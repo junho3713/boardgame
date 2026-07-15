@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>혁신도시 보드게임 보유 목록</title>
+    <!-- 카카오톡 공유용 오픈그래프 설정 -->
+    <meta property="og:title" content="🎲 혁신도시 보드게임 보유 목록">
+    <meta property="og:description" content="인원수와 테마에 맞는 게임을 실시간으로 검색해 보세요!">
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --primary-color: #4f46e5;
+            --primary-light: #e0e7ff;
+            --secondary-color: #10b981;
+            --secondary-light: #d1fae5;
+            --text-main: #1f2937;
+            --text-sub: #4b5563;
+            --border-color: #e5e7eb;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            padding: 16px;
+            max-width: 480px; /* 모바일 맞춤형 최대 가로폭 */
+            margin: 0 auto;
+        }
+
+        header {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--text-main);
+            margin-bottom: 4px;
+        }
+
+        header p {
+            font-size: 13px;
+            color: var(--text-sub);
+        }
+
+        /* 섹션 타이틀 - 이모지와 텍스트 간격 정밀 조정 */
+        .section-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-sub);
+            margin-bottom: 10px;
+            padding-left: 4px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* 필터 버튼 영역 */
+        .filter-wrapper {
+            background: var(--card-bg);
+            padding: 14px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            margin-bottom: 16px;
+        }
+
+        /* 3열 종대로 칼정렬해 주는 CSS Grid 적용 */
+        .filter-container {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        /* 가로로 꽉 차고 클릭 영역을 넓힌 버튼 스타일 */
+        .filter-btn {
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            color: var(--text-sub);
+            padding: 12px 8px; /* 터치하기 편하게 위아래 패딩 확장 */
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+            width: 100%;
+        }
+
+        /* 인원 필터 활성화 스타일 */
+        .player-btn.active {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            color: #ffffff;
+        }
+
+        /* 테마 필터 활성화 스타일 */
+        .theme-btn.active {
+            background-color: var(--secondary-color);
+            border-color: var(--secondary-color);
+            color: #ffffff;
+        }
+
+        /* 검색결과 요약 */
+        .status-bar {
+            font-size: 13px;
+            color: var(--text-sub);
+            margin-bottom: 12px;
+            padding: 0 4px;
+            font-weight: 500;
+        }
+
+        /* 카드 리스트 영역 */
+        .game-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .game-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+        }
+
+        .game-info {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .game-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        /* 메타라인 정렬 및 수직 중앙 맞춤 */
+        .game-meta {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            margin-top: 2px;
+        }
+
+        .game-owner {
+            font-size: 11px;
+            color: #6b7280;
+            background-color: #f3f4f6;
+            padding: 2px 6px;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        .game-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        .tag {
+            font-size: 11px;
+            color: #4b5563;
+            background-color: #e5e7eb;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .game-players {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--primary-color);
+            background-color: var(--primary-light);
+            padding: 6px 12px;
+            border-radius: 8px;
+            white-space: nowrap;
+        }
+
+        .no-result {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-sub);
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>🎲 혁신도시 보드게임 [찐막]</h1>
+        <p>인원수와 테마 필터로 게임을 편리하게 찾아보세요!</p>
+    </header>
+
+    <!-- 인원수 필터 영역 (3명, 4명, 5명, 6명, 7명+ 3열 칼정렬) -->
+    <div class="filter-wrapper">
+        <div class="section-title"><span>👥</span> 인원 선택</div>
+        <div class="filter-container">
+            <button class="filter-btn player-btn active" onclick="filterPlayers('all', this)">전체</button>
+            <button class="filter-btn player-btn" onclick="filterPlayers(3, this)">3명</button>
+            <button class="filter-btn player-btn" onclick="filterPlayers(4, this)">4명</button>
+            <button class="filter-btn player-btn" onclick="filterPlayers(5, this)">5명</button>
+            <button class="filter-btn player-btn" onclick="filterPlayers(6, this)">6명</button>
+            <button class="filter-btn player-btn" onclick="filterPlayers('7+', this)">7명+</button>
+        </div>
+    </div>
+
+    <!-- 테마 필터 영역 (전체 + 테마 8종 = 총 9개 버튼으로 3열 딱 떨어짐) -->
+    <div class="filter-wrapper">
+        <div class="section-title"><span>🏷️</span> 테마 선택</div>
+        <div class="filter-container">
+            <button class="filter-btn theme-btn active" onclick="filterTheme('all', this)">전체</button>
+            <button class="filter-btn theme-btn" onclick="filterTheme('협동', this)">협동</button>
+            <button class="filter-btn theme-btn" onclick="filterTheme('파티', this)">파티</button>
+            <button class="filter-btn theme-btn" onclick="filterTheme('전략', this)">전략</button>
+            <button class="filter-btn theme-btn" onclick="filterTheme('카드', this)">카드</button>
+            <button class="filter-btn theme-btn" onclick="filterTheme('주사위', this)">주사위</button>
+            <button class="filter-btn theme-btn" onclick="filterTheme('마피아', this)">마피아</button>
+            <button class="filter-btn theme-btn" onclick="filterTheme('블러핑', this)">블러핑</button>
+            <button class="filter-btn theme-btn" onclick="filterTheme('손패 털기', this)">손패 털기</button>
+        </div>
+    </div>
+
+    <div class="status-bar" id="statusBar">총 27개의 게임이 있습니다.</div>
+
+    <!-- 게임 목록 리스트 -->
+    <div class="game-list" id="gameList"></div>
+
+    <script>
+        // 캔트스탑 추가된 총 27개 게임 리스트 (가나다 정렬은 스크립트가 자동 처리)
+        const games = [
+            { name: "크라클 오라클", owner: "윌리", min: 2, max: 8, themes: ["협동", "파티"] },
+            { name: "스플렌더", owner: "윌리", min: 2, max: 4, themes: ["전략"] },
+            { name: "갱스터", owner: "두쿤", min: 3, max: 6, themes: ["협동", "카드"] },
+            { name: "라스베가스", owner: "해해", min: 2, max: 5, themes: ["파티", "주사위"] },
+            { name: "노터치 크라켄 디럭스", owner: "윌리", min: 4, max: 8, themes: ["마피아", "블러핑"] },
+            { name: "프린세스의 반란", owner: "윌리", min: 3, max: 6, themes: ["손패 털기"] },
+            { name: "나르", owner: "윌리", min: 2, max: 4, themes: ["전략"] },
+            { name: "쿠", owner: "윌리", min: 2, max: 6, themes: ["블러핑"] },
+            { name: "라스트캠퍼", owner: "영호", min: 2, max: 5, themes: [] },
+            { name: "윙스팬", owner: "영호", min: 1, max: 5, themes: ["전략"] },
+            { name: "디셉션", owner: "윌리", min: 4, max: 12, themes: ["마피아", "블러핑"] },
+            { name: "스파이폴2", owner: "영호", min: 3, max: 12, themes: ["마피아", "블러핑"] },
+            { name: "렉시오", owner: "해해", min: 3, max: 5, themes: ["카드", "손패 털기"] },
+            { name: "더 콜렉터", owner: "영호", min: 2, max: 5, themes: ["파티", "카드"] },
+            { name: "차가운 그녀가 눈을 뜨기 전에", owner: "윌리", min: 3, max: 6, themes: ["마피아", "블러핑", "카드"] },
+            { name: "뱀파이어퀸", owner: "윌리", min: 3, max: 12, themes: ["파티", "손패 털기", "카드"] },
+            { name: "베큐베큐", owner: "영호", min: 2, max: 6, themes: ["파티", "카드"] },
+            { name: "달무티", owner: "블랑", min: 4, max: 8, themes: ["파티", "손패 털기", "카드"] },
+            { name: "셀레스티아", owner: "윌리", min: 2, max: 6, themes: ["블러핑", "카드", "주사위"] },
+            { name: "토마토스", owner: "윌리", min: 2, max: 4, themes: ["전략", "카드"] },
+            { name: "한밤의 수수께끼", owner: "윌리", min: 4, max: 10, themes: ["마피아", "블러핑"] },
+            { name: "놉!놉! 테이블", owner: "블랑", min: 3, max: 8, themes: ["파티", "카드"] },
+            { name: "러브레터", owner: "윌리", min: 2, max: 6, themes: ["블러핑", "카드"] },
+            { name: "사보타지", owner: "영호", min: 3, max: 10, themes: ["마피아", "블러핑", "카드"] },
+            { name: "티츄", owner: "윌리", min: 4, max: 4, themes: ["카드"] },
+            { name: "방금 떠올린 프로포즈의 말을 너에게 바칠게", owner: "윌리", min: 3, max: 6, themes: ["파티", "카드"] },
+            { name: "캔트스탑", owner: "두쿤", min: 2, max: 4, themes: ["파티", "주사위"] }
+        ];
+
+        let currentPlayers = 'all';
+        let currentTheme = 'all';
+
+        function sortAlphabetically(list) {
+            return list.sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+        }
+
+        function updateList() {
+            const listEl = document.getElementById('gameList');
+            const statusEl = document.getElementById('statusBar');
+            listEl.innerHTML = '';
+
+            const filtered = games.filter(game => {
+                let matchPlayer = true;
+                if (currentPlayers !== 'all') {
+                    if (currentPlayers === '7+') {
+                        matchPlayer = game.max >= 7;
+                    } else {
+                        matchPlayer = currentPlayers >= game.min && currentPlayers <= game.max;
+                    }
+                }
+
+                let matchTheme = true;
+                if (currentTheme !== 'all') {
+                    matchTheme = game.themes.includes(currentTheme);
+                }
+
+                return matchPlayer && matchTheme;
+            });
+
+            if (filtered.length === 0) {
+                listEl.innerHTML = '<div class="no-result">조건에 맞는 게임이 없습니다. 🥲</div>';
+                statusEl.textContent = `검색 결과가 없습니다.`;
+                return;
+            }
+
+            const sortedList = sortAlphabetically(filtered);
+
+            sortedList.forEach(game => {
+                const card = document.createElement('div');
+                card.className = 'game-card';
+
+                const tagsHtml = game.themes.map(t => `<span class="tag">${t}</span>`).join('');
+
+                card.innerHTML = `
+                    <div class="game-info">
+                        <div class="game-title">${game.name}</div>
+                        <div class="game-meta">
+                            <span class="game-owner">소유: ${game.owner}</span>
+                            <div class="game-tags">${tagsHtml}</div>
+                        </div>
+                    </div>
+                    <div class="game-players">${game.min === game.max ? game.min : game.min + '-' + game.max}인</div>
+                `;
+                listEl.appendChild(card);
+            });
+
+            statusEl.textContent = `조건에 맞는 게임이 총 ${sortedList.length}개 있습니다.`;
+        }
+
+        function filterPlayers(target, btn) {
+            const buttons = document.querySelectorAll('.player-btn');
+            buttons.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            currentPlayers = target;
+            updateList();
+        }
+
+        function filterTheme(target, btn) {
+            const buttons = document.querySelectorAll('.theme-btn');
+            buttons.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            currentTheme = target;
+            updateList();
+        }
+
+        updateList();
+    </script>
+</body>
+</html>
