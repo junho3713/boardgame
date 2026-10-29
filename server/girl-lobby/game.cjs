@@ -9,7 +9,13 @@ const active=g=>g.players.filter(p=>!p.locked);
 const player=(g,id)=>g.players.find(p=>p.id===id);
 const log=(g,message)=>{g.log.push(message);if(g.log.length>100)g.log.shift();};
 function remember(g,p,message,seen){p.intel.unshift({turn:g.turn,message,...(seen?{seen}:{})});p.intel=p.intel.slice(0,24);}
-function emit(g,kind,from,to,front){g.events??=[];g.eventSequence=(g.eventSequence||0)+1;g.events.push({n:g.eventSequence,kind,from,to,...(front?{card:card(front)}:{})});g.events=g.events.slice(-60);}
+function emit(g,kind,from,to,front,meta={}){g.events??=[];g.eventSequence=(g.eventSequence||0)+1;g.events.push({n:g.eventSequence,kind,from,to,...(front?{card:card(front)}:{}),...meta});g.events=g.events.slice(-60);}
+// A public skill points at its target without revealing any hidden hand or signal.
+function emitEffect(g,actor,type,to,description,audience){
+ const index=actor.used.findLastIndex(c=>c.type===type);if(index<0)return;
+ const target=to.player?player(g,to.player).name:'공용 조합';
+ emit(g,'effect',{zone:'used',player:actor.id,index},to,actor.used[index],{actor:actor.id,title:`${actor.name} → ${audience||target} · ${byType[type].name}`,description});
+}
 function notice(p,kind,message){p.notices??=[];p.notices.push({id:crypto.randomUUID(),kind,message,at:Date.now()});p.notices=p.notices.slice(-12);}
 function shuffled(a){for(let i=a.length-1;i>0;i--){const j=crypto.randomInt(i+1);[a[i],a[j]]=[a[j],a[i]];}return a;}
 function newGame(members){
@@ -57,13 +63,14 @@ function beginSkill(g,p,c){
   case 'discipline':g.pending={kind:'target',skill:c.type,actor:p.id};break;
   case 'health':
    if(g.players.some(x=>x.id!==p.id&&x.used.some(c=>c.type!=='health')))g.pending={kind:'health',actor:p.id};else{log(g,'다른 사람이 사용한 보건위원 이외의 카드가 없어 효과를 건너뛰어요.');endTurn(g);}break;
-  case 'library':reveal(g,p,`조합 ${g.pool.length}장: ${g.pool.map(c=>byType[c.type].name+'('+byType[c.type].mp+')').join(' · ')||'없음'}. 당시 합계 ${g.pool.reduce((s,c)=>s+byType[c.type].mp,0)} MP.`,{kind:'pool',cards:g.pool.map(card)});break;
+  case 'library':emitEffect(g,p,'library',{zone:'pool'},'조합에 놓인 카드 앞면과 MP 합계를 사용한 사람만 확인해요. 다른 사람에게는 공개하지 않아요.');reveal(g,p,`조합 ${g.pool.length}장: ${g.pool.map(c=>byType[c.type].name+'('+byType[c.type].mp+')').join(' · ')||'없음'}. 당시 합계 ${g.pool.reduce((s,c)=>s+byType[c.type].mp,0)} MP.`,{kind:'pool',cards:g.pool.map(card)});break;
   case 'homecoming':
-   if(g.pool.length)g.pending={kind:'homecoming',actor:p.id};else{log(g,'조합에 카드가 없어 교환 효과를 건너뛰어요.');endTurn(g);}break;
-  case 'newspaper':g.pending={kind:'pass',actor:p.id,participants:active(g).map(x=>x.id),answers:{}};break;
+   if(g.pool.length){emitEffect(g,p,'homecoming',{zone:'pool'},'조합의 뒷면 카드 한 장과 내 손패 한 장을 교환해요. 가져올 카드 앞면은 미리 볼 수 없어요.');g.pending={kind:'homecoming',actor:p.id};}else{log(g,'조합에 카드가 없어 교환 효과를 건너뛰어요.');endTurn(g);}break;
+  case 'newspaper':for(const x of active(g).filter(x=>x.id!==p.id))emitEffect(g,p,'newspaper',{zone:'hand',player:x.id},'차례에 남은 사람들은 자기 손패 한 장을 골라 왼쪽 사람에게 동시에 넘겨요. 마지막 정체가 보호된 사람은 건너뛰어요.','차례에 남은 플레이어 모두');g.pending={kind:'pass',actor:p.id,participants:active(g).map(x=>x.id),answers:{}};break;
   case 'accomplice':
    if(g.players.some(x=>x.suspicions.length))g.pending={kind:'move',actor:p.id};else{log(g,'옮길 의혹 카드가 없어 효과를 건너뛰어요.');endTurn(g);}break;
   case 'genius':{
+   for(const x of g.players.filter(x=>x.id!==p.id))emitEffect(g,p,'genius',{zone:'hand',player:x.id},'범인을 가진 사람은 자동으로 혀 신호를 보내고, 외계인은 보낼지 선택해요. 신호는 수재를 쓴 사람만 봐요.','다른 플레이어 모두');
    const holders=g.players.filter(x=>x.id!==p.id),responders=holders.filter(x=>x.hand.some(c=>c.type==='criminal')).map(x=>x.id);
    const aliens=holders.filter(x=>x.hand.some(c=>c.type==='alien')).map(x=>x.id);
    for(const x of holders){if(responders.includes(x.id))notice(x,'criminal-signal',`${p.name}님이 수재를 사용했어요. 범인 카드를 가지고 있어 혀 신호를 자동으로 보냈어요. 이 알림과 내 정체는 다른 사람에게 보이지 않아요.`);else if(aliens.includes(x.id))notice(x,'alien-choice',`${p.name}님이 수재를 사용했어요. 외계인(우주인)은 혀를 내밀지 선택할 수 있어요. 아래에서 신호를 골라 주세요.`);else notice(x,'eyes-closed',`${p.name}님이 수재를 사용했어요. 신호를 확인하는 동안 다른 사람의 혀 신호는 보이지 않아요.`);}
@@ -91,6 +98,9 @@ function answerInternal(g,id,a){
  if(q.kind==='ack'){endTurn(g);return;}
  if(q.kind==='target'){
   const target=player(g,a.target);need(target&&target!==actor,'다른 사람을 골라 주세요.');if(q.skill!=='discipline')need(!target.locked,'마지막 카드가 보호된 사람은 교환할 수 없어요.');
+  log(g,`${actor.name} → ${target.name} · ${byType[q.skill].name} 특기 사용`);
+  const effectHelp={class:'두 사람이 자기 손패에서 한 장씩 골라 뒷면으로 교환해요. 상대가 고른 카드는 교환이 끝날 때 알 수 있어요.',lady:'상대의 섞인 뒷면 손패 중 한 장을 가져온 뒤, 내 손패에서 한 장을 골라 돌려줘요.',discipline:'선택한 상대의 손패를 사용한 사람만 확인해요. 카드는 상대 손에 그대로 있고 다른 사람에게 공개하지 않아요.'};
+  emitEffect(g,actor,q.skill,{zone:'hand',player:target.id},effectHelp[q.skill]);
   if(q.skill==='class')g.pending={kind:'exchange',actor:actor.id,participants:[actor.id,target.id],answers:{}};
   if(q.skill==='lady')g.pending={kind:'draw',actor:actor.id,target:target.id,order:shuffled(target.hand.map(c=>c.uid))};
   if(q.skill==='discipline')reveal(g,actor,`${target.name}님의 당시 손패: ${target.hand.map(c=>byType[c.type].name).join(' · ')}.`,{kind:'hand',player:target.id,cards:target.hand.map(card)});
@@ -115,10 +125,10 @@ function answerInternal(g,id,a){
   return;
  }
  if(q.kind==='health'){
-  let owner,index;for(const x of g.players){const i=x.used.findIndex(c=>c.uid===a.used&&c.type!=='health');if(x.id!==id&&i>=0){owner=x;index=i;break;}}need(owner,'다른 사람이 사용한 보건위원 이외의 카드를 골라 주세요.');const c=owner.used.splice(index,1)[0];p.hand.push(c);emit(g,'recover',{zone:'used',player:owner.id,index},{zone:'hand',player:id,index:p.hand.length-1},c);log(g,`${p.name}님이 ${owner.name}님의 사용된 ${byType[c.type].name}을(를) 손으로 회수했어요. 능력은 다시 사용해야 발동해요.`);endTurn(g);return;
+  let owner,index;for(const x of g.players){const i=x.used.findIndex(c=>c.uid===a.used&&c.type!=='health');if(x.id!==id&&i>=0){owner=x;index=i;break;}}need(owner,'다른 사람이 사용한 보건위원 이외의 카드를 골라 주세요.');emitEffect(g,p,'health',{zone:'used',player:owner.id,index},`${owner.name}님이 사용한 ${byType[owner.used[index].type].name} 카드를 내 손패로 가져와요. 가져온 카드의 특기는 자동으로 발동하지 않고, 나중에 다시 사용해야 해요.`);const c=owner.used.splice(index,1)[0];p.hand.push(c);emit(g,'recover',{zone:'used',player:owner.id,index},{zone:'hand',player:id,index:p.hand.length-1},c);log(g,`${p.name}님이 ${owner.name}님의 사용된 ${byType[c.type].name}을(를) 손으로 회수했어요. 능력은 다시 사용해야 발동해요.`);endTurn(g);return;
  }
  if(q.kind==='move'){
-  const target=player(g,a.target);need(target&&target.id!==id,'나 이외의 목적지를 골라 주세요.');let owner,index;for(const x of g.players){const i=x.suspicions.findIndex(c=>c.uid===a.suspicion);if(i>=0){owner=x;index=i;break;}}need(owner&&owner!==target,'출발지와 다른 사람 앞으로 옮겨 주세요.');target.suspicions.push(owner.suspicions.splice(index,1)[0]);emit(g,'move',{zone:'suspicion',player:owner.id,index},{zone:'suspicion',player:target.id,index:target.suspicions.length-1});log(g,`${owner.name}님의 의혹 1장을 ${target.name}님에게 뒷면으로 옮겼어요.`);endTurn(g);return;
+  const target=player(g,a.target);need(target&&target.id!==id,'나 이외의 목적지를 골라 주세요.');let owner,index;for(const x of g.players){const i=x.suspicions.findIndex(c=>c.uid===a.suspicion);if(i>=0){owner=x;index=i;break;}}need(owner&&owner!==target,'출발지와 다른 사람 앞으로 옮겨 주세요.');emitEffect(g,p,'accomplice',{zone:'suspicion',player:target.id},`${owner.name}님 앞의 의혹 한 장을 ${target.name}님 앞으로 뒷면으로 옮겨요. 의혹의 내용은 공개하지 않아요.`);target.suspicions.push(owner.suspicions.splice(index,1)[0]);emit(g,'move',{zone:'suspicion',player:owner.id,index},{zone:'suspicion',player:target.id,index:target.suspicions.length-1});log(g,`${owner.name}님의 의혹 1장을 ${target.name}님에게 뒷면으로 옮겼어요.`);endTurn(g);return;
  }
 }
 function pendingContent(g,id){
