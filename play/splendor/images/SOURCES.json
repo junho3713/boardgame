@@ -1,0 +1,16 @@
+{
+  "source": "https://github.com/hexanome-04/splendor/tree/d1797acf5d43c6bc512b57ef3c1d990006a49a5c/client/public/images",
+  "imageFiles": {
+    "development-cards/042.jpg": "development-042.jpg",
+    "development-cards/01.jpg": "development-01.jpg",
+    "nobles/20001.jpg": "noble-20001.jpg",
+    "tokens/WhiteToken.jpg": "token-white.jpg",
+    "tokens/BlueToken.jpg": "token-blue.jpg",
+    "tokens/GreenToken.jpg": "token-green.jpg",
+    "tokens/RedToken.jpg": "token-red.jpg",
+    "tokens/BrownToken.jpg": "token-brown.jpg",
+    "tokens/GoldToken.jpg": "token-gold.jpg"
+  },
+  "purpose": "Examples supporting the Korean rule explanations; not a full card gallery.",
+  "rights": "Artwork rights remain with their respective rights holders."
+}
