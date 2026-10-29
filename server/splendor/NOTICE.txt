@@ -5,5 +5,7 @@ The extra custom noble 20011 and all expansion cards are excluded.
 Game: Splendor, Marc Andre / SPACE Cowboys. Game names and artwork belong to their respective rights holders.
 
 
-Card, noble and token images are displayed from the public source repository at commit d1797acf5d43c6bc512b57ef3c1d990006a49a5c, client/public/images/. Artwork rights remain with their respective owners; the MIT code/data notice is not a claim to ownership of the original artwork.
+The active /splendor/ version uses newly generated 2D illustrations and project-authored SVG gem/token icons. No publisher card, noble or token image is loaded in this version.
+Illustration atlas: assets/art-2d.webp, generated with the built-in image generation tool on 2026-10-29. 25 original illustrated panels: 15 workshop/trade/guild scenes and 10 fictional merchant patrons. Prompt recorded in assets/ARTWORK-PROMPT.txt.
+The prior visual version remains separately available at /splendor2/ with its original source notices.
 Rules reference: https://www.spacecowboys-games.com/game/splendor/

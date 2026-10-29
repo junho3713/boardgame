@@ -12,8 +12,8 @@ function createHandler(){
   const url=new URL(req.url,'http://localhost'),route=url.pathname;
   try{
    if(route==='/splendor'){res.writeHead(302,{Location:'/splendor/'});res.end();return;}
-   const files={'/splendor/':['index.html','text/html; charset=utf-8'],'/splendor/app.js':['app.js','text/javascript; charset=utf-8'],'/splendor/app.css':['app.css','text/css; charset=utf-8'],'/splendor/credits':['NOTICE.txt','text/plain; charset=utf-8'],'/splendor/license':['LICENSE.cards','text/plain; charset=utf-8']};
-   if(req.method==='GET'&&files[route]){const [file,mime]=files[route];res.writeHead(200,{'Content-Type':mime,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'self'; img-src 'self' https://raw.githubusercontent.com data:; script-src 'self'; style-src 'self' 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'"});res.end(fs.readFileSync(path.join(__dirname,file)));return;}
+   const files={'/splendor/art-2d.webp':['assets/art-2d.webp','image/webp'],'/splendor/':['index.html','text/html; charset=utf-8'],'/splendor/app.js':['app.js','text/javascript; charset=utf-8'],'/splendor/app.css':['app.css','text/css; charset=utf-8'],'/splendor/credits':['NOTICE.txt','text/plain; charset=utf-8'],'/splendor/license':['LICENSE.cards','text/plain; charset=utf-8']};
+   if(req.method==='GET'&&files[route]){const [file,mime]=files[route];res.writeHead(200,{'Content-Type':mime,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'self'; img-src 'self' data:; script-src 'self'; style-src 'self' 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'"});res.end(fs.readFileSync(path.join(__dirname,file)));return;}
    if(!route.startsWith('/splendor/api/')){json(res,404,{error:'페이지를 찾지 못했어요.'});return;}
    for(const r of rooms.values())if(Date.now()-r.created>ttl)expire(r);
    let body={};if(req.method==='POST'){let raw='';for await(const part of req){raw+=part;if(Buffer.byteLength(raw)>3072){json(res,413,{error:'요청이 너무 커요.'});return;}}try{body=JSON.parse(raw||'{}');}catch{json(res,400,{error:'요청 형식을 확인해 주세요.'});return;}}

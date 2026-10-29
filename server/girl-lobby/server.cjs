@@ -4,6 +4,7 @@ const cardTypes=JSON.parse(fs.readFileSync(path.join(__dirname,'../../play/girl/
 const game=require('./game.cjs');
 function createApp(){
  const splendorHandler=require('../splendor/server.cjs').createHandler();
+ const splendor2Handler=require('../splendor2/server.cjs').createHandler();
  const rooms=new Map(), sessions=new Map();const ttl=2*60*60*1000;
  function prune(){for(const [code,r]of rooms)if(Date.now()-r.created>ttl){rooms.delete(code);for(const p of r.players)sessions.delete(p.token);}}
  function json(res,status,value){res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});res.end(JSON.stringify(value));}
@@ -11,6 +12,7 @@ function createApp(){
  function project(r,p){if(r.game)game.tick(r.game);return r.game?{code:r.code,host:r.host,...game.view(r.game,p.id)}:{code:r.code,phase:r.phase,host:r.host,me:p.id,players:r.players.map(x=>({id:x.id,name:x.name,cards:0})),hand:[]};}
  const server=http.createServer(async(req,res)=>{
   try{
+   if(req.url.startsWith('/splendor2')){await splendor2Handler(req,res);return;}
    if(req.url.startsWith('/splendor')){await splendorHandler(req,res);return;}
    if(req.url==='/healthz'&&req.method==='GET')return json(res,200,{ok:true});
    if(req.url==='/'&&req.method==='GET'){res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'"});return res.end(fs.readFileSync(path.join(__dirname,'index.html')));}
