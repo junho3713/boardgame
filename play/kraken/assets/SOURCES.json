@@ -1,0 +1,35 @@
+{
+  "edition": "노터치 크라켄 디럭스 한글판",
+  "officialRules": "https://popcorngames.tistory.com/40",
+  "rulesRevision": "2024-02-22",
+  "assets": [
+    {
+      "files": [
+        "explorer.jpg",
+        "skeleton.jpg",
+        "empty.jpg",
+        "treasure.jpg",
+        "kraken.jpg",
+        "curse.jpg",
+        "special.jpg"
+      ],
+      "source": "Popcorn Games official Korean rulebook, page 2",
+      "method": "Extracted original embedded JPEG streams without changing image pixels"
+    },
+    {
+      "files": [
+        "box.jpg"
+      ],
+      "source": "https://popcontr2632.cdn-nhncommerce.com/data/goods/19/07/18/66219/66219_detail_033.jpg"
+    },
+    {
+      "files": [
+        "special-cards.webp"
+      ],
+      "author": "얼룩미플",
+      "source": "https://ullookmeeple.tistory.com/entry/%EB%B3%B4%EB%93%9C%EA%B2%8C%EC%9E%84-%EA%B7%9C%EC%B9%99-%EB%85%B8-%ED%84%B0%EC%B9%98-%ED%81%AC%EB%9D%BC%EC%BC%84-%ED%95%98%EB%8A%94-%EB%B2%95",
+      "license": "https://creativecommons.org/licenses/by-nc-nd/4.0/deed.ko",
+      "method": "Lossless format conversion from original PNG; dimensions and decoded RGB pixels verified identical"
+    }
+  ]
+}
