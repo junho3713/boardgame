@@ -1,0 +1,23 @@
+/* Advice opens the normal review flow; it never commits a game action. */
+let currentAdvice=null;
+function adviceSelector(c){if(!c)return null;return c.kind==='recruit'?`[data-hand="${c.cardId}"]`:c.kind==='draft'||c.kind==='refresh'?`[data-market="${state.market[c.slot]?.id}"]`:c.kind==='explore'?c.source==='reserved'?`[data-reserved="${c.index}"]`:`[data-land="${c.index}"]`:c.kind==='reserve'?`[data-land="${c.index}"]`:c.kind==='trade'?`[data-trade="${c.n}"]`:c.kind==='finish'?'#endTurn':c.kind==='skipBonus'?'[data-skip-bonus]':c.kind==='skipArtifact'?'[data-skip-artifact]':'#recycleBtn';}
+function adviceReasons(c){return `<ul>${c.reasons.filter(Boolean).map(r=>`<li>${esc(r)}</li>`).join('')}</ul><p class="advice-caution"><strong>함께 생각할 점</strong> ${esc(c.caution)}</p>`;}
+function adviceLocation(){return state.phase==='draft'||state.phase==='refresh'?'#market':state.phase==='reserve'?'#destinations':state.phase==='bonus'?state.bonus.action==='recruit'?'#hand':'#destinations':state.actionDone?'#turnActions':'#actionOptions';}
+function renderAdvice(){const el=$('#playAdvice');currentAdvice=KnarrAdvisor.recommend(state);if(!myTurn()||hiddenHand||!currentAdvice.top){el.hidden=true;return;}const a=currentAdvice.top,anchor=state.phase==='draft'?$('#marketGuide'):['reserve','refresh','bonus'].includes(state.phase)?$('#artifactPrompt'):state.actionDone?$('#turnActions'):$('#actionOptions');anchor.before(el);el.hidden=false;el.innerHTML=`<div class="advice-heading"><h3>지금 추천하는 플레이</h3><span>현재 상황에 맞춰 비교</span></div><strong class="advice-title">${esc(a.title)}</strong><p class="advice-short">${esc(a.reasons[0])}</p><div class="advice-buttons"><button class="secondary advice-go" data-advice-pick="${esc(a.key)}">${esc(a.cta)} →</button><button class="textbtn advice-location" data-advice-location>선택지 전체 위치 보기</button></div><details class="advice-details"><summary>왜 추천하는지 · 다른 선택과 비교 (${currentAdvice.choices.length}개)</summary><div class="advice-main-reasons">${adviceReasons(a)}</div>${currentAdvice.choices.length>1?`<h4>다른 선택은 어떨까?</h4><div class="advice-alternatives">${currentAdvice.choices.slice(1).map(c=>`<details><summary>${esc(c.title)}</summary>${adviceReasons(c)}<button class="textbtn" data-advice-pick="${esc(c.key)}">이 선택 살펴보기 →</button></details>`).join('')}</div>`:''}<p class="advice-method">${esc(currentAdvice.note)}</p></details>`;}
+function openAdviceChoice(key){if(!myTurn())return;const a=KnarrAdvisor.recommend(state).choices.find(c=>c.key===key);if(!a){toast('상황이 바뀌었어. 현재 추천을 다시 확인해줘.');render();return;}
+ if(a.kind==='recruit'){selected=a.cardId;render();}
+ else if(a.kind==='draft'||a.kind==='refresh')showMarketChoice(a.slot);
+ else if(a.kind==='explore')landDetail(a.index,a.source);
+ else if(a.kind==='reserve')landDetail(a.index);
+ else if(a.kind==='trade')$(adviceSelector(a))?.click();
+ else if(a.kind==='finish')scrollToAction($('#turnActions'));
+ else if(a.kind==='recycle'){recycleModal();const c=$(`[data-recycle-player="${a.pid}"][data-recycle-card="${a.cardId}"]`);c?.classList.add('advice-card');c?.scrollIntoView({block:'nearest'});}
+ else modal(`<h2>${esc(a.title)}</h2>${adviceReasons(a)}<p>추천은 선택을 대신 실행하지 않아. 아래 버튼을 누르면 이번 기회를 건너뛰어.</p><button class="primary" data-confirm-advice-skip="${a.kind}">이번 ${state.phase==='bonus'?'추가 행동':state.phase==='refresh'?'교체':'예약'} 건너뛰기</button>`);
+}
+function paymentAdvice(p,d){const a=KnarrAdvisor.bestPayment(state,p,d);if(!a)return'';const same=a.tokens===payTokens&&a.ids.length===payIds.length&&a.ids.every(id=>payIds.includes(id)),cards=K.COLORS.map((cl,i)=>{const n=a.ids.filter(id=>p.crew.find(c=>c.id===id).color===i).length;return n?`${cl.name} ${n}명`:'';}).filter(Boolean).join(' · ')||'선원 0명';return `<div class="payment-advice"><strong>${same?'추천 비용 조합을 미리 골랐어':'직접 조정한 비용을 보고 있어'}</strong><p>기본 추천: ${cards} + 모집 토큰 ${a.tokens}개.</p><p>손패와 같은 색의 반복 보상을 지키는 정도, 토큰 잔량, 비용 지불 후 실제로 받을 보상을 함께 비교했어. 선원과 토큰은 직접 바꿀 수 있어.</p>${same?'':'<button class="textbtn" data-use-advice-payment>추천 비용 조합으로 되돌리기</button>'}</div>`;}
+document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled)return;const a=b.dataset;
+ if('advicePick'in a){openAdviceChoice(a.advicePick);return;}
+ if('adviceLocation'in a){scrollToAction($(adviceLocation()));return;}
+ if('confirmAdviceSkip'in a){closeModal();run(()=>a.confirmAdviceSkip==='skipBonus'?K.skipBonus(state):state.phase==='refresh'?K.refresh(state,null):K.reserve(state,null));return;}
+ if('useAdvicePayment'in a){const p=K.current(state),d=paySource==='reserved'?p.reserved[payIndex]:state.destinations[payIndex],v=KnarrAdvisor.bestPayment(state,p,d);if(v){payIds=v.ids;payTokens=v.tokens;paymentModal('#modalContent h2');}return;}
+});

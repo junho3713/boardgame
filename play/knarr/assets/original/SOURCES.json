@@ -1,0 +1,8 @@
+{
+  "rulebook": "https://studiobombyx.com/assets/KNARR_rulebook_EN.pdf",
+  "factualCardReference": "https://github.com/thoun/knarr",
+  "vikingData": "https://github.com/thoun/knarr/blob/main/modules/php/VikingManager.php",
+  "destinationData": "https://github.com/thoun/knarr/blob/main/modules/php/DestinationManager.php",
+  "referenceCommit": "6e78ab31083950b7499facdb0b3ba9ebc0cab1ca",
+  "credits": "KNARR: Thomas Dupont. Artwork: Antoine Carrion. Publisher: Bombyx. Unofficial private educational implementation. Original engine written separately; no BGA engine code reused."
+}

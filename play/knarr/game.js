@@ -1,0 +1,98 @@
+
+/* Independent KNARR engine: base game and all seven shared artifact variants. */
+(function(root){'use strict';
+const D=typeof module!=='undefined'?require('./data.js'):root.KnarrData;
+const COLORS=[{id:'red',name:'빨강',hex:'#ad4335'},{id:'yellow',name:'노랑',hex:'#a27a23'},{id:'green',name:'초록',hex:'#3e7451'},{id:'blue',name:'파랑',hex:'#42718a'},{id:'purple',name:'보라',hex:'#74577d'}];
+const ASSETS={vp:{name:'승점'},rep:{name:'명성'},recruit:{name:'모집 토큰'},bracelet:{name:'은팔찌'},draw:{name:'선단에 선원 추가'}};
+const SHIPS=['beige','white','brown','black'],MARKERS=['#c59d6a','#f7f0d9','#8d5443','#303e42'];
+const clone=x=>JSON.parse(JSON.stringify(x));
+function rng(seed){let n=seed>>>0;return()=>{n+=0x6D2B79F5;let t=n;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296}}
+function shuffle(a,random=Math.random){for(let i=a.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function current(s){return s.players[s.active]}
+function income(rep){return rep>=14?5:rep>=10?3:rep>=6?2:rep>=3?1:0}
+function log(s,msg){s.log.unshift(msg);s.log=s.log.slice(0,80)}
+function label(r){return Object.entries(r).filter(([k,n])=>n>0).map(([k,n])=>`${ASSETS[k].name} +${n}`).join(' · ')||'보상 없음'}
+function create(o={}){
+ const count=Number(o.count||2);if(![2,3,4].includes(count))throw Error('2~4명으로 시작해줘.');
+ const seed=o.seed===undefined?Math.floor(Math.random()*4294967296):o.seed,random=rng(seed);let id=1;const deck=[];
+ for(const t of D.vikingTypes)for(let i=0;i<t.counts[count];i++)deck.push({...clone(t),id:id++});shuffle(deck,random);
+ const players=Array.from({length:count},(_,i)=>({id:i,name:i===0?'준호':o.mode==='local'?`플레이어 ${i+1}`:`항해사 ${i}`,bot:o.mode!=='local'&&i>0,ship:SHIPS[i],marker:MARKERS[i],vp:0,rep:0,recruit:1,bracelet:1,crew:[],hand:[],lands:[],reserved:[]}));
+ const landDecks={A:shuffle(D.lands.filter(d=>d.type==='A').map(clone),random),B:shuffle(D.lands.filter(d=>d.type==='B').map(clone),random)};
+ const s={version:4,seed,count,mode:o.mode||'bot',side:o.side==='advanced'?'advanced':'normal',guided:o.guided!==false,players,deck,discard:[],landDecks,destinations:[],market:[],active:0,starter:0,round:1,turn:1,actionDone:false,traded:false,phase:'action',pendingColor:null,queue:[],recycle:null,finalRound:false,ended:false,winners:[],log:[],events:{recruit:0,explore:0,trade:0},artifacts:[],artifactUses:{},noticeSeq:0,notice:null,bonus:null,artifactChoice:null,freeDraft:false,rowBaseline:0};
+ for(let i=0;i<5;i++)s.market.push(s.deck.pop());
+ for(const p of players){const first=s.deck.pop();p.crew.push(first);const j=s.deck.findIndex(c=>c.color!==first.color);p.crew.push(s.deck.splice(j,1)[0]);}
+ for(const p of players)for(let i=0;i<3;i++)p.hand.push(s.deck.pop());
+ s.destinations=[...Array.from({length:3},()=>s.landDecks.A.pop()),...Array.from({length:3},()=>s.landDecks.B.pop())];
+ const artifact=o.artifact||'none';
+ if(artifact!=='none'){const addCup=count===2&&o.mead===true;const pool=addCup?[2,3,4,5,6,7]:[1,2,3,4,5,6,7];const chosen=artifact==='random'?pool[Math.floor(random()*pool.length)]:Number(artifact);if(![1,2,3,4,5,6,7].includes(chosen))throw Error('사용할 유물을 확인해줘.');s.artifacts=addCup?[...new Set([1,chosen])]:[chosen];}
+ s.starter=s.active=o.starter===undefined?Math.floor(random()*count):Number(o.starter);if(!Number.isInteger(s.active)||s.active<0||s.active>=count)throw Error('선 플레이어를 확인해줘.');
+ log(s,`${count}인 · ${s.side==='normal'?'기본':'고급'} 배 · 선원 ${count===2?30:count===3?40:50}장. ${current(s).name}부터 시작.`);beginTurn(s);return s;
+}
+function score(s,p,n){p.vp+=n;if(p.vp>=40&&!s.finalRound){s.finalRound=true;log(s,`${p.name} 40점 도달! 현재 라운드의 마지막 플레이어까지 진행해.`)}}
+function gain(s,p,r){const actual={};for(const[k,n]of Object.entries(r)){if(!n)continue;if(k==='draw'){for(let i=0;i<n;i++)s.queue.push({kind:'drawCrew',player:p.id});actual.draw=n;}else if(k==='vp'){score(s,p,n);actual.vp=n;}else if(k==='rep'){const a=p.rep;p.rep=Math.min(14,p.rep+n);actual.rep=p.rep-a;}else if(k==='bracelet'||k==='recruit'){const a=p[k];p[k]=Math.min(3,p[k]+n);actual[k]=p[k]-a;}}return actual}
+function beginTurn(s){const p=current(s),n=income(p.rep);s.turnIncome=n;s.actionDone=false;s.traded=false;s.pendingColor=null;s.phase='action';s.rowBaseline=completedRows(p);s.notice=null;s.freeDraft=false;s.bonus=null;s.artifactChoice=null;score(s,p,n);log(s,`${s.round}라운드 · ${p.name} 차례. 명성 ${p.rep}칸 → 승점 +${n}.`);return n}
+function canAction(s,kind){return !s.ended&&((s.phase==='action'&&!s.actionDone)||(s.phase==='bonus'&&s.bonus?.action===kind))}
+function assertAction(s,kind){if(s.ended)throw Error('끝난 게임이야.');if(s.phase==='bonus'&&s.bonus?.action!==kind)throw Error(`이번 유물의 추가 행동은 ${s.bonus.action==='recruit'?'모집':'탐험'}이야. 사용하거나 건너뛰어줘.`);if(!canAction(s,kind))throw Error(s.actionDone?'이번 주요 행동은 끝났어. 교역하거나 차례를 마쳐줘.':'진행 중인 카드 선택·보충을 먼저 마쳐줘.');}
+function completedRows(p){return Math.min(...COLORS.map((_,i)=>p.crew.filter(c=>c.color===i).length))}
+function hasArtifact(s,id){return (s.artifacts||[]).includes(id)}
+function announce(s,id,reason){const a=D.artifacts.find(a=>a.id===id);s.notice={id:++s.noticeSeq,artifact:id,name:a.name,reason};s.artifactUses[id]=(s.artifactUses[id]||0)+1;log(s,`${current(s).name} · ${a.name} 발동: ${reason}`)}
+function checkRows(s){const p=current(s),rows=completedRows(p);if(rows<=s.rowBaseline)return[];
+ if(hasArtifact(s,6)){s.rowBaseline=rows;const r=gain(s,p,{bracelet:1,recruit:1,rep:1});announce(s,6,`다섯 색 가로줄 ${rows}줄 완성 → ${label(r)}. 토큰 한도는 3개야.`);}
+ if(hasArtifact(s,7)){s.rowBaseline=rows;if(s.bonus?.action==='explore'||s.queue.some(e=>e.kind==='resumeBonus'&&e.bonus.action==='explore'))return[];return[{kind:'bonus',action:'explore',artifact:7,reason:`다섯 색 가로줄 ${rows}줄을 완성했어. 비용을 내고 추가 탐험을 할 수 있어.`}];}return[];
+}
+function afterAction(s,e){const p=current(s),fx=[],bonuses=[];
+ if(e.action==='recruit'){const n=p.crew.filter(c=>c.color===e.color).length;
+  if(hasArtifact(s,2)&&n>3){gain(s,p,{vp:1});announce(s,2,`${COLORS[e.color].name} ${n}번째 선원을 모집해서 추가 승점 1점.`);}
+  if(hasArtifact(s,4)&&n===3){if(p.reserved.length<2&&s.destinations.some(Boolean))fx.push({kind:'reserve',artifact:4,reason:`${COLORS[e.color].name} 선원이 정확히 3명이라 목적지 1장을 예약할 수 있어.`});else log(s,'황금 팔찌 조건 달성. 예약 2장 한도 또는 공개 목적지 소진으로 새 예약은 없어.');}
+ }
+ if(e.action==='explore'){
+  if(hasArtifact(s,1))fx.push({kind:'refresh',artifact:1,reason:'탐험을 마쳐서 항구 카드 1장을 새 카드로 바꿀 수 있어. 원하지 않으면 건너뛰어도 돼.'});
+  if(hasArtifact(s,5)&&e.previous==='A'&&e.type==='B')bonuses.push({kind:'bonus',action:'recruit',artifact:5,reason:'교역의 땅 A 바로 위에 영향력의 땅 B를 탐험해 놓았어. 손에서 선원 1장을 추가 모집할 수 있어.'});
+ }
+ return [...fx,...bonuses,...checkRows(s)];
+}
+function availableDraw(s){if(s.deck.length)return true;if(s.discard.length){s.deck=shuffle(s.discard.splice(0));log(s,'선원 덱이 비어 버림패를 섞었어.');return true;}
+ const max=Math.max(...s.players.map(p=>p.crew.length));if(!max)throw Error('카드 상태가 잘못됐어. 새 게임을 시작해줘.');s.recycle={players:s.players.filter(p=>p.crew.length===max).map(p=>p.id),choices:{},size:max};s.phase='recycle';log(s,`덱·버림패가 비었어. 선원 ${max}명으로 가장 많은 플레이어는 각자 선원 1명을 골라 보내줘.`);return false;}
+function process(s){while(s.queue.length){const e=s.queue[0];
+ if(e.kind==='drawCrew'||e.kind==='refill'){if(!availableDraw(s))return;s.queue.shift();const c=s.deck.pop();if(e.kind==='drawCrew'){s.players[e.player].crew.push(c);log(s,`${s.players[e.player].name}: ${COLORS[c.color].name} 선원을 선단에 추가. 모집 보상은 없어.`);}else s.market[e.slot]=c;continue;}
+ s.queue.shift();
+ if(e.kind==='draft'){s.phase='draft';s.pendingColor=e.color;s.freeDraft=!!e.free;return;}
+ if(e.kind==='afterAction'){s.queue.unshift(...afterAction(s,e));continue;}
+ if(e.kind==='rowCheck'){s.queue.unshift(...checkRows(s));continue;}
+ if(e.kind==='reserve'){if(current(s).reserved.length>=2||!s.destinations.some(Boolean))continue;s.artifactChoice=e;s.phase='reserve';announce(s,e.artifact,e.reason);return;}
+ if(e.kind==='refresh'){s.artifactChoice=e;s.phase='refresh';announce(s,e.artifact,e.reason);return;}
+ if(e.kind==='resumeBonus'){s.bonus=e.bonus;s.phase='bonus';return;}
+ if(e.kind==='bonus'){s.bonus=e;s.phase='bonus';announce(s,e.artifact,e.reason);return;}
+ }s.phase='action';}
+function reserve(s,index=null){if(s.phase!=='reserve')throw Error('지금은 목적지를 예약하는 단계가 아니야.');const p=current(s);if(index!==null){if(!Number.isInteger(index)||index<0||index>=6||!s.destinations[index]||p.reserved.length>=2)throw Error('예약할 수 있는 공개 목적지를 골라줘.');const d=s.destinations[index];p.reserved.push(d);s.destinations[index]=s.landDecks[d.type].pop()||null;log(s,`${p.name}: ${d.name} 예약. 비용·보상은 나중에 실제 탐험할 때 처리해.`);}else log(s,`${p.name}: 이번 목적지 예약은 건너뛰었어.`);s.artifactChoice=null;s.phase='resolve';process(s);}
+function refresh(s,slot=null){if(s.phase!=='refresh')throw Error('지금은 벌꿀술 잔의 항구 교체 단계가 아니야.');if(slot!==null){if(!Number.isInteger(slot)||slot<0||slot>4||!s.market[slot])throw Error('교체할 항구 카드를 골라줘.');s.discard.push(s.market[slot]);s.market[slot]=null;s.queue.unshift({kind:'refill',slot});log(s,`${current(s).name}: 벌꿀술 잔으로 ${COLORS[slot].name} 칸의 카드를 버리고 보충해.`);}else log(s,`${current(s).name}: 이번 항구 교체는 건너뛰었어.`);s.artifactChoice=null;s.phase='resolve';process(s);}
+function skipBonus(s){if(s.phase!=='bonus'||!s.bonus)throw Error('건너뛸 추가 행동이 없어.');log(s,`${current(s).name}: ${D.artifacts.find(a=>a.id===s.bonus.artifact).name}의 추가 행동을 건너뛰었어.`);s.bonus=null;s.phase='resolve';process(s);}
+function chooseRecycle(s,pid,cid){if(s.phase!=='recycle'||!s.recycle.players.includes(pid))throw Error('선원을 보내야 하는 플레이어를 확인해줘.');const p=s.players[pid];if(!p.crew.some(c=>c.id===cid))throw Error('자신의 선단에서 선원을 골라줘.');s.recycle.choices[pid]=cid;
+ if(s.recycle.players.every(id=>s.recycle.choices[id]!==undefined)){for(const id of s.recycle.players){const p=s.players[id],i=p.crew.findIndex(c=>c.id===s.recycle.choices[id]);s.discard.push(p.crew.splice(i,1)[0]);log(s,`${p.name}가 선원 1명을 버림패로 보냈어.`);}s.recycle=null;s.deck=shuffle(s.discard.splice(0));s.phase='resolve';process(s);}}
+function recruit(s,id){assertAction(s,'recruit');const p=current(s),i=p.hand.findIndex(c=>c.id===id);if(i<0)throw Error('손에 있는 선원을 골라줘.');const extra=!!s.bonus;s.bonus=null;const tail=s.queue.splice(0),c=p.hand.splice(i,1)[0];p.crew.push(c);const group=p.crew.filter(x=>x.color===c.color),r={};for(const x of group)r[x.asset]=(r[x.asset]||0)+1;s.actionDone=true;s.phase='resolve';s.events.recruit++;const actual=gain(s,p,r),free=hasArtifact(s,3)&&group.length===2;if(free)announce(s,3,`${COLORS[c.color].name} 선원이 정확히 2명이라 이번에는 항구의 모든 칸이 무료야.`);s.queue.push({kind:'draft',color:c.color,free},{kind:'afterAction',action:'recruit',color:c.color},...tail);log(s,`${p.name}: ${extra?'유물 추가 모집 · ':''}${COLORS[c.color].name} ${group.length}명 보상 → ${label(actual)}. 항구에서 손패 1장 획득.`);process(s);return{count:group.length,reward:actual};}
+function draft(s,slot){if(s.ended||s.phase!=='draft')throw Error('먼저 선원을 모집해줘.');if(!Number.isInteger(slot)||slot<0||slot>4||!s.market[slot])throw Error('카드가 있는 항구 칸을 골라줘.');const p=current(s),cost=s.freeDraft||slot===s.pendingColor?0:1;if(p.recruit<cost)throw Error('다른 칸은 모집 토큰 1개가 필요해.');p.recruit-=cost;const c=s.market[slot];p.hand.push(c);s.market[slot]=null;s.pendingColor=null;s.freeDraft=false;s.phase='resolve';s.queue.unshift({kind:'refill',slot});log(s,`${p.name}: ${COLORS[slot].name} 칸의 ${COLORS[c.color].name} 선원 획득.${cost?' 모집 1개 사용.':''}`);process(s);}
+function payment(p,d,ids,tokens){if(!d)throw Error('비어 있는 목적지야.');if(!Array.isArray(ids)||!Number.isInteger(tokens)||tokens<0||tokens>p.recruit)throw Error('선원·모집 토큰 수를 확인해줘.');if(new Set(ids).size!==ids.length)throw Error('같은 선원을 두 번 쓸 수 없어.');const cards=ids.map(id=>p.crew.find(c=>c.id===id));if(cards.some(c=>!c))throw Error('손패가 아니라 선단에서 골라줘.');const n=d.same||d.different||d.cost.length;if(cards.length+tokens!==n)throw Error(`선원과 토큰을 합쳐 정확히 ${n}개가 필요해.`);
+ if(d.same){if(new Set(cards.map(c=>c.color)).size>1)throw Error('같은 색의 선원이 필요해.');}else if(d.different){if(new Set(cards.map(c=>c.color)).size!==cards.length)throw Error('서로 다른 색의 선원이 필요해.');}else{const rest=[...d.cost];for(const c of cards){const j=rest.indexOf(c.color);if(j<0)throw Error('목적지에 표시된 색을 맞춰줘.');rest.splice(j,1);}if(rest.length!==tokens)throw Error('모집 토큰으로 부족한 색을 대신해줘.');}return true;}
+function autoPay(p,d){if(!d)return null;let ids=[],tokens=0;const a=[...p.crew];if(d.same){let g=[];for(let c=0;c<5;c++){const v=a.filter(x=>x.color===c);if(v.length>g.length)g=v;}ids=g.slice(0,d.same).map(c=>c.id);tokens=d.same-ids.length;}else if(d.different){for(let c=0;c<5&&ids.length<d.different;c++){const v=a.find(x=>x.color===c);if(v)ids.push(v.id);}tokens=d.different-ids.length;}else for(const c of d.cost){const j=a.findIndex(x=>x.color===c);if(j<0)tokens++;else ids.push(a.splice(j,1)[0].id);}return tokens<=p.recruit?{ids,tokens}:null;}
+function explore(s,index,ids,tokens,source='market'){assertAction(s,'explore');const p=current(s),fromReserve=source==='reserved';if(!['market','reserved'].includes(source)||!Number.isInteger(index)||index<0||index>=(fromReserve?p.reserved.length:6))throw Error('목적지 칸을 확인해줘.');const d=fromReserve?p.reserved[index]:s.destinations[index];payment(p,d,ids,tokens);const extra=!!s.bonus;s.bonus=null;const tail=s.queue.splice(0),previous=p.lands.at(-1)?.type;const used=new Set(ids);s.discard.push(...p.crew.filter(c=>used.has(c.id)));p.crew=p.crew.filter(c=>!used.has(c.id));p.recruit-=tokens;p.lands.push(d);if(fromReserve)p.reserved.splice(index,1);else s.destinations[index]=s.landDecks[d.type].pop()||null;s.actionDone=true;s.phase='resolve';s.events.explore++;const actual=gain(s,p,d.reward);s.queue.push({kind:'afterAction',action:'explore',previous,type:d.type},...tail);log(s,`${p.name}: ${extra?'유물 추가 탐험 · ':''}${d.name}${fromReserve?' (예약지)':''} 탐험. 선원 ${ids.length}명·모집 ${tokens}개 → ${label(actual)}.`);process(s);return actual;}
+function shipReward(side){return side==='advanced'?[{vp:1},{},{bracelet:1}]:[{},{recruit:1},{}]}
+function tradeReward(s,n,p=current(s)){const r={};for(const row of[shipReward(s.side),...p.lands.map(d=>d.trade)])for(let i=0;i<n;i++)for(const[k,v]of Object.entries(row[i]))r[k]=(r[k]||0)+v;return r;}
+function trade(s,n){if(s.ended||!['action','bonus'].includes(s.phase))throw Error('카드 선택과 보충을 먼저 마쳐줘.');if(s.traded)throw Error('교역은 차례당 한 번이야.');const p=current(s);if(!Number.isInteger(n)||n<1||n>3||p.bracelet<n)throw Error('사용할 은팔찌를 확인해줘.');const held=s.bonus;s.bonus=null;p.bracelet-=n;s.traded=true;s.events.trade++;s.phase='resolve';const r=gain(s,p,tradeReward(s,n));if(s.actionDone)s.queue.push({kind:'rowCheck'});if(held)s.queue.push({kind:'resumeBonus',bonus:held});log(s,`${p.name}: 은팔찌 ${n}개로 앞 ${n}열 교역 → ${label(r)}.`);process(s);return r;}
+function finish(s){s.ended=true;s.phase='ended';const score=Math.max(...s.players.map(p=>p.vp)),tied=s.players.filter(p=>p.vp===score),tokens=Math.max(...tied.map(p=>p.recruit+p.bracelet));s.winners=tied.filter(p=>p.recruit+p.bracelet===tokens).map(p=>p.id);log(s,`${s.winners.map(id=>s.players[id].name).join(' · ')} ${s.winners.length>1?'공동 승리':'승리'}! 모두 같은 횟수의 차례를 마쳤어.`);}
+function endTurn(s){if(s.ended)throw Error('이미 끝난 게임이야.');if(s.phase!=='action'||!s.actionDone)throw Error('주요 행동과 필요한 카드 보충을 먼저 마쳐줘.');const fx=checkRows(s);if(fx.length){s.queue.push(...fx);s.phase='resolve';process(s);return 0;}const next=(s.active+1)%s.count;if(s.finalRound&&next===s.starter){finish(s);return 0;}s.active=next;s.turn++;if(next===s.starter)s.round++;return beginTurn(s);}
+function rewardValue(p,r){return(r.vp||0)+(r.rep||0)*(p.rep<14?1.5:0)+(r.recruit||0)*(p.recruit<3?1.1:0)+(r.bracelet||0)*(p.bracelet<3?.95:0)+(r.draw||0)*1.2}
+function cardValue(p,c){return rewardValue(p,{[c.asset]:1})+p.crew.filter(x=>x.color===c.color).length*.6}
+function bestRecruit(p){return p.hand.map(c=>{const r={};for(const x of[...p.crew.filter(x=>x.color===c.color),c])r[x.asset]=(r[x.asset]||0)+1;return{c,value:rewardValue(p,r)+.8}}).sort((a,b)=>b.value-a.value)[0]}
+function bestExplore(s,p){return [...s.destinations.map((d,i)=>({d,i,source:'market'})),...p.reserved.map((d,i)=>({d,i,source:'reserved'}))].map(({d,i,source})=>{const plan=autoPay(p,d);if(!plan)return null;const loss=plan.ids.reduce((n,id)=>{const c=p.crew.find(x=>x.id===id);return n+.35+.2*p.crew.filter(x=>x.color===c.color).length},0);return{i,source,land:d,plan,value:rewardValue(p,d.reward)+d.trade.reduce((n,r)=>n+rewardValue(p,r),0)*.65-loss}}).filter(Boolean).sort((a,b)=>b.value-a.value)[0]}
+function botStep(s){if(s.ended)return false;if(s.phase==='recycle'){const id=s.recycle.players.find(id=>s.players[id].bot&&s.recycle.choices[id]===undefined);if(id===undefined)return false;const p=s.players[id],a=[...p.crew].sort((a,b)=>cardValue(p,a)-cardValue(p,b));chooseRecycle(s,id,a[0].id);return true;}const p=current(s);if(!p.bot)return false;
+ if(s.phase==='reserve'){const choices=s.destinations.map((d,i)=>d?{i,v:(d.reward.vp||0)+d.trade.reduce((n,r)=>n+rewardValue(p,r),0)}:null).filter(Boolean).sort((a,b)=>b.v-a.v);reserve(s,choices[0]?.i??null);return true;}
+ if(s.phase==='refresh'){const choices=s.market.map((c,i)=>c?{i,v:cardValue(p,c)}:null).filter(Boolean).sort((a,b)=>a.v-b.v);refresh(s,choices[0]?.i??null);return true;}
+ if(s.phase==='bonus'){if(!s.traded&&p.bracelet&&rewardValue(p,tradeReward(s,p.bracelet))>1.5){trade(s,p.bracelet);return true;}if(s.bonus.action==='recruit'){const r=bestRecruit(p);if(r)recruit(s,r.c.id);else skipBonus(s);}else{const e=bestExplore(s,p);if(e)explore(s,e.i,e.plan.ids,e.plan.tokens,e.source||'market');else skipBonus(s);}return true;}
+ if(s.phase==='draft'){const a=s.market.map((c,i)=>c&&(s.freeDraft||i===s.pendingColor||p.recruit>0)?{i,v:cardValue(p,c)-(s.freeDraft||i===s.pendingColor?0:.9)}:null).filter(Boolean).sort((a,b)=>b.v-a.v);draft(s,a[0].i);return true;}if(s.phase!=='action')return false;
+ if(!s.traded&&p.bracelet){const n=p.bracelet,r=tradeReward(s,n);if(rewardValue(p,r)>1.5&&(s.actionDone||p.recruit===0||p.bracelet===3||s.finalRound)){trade(s,n);return true;}}
+ if(s.actionDone){endTurn(s);return true;}const r=bestRecruit(p),e=bestExplore(s,p);if(e&&(!r||e.value>r.value||p.vp+(e.land.reward.vp||0)>=40))explore(s,e.i,e.plan.ids,e.plan.tokens,e.source||'market');else if(r)recruit(s,r.c.id);else throw Error('선택할 행동이 없어. 저장 상태를 확인해줘.');return true;
+}
+function validate(s){if(s.version!==4||!Array.isArray(s.players)||s.players.length!==s.count||![2,3,4].includes(s.count))return false;const c=[...s.deck,...s.discard,...s.market.filter(Boolean),...s.players.flatMap(p=>[...p.crew,...p.hand])],d=[...s.destinations.filter(Boolean),...s.landDecks.A,...s.landDecks.B,...s.players.flatMap(p=>[...p.lands,...p.reserved])];return c.length===({2:30,3:40,4:50})[s.count]&&new Set(c.map(x=>x.id)).size===c.length&&d.length===35&&new Set(d.map(x=>x.id)).size===35&&s.players.every(p=>p.recruit>=0&&p.recruit<=3&&p.bracelet>=0&&p.bracelet<=3&&p.rep>=0&&p.rep<=14&&p.reserved.length<=2)}
+function upgrade(s){if(s.version===3){s.version=4;s.artifacts=[];s.players.forEach(p=>p.reserved=[]);s.artifactUses={};s.noticeSeq=0;s.notice=null;s.bonus=null;s.artifactChoice=null;s.freeDraft=false;s.rowBaseline=completedRows(current(s));s.turnIncome=Number((s.log.find(x=>/차례. 명성/.test(x))||'').match(/승점 \+(\d+)/)?.[1]||0);}return s;}
+root.Knarr={canAction,hasArtifact,completedRows,reserve,refresh,skipBonus,upgrade,DATA:D,COLORS,ASSETS,create,current,income,gain,label,recruit,draft,payment,autoPay,explore,shipReward,tradeReward,trade,endTurn,chooseRecycle,botStep,validate,bestRecruit,bestExplore,process};
+})(typeof module!=='undefined'?module.exports:window);
