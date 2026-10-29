@@ -7,13 +7,13 @@ function createApp(){
  function prune(){for(const [code,r]of rooms)if(Date.now()-r.created>ttl){rooms.delete(code);for(const p of r.players)sessions.delete(p.token);}}
  function json(res,status,value){res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});res.end(JSON.stringify(value));}
  function player(name){return {id:crypto.randomUUID(),token:crypto.randomBytes(32).toString('hex'),name,hand:[]};}
- function project(r,p){return r.game?{code:r.code,host:r.host,...game.view(r.game,p.id)}:{code:r.code,phase:r.phase,host:r.host,me:p.id,players:r.players.map(x=>({id:x.id,name:x.name,cards:0})),hand:[]};}
+ function project(r,p){if(r.game)game.tick(r.game);return r.game?{code:r.code,host:r.host,...game.view(r.game,p.id)}:{code:r.code,phase:r.phase,host:r.host,me:p.id,players:r.players.map(x=>({id:x.id,name:x.name,cards:0})),hand:[]};}
  const server=http.createServer(async(req,res)=>{
   try{
    if(req.url==='/healthz'&&req.method==='GET')return json(res,200,{ok:true});
    if(req.url==='/'&&req.method==='GET'){res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'"});return res.end(fs.readFileSync(path.join(__dirname,'index.html')));}
-   const staticFiles={'/app.js':['app.js','text/javascript; charset=utf-8'],'/app.css':['app.css','text/css; charset=utf-8'],'/cards.json':['../../play/girl/cards.json','application/json; charset=utf-8'],'/assets/ordinary.png':['../../play/girl/assets/ordinary.png','image/png'],'/assets/criminals.png':['../../play/girl/assets/criminals.png','image/png'],'/assets/official-roles.jpg':['../../play/girl/assets/official-roles.jpg','image/jpeg']};
-   if(req.method==='GET'&&staticFiles[req.url]){const [file,mime]=staticFiles[req.url];res.writeHead(200,{'Content-Type':mime,'X-Content-Type-Options':'nosniff','Cache-Control':'no-store'});return res.end(fs.readFileSync(path.join(__dirname,file)));}
+   const staticFiles={'/table.js':['table.js','text/javascript; charset=utf-8'],'/table.css':['table.css','text/css; charset=utf-8'],'/app.js':['app.js','text/javascript; charset=utf-8'],'/app.css':['app.css','text/css; charset=utf-8'],'/cards.json':['../../play/girl/cards.json','application/json; charset=utf-8'],'/assets/ordinary.png':['../../play/girl/assets/ordinary.png','image/png'],'/assets/criminals.png':['../../play/girl/assets/criminals.png','image/png'],'/assets/official-roles.jpg':['../../play/girl/assets/official-roles.jpg','image/jpeg']};
+   if(req.method==='GET'&&staticFiles[req.url]){const [file,mime]=staticFiles[req.url];res.writeHead(200,{'Content-Type':mime,'X-Content-Type-Options':'nosniff','Cache-Control':mime.startsWith('image/')?'public, max-age=86400':'no-store'});return res.end(fs.readFileSync(path.join(__dirname,file)));}
    if(!req.url.startsWith('/api/'))return json(res,404,{error:'페이지를 찾지 못했어요.'});prune();
    let body={};if(req.method==='POST'){let raw='';for await(const part of req){raw+=part;if(Buffer.byteLength(raw)>2048)return json(res,413,{error:'요청이 너무 커요.'});}try{body=JSON.parse(raw||'{}');}catch{return json(res,400,{error:'요청 형식이 올바르지 않아요.'});}}
    if(['/api/rooms','/api/solo'].includes(req.url)&&req.method==='POST'){
@@ -34,9 +34,9 @@ function createApp(){
     if(p.id!==r.host)return json(res,403,{error:'방장만 카드를 나눠줄 수 있어요.'});if(r.phase!=='lobby')return json(res,409,{error:'이미 나눠줬어요.'});if(r.players.length<3)return json(res,409,{error:'3명 이상 입장하면 시작할 수 있어요.'});
     r.game=game.newGame(r.players);r.phase='playing';return json(res,200,project(r,p));
    }
-   if(['/api/action','/api/answer','/api/bot-step'].includes(req.url)&&req.method==='POST'){
-    if(!r.game)return json(res,409,{error:'아직 게임을 시작하지 않았어요.'});if(body.version!==r.game.version)return json(res,409,{error:'상태가 바뀌었어요. 최신 화면에서 다시 골라 주세요.'});
-    try{if(req.url==='/api/action')game.play(r.game,p.id,body);if(req.url==='/api/answer')game.answer(r.game,p.id,body);if(req.url==='/api/bot-step')game.botStep(r.game);game.assertInvariant(r.game);}catch(e){return json(res,400,{error:e.message});}
+   if(['/api/action','/api/answer','/api/bot-step','/api/shuffle'].includes(req.url)&&req.method==='POST'){
+    if(!r.game)return json(res,409,{error:'아직 게임을 시작하지 않았어요.'});game.tick(r.game);if(body.version!==r.game.version)return json(res,409,{error:'상태가 바뀌었어요. 최신 화면에서 다시 골라 주세요.'});
+    try{if(req.url==='/api/action')game.play(r.game,p.id,body);if(req.url==='/api/answer')game.answer(r.game,p.id,body);if(req.url==='/api/bot-step')game.botStep(r.game);if(req.url==='/api/shuffle')game.shuffleHand(r.game,p.id);game.assertInvariant(r.game);}catch(e){return json(res,400,{error:e.message});}
     return json(res,200,project(r,p));
    }
    return json(res,404,{error:'지원하지 않는 요청이에요.'});
