@@ -1,0 +1,129 @@
+{
+  "edition": "렉시오 오리지널 기본 규칙 · 3–5인",
+  "rulebook": "https://lexio.co.kr/bbs/board.php?bo_table=0301&wr_id=19",
+  "officialGuide": "https://www.didanonia.com/lexio",
+  "officialScoring": "https://lexio.co.kr/bbs/board.php?bo_table=0107",
+  "assets": [
+    {
+      "file": "tiles.webp",
+      "source": "https://static.wixstatic.com/media/673204_57dea0f924294b21b44c08dddbe96116~mv2.jpg",
+      "description": "타일1.jpg",
+      "width": 258,
+      "height": 225,
+      "bytes": 20198
+    },
+    {
+      "file": "suits.webp",
+      "source": "https://static.wixstatic.com/media/673204_3dafca363d7243358d505bf838c7638c~mv2.png",
+      "description": "0101_3.png",
+      "width": 1000,
+      "height": 309,
+      "bytes": 42784
+    },
+    {
+      "file": "setup.webp",
+      "source": "https://static.wixstatic.com/media/673204_ea82b94a177c4bbd9f4bdbb400e45385~mv2.png",
+      "description": "0101_5.png",
+      "width": 1000,
+      "height": 476,
+      "bytes": 44028
+    },
+    {
+      "file": "number-rank.webp",
+      "source": "https://static.wixstatic.com/media/673204_8fb86c02eb414210b98fe4c196421949~mv2.png",
+      "description": "0102_15.png",
+      "width": 1000,
+      "height": 240,
+      "bytes": 9960
+    },
+    {
+      "file": "suit-rank.webp",
+      "source": "https://static.wixstatic.com/media/673204_ebf67928e4aa4e12a649c9df8b7eff8f~mv2.png",
+      "description": "0102_16.png",
+      "width": 1000,
+      "height": 240,
+      "bytes": 24308
+    },
+    {
+      "file": "single.webp",
+      "source": "https://static.wixstatic.com/media/673204_84a49258501f443a9717de888a5beba7~mv2.png",
+      "description": "0102_17.png",
+      "width": 1000,
+      "height": 127,
+      "bytes": 9518
+    },
+    {
+      "file": "pair.webp",
+      "source": "https://static.wixstatic.com/media/673204_1e27df7267314ea98fa93f9c258b2af9~mv2.png",
+      "description": "0102_18.png",
+      "width": 1000,
+      "height": 127,
+      "bytes": 13840
+    },
+    {
+      "file": "triple.webp",
+      "source": "https://static.wixstatic.com/media/673204_a0ffd01373ae4aa39b43ea15fc912628~mv2.png",
+      "description": "0102_19.png",
+      "width": 1000,
+      "height": 127,
+      "bytes": 13550
+    },
+    {
+      "file": "straight.webp",
+      "source": "https://static.wixstatic.com/media/673204_b0c9525151724bb5b6a79a36154e546b~mv2.png",
+      "description": "0102_20.png",
+      "width": 1000,
+      "height": 336,
+      "bytes": 50354
+    },
+    {
+      "file": "straight-rank.webp",
+      "source": "https://static.wixstatic.com/media/673204_871f82d32b8b424a894140dd7a9f1cdb~mv2.jpg",
+      "description": "스트레이트 순서.jpg",
+      "width": 867,
+      "height": 539,
+      "bytes": 33732
+    },
+    {
+      "file": "flush.webp",
+      "source": "https://static.wixstatic.com/media/673204_36cf3bdea4474153a3e88007de1bfb57~mv2.png",
+      "description": "0102_21.png",
+      "width": 1000,
+      "height": 336,
+      "bytes": 40318
+    },
+    {
+      "file": "full-house.webp",
+      "source": "https://static.wixstatic.com/media/673204_45af21e65331427c89a7debefda83f2e~mv2.png",
+      "description": "0102_22.png",
+      "width": 1000,
+      "height": 127,
+      "bytes": 21612
+    },
+    {
+      "file": "four-kind.webp",
+      "source": "https://static.wixstatic.com/media/673204_135c9e50a4fe47f8a236e4562896075a~mv2.png",
+      "description": "0102_23.png",
+      "width": 1000,
+      "height": 127,
+      "bytes": 22288
+    },
+    {
+      "file": "straight-flush.webp",
+      "source": "https://static.wixstatic.com/media/673204_2dc95a26b5f1412f86fa3c7f5b2547a1~mv2.png",
+      "description": "0102_24.png",
+      "width": 1000,
+      "height": 240,
+      "bytes": 44590
+    },
+    {
+      "file": "twos-scoring.webp",
+      "source": "https://static.wixstatic.com/media/673204_7806def4fd824556aa904b7a5138b6de~mv2.png",
+      "description": "0103_1.png",
+      "width": 1000,
+      "height": 938,
+      "bytes": 71940
+    }
+  ],
+  "method": "Official publisher illustrations converted and reduced to WebP for explanatory use; images show actual Lexio tiles."
+}
