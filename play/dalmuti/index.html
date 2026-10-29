@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>달무티 · 처음 배우는 규칙</title>
+  <meta name="description" content="달무티 4~8인 기본 규칙. 카드 숫자와 장수, 내 차례, 패스, 계급, 세금과 혁명을 예시로 배워요.">
+  <link rel="stylesheet" href="guide.css">
+</head>
+<body>
+<main>
+  <a class="back" href="../../index.htm">← 보드게임 목록</a>
+  <header>
+    <p class="eyebrow">THE GREAT DALMUTI · 4–8인</p>
+    <h1>달무티</h1>
+    <p class="intro">손의 카드를 먼저 다 내면 다음 판의 왕이 돼요.<br>낮은 숫자가 강하고, 높은 지위일수록 유리하게 시작하는 카드 게임이에요.</p>
+    <p class="meta">파티 · 손패 털기 · 카드 / 소유: 블랑</p>
+    <p class="takeaway"><strong>같은 장수 + 더 낮은 숫자.</strong> 이것만 먼저 기억해요.</p>
+  </header>
+
+  <nav class="contents" aria-label="달무티 설명 목차">
+    <a href="#cards">카드</a><a href="#setup">준비</a><a href="#turn">내 차례</a><a href="#rank">계급·세금</a><a href="#revolution">혁명</a><a href="#variants">선택 규칙</a><a href="#questions">헷갈리는 규칙</a>
+  </nav>
+
+  <section aria-labelledby="cards">
+    <h2 id="cards">01. 숫자가 작을수록 강해요.</h2>
+    <p>카드는 총 <strong>80장</strong>이에요. 숫자 카드는 1부터 12까지 있고, 각 숫자만큼 들어 있어요. <strong>1은 1장, 2는 2장, …, 12는 12장</strong>이에요. 여기에 광대 2장이 더해져요.</p>
+    <div class="strength" aria-label="숫자 1이 가장 강하고 12가 가장 약해요.">
+      <span class="mini-card strong-card">1<small>1장</small></span>
+      <span class="direction">강함 ← → 약함</span>
+      <span class="mini-card weak-card">12<small>12장</small></span>
+    </div>
+    <h3>광대는 다른 카드의 수를 채워 줘요.</h3>
+    <p>광대를 숫자 카드와 함께 내면 그 숫자로 취급해요. 예를 들어 <strong>7 + 7 + 광대</strong>는 7 세 장이에요. 숫자 카드 없이 광대만 내면 <strong>13</strong>이라서 12보다도 약해요.</p>
+    <p class="example">1과 광대를 함께 내면 1 두 장이 돼요. 원래 1 카드는 한 장뿐이어도 광대로 묶음을 만들 수 있어요.</p>
+  </section>
+
+  <section aria-labelledby="setup">
+    <h2 id="setup">02. 자리를 정하고 전부 나눠요.</h2>
+    <ol>
+      <li>카드를 섞고 각자 한 장씩 뽑아 공개해요. <strong>숫자가 낮은 순서</strong>로 첫 계급을 정해요. 광대는 가장 약하고, 동점이면 다시 뽑아 비교해요.</li>
+      <li>가장 강한 카드를 뽑은 사람이 <strong>대달무티</strong>예요. 그 왼쪽부터 계급 순으로 앉아 시계 방향으로 진행해요.</li>
+      <li>최하위인 <strong>대노예</strong>가 카드를 전부 모아 섞고, 대달무티부터 시계 방향으로 한 장씩 나눠요. 인원수에 따라 손패 수가 달라도 괜찮아요.</li>
+      <li>아래의 <a href="#rank">세금 교환</a>을 마치면 대달무티가 먼저 내요. 혁명은 세금 교환 전에 선언해요.</li>
+    </ol>
+    <p class="note"><strong>첫 판 선택 규칙:</strong> 처음에는 세금 없이 시작하기로 정할 수 있어요. 공식 룰북의 선택 규칙이며, 기본 규칙에서는 첫 판에도 세금을 교환해요.</p>
+  </section>
+
+  <section aria-labelledby="turn">
+    <h2 id="turn">03. 같은 장수로, 더 낮게 내요.</h2>
+    <p>먼저 내는 사람은 같은 숫자의 카드를 원하는 장수만큼 내요. 한 장도 괜찮아요. 다음 사람은 <strong>방금 나온 묶음과 장수가 같고, 숫자는 더 낮은 묶음</strong>을 내거나 패스해요.</p>
+    <div class="play-example" aria-label="8 세 장 위에는 6 세 장을 낼 수 있어요. 5 두 장은 장수가 달라 낼 수 없어요.">
+      <div class="play-row">
+        <span class="row-label">앞사람</span>
+        <div class="card-set"><span class="mini-card">8</span><span class="mini-card">8</span><span class="mini-card">8</span></div>
+        <span class="verdict">8 세 장</span>
+      </div>
+      <div class="play-row valid">
+        <span class="row-label">내가 내기</span>
+        <div class="card-set"><span class="mini-card">6</span><span class="mini-card">6</span><span class="mini-card">6</span></div>
+        <span class="verdict">가능 · 더 낮은 숫자</span>
+      </div>
+      <div class="play-row invalid">
+        <span class="row-label">이건 안 돼요</span>
+        <div class="card-set"><span class="mini-card">5</span><span class="mini-card">5</span></div>
+        <span class="verdict">불가 · 장수가 달라요</span>
+      </div>
+    </div>
+    <h3>낼 수 있어도 패스할 수 있어요.</h3>
+    <p>좋은 카드를 아껴 두고 싶다면 패스해도 돼요. <strong>한 번 패스했어도 다시 내 차례가 오면 낼 수 있어요.</strong> 같은 숫자 묶음은 이길 수 없어요. 8 세 장 위에 또 8 세 장을 낼 수는 없어요.</p>
+    <h3>모두 패스하면 새로 시작해요.</h3>
+    <p>마지막에 카드를 낸 사람 외에, 카드가 남은 모두가 연속으로 패스하면 바닥의 카드를 치워요. <strong>마지막에 낸 사람이 새 묶음을 먼저 내요.</strong> 이때는 숫자와 장수를 새로 정할 수 있어요.</p>
+    <p class="example">세 장 싸움에서 이겼다면, 다음에는 12 네 장을 먼저 낼 수도 있어요. 약한 카드를 한꺼번에 털 기회예요.</p>
+    <p>손패를 다 낸 사람은 즉시 순위가 정해져 빠져요. 나머지는 계속해요. 마지막에 낸 사람이 이미 빠졌다면, 그 묶음을 아무도 이기지 못하고 모두 패스한 뒤 <strong>시계 방향의 다음 남은 사람</strong>이 새 묶음을 시작해요.</p>
+  </section>
+
+  <section aria-labelledby="rank">
+    <h2 id="rank">04. 빨리 털수록 다음 판이 유리해요.</h2>
+    <p>처음 손패를 비운 사람이 다음 판의 대달무티, 두 번째가 소달무티예요. 나머지도 손패를 비운 순서대로 계급이 정해져요. 마지막에 남은 사람이 대노예예요. 다음 판은 새 계급에 맞춰 자리를 옮겨요.</p>
+    <div class="table-wrap" tabindex="0" role="region" aria-label="계급별 세금 교환 표">
+      <table>
+        <caption>다음 판 시작 전 세금 교환</caption>
+        <thead><tr><th scope="col">교환하는 두 사람</th><th scope="col">아래 계급 → 위 계급</th><th scope="col">위 계급 → 아래 계급</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">대노예 ↔ 대달무티</th><td>가장 좋은 카드 <strong>2장</strong></td><td>원하는 카드 <strong>2장</strong></td></tr>
+          <tr><th scope="row">소노예 ↔ 소달무티</th><td>가장 좋은 카드 <strong>1장</strong></td><td>원하는 카드 <strong>1장</strong></td></tr>
+          <tr><th scope="row">가운데 계급 · 평민</th><td colspan="2">교환하지 않아요. 4인 게임에는 가운데 계급이 없어요.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>세금에서 가장 좋은 카드는 <strong>숫자가 가장 낮은 카드</strong>예요. 광대는 13으로 봐요. 위 계급은 돌려줄 카드를 자유롭게 고르고, <strong>모든 교환은 동시에</strong> 해요.</p>
+    <p class="example">대노예의 가장 좋은 카드가 2와 3이라면 두 장을 대달무티에게 줘요. 대달무티는 자기 손의 12 두 장을 골라 돌려줄 수 있어요.</p>
+    <p class="note"><strong>6인 계급 예시:</strong> 대달무티 → 소달무티 → 평민 → 평민 → 소노예 → 대노예. 뒤에서 두 번째가 소노예예요.</p>
+    <h3>게임은 언제 끝나나요?</h3>
+    <p>기본 규칙은 판을 반복하며 지위가 오르내리는 것을 즐겨요. 전체 우승자를 정하고 싶으면 미리 판 수를 정하고, 각 판에서 손패를 비울 때 <strong>아직 카드가 남은 사람 수만큼 점수</strong>를 받는 선택 규칙을 써요. 합계가 가장 높은 사람이 이겨요.</p>
+  </section>
+
+  <section aria-labelledby="revolution">
+    <h2 id="revolution">05. 광대 두 장이면 혁명!</h2>
+    <p>카드를 받은 뒤 한 사람에게 <strong>광대 두 장이 모두 있으면</strong>, 세금 교환 전에 혁명을 선언할 수 있어요. 의무는 아니에요.</p>
+    <dl class="revolutions">
+      <div><dt>혁명</dt><dd>이번 판의 <strong>세금 교환을 취소</strong>해요. 계급과 자리는 그대로예요.</dd></div>
+      <div><dt>대혁명</dt><dd><strong>대노예가</strong> 선언하면 전원의 계급 순서가 뒤집혀요. 대노예는 대달무티가 되고, 소노예는 소달무티가 돼요. 세금 교환도 없어요.</dd></div>
+    </dl>
+    <p class="note">혁명은 카드의 강약을 바꾸지 않아요. 혁명 뒤에도 1이 가장 강하고, 광대만 내면 13이에요. 광대 두 장을 내려놓고 소모하는 행동도 아니에요.</p>
+  </section>
+
+  <section aria-labelledby="variants">
+    <h2 id="variants">06. 익숙해지면 선택 규칙을 써 봐요.</h2>
+    <p>아래는 공식 룰북에 소개된 선택 규칙이에요. 시작 전에 사용할 것만 함께 정해요.</p>
+    <details><summary>4~5인이라 손패가 너무 많아요.</summary><p>5인 게임에서는 12 카드 12장을 빼서 <strong>68장</strong>으로 할 수 있어요. 4인 게임에서는 12와 11 카드를 모두 빼서 <strong>57장</strong>으로 해요. 광대 두 장은 남기고, 나머지 규칙은 같아요.</p></details>
+    <details><summary>여러 판의 점수를 합쳐 우승자를 정하고 싶어요.</summary><p>미리 판 수를 정해요. 내가 손패를 비운 순간 아직 손패가 남은 사람 수가 이번 판 점수예요. 예를 들어 <strong>6인 게임은 1등부터 5·4·3·2·1·0점</strong>이에요. 정한 판을 모두 끝낸 뒤 합계를 비교해요.</p></details>
+    <details><summary>아래 계급의 순위가 올라가면 위 계급도 보너스를 받아요.</summary><p>점수제를 쓰면서 적용하는 선택 규칙이에요. 그 판의 대노예가 이전보다 높은 계급으로 올라가면, 그 판의 대달무티에게 추가 1점을 줘요. 소노예가 올라가면 소달무티가 추가 1점을 받아요.</p></details>
+    <details><summary>중간에 한 명이 더 왔어요.</summary><p>새 판을 시작할 때 합류할 수 있어요. 새 사람은 대달무티와 대노예 사이의 <strong>가운데 계급</strong>으로 들어와요. 가운데 자리가 둘 중 하나일 때는 대달무티가 위치를 정해요. 이미 하위 계급이던 사람은 그대로 재도전할 기회를 가져요.</p></details>
+    <details><summary>계급에 따라 의자나 역할을 바꿔도 되나요?</summary><p>계급별로 다른 의자를 쓰거나, 서로 정한 호칭과 역할을 더할 수 있어요. 대달무티에게 좋은 자리를 주고 대노예가 카드 정리를 맡는 식이에요. 모두 편하게 즐길 수 있는 범위로 미리 정해요.</p></details>
+    <p class="example"><strong>처음 하는 모임이라면:</strong> 우선 80장 기본 덱으로 한 판을 해 보고, 첫 판 세금 생략이나 손패를 줄이는 규칙을 골라 봐요. 카드의 강약과 내는 장수는 어떤 선택 규칙에서도 그대로예요.</p>
+  </section>
+
+  <section aria-labelledby="questions">
+    <h2 id="questions">자주 헷갈리는 규칙</h2>
+    <details><summary>12 네 장 위에 1 한 장을 내면 이기나요?</summary><p>아니요. 숫자가 아무리 강해도 장수가 같아야 해요. 네 장 위에는 네 장만 낼 수 있어요.</p></details>
+    <details><summary>패스하면 바닥이 비워질 때까지 쉬나요?</summary><p>아니요. 다음 내 차례에 다시 낼 수 있어요. 다른 사람 모두가 연속으로 패스했을 때 바닥을 치워요.</p></details>
+    <details><summary>광대와 서로 다른 숫자를 섞어도 되나요?</summary><p>아니요. 숫자 카드는 모두 같은 숫자여야 해요. 7 + 7 + 광대는 가능하지만 6 + 7 + 광대는 불가능해요.</p></details>
+    <details><summary>광대 한 장은 1보다 강한가요?</summary><p>광대만 내면 13이라서 가장 약해요. 다른 숫자 카드와 함께 낼 때 그 숫자를 대신해요.</p></details>
+    <details><summary>1등이 나오면 바로 다음 판인가요?</summary><p>아니요. 남은 사람들도 계속해서 다음 판의 계급을 정해요. 마지막 한 사람만 손패가 남으면 그 사람이 최하위예요.</p></details>
+    <details><summary>처음에는 어떤 카드부터 내면 좋나요?</summary><p>높은 숫자처럼 약한 카드부터 낼 기회를 찾아봐요. 강한 묶음은 나중에 흐름을 가져와, 남은 약한 묶음을 먼저 내는 데 쓸 수 있어요. 낼 수 있다고 항상 내야 하는 것은 아니에요.</p></details>
+  </section>
+
+  <footer>
+    <p>공식 기본 규칙을 바탕으로 정리한 비공식 한국어 안내예요. 이 페이지의 숫자 카드는 규칙을 설명하기 위한 도식이에요.</p>
+    <a href="https://media.wizards.com/2015/downloads/ah/great_dalmuti_rules.pdf" target="_blank" rel="noopener">Wizards of the Coast 공식 룰북 (영문 PDF)</a>
+    <a class="back bottom-back" href="../../index.htm">← 보드게임 목록으로 돌아가기</a>
+  </footer>
+</main>
+</body>
+</html>
