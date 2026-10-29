@@ -235,17 +235,18 @@
         </div>
     </div>
 
-    <div class="status-bar" id="statusBar">총 27개의 게임이 있습니다.</div>
+    <div class="status-bar" id="statusBar">게임 목록을 불러오고 있어요.</div>
 
     <!-- 게임 목록 리스트 -->
     <div class="game-list" id="gameList"></div>
 
     <script>
-        // 캔트스탑 추가된 총 27개 게임 리스트 (가나다 정렬은 스크립트가 자동 처리)
+        // 보유 게임 리스트 (가나다 정렬은 스크립트가 자동 처리)
         const games = [
             { name: "크라클 오라클", owner: "윌리", min: 2, max: 8, themes: ["협동", "파티"] },
             { name: "스플렌더", owner: "윌리", min: 2, max: 4, themes: ["전략"] },
             { name: "갱스터", owner: "두쿤", min: 3, max: 6, themes: ["협동", "카드"] },
+            { name: "블랙 프라이데이", owner: "해해", min: 2, max: 5, themes: ["전략"] },
             { name: "라스베가스", owner: "해해", min: 2, max: 5, themes: ["파티", "주사위"] },
             { name: "노터치 크라켄 디럭스", owner: "윌리", min: 4, max: 8, themes: ["마피아", "블러핑"] },
             { name: "프린세스의 반란 디럭스", owner: "윌리", min: 3, max: 6, themes: ["카드", "파티"] },
@@ -314,7 +315,7 @@
 
             sortedList.forEach(game => {
                 const card = document.createElement('div');
-                const hasDetails = ['나르','차가운 그녀가 눈을 뜨기 전에','스플렌더','달무티','노터치 크라켄 디럭스','프린세스의 반란 디럭스','스파이폴2','렉시오'].includes(game.name);
+                const hasDetails = ['나르','차가운 그녀가 눈을 뜨기 전에','스플렌더','달무티','노터치 크라켄 디럭스','프린세스의 반란 디럭스','스파이폴2','렉시오','블랙 프라이데이'].includes(game.name);
                 card.className = 'game-card' + (hasDetails ? ' has-details' : '');
 
                 const tagsHtml = game.themes.map(t => `<span class="tag">${t}</span>`).join('');
@@ -327,7 +328,7 @@
                             <div class="game-tags">${tagsHtml}</div>
                         </div>
                     </div>
-                    ${hasDetails ? '<div class="game-actions">' : ''}<div class="game-players">${game.min === game.max ? game.min : game.min + '-' + game.max}인</div>${game.name === '나르' ? '<button type="button" class="details-button" data-knarr-details aria-haspopup="dialog" aria-controls="knarrDetails" aria-label="나르 자세히 보기">자세히 보기</button></div>' : game.name === '차가운 그녀가 눈을 뜨기 전에' ? '<a class="details-button" href="play/girl/index.html" aria-label="차가운 그녀가 눈을 뜨기 전에 카드와 규칙 보기">카드·규칙</a></div>' : game.name === '스플렌더' ? '<a class="details-button" href="play/splendor/index.html" aria-label="스플렌더 규칙과 멀티플레이 보기">자세히 보기</a></div>' : game.name === '달무티' ? '<a class="details-button" href="play/dalmuti/index.html" aria-label="달무티 기본 규칙과 예시 보기">자세히 보기</a></div>' : game.name === '노터치 크라켄 디럭스' ? '<a class="details-button" href="play/kraken/index.html" aria-label="노터치 크라켄 디럭스 규칙과 실제 카드 보기">자세히 보기</a></div>' : game.name === '프린세스의 반란 디럭스' ? '<a class="details-button" href="play/princess/index.html" aria-label="프린세스의 반란 디럭스 규칙과 카드 보기">자세히 보기</a></div>' : game.name === '스파이폴2' ? '<a class="details-button" href="play/spyfall2/index.html" aria-label="스파이폴 2 규칙과 장소 보기">자세히 보기</a></div>' : game.name === '렉시오' ? '<a class="details-button" href="play/lexio/index.html" aria-label="렉시오 규칙과 타일 족보 보기">자세히 보기</a></div>' : ''}
+                    ${hasDetails ? '<div class="game-actions">' : ''}<div class="game-players">${game.min === game.max ? game.min : game.min + '-' + game.max}인</div>${game.name === '나르' ? '<button type="button" class="details-button" data-knarr-details aria-haspopup="dialog" aria-controls="knarrDetails" aria-label="나르 자세히 보기">자세히 보기</button></div>' : game.name === '차가운 그녀가 눈을 뜨기 전에' ? '<a class="details-button" href="play/girl/index.html" aria-label="차가운 그녀가 눈을 뜨기 전에 카드와 규칙 보기">카드·규칙</a></div>' : game.name === '스플렌더' ? '<a class="details-button" href="play/splendor/index.html" aria-label="스플렌더 규칙과 멀티플레이 보기">자세히 보기</a></div>' : game.name === '달무티' ? '<a class="details-button" href="play/dalmuti/index.html" aria-label="달무티 기본 규칙과 예시 보기">자세히 보기</a></div>' : game.name === '노터치 크라켄 디럭스' ? '<a class="details-button" href="play/kraken/index.html" aria-label="노터치 크라켄 디럭스 규칙과 실제 카드 보기">자세히 보기</a></div>' : game.name === '프린세스의 반란 디럭스' ? '<a class="details-button" href="play/princess/index.html" aria-label="프린세스의 반란 디럭스 규칙과 카드 보기">자세히 보기</a></div>' : game.name === '스파이폴2' ? '<a class="details-button" href="play/spyfall2/index.html" aria-label="스파이폴 2 규칙과 장소 보기">자세히 보기</a></div>' : game.name === '블랙 프라이데이' ? '<a class="details-button" href="play/black-friday/index.html" aria-label="블랙 프라이데이 쉬운 규칙과 예시 보기">자세히 보기</a></div>' : game.name === '렉시오' ? '<a class="details-button" href="play/lexio/index.html" aria-label="렉시오 규칙과 타일 족보 보기">자세히 보기</a></div>' : ''}
                 `;
                 listEl.appendChild(card);
             });
