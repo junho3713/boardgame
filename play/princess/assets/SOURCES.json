@@ -1,0 +1,70 @@
+{
+  "edition": "프린세스의 반란 디럭스 한글판",
+  "officialRules": "https://popcorngames.tistory.com/77",
+  "revision": "2025-05-20",
+  "faq": "https://beziergames.com/pages/rebel-princess-deluxe-edition-living-faq",
+  "artCredit": "Alfredo Cáceres / Zombi Paella / Popcorn Games",
+  "assets": [
+    {
+      "files": [
+        "alice.jpg",
+        "aurora.jpg",
+        "carmesina.webp",
+        "cinderella.jpg",
+        "fairy-9.webp",
+        "frog-8.webp",
+        "ice.jpg",
+        "mermaid.jpg",
+        "mulan.jpg",
+        "pea.jpg",
+        "pocahontas.jpg",
+        "prince-12.webp",
+        "queen-3.webp",
+        "queen-4.webp",
+        "queen-7.webp",
+        "rapunzel.jpg",
+        "round-a.webp",
+        "round-b.webp",
+        "round-c.webp",
+        "round-d.webp",
+        "round-e.webp",
+        "round-f.webp",
+        "round-g.webp",
+        "round-h.webp",
+        "round-i.webp",
+        "round-j.webp",
+        "round-k.webp",
+        "round-l.webp",
+        "round-m.webp",
+        "round-n.webp",
+        "round-o.webp",
+        "round-p.webp",
+        "round-pass-both.webp",
+        "round-pass-left.webp",
+        "round-pass-right.webp",
+        "round-q.webp",
+        "round-r.webp",
+        "round-s.webp",
+        "round-t.webp",
+        "round-u.webp",
+        "round-v.webp",
+        "round-w.webp",
+        "round-x.webp",
+        "round-y.webp",
+        "round-z.webp",
+        "scheherazade.jpg",
+        "snow-white.jpg",
+        "thumbelina.jpg"
+      ],
+      "source": "Official Korean rulebook: playing-card examples p.10; pass examples p.5; round illustrations pp.14-21; princess illustrations pp.22-26",
+      "method": "Original embedded princess JPEGs extracted; card and round figures rendered from their PDF regions as lossless WebP"
+    },
+    {
+      "files": [
+        "box.webp"
+      ],
+      "source": "https://popcontr2632.cdn-nhncommerce.com/data/goods/25/05/20/96486/96486_detail_072.png",
+      "method": "Lossless WebP format conversion"
+    }
+  ]
+}
