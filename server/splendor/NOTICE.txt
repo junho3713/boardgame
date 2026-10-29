@@ -1,0 +1,9 @@
+Basic card data adapted from hexanome-04/splendor (MIT), server/src/main/resources/cards.csv.
+Source: https://github.com/hexanome-04/splendor
+Copyright (c) 2023 Alex, Alexa, Chen, Jia, Richard, Sarah.
+The extra custom noble 20011 and all expansion cards are excluded.
+Game: Splendor, Marc Andre / SPACE Cowboys. Game names and artwork belong to their respective rights holders.
+
+
+Card, noble and token images are displayed from the public source repository at commit d1797acf5d43c6bc512b57ef3c1d990006a49a5c, client/public/images/. Artwork rights remain with their respective owners; the MIT code/data notice is not a claim to ownership of the original artwork.
+Rules reference: https://www.spacecowboys-games.com/game/splendor/

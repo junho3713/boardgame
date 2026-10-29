@@ -314,7 +314,7 @@
 
             sortedList.forEach(game => {
                 const card = document.createElement('div');
-                card.className = 'game-card' + (['나르','차가운 그녀가 눈을 뜨기 전에'].includes(game.name) ? ' has-details' : '');
+                card.className = 'game-card' + (['나르','차가운 그녀가 눈을 뜨기 전에','스플렌더'].includes(game.name) ? ' has-details' : '');
 
                 const tagsHtml = game.themes.map(t => `<span class="tag">${t}</span>`).join('');
 
@@ -326,7 +326,7 @@
                             <div class="game-tags">${tagsHtml}</div>
                         </div>
                     </div>
-                    ${['나르','차가운 그녀가 눈을 뜨기 전에'].includes(game.name) ? '<div class="game-actions">' : ''}<div class="game-players">${game.min === game.max ? game.min : game.min + '-' + game.max}인</div>${game.name === '나르' ? '<button type="button" class="details-button" data-knarr-details aria-haspopup="dialog" aria-controls="knarrDetails" aria-label="나르 자세히 보기">자세히 보기</button></div>' : game.name === '차가운 그녀가 눈을 뜨기 전에' ? '<a class="details-button" href="play/girl/index.html" aria-label="차가운 그녀가 눈을 뜨기 전에 카드와 규칙 보기">카드·규칙</a></div>' : ''}
+                    ${['나르','차가운 그녀가 눈을 뜨기 전에','스플렌더'].includes(game.name) ? '<div class="game-actions">' : ''}<div class="game-players">${game.min === game.max ? game.min : game.min + '-' + game.max}인</div>${game.name === '나르' ? '<button type="button" class="details-button" data-knarr-details aria-haspopup="dialog" aria-controls="knarrDetails" aria-label="나르 자세히 보기">자세히 보기</button></div>' : game.name === '차가운 그녀가 눈을 뜨기 전에' ? '<a class="details-button" href="play/girl/index.html" aria-label="차가운 그녀가 눈을 뜨기 전에 카드와 규칙 보기">카드·규칙</a></div>' : game.name === '스플렌더' ? '<a class="details-button" href="play/splendor/index.html" aria-label="스플렌더 규칙과 멀티플레이 보기">자세히 보기</a></div>' : ''}
                 `;
                 listEl.appendChild(card);
             });
