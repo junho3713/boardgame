@@ -1,0 +1,55 @@
+{
+  "game": "스파이폴 2 한국어판",
+  "rules": "https://cdn.shopify.com/s/files/1/0464/6961/1676/files/SPYFALL2_Rulebook.pdf?v=1611121030",
+  "localizedNames": "https://m.popcone.co.kr/goods/goods_view.php?goodsNo=56973",
+  "assets": [
+    {
+      "files": [
+        "race-track.webp",
+        "construction-site.webp",
+        "wedding.webp",
+        "cat-show.webp",
+        "cemetery.webp",
+        "vineyard.webp",
+        "candy-factory.webp",
+        "harbor-docks.webp",
+        "jail.webp",
+        "jazz-club.webp",
+        "library.webp",
+        "coal-mine.webp",
+        "art-museum.webp",
+        "un.webp",
+        "gas-station.webp",
+        "retirement-home.webp",
+        "rock-concert.webp",
+        "stadium.webp",
+        "subway.webp",
+        "sightseeing-bus.webp"
+      ],
+      "source": "Cryptozoic official Spyfall 2 rulebook, pages 4–5",
+      "method": "Cropped scene excerpts from overlapping location atlas; reduced for web display"
+    },
+    {
+      "files": [
+        "location-card.webp",
+        "spy-card.webp"
+      ],
+      "source": "Cryptozoic official Spyfall 2 rulebook, page 3",
+      "method": "Rendered card examples"
+    },
+    {
+      "files": [
+        "box.webp"
+      ],
+      "source": "https://popcontr2632.cdn-nhncommerce.com/data/goods/17/10/20/56973/56973_main_069.png",
+      "method": "Lossless WebP conversion"
+    },
+    {
+      "files": [
+        "korean-locations.webp"
+      ],
+      "source": "https://popcontr2632.cdn-nhncommerce.com/data/temp/shop/data/detail_page/spyfall2_800.jpg",
+      "method": "Cropped official Korean location reference"
+    }
+  ]
+}
