@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: girl-free-lobby-test
+    runtime: node
+    plan: free
+    buildCommand: node --check server/girl-lobby/server.cjs
+    startCommand: node server/girl-lobby/server.cjs
+    healthCheckPath: /healthz
+    autoDeployTrigger: off

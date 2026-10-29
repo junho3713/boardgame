@@ -1,0 +1,1 @@
+{"name":"girl-free-lobby-test","private":true,"version":"0.1.0","engines":{"node":">=22"},"scripts":{"start":"node server.cjs","test":"node --test server.test.cjs"}}
