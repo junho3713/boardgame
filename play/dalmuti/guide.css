@@ -82,3 +82,22 @@ footer { border-top: 1px solid var(--border); margin-top: 42px; padding-top: 23p
   .direction { font-size: 12px; }
   .strength { gap: 14px; }
 }
+
+/* Official Korean edition card images, displayed from the publisher's product sheet. */
+.real-cards { margin: 28px 0; }
+.card-gallery { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 22px 18px; margin: 22px 0 14px; }
+.card-gallery figure { margin: 0; min-width: 0; text-align: center; }
+.card-gallery svg { display: block; width: 100%; max-width: 112px; height: auto; aspect-ratio: 86 / 134; margin: 0 auto; border-radius: 5px; background: #ebe4d9; box-shadow: 0 3px 8px #332e2926; }
+.card-gallery figcaption { margin-top: 9px; font-size: 12px; line-height: 1.75; }
+.card-gallery figcaption strong, .card-gallery figcaption span { display: block; }
+.card-gallery figcaption span { color: #655c50; font-size: 11px; }
+.image-source { font-size: 11px; color: #655c50; }
+.source-note { margin-top: 14px; }
+#sources { scroll-margin-top: 95px; }
+@media (max-width: 600px) {
+  .card-gallery { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px 12px; }
+  .card-gallery figcaption { font-size: 11px; }
+}
+@media (max-width: 420px) {
+  .card-gallery { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px 14px; }
+}
