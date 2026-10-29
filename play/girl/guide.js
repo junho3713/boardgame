@@ -7,7 +7,7 @@ function cardImage(card,decorative=false){
  const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg'),img=document.createElementNS(ns,'image');
  svg.setAttribute('viewBox',rect.join(' '));svg.setAttribute('class','card-art');
  if(decorative)svg.setAttribute('aria-hidden','true');else{svg.setAttribute('role','img');svg.setAttribute('aria-label',`${card.name} 원본 카드`);}
- img.setAttribute('href',official[card.id]?'https://mtsgames.kr/web/upload/NNEditor/20260326/fe26f45ed47be6cc789d92815eb95990.jpg':`assets/${file}`);img.setAttribute('width',official[card.id]?'1000':'1265');img.setAttribute('height',official[card.id]?'3800':'712');svg.append(img);return svg;
+ img.setAttribute('href',`assets/${file}`);img.setAttribute('width',official[card.id]?'1000':'1265');img.setAttribute('height',official[card.id]?'3800':'712');svg.append(img);return svg;
 }
 function textNode(tag,text,cls){const e=document.createElement(tag);e.textContent=text;if(cls)e.className=cls;return e;}
 function selectCard(card,button,move){
