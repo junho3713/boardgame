@@ -34,7 +34,7 @@ function availableCards(g,p){return Object.values(g.market).flat().concat(p.rese
 function canReserve(g,p){return p.reserved.length<3&&([1,2,3].some(t=>g.market[t].length||g.decks[t].length));}
 function canPass(g,p){return colors.every(c=>g.bank[c]===0)&&!canReserve(g,p)&&!availableCards(g,p).some(c=>payment(p,c));}
 function act(g,id,a){
- need(g.phase==='playing','게임이 끝났어요. 새 방에서 다시 시작해 주세요.');const p=g.players[g.current];need(p.id===id,'아직 내 차례가 아니에요.');need(!g.pending,'반환할 볼이나 진화 선택을 먼저 마쳐 주세요.');
+ need(g.phase==='playing','게임이 끝났어요. 방장이 같은 방에서 다시 시작할 수 있어요.');const p=g.players[g.current];need(p.id===id,'아직 내 차례가 아니에요.');need(!g.pending,'반환할 볼이나 진화 선택을 먼저 마쳐 주세요.');
  if(a.type==='take'){
   const pick=a.tokens;need(pick&&typeof pick==='object'&&!Array.isArray(pick),'가져올 볼을 골라 주세요.');need(Object.keys(pick).every(k=>colors.includes(k)),'마스터볼은 카드 예약으로만 가져와요.');for(const c of colors)need(Number.isInteger(pick[c]??0)&&(pick[c]??0)>=0&&(pick[c]??0)<=g.bank[c],'남아 있는 볼 중에서 골라 주세요.');
   const chosen=colors.filter(c=>pick[c]>0),sum=chosen.reduce((n,c)=>n+pick[c],0),different=Math.min(3,colors.filter(c=>g.bank[c]>0).length);

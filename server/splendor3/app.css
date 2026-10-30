@@ -315,3 +315,20 @@ body.reserving #market .afford-label{display:none}
 body.reserving #nobles .special-pile .dev-card{filter:saturate(.45)}
 body.inspecting #market .dev-card{cursor:help}
 @media(max-width:600px){.take-mode button{padding:6px 9px;font-size:11px}.take-controls{gap:7px}.take-action{min-width:0}#takeHelp{line-height:1.5}}
+
+/* Room chat stays separate from turn actions and is shared across rematches. */
+.chat-toggle{position:fixed;right:max(16px,env(safe-area-inset-right));bottom:max(16px,env(safe-area-inset-bottom));z-index:110;box-shadow:0 4px 18px #071b1b55;background:#e0c17b;color:#2d2c21}
+.room-chat{position:fixed;right:max(16px,env(safe-area-inset-right));bottom:calc(max(16px,env(safe-area-inset-bottom)) + 54px);z-index:110;width:340px;max-width:calc(100vw - 24px);max-height:calc(var(--visible-height,100dvh) - 90px);display:flex;flex-direction:column;padding:14px;border:1px solid #91a58b;border-radius:12px;background:#193b34;color:#f4efdf;box-shadow:0 10px 35px #061b2090}
+.room-chat[hidden],.chat-toggle[hidden]{display:none}
+.chat-header{display:flex;align-items:center;justify-content:space-between;gap:10px;flex:none}
+.chat-header h2{font-size:17px;margin:0}.chat-header button{min-height:32px;padding:4px 9px;font-size:12px}
+.chat-help,.chat-empty{font-size:12px;line-height:1.5;color:#d7e1cd;margin:8px 0}
+.chat-messages{list-style:none;overflow-y:auto;overscroll-behavior:contain;min-height:55px;max-height:260px;padding:3px;margin:8px 0;scrollbar-width:thin}
+.chat-message{padding:9px 10px;margin-bottom:8px;border-radius:8px;background:#294d42;overflow-wrap:anywhere}
+.chat-message.chat-mine{background:#40573d}.chat-meta{display:flex;justify-content:space-between;gap:8px;align-items:baseline;font-size:12px}
+.chat-meta b{min-width:0}.chat-meta time{font-size:10px;white-space:nowrap;color:#d3ddc9}.chat-message p{font-size:14px;line-height:1.5;margin:5px 0 0;white-space:pre-wrap}
+.chat-form{flex:none}.chat-form label{display:block;font-size:12px;margin:0 0 5px}.chat-form label span{color:#ccd5c1;font-weight:400;margin-left:5px;font-size:10px}
+.chat-form>div{display:flex;gap:6px}.chat-form input{width:0;min-width:0;flex:1;font-size:14px}.chat-form button{padding:7px 11px;font-size:13px}
+.chat-error{color:#ffcfbb;font-size:12px;margin:7px 0 0}.chat-error:empty{display:none}
+@media(max-width:600px){.chat-toggle{font-size:12px;min-height:39px}.room-chat{right:12px;width:calc(100vw - 24px);padding:12px}.chat-messages{max-height:230px}.game-toolbar #restart{white-space:normal}}
+@media(orientation:landscape) and (max-height:560px){.room-chat{bottom:60px;max-height:calc(var(--visible-height,100dvh) - 70px)}.chat-help{display:none}.chat-messages{min-height:35px}.chat-toggle{bottom:8px;min-height:34px;padding:5px 10px;font-size:11px}}

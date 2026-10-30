@@ -4,7 +4,7 @@ function createHandler(){
  const rooms=new Map(),sessions=new Map(),ttl=2*60*60*1000;
  const json=(res,status,value)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});res.end(JSON.stringify(value));};
  const person=(name,bot=false)=>({id:crypto.randomUUID(),token:crypto.randomBytes(24).toString('hex'),name,bot});
- const project=(r,p)=>({code:r.code,host:r.host,version:r.version,serverNow:Date.now(),turnLimitSeconds:r.timed?r.turnSeconds:null,turnDeadline:r.deadline??null,...(r.game?game.view(r.game,p.id):{phase:'lobby',me:p.id,players:r.players.map(p=>({id:p.id,name:p.name,bot:p.bot})),first:r.first})});
+ const project=(r,p)=>({code:r.code,host:r.host,version:r.version,gameNumber:r.gameNumber,chat:{version:r.chatSequence,messages:r.chat},serverNow:Date.now(),turnLimitSeconds:r.timed?r.turnSeconds:null,turnDeadline:r.deadline??null,...(r.game?game.view(r.game,p.id):{phase:'lobby',me:p.id,players:r.players.map(p=>({id:p.id,name:p.name,bot:p.bot})),first:r.first})});
  function expire(r){clearTimeout(r.timer);clearTimeout(r.turnTimer);for(const p of r.players)sessions.delete(p.token);for(const s of r.streams)s.res.end();rooms.delete(r.code);}
  function broadcast(r){for(const s of [...r.streams]){try{s.res.write('event: state\ndata: '+JSON.stringify(project(r,s.player))+'\n\n');}catch{r.streams.delete(s);}}}
  function syncDeadline(r){
@@ -35,7 +35,7 @@ function createHandler(){
    for(const r of rooms.values())if(Date.now()-r.created>ttl)expire(r);
    let body={};if(req.method==='POST'){let raw='';for await(const part of req){raw+=part;if(Buffer.byteLength(raw)>3072){json(res,413,{error:'요청이 너무 커요.'});return;}}try{body=JSON.parse(raw||'{}');}catch{json(res,400,{error:'요청 형식을 확인해 주세요.'});return;}}
    if(req.method==='POST'&&['/splendor3/api/create','/splendor3/api/solo'].includes(route)){
-    if(rooms.size>=40){json(res,503,{error:'무료 서버의 방이 가득 찼어요. 잠시 후 다시 시도해 주세요.'});return;}const name=String(body.name||'나').trim().slice(0,16)||'나',p=person(name),bots=route.endsWith('/solo')?Number(body.bots??1):0;if(!Number.isInteger(bots)||bots<0||bots>3){json(res,400,{error:'컴퓨터는 1~3명으로 골라 주세요.'});return;}let code;do{code=crypto.randomBytes(3).toString('hex').toUpperCase();}while(rooms.has(code));const r={code,host:p.id,first:p.id,created:Date.now(),version:1,players:[p],streams:new Set(),game:null,timer:null,turnTimer:null,timed:!route.endsWith('/solo'),turnSeconds:30,deadline:null,deadlineTurn:null};for(let i=0;i<bots;i++)r.players.push(person('컴퓨터 '+(i+1),true));rooms.set(code,r);sessions.set(p.token,{r,p});if(bots){r.game=game.newGame(r.players,r.first);schedule(r);}json(res,201,{token:p.token,state:project(r,p)});return;
+    if(rooms.size>=40){json(res,503,{error:'무료 서버의 방이 가득 찼어요. 잠시 후 다시 시도해 주세요.'});return;}const name=String(body.name||'나').trim().slice(0,16)||'나',p=person(name),bots=route.endsWith('/solo')?Number(body.bots??1):0;if(!Number.isInteger(bots)||bots<0||bots>3){json(res,400,{error:'컴퓨터는 1~3명으로 골라 주세요.'});return;}let code;do{code=crypto.randomBytes(3).toString('hex').toUpperCase();}while(rooms.has(code));const r={code,host:p.id,first:p.id,created:Date.now(),version:1,gameNumber:0,chat:[],chatSequence:0,players:[p],streams:new Set(),game:null,timer:null,turnTimer:null,timed:!route.endsWith('/solo'),turnSeconds:30,deadline:null,deadlineTurn:null};for(let i=0;i<bots;i++)r.players.push(person('컴퓨터 '+(i+1),true));rooms.set(code,r);sessions.set(p.token,{r,p});if(bots){r.game=game.newGame(r.players,r.first);r.gameNumber++;schedule(r);}json(res,201,{token:p.token,state:project(r,p)});return;
    }
    if(req.method==='POST'&&route==='/splendor3/api/join'){
     const r=rooms.get(String(body.code||'').trim().toUpperCase());if(!r){json(res,404,{error:'방이 없거나 만료됐어요. 코드를 확인해 주세요.'});return;}if(r.game||r.players.length>=4){json(res,409,{error:r.game?'이미 시작한 방이에요.':'4명이 모두 모였어요.'});return;}const p=person(String(body.name||'플레이어').trim().slice(0,16)||'플레이어');r.players.push(p);r.version++;sessions.set(p.token,{r,p});broadcast(r);json(res,200,{token:p.token,state:project(r,p)});return;
@@ -46,8 +46,16 @@ function createHandler(){
     if(r.streams.size>=16){json(res,429,{error:'이 방의 연결이 너무 많아요. 사용하지 않는 창을 닫아 주세요.'});return;}res.writeHead(200,{'Content-Type':'text/event-stream; charset=utf-8','Cache-Control':'no-cache, no-transform','Connection':'keep-alive','X-Accel-Buffering':'no'});const stream={res,player:p};r.streams.add(stream);res.write('event: state\ndata: '+JSON.stringify(project(r,p))+'\n\n');const heartbeat=setInterval(()=>{if(Date.now()-r.created>ttl){expire(r);return;}res.write(': keepalive\n\n');},20000);heartbeat.unref?.();res.on('close',()=>{clearInterval(heartbeat);r.streams.delete(stream);});return;
    }
    if(req.method!=='POST'){json(res,405,{error:'지원하지 않는 요청이에요.'});return;}
+   if(route==='/splendor3/api/chat'){
+    const text=typeof body.text==='string'?body.text.trim():'';
+    if(!text||text.length>300)throw Error('채팅은 1~300자로 입력해 주세요.');
+    const now=Date.now();if(p.lastChatAt&&now-p.lastChatAt<700){json(res,429,{error:'잠깐 기다렸다가 보내 주세요.'});return;}
+    p.lastChatAt=now;r.chat.push({id:++r.chatSequence,player:p.id,name:p.name,text,at:now});r.chat=r.chat.slice(-80);
+    json(res,200,project(r,p));broadcast(r);return;
+   }
    if(body.version!==r.version){json(res,409,{error:'다른 플레이어의 행동으로 상태가 바뀌었어요. 새 화면에서 다시 선택해 주세요.',state:project(r,p)});return;}
-   if(route==='/splendor3/api/start'){if(p.id!==r.host||r.game)throw Error('대기방의 방장만 시작할 수 있어요.');r.game=game.newGame(r.players,r.first);}
+   if(route==='/splendor3/api/start'){if(p.id!==r.host||r.game)throw Error('대기방의 방장만 시작할 수 있어요.');r.game=game.newGame(r.players,r.first);r.gameNumber++;}
+   else if(route==='/splendor3/api/restart'){if(p.id!==r.host||r.game?.phase!=='finished')throw Error('게임이 끝난 뒤 방장만 다시 시작할 수 있어요.');r.game=game.newGame(r.players,r.first);r.gameNumber++;r.deadline=null;r.deadlineTurn=null;}
    else if(route==='/splendor3/api/turn-limit'){if(p.id!==r.host||r.game)throw Error('대기방의 방장만 제한시간을 바꿀 수 있어요.');if(![15,30,45,60,90,120,180].includes(body.seconds))throw Error('목록에서 턴 제한시간을 골라 주세요.');r.turnSeconds=body.seconds;}
    else if(route==='/splendor3/api/add-bot'){if(p.id!==r.host||r.game||r.players.length>=4)throw Error('대기방의 방장이 빈자리에 컴퓨터를 넣을 수 있어요.');r.players.push(person('컴퓨터 '+(r.players.filter(p=>p.bot).length+1),true));}
    else if(route==='/splendor3/api/fill-bots'){if(p.id!==r.host||r.game||r.players.length>=4)throw Error('대기방의 방장만 빈자리를 채울 수 있어요.');while(r.players.length<4)r.players.push(person('컴퓨터 '+(r.players.filter(p=>p.bot).length+1),true));}
