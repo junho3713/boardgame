@@ -1,0 +1,6 @@
+export {normalizeGameId} from './rules-engine';
+export type {GameProjection} from './rules-engine';
+import {api,ensureAnonymousIdentity} from './firebase';
+export async function appendGameEvent(_db:any,gameId:string,_uid:string,type:string,payload:any,_seq?:number){return api('/event',{gameId,type,payload});}
+export async function loadGame(_db:any,gameId:string){return api('/state?game='+encodeURIComponent(gameId));}
+export function subscribeToGame(_db:any,gameId:string,receive:(g:any)=>void,fail:()=>void){let stopped=false;const controller=new AbortController();(async()=>{while(!stopped){try{const me=await ensureAnonymousIdentity();const r=await fetch('/princess/api/stream?game='+encodeURIComponent(gameId),{headers:{Authorization:'Bearer '+me.token},signal:controller.signal});if(!r.ok)throw Error('연결 실패');const reader=r.body!.getReader(),decoder=new TextDecoder();let buffer='';while(!stopped){const chunk=await reader.read();if(chunk.done)break;buffer+=decoder.decode(chunk.value,{stream:true});let end;while((end=buffer.indexOf('\n\n'))>=0){const line=buffer.slice(0,end);buffer=buffer.slice(end+2);if(line.startsWith('data: '))receive(JSON.parse(line.slice(6)));}}}catch{if(!stopped)fail();}if(!stopped)await new Promise(resolve=>setTimeout(resolve,1800));}})();return()=>{stopped=true;controller.abort();};}

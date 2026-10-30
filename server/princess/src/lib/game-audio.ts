@@ -1,0 +1,1 @@
+export const gameAudio={async startMusic(){},stopMusic(){},async playPrincessChime(){},setMix(_mix:any){}};

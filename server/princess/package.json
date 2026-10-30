@@ -1,0 +1,1 @@
+{"name":"jjinmak-princess","private":true,"version":"1.0.0","license":"GPL-3.0-only","scripts":{"build":"node build.cjs"},"devDependencies":{"svelte":"^5.0.0","esbuild":"^0.25.0"}}

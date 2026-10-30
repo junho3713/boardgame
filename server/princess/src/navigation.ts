@@ -1,0 +1,1 @@
+export function replaceState(url:string,state:any){history.replaceState(state,'',url);}

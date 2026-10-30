@@ -1,0 +1,5 @@
+let pending:Promise<any>|null=null;
+export const firebaseDatabase=()=>null;
+export function ensureAnonymousIdentity(_ignored?:string):Promise<any>{return pending??=(async()=>{const saved=sessionStorage.getItem('princess-session');if(saved){try{const p=JSON.parse(saved);const r=await fetch('/princess/api/session',{headers:{Authorization:'Bearer '+p.token}});if(r.ok)return p;}catch{}}const r=await fetch('/princess/api/session',{method:'POST'});const p=await r.json();if(!r.ok)throw Error(p.error);sessionStorage.setItem('princess-session',JSON.stringify(p));return p;})();}
+export async function probeFirebase(_ignored?:string){await ensureAnonymousIdentity();return 'server';}
+export async function api(path:string,body?:any){const me=await ensureAnonymousIdentity();const r=await fetch('/princess/api'+path,{method:body===undefined?'GET':'POST',headers:{Authorization:'Bearer '+me.token,'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body)});const data=await r.json();if(!r.ok)throw Error(data.error||'처리하지 못했어요.');return data;}
