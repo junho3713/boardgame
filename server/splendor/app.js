@@ -9,10 +9,17 @@ function gem(c,tokenFace=true){
  svg.innerHTML=(tokenFace?'<circle class="token-rim" cx="24" cy="24" r="22"/><circle class="token-inner" cx="24" cy="24" r="18.5"/><g transform="translate(7.2 7.2) scale(.7)">':'<g>')+shapes[c]+'</g>';n.append(svg);return n;
 }
 function chip(c,count,caption=true){const n=el('span',undefined,'chip chip-'+c);n.append(gem(c),el('strong',String(count)));if(caption)n.append(el('span',names[c],'chip-name'));return n;}
+function cardCost(c,count){
+ const n=el('span',undefined,'cost-badge cost-'+c);n.setAttribute('aria-label',names[c]+' '+count+'개');
+ const value=el('strong',String(count),'cost-value');value.setAttribute('aria-hidden','true');
+ const icon=gem(c,false);icon.classList.add('cost-gem');icon.setAttribute('aria-hidden','true');icon.removeAttribute('aria-label');
+ const svg=icon.firstElementChild,outline=svg.firstElementChild.cloneNode(true);outline.classList.add('cost-gem-outline');svg.prepend(outline);
+ n.append(value,icon);return n;
+}
 function card(c,fn,kind='development'){
  const b=fn?btn('',fn,'dev-card '+kind+' illustrated'):el('div',undefined,'dev-card '+kind+' illustrated');b.setAttribute('aria-label',(c.tier?'레벨 '+c.tier+' '+names[c.color]+' 보너스':'귀족')+' · 명성 '+c.points+'점 · '+colors.filter(k=>c.cost[k]).map(k=>names[k]+' '+c.cost[k]).join(', '));
  const nobleIndex=Math.max(0,Number(c.id)-20001),col=c.tier?colors.indexOf(c.color):nobleIndex%5,row=c.tier?c.tier-1:3+Math.floor(nobleIndex/5),art=el('div',undefined,'card-art');art.style.backgroundImage='url("'+artSource+'")';art.style.backgroundPosition=col*25+'% '+row*25+'%';art.setAttribute('aria-hidden','true');b.append(art);
- const face=el('div',undefined,'card-fallback'),points=el('strong',String(c.points),'card-points');points.title='명성 '+c.points+'점';face.append(points);if(c.color)face.append(gem(c.color,false));else face.append(el('span','귀족','noble-emblem'));const costs=el('div',undefined,'card-costs');for(const k of colors)if(c.cost[k])costs.append(chip(k,c.cost[k],false));face.append(costs);b.append(face);b.dataset.card=c.id;return b;
+ const face=el('div',undefined,'card-fallback'),points=el('strong',String(c.points),'card-points');points.title='명성 '+c.points+'점';face.append(points);if(c.color)face.append(gem(c.color,false));else face.append(el('span','귀족','noble-emblem'));const costs=el('div',undefined,'card-costs');for(const k of colors)if(c.cost[k])costs.append(cardCost(k,c.cost[k]));costs.dataset.count=costs.children.length;face.append(costs);b.append(face);b.dataset.card=c.id;return b;
 }
 function back(t,fn){const n=fn?btn('',fn,'deck-card'):el('div',undefined,'deck-card');n.append(el('strong',t?'레벨 '+t:'예약'),el('span','SPLENDOR'));return n;}
 function toast(text){clearTimeout(toastTimer);$('toast').textContent=text;$('toast').hidden=false;toastTimer=setTimeout(()=>$('toast').hidden=true,4300);}

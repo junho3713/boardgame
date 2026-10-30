@@ -171,3 +171,24 @@
 .noble-card.illustrated .card-costs .chip{padding:1cqw}
 .noble-card.illustrated .card-costs .gem{width:clamp(6px,12cqw,15px);height:clamp(6px,12cqw,15px)}
 .noble-card.illustrated .card-costs .chip strong{font-size:clamp(7px,12cqw,14px)}
+
+/* Card requirements: colored number circles with a separate outlined gem. */
+.illustrated .card-art{inset:20cqw 0 0}
+.illustrated .card-fallback{background:linear-gradient(to bottom,#fff4da 0 20cqw,transparent 20cqw)}
+.illustrated .card-costs{display:flex;flex-direction:column;align-items:flex-start;gap:1.4cqw;left:4cqw;bottom:4cqw;max-width:92%;width:max-content}
+.cost-badge{--cost-color:#fff9ed;--cost-ink:#23352e;display:inline-flex;align-items:center;gap:0;position:relative;line-height:1;white-space:nowrap}
+.cost-blue{--cost-color:#245f98;--cost-ink:#fff}.cost-green{--cost-color:#23764b;--cost-ink:#fff}.cost-red{--cost-color:#a92f40;--cost-ink:#fff}.cost-black{--cost-color:#68452f;--cost-ink:#fff}
+.illustrated .card-costs .cost-value{display:grid;place-items:center;width:clamp(14px,24cqw,34px);height:clamp(14px,24cqw,34px);border:clamp(1.5px,1.8cqw,2.4px) solid #fff;border-radius:50%;background:var(--cost-color);color:var(--cost-ink);font-family:'Malgun Gothic','Apple SD Gothic Neo',system-ui,sans-serif;font-size:clamp(11px,18cqw,25px);font-weight:800;font-variant-numeric:tabular-nums;line-height:1;letter-spacing:-.045em;text-shadow:none;box-shadow:0 1px 3px #071b1b9c}
+.illustrated .card-costs .cost-gem{width:clamp(10px,16cqw,23px);height:clamp(10px,16cqw,23px);margin-left:-.5cqw;filter:drop-shadow(0 1px 1px #071b1b80)}
+.cost-gem .cost-gem-outline>*{stroke:#fff;stroke-width:5.5;fill:none}.cost-gem .cost-gem-outline .gem-facet{display:none}
+.illustrated:has(.afford-label) .card-costs{bottom:calc(4cqw + 14px)}
+.noble-card.illustrated .card-costs{display:flex;flex-direction:column;flex-wrap:nowrap;gap:1cqw;left:4cqw;bottom:3cqw;max-width:92%}
+.noble-card.illustrated .card-costs .cost-value{width:clamp(12px,22cqw,27px);height:clamp(12px,22cqw,27px);font-size:clamp(9px,16cqw,19px)}
+.noble-card.illustrated .card-costs .cost-gem{width:clamp(9px,15cqw,18px);height:clamp(9px,15cqw,18px)}
+@media(max-width:600px){.illustrated:has(.afford-label) .card-costs{bottom:calc(3cqw + 12px)}}
+
+@container (max-width:66px){
+ .card-costs[data-count="4"]{display:grid;grid-template-columns:repeat(2,max-content);gap:2cqw 1cqw}
+ .card-costs[data-count="4"] .cost-value{width:clamp(11px,24cqw,16px);height:clamp(11px,24cqw,16px);font-size:clamp(9px,18cqw,12px);border-width:1.5px}
+ .card-costs[data-count="4"] .cost-gem{width:clamp(7px,14cqw,10px);height:clamp(7px,14cqw,10px)}
+}
