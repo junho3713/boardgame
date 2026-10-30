@@ -195,6 +195,24 @@
             color: var(--text-sub);
             font-size: 14px;
         }
+
+        .catalog-mode{position:relative;display:inline-flex;margin-top:14px;width:244px;height:48px;cursor:pointer;vertical-align:middle}
+        .catalog-mode input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;z-index:3;margin:0}
+        .mode-track{position:relative;display:grid;grid-template-columns:1fr 1fr;align-items:center;width:100%;border:1px solid #d4d0ef;border-radius:999px;background:#f1f0fa;padding:4px}
+        .mode-thumb{position:absolute;left:4px;top:4px;bottom:4px;width:calc(50% - 4px);border-radius:999px;background:#4f46e5;box-shadow:0 2px 5px #312e8120;transition:transform .2s cubic-bezier(.2,.8,.2,1)}
+        .mode-label{position:relative;z-index:1;font-size:14px;font-weight:700;color:#4b4568;line-height:1.5;pointer-events:none}
+        .mode-offline{color:#fff}.catalog-mode input:checked+.mode-track .mode-thumb{transform:translateX(100%)}
+        .catalog-mode input:checked+.mode-track .mode-offline{color:#4b4568}.catalog-mode input:checked+.mode-track .mode-online{color:#fff}
+        .catalog-mode input:focus-visible+.mode-track{outline:3px solid #312e81;outline-offset:3px}
+        header .mode-hint{font-size:12px;margin-top:9px;line-height:1.6;color:#4b5563}
+        .game-card.has-online .game-actions{display:grid;grid-template-columns:auto auto;gap:7px;min-width:134px}
+        .online-play{grid-column:1/-1;display:flex;align-items:center;justify-content:center;min-height:40px;border-radius:8px;padding:8px 10px;background:#4f46e5;color:#fff;font-size:12px;font-weight:700;text-decoration:none}
+        .online-play:hover{background:#3730a3}.online-play:focus-visible{outline:3px solid #312e81;outline-offset:3px}
+        .online-badge{font-size:11px;color:#3730a3;background:#edeaff;padding:2px 6px;border-radius:4px;white-space:nowrap}
+        .game-card.has-online .game-info{min-width:0}.game-card.has-online .game-title{overflow-wrap:anywhere}
+        .game-card.has-online .game-meta{flex-wrap:wrap}.game-card.has-online .game-players{font-size:12px;padding:7px 8px;text-align:center}
+        .game-card.has-online .details-button{min-height:36px;font-size:11px;padding:7px}
+        @media(prefers-reduced-motion:reduce){.mode-thumb{transition:none}}
     </style>
 <link rel="stylesheet" href="knarr-details.css?v=2">
 </head>
@@ -203,7 +221,11 @@
     <header>
         <h1>🎲 혁신도시 보드게임 [찐막]</h1>
         <p>인원수와 테마 필터로 게임을 편리하게 찾아보세요!</p>
-        <a class="practice-entry" href="play/knarr/index.html">나르 연습해 보기 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7M16 12H3"/></svg></a>
+        <label class="catalog-mode">
+            <input id="onlineMode" type="checkbox" role="switch" aria-label="온라인 게임 목록" aria-describedby="modeHint">
+            <span class="mode-track"><span class="mode-thumb" aria-hidden="true"></span><span class="mode-label mode-offline">오프라인</span><span class="mode-label mode-online">온라인</span></span>
+        </label>
+        <p class="mode-hint" id="modeHint">카페에 있는 보드게임 목록이에요.</p>
     </header>
 
     <!-- 인원수 필터 영역 (3명, 4명, 5명, 6명, 7명+ 3열 칼정렬) -->
@@ -235,7 +257,7 @@
         </div>
     </div>
 
-    <div class="status-bar" id="statusBar">게임 목록을 불러오고 있어요.</div>
+    <div class="status-bar" id="statusBar" role="status" aria-live="polite">게임 목록을 불러오고 있어요.</div>
 
     <!-- 게임 목록 리스트 -->
     <div class="game-list" id="gameList"></div>
@@ -275,6 +297,26 @@
             { name: "트럼프 카드", owner: "클리브", min: 2, max: 8, themes: ["카드", "파티"] }
         ];
 
+        const onlineGames = {
+            '스플렌더': 'https://jjinmak-boardgame.onrender.com/splendor2/',
+            '스플렌더 포켓몬': 'https://jjinmak-boardgame.onrender.com/splendor3/',
+            '달무티': 'https://jjinmak-boardgame.onrender.com/dalmuti/',
+            '프린세스의 반란 디럭스': 'https://jjinmak-boardgame.onrender.com/princess/',
+            '요트 다이스': 'https://jjinmak-boardgame.onrender.com/yacht/'
+        };
+        const splendor = games.find(game => game.name === '스플렌더');
+        games.push({name:'스플렌더 포켓몬', min:splendor.min, max:splendor.max, themes:[...splendor.themes], onlineOnly:true});
+        games.push({name:'요트 다이스', min:2, max:10, themes:['주사위','전략'], onlineOnly:true});
+        let onlineOnly = new URLSearchParams(location.search).get('mode') === 'online';
+        const modeControl = document.getElementById('onlineMode');
+        modeControl.checked = onlineOnly;
+        modeControl.addEventListener('change', () => {
+            onlineOnly = modeControl.checked;
+            const url = new URL(location.href);
+            if (onlineOnly) url.searchParams.set('mode','online'); else url.searchParams.delete('mode');
+            history.replaceState(null,'',url);
+            updateList();
+        });
         let currentPlayers = 'all';
         let currentTheme = 'all';
 
@@ -286,6 +328,7 @@
             const listEl = document.getElementById('gameList');
             const statusEl = document.getElementById('statusBar');
             listEl.innerHTML = '';
+            document.getElementById('modeHint').textContent = onlineOnly ? '온라인으로 함께 플레이할 수 있는 게임만 보여요.' : '카페에 있는 보드게임 목록이에요.';
 
             const filtered = games.filter(game => {
                 let matchPlayer = true;
@@ -302,7 +345,8 @@
                     matchTheme = game.themes.includes(currentTheme);
                 }
 
-                return matchPlayer && matchTheme;
+                const matchMode = onlineOnly ? Boolean(onlineGames[game.name]) : !game.onlineOnly;
+                return matchMode && matchPlayer && matchTheme;
             });
 
             if (filtered.length === 0) {
@@ -315,8 +359,9 @@
 
             sortedList.forEach(game => {
                 const card = document.createElement('div');
-                const hasDetails = ['나르','차가운 그녀가 눈을 뜨기 전에','스플렌더','달무티','노터치 크라켄 디럭스','프린세스의 반란 디럭스','스파이폴2','렉시오','블랙 프라이데이'].includes(game.name);
-                card.className = 'game-card' + (hasDetails ? ' has-details' : '');
+                const hasDetails = ['요트 다이스','스플렌더 포켓몬','나르','차가운 그녀가 눈을 뜨기 전에','스플렌더','달무티','노터치 크라켄 디럭스','프린세스의 반란 디럭스','스파이폴2','렉시오','블랙 프라이데이'].includes(game.name);
+                const playUrl = onlineOnly ? onlineGames[game.name] : '';
+                card.className = 'game-card' + (hasDetails ? ' has-details' : '') + (playUrl ? ' has-online' : '');
 
                 const tagsHtml = game.themes.map(t => `<span class="tag">${t}</span>`).join('');
 
@@ -324,16 +369,17 @@
                     <div class="game-info">
                         <div class="game-title">${game.name}</div>
                         <div class="game-meta">
-                            <span class="game-owner">소유: ${game.owner}</span>
+                            ${game.onlineOnly ? '<span class="online-badge">온라인 전용</span>' : '<span class="game-owner">소유: '+game.owner+'</span>'}
                             <div class="game-tags">${tagsHtml}</div>
                         </div>
                     </div>
-                    ${hasDetails ? '<div class="game-actions">' : ''}<div class="game-players">${game.min === game.max ? game.min : game.min + '-' + game.max}인</div>${game.name === '나르' ? '<button type="button" class="details-button" data-knarr-details aria-haspopup="dialog" aria-controls="knarrDetails" aria-label="나르 자세히 보기">자세히 보기</button></div>' : game.name === '차가운 그녀가 눈을 뜨기 전에' ? '<a class="details-button" href="play/girl/index.html" aria-label="차가운 그녀가 눈을 뜨기 전에 카드와 규칙 보기">카드·규칙</a></div>' : game.name === '스플렌더' ? '<a class="details-button" href="play/splendor/index.html" aria-label="스플렌더 규칙과 멀티플레이 보기">자세히 보기</a></div>' : game.name === '달무티' ? '<a class="details-button" href="play/dalmuti/index.html" aria-label="달무티 기본 규칙과 예시 보기">자세히 보기</a></div>' : game.name === '노터치 크라켄 디럭스' ? '<a class="details-button" href="play/kraken/index.html" aria-label="노터치 크라켄 디럭스 규칙과 실제 카드 보기">자세히 보기</a></div>' : game.name === '프린세스의 반란 디럭스' ? '<a class="details-button" href="play/princess/index.html" aria-label="프린세스의 반란 디럭스 규칙과 카드 보기">자세히 보기</a></div>' : game.name === '스파이폴2' ? '<a class="details-button" href="play/spyfall2/index.html" aria-label="스파이폴 2 규칙과 장소 보기">자세히 보기</a></div>' : game.name === '블랙 프라이데이' ? '<a class="details-button" href="play/black-friday/index.html" aria-label="블랙 프라이데이 쉬운 규칙과 예시 보기">자세히 보기</a></div>' : game.name === '렉시오' ? '<a class="details-button" href="play/lexio/index.html" aria-label="렉시오 규칙과 타일 족보 보기">자세히 보기</a></div>' : ''}
+                    <div class="game-actions"><div class="game-players">${game.min === game.max ? game.min : game.min + '-' + game.max}인</div>${game.name === '요트 다이스' ? '<a class="details-button" href="https://jjinmak-boardgame.onrender.com/yacht/?rules=1" aria-label="요트 다이스 규칙 보기">규칙 보기</a>' : game.name === '스플렌더 포켓몬' ? '<a class="details-button" href="https://jjinmak-boardgame.onrender.com/splendor3/?rules=1" aria-label="스플렌더 포켓몬 규칙 보기">규칙 보기</a>' : game.name === '나르' ? '<button type="button" class="details-button" data-knarr-details aria-haspopup="dialog" aria-controls="knarrDetails" aria-label="나르 자세히 보기">자세히 보기</button>' : game.name === '차가운 그녀가 눈을 뜨기 전에' ? '<a class="details-button" href="play/girl/index.html" aria-label="차가운 그녀가 눈을 뜨기 전에 카드와 규칙 보기">카드·규칙</a>' : game.name === '스플렌더' ? '<a class="details-button" href="play/splendor/index.html" aria-label="스플렌더 규칙과 멀티플레이 보기">자세히 보기</a>' : game.name === '달무티' ? '<a class="details-button" href="play/dalmuti/index.html" aria-label="달무티 기본 규칙과 예시 보기">자세히 보기</a>' : game.name === '노터치 크라켄 디럭스' ? '<a class="details-button" href="play/kraken/index.html" aria-label="노터치 크라켄 디럭스 규칙과 실제 카드 보기">자세히 보기</a>' : game.name === '프린세스의 반란 디럭스' ? '<a class="details-button" href="play/princess/index.html" aria-label="프린세스의 반란 디럭스 규칙과 카드 보기">자세히 보기</a>' : game.name === '스파이폴2' ? '<a class="details-button" href="play/spyfall2/index.html" aria-label="스파이폴 2 규칙과 장소 보기">자세히 보기</a>' : game.name === '블랙 프라이데이' ? '<a class="details-button" href="play/black-friday/index.html" aria-label="블랙 프라이데이 쉬운 규칙과 예시 보기">자세히 보기</a>' : game.name === '렉시오' ? '<a class="details-button" href="play/lexio/index.html" aria-label="렉시오 규칙과 타일 족보 보기">자세히 보기</a>' : ''}
+                    ${playUrl ? '<a class="online-play" href="'+playUrl+'" aria-label="'+game.name+' 온라인 플레이하기">플레이하기</a>' : ''}</div>
                 `;
                 listEl.appendChild(card);
             });
 
-            statusEl.textContent = `조건에 맞는 게임이 총 ${sortedList.length}개 있습니다.`;
+            statusEl.textContent = `${onlineOnly ? '온라인으로 플레이할 수 있는' : '조건에 맞는'} 게임이 총 ${sortedList.length}개 있습니다.`;
         }
 
         function filterPlayers(target, btn) {
