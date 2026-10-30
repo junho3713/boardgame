@@ -4,14 +4,34 @@
 <body><main>
 <a class="back" href="../../index.htm">← 보드게임 목록</a>
 <header><h1>블랙 프라이데이</h1><p class="meta">2–5인 · 약 60분 · 전략 · 소유: 해해</p><p class="intro">주식을 싸게 사서 비싸게 팔고,<br>번 돈으로 금을 모아 보세요.</p><p>주식을 몰라도 괜찮아요. 내가 고르는 행동은 세 가지예요. 복잡한 주가 계산은 아래 ‘진행자용 순서’를 보면서 함께 처리하면 돼요.</p><p class="edition">2023년 개정판 기준 · 은괴를 쓰는 구판과 구분해요.</p></header>
-<nav class="contents" aria-label="설명 목차"><a href="#start">먼저 알기</a><a href="#board">게임판 보기</a><a href="#actions">내 차례</a><a href="#example">직접 따라가기</a><a href="#change">주가 변동</a><a href="#price-reference">작은 변동표 읽기</a><a href="#finish">승리 계산</a><a href="#questions">헷갈릴 때</a></nav>
+<nav class="contents" aria-label="설명 목차"><a href="#start">먼저 알기</a><a href="#setup">시작 준비</a><a href="#board">게임판 보기</a><a href="#actions">내 차례</a><a href="#example">직접 따라가기</a><a href="#change">주가 변동</a><a href="#price-reference">작은 변동표 읽기</a><a href="#finish">승리 계산</a><a href="#questions">헷갈릴 때</a></nav>
 
 <section aria-labelledby="start"><h2 id="start">처음에는 이것부터 기억해요</h2>
 <p><strong>목표는 마지막에 재산이 가장 많아지는 것.</strong> 현금에 남은 주식의 판매금과 금의 가치를 더해요. 금만 많이 모았다고 무조건 이기지는 않아요.</p>
 <dl class="terms"><div><dt>주식</dt><dd>다섯 색 가방 모양 토큰. 색마다 가격이 달라요.</dd></div><div><dt>주가</dt><dd>그 색 주식 한 개의 현재 가격.</dd></div><div><dt>금</dt><dd>나중을 위해 사두는 재산. 작은 금괴 5개 = 큰 금괴 1개예요.</dd></div><div><dt>트랙</dt><dd>행동의 흔적을 토큰으로 남겨두는 줄. 가득 차거나 일정 수가 빠지면 큰 가격 변동이 일어나요.</dd></div><div><dt>수준 타일</dt><dd>지금 한 번에 거래할 최대 수량과, 가격 변동 때 뽑을 토큰 수를 알려줘요.</dd></div></dl>
 <p class="example"><strong>생각하는 예시</strong><br>“나중에 파랑이 오를 것 같아” → 파랑 주식을 사요.<br>“이미 충분히 올랐어” → 팔아서 돈을 받아요.<br>“이제 이익을 확보하고 싶어” → 금을 사는 걸 고려해요.</p>
-<details><summary>시작할 때 내 앞에는 무엇을 놓나요?</summary><p>각자 현금 $100과 무작위 주식 5개를 가림막 뒤에 둬요. 세부 판 세팅은 <a href="https://2f-games.com/pdf/2F-BlackFriday-Rules-US-web.pdf#page=2" target="_blank" rel="noopener">공식 준비 그림</a>을 따라요.</p><p><strong>2인이라면 자동 상대 M.I.B.S.를 반드시 추가</strong>해요. 3·4인은 선택, 5인은 넣지 않아요. 자동 상대도 인원에 포함해 판과 트랙을 정해요.</p></details>
+<p><a href="#setup">처음 펼쳤다면 → 아래 시작 준비부터 따라가세요.</a></p>
 </section>
+
+<section aria-labelledby="setup"><h2 id="setup">처음 펼쳤을 때: 시작 준비</h2>
+<p>먼저 <strong>자동 상대 M.I.B.S.를 넣을지</strong> 정해요. 넣는다면 한 명으로 세요. 예를 들어 사람 4명 + 자동 상대라면 5인 판을 써요.</p>
+<div class="table-wrap" tabindex="0" role="region" aria-label="사람 수와 자동 상대에 맞는 판"><table><thead><tr><th>사람</th><th>자동 상대</th><th>세팅 기준 인원</th><th>판 면</th></tr></thead><tbody><tr><th>2명</th><td>반드시 추가</td><td>3인</td><td>2–4인 면</td></tr><tr><th>3명</th><td>없음 / 추가</td><td>3인 / 4인</td><td>2–4인 면</td></tr><tr><th>4명</th><td>없음 / 추가</td><td>4인 / 5인</td><td>2–4인 면 / 5인 면</td></tr><tr><th>5명</th><td>넣지 않음</td><td>5인</td><td>5인 면</td></tr></tbody></table></div>
+<p class="note">아래 ‘2–4인 / 5인’은 사람이 아니라 <strong>자동 상대까지 포함한 세팅 기준 인원</strong>이에요.</p>
+<ol class="procedure setup-steps">
+<li><strong>판·은행.</strong> 위 표에 맞는 판 면을 펼쳐요. 돈과 금괴는 판 옆에 종류별로 모아요. 아직 개인에게 금을 나눠주지는 않아요.</li>
+<li><strong>금 표시 두 개.</strong> 왼쪽 ‘금값’은 <strong>$20</strong>, 아래 ‘매입한 금괴 수’는 <strong>0</strong>에 둬요.</li>
+<li><strong>매도 세 줄.</strong> 각 줄에 다섯 색 주식을 <strong>색마다 2개</strong>씩 놓아요. 한 줄 10개, 세 줄 30개예요. 검정 6개는 세 줄 옆의 표시된 자리에 배치해요. 맨 위 줄부터 사용해요.</li>
+<li><strong>나머지 검정.</strong> 남은 <strong>9개</strong>는 큰 주가표 오른쪽의 검정 표시 자리에 하나씩 둬요. <strong>처음에는 검정을 주머니에 넣지 않아요.</strong></li>
+<li><strong>수준 타일.</strong> 0이 맨 위, 아래에 2·4·6·8 순서로 쌓아요. 첫 수준은 0이에요. 주가 표시 다섯 색은 모두 <strong>$8</strong> 칸에 둬요. 검정 주가 표시는 없어요.</li>
+<li><strong>시장·주머니.</strong> 2–4인 세팅은 주식을 <strong>색마다 1개씩 상자에 빼두고</strong>, 시장에 색마다 4개씩 놓아요. 5인 세팅은 빼두지 않고 시장에 색마다 5개씩 놓아요. 남은 다섯 색 주식은 주머니에 넣고 섞어요. 그다음 <strong>20개를 무작위로 뽑아</strong> 시장에 색별로 더해요.</li>
+<li><strong>초기 주가 조정.</strong> 시장에 <strong>가장 적은 색은 $10</strong>, <strong>가장 많은 색은 $6</strong>으로 옮겨요. 나머지는 $8이에요. 적거나 많은 색이 동률이면 해당 색을 모두 옮겨요. 다섯 색 수가 전부 같으면 모두 $8 그대로예요. <strong>개인 주식을 뽑기 전에</strong> 처리해요.</li>
+<li><strong>개인 준비.</strong> 각자 가림막을 받고 주머니에서 <strong>주식 5개</strong>를 무작위로 뽑아요. <strong>현금 $100</strong>과 함께 뒤에 숨겨요. 자동 상대도 5개·$100을 받지만 모두 공개해요.</li>
+<li><strong>시작 순서·보너스.</strong> 시작할 사람을 정하고 시계 방향으로 진행해요. 선은 보너스 없이, 둘째부터 자기 순서 번호의 보너스 타일을 가림막 앞에 둬요. 자동 상대가 있다면 <strong>자동 상대가 선</strong>이므로 사람들은 2번부터 받아요.</li>
+</ol>
+<h3>시작 직전, 이것만 확인해요</h3>
+<ul class="setup-check"><li>시장 주식 합계: <strong>2–4인 세팅 40개 / 5인 세팅 45개.</strong></li><li>각자 주식 5개·현금 $100. 금괴는 아직 없음.</li><li>금값 $20 · 매입한 금괴 수 0 · 수준 0.</li><li>주식 매수·금괴 매입 트랙은 비어 있고, 매도 세 줄은 채워져 있음.</li><li>주머니에 검정 없음. 남은 다섯 색 주식은 주머니에 둠.</li></ul>
+<p class="example"><strong>시장에 색마다 4개만 놓고 끝내면 안 돼요.</strong><br>기본 20개에 무작위 20개를 더해 총 40개로 시작해요. 그래서 색마다 개수가 달라지고, 그 차이로 시작 가격도 달라져요.</p>
+<p class="note">2023년판 공식 룰북 <a href="https://2f-games.com/pdf/2F-BlackFriday-Rules-US-web.pdf#page=2" target="_blank" rel="noopener">2–3쪽 준비 그림</a>을 함께 보면 검정 토큰과 수준 타일의 정확한 자리를 찾기 쉬워요.</p></section>
 
 <section aria-labelledby="board"><h2 id="board">판에서 어디를 보면 될까요?</h2>
 <figure class="board-photo"><a href="https://2f-games.com/wp-content/uploads/2023/10/BlackFriday-plan-RGB.png" target="_blank" rel="noopener"><img src="https://2f-games.com/wp-content/uploads/2023/10/BlackFriday-plan-RGB.png" alt="2023년판 실제 게임판. 왼쪽 금값, 중앙 주가표, 오른쪽 주식 시장과 거래 트랙." loading="lazy" referrerpolicy="no-referrer"></a><figcaption>2F Games가 공개한 2023년판 게임판. 누르면 크게 볼 수 있어요. 언어판에 따라 그림과 표기가 다를 수 있어요.</figcaption></figure>
