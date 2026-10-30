@@ -14,3 +14,20 @@
 @media(max-width:680px){.hand .tile{flex-basis:calc((100% - 35px)/6);width:calc((100% - 35px)/6);min-height:80px}.hand{max-height:none}}
 @media(max-height:520px) and (orientation:landscape){.action-bar{position:static}.hand .tile{flex-basis:53px;width:53px}}
 @media(prefers-reduced-motion:reduce){.tile{transition:none}.tile.selected{transform:none}}
+
+/* White-edition faces: suit patterns remain readable independently of color. */
+.tile{padding:0;gap:0;aspect-ratio:64/94;min-height:0;height:auto;overflow:visible;border:2px solid #d0d2ca;border-radius:7px;background:#fffefb;color:var(--suit);box-shadow:0 4px 0 #aeb7ac,0 6px 9px #071f2655;isolation:isolate}
+.hand .tile,.table-cards .tile,.combo-option .tile{min-height:0;height:auto;aspect-ratio:64/94}
+.tile:hover{background:#fffefb;border-color:#b7c4b5}
+.tile .tile-face{position:absolute;inset:1px;display:block;width:calc(100% - 2px);height:calc(100% - 2px);fill:none;stroke:none;overflow:hidden;border-radius:4px;pointer-events:none}
+.tile small{position:absolute;bottom:4px;left:50%;transform:translateX(-50%);min-width:25px;padding:1px 3px;border-radius:3px;background:#fffefbf2;color:var(--suit);font-size:9px;font-weight:800;line-height:1.15;white-space:nowrap;pointer-events:none}
+.tile-cloud{--suit:#222428}.tile-star{--suit:#c35409}.tile-moon{--suit:#166344}.tile-sun{--suit:#c82735}
+.tile-two{border-color:#c5c9c0}.tile-two small{border:1px solid #fff9;box-shadow:0 0 2px #fff8}
+.tile.selected{border-color:#ffe36e;outline:2px solid #ffe36e;outline-offset:1px;background:#fffefb;box-shadow:0 4px 0 #a08431,0 7px 13px #071f2688}
+.table-cards .tile{flex-basis:72px;width:72px}
+.combo-option .tile{flex-basis:42px;width:42px}.combo-option .tile .tile-face{width:calc(100% - 2px);height:calc(100% - 2px)}
+.combo-option .tile small{display:none}
+.reference-example .tile{flex-basis:58px;width:58px}
+@media(max-width:680px){.tile{flex-basis:48px;width:48px}.hand .tile{flex-basis:calc((100% - 35px)/6);width:calc((100% - 35px)/6);min-height:0}.table-cards .tile{flex-basis:48px;width:48px;min-height:0}.tile small{font-size:8px;bottom:3px;padding:1px 2px}.reference-example .tile{flex-basis:48px;width:48px}.combo-option .tile{flex-basis:42px;width:42px}}
+@media(max-height:520px) and (orientation:landscape){.hand .tile{flex-basis:53px;width:53px;min-height:0}}
+

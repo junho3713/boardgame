@@ -3,7 +3,57 @@ const $=id=>document.getElementById(id),el=(tag,text,cls)=>{const n=document.cre
 const R=LexioRules;
 let token=sessionStorage.getItem('lexio-token')||'',state=null,busy=false,moving=false,selected=new Set(),modal=null,modalBound=false,stopped=false,controller=null,chain=Promise.resolve(),serverOffset=0,toastTimer,sortSuit=false;
 const me=()=>state.players.find(p=>p.id===state.me),reduced=()=>matchMedia('(prefers-reduced-motion:reduce)').matches;
-function card(c,action){const n=action?btn('',action,'tile'):el('div',undefined,'tile'),names=['cloud','star','moon','sun'];n.classList.add('tile-'+names[c.suit]);n.append(el('strong',String(c.rank)));const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 32 32');svg.setAttribute('aria-hidden','true');svg.innerHTML=['<path d="M7 24a6 6 0 0 1-1-12 9 9 0 0 1 17-2 7 7 0 0 1 1 14Z"/>','<path d="m16 3 4 8 9 2-7 6 2 10-8-5-8 5 2-10-7-6 9-2Z"/>','<path d="M24 22A12 12 0 0 1 13 3a13 13 0 1 0 14 17Z"/>','<circle cx="16" cy="16" r="7"/><path d="M16 2v3m0 22v3M2 16h3m22 0h3M6 6l2 2m16 16 2 2M6 26l2-2M24 8l2-2"/>'][c.suit];n.append(svg,el('small',R.suits[c.suit]));n.setAttribute('aria-label',R.suits[c.suit]+' '+c.rank);if(c.id)n.dataset.card=c.id;return n;}
+// Vector faces based on the white-edition reference: no external image requests.
+function tileArt(c){
+ const suit=Number(c.suit),rank=Number(c.rank),white='#fffefb',ink=['#222428','#dc6411','#166344','#c82735'][suit];
+ const line=(x1,y1,x2,y2,width=1.4,color=ink)=>`<path d="M${x1} ${y1}L${x2} ${y2}" fill="none" stroke="${color}" stroke-width="${width}"/>`;
+ const circle=(x,y,r,fill=white,stroke=ink,width=1.6)=>`<circle cx="${x}" cy="${y}" r="${r}" fill="${fill}" stroke="${stroke}" stroke-width="${width}"/>`;
+ const curl=(x,y,rotate=0,scale=1,color=ink)=>`<g transform="translate(${x} ${y}) rotate(${rotate}) scale(${scale})" fill="none" stroke="${color}" stroke-width="1.65" stroke-linecap="round"><path d="M1 15C-3 7 1 0 8 1C16 2 16 12 10 12C5 12 4 6 8 5C12 4 13 8 10 9M3 16C8 20 18 17 17 9M2 4L-1 1M15 3L18 0"/></g>`;
+ const digit=(x,y,size=30,color=ink)=>`<text x="${x}" y="${(y+size*.31).toFixed(2)}" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="700" font-size="${size}" fill="${color}"${rank>9?' textLength="27" lengthAdjust="spacingAndGlyphs"':''}>${rank}</text>`;
+ let art=`<rect width="64" height="88" rx="3" fill="${white}"/>`;
+ if(rank===2){
+  if(suit===3){
+   for(let i=0;i<36;i++){const a=i*Math.PI/18,x=32+Math.cos(a)*85,y=39+Math.sin(a)*85;art+=line(32,39,x.toFixed(2),y.toFixed(2),i%3===0?2.5:1.5);}
+   for(const [x,y] of [[6,7],[58,7],[6,77],[58,77]])art+=circle(x,y,4.3,white,ink,1.3);
+   art+=circle(32,39,21.7,white,ink,2.5)+circle(32,39,17.4,white,ink,1.2)+digit(32,39,33);
+  }else if(suit===2){
+   art+=`<rect width="64" height="88" rx="3" fill="${ink}"/>`;
+   for(const y of [5,8,11,77,80,83])art+=line(4,y,60,y,.8,white);
+   art+=`<path d="M3 15C15 16 17 4 12 1C27 6 20 24 6 23ZM61 73C49 72 47 84 52 87C37 82 44 64 58 65Z" fill="${white}"/>`;
+   art+=circle(32,39,22,white,white,1)+circle(32,39,17,ink,ink,1)+digit(32,39,34,white);
+  }else if(suit===1){
+   art+=`<path d="M32-8L41 16L76 6L51 34L76 64L41 59L32 88L23 59L-12 64L13 34L-12 6L23 16Z" fill="${ink}"/>`;
+   for(const [x,y] of [[7,8],[57,8],[7,76],[57,76]])art+=`<path d="M${x} ${y-5}l1.7 3.3 3.8 1.7-3.8 1.7L${x} ${y+5}l-1.7-3.3L${x-5.5} ${y}l3.8-1.7Z" fill="${ink}"/>`;
+   art+=circle(32,39,23,white,ink,1)+circle(32,39,17.5,white,ink,1.2)+digit(32,39,33);
+  }else{
+   for(const [x,y,r,s] of [[3,3,0,.94],[61,4,90,1],[4,85,-90,1],[61,85,180,1],[3,30,0,.9],[62,57,180,.9],[26,1,0,.8],[39,87,180,.8]])art+=curl(x,y,r,s);
+   art+=`<path d="M2 22C11 19 18 22 15 28M62 63C53 66 46 63 49 57M1 63C9 61 12 68 8 73M63 22C55 24 52 17 56 12" fill="none" stroke="${ink}" stroke-width="2"/>`;
+   art+=circle(32,39,23,white,ink,2.2)+circle(32,39,18.1,white,ink,1.2)+digit(32,39,33);
+  }
+ }else{
+  if(suit===3){
+   art+=circle(26,31,21.4,white,ink,1.2);
+   for(let i=0;i<16;i++){const a=i*Math.PI/8;art+=line((26+Math.cos(a)*17.5).toFixed(2),(31+Math.sin(a)*17.5).toFixed(2),(26+Math.cos(a)*21).toFixed(2),(31+Math.sin(a)*21).toFixed(2),1.3);}
+   art+=circle(26,31,16,white,ink,1.5);
+  }else if(suit===2){
+   art+=circle(26,31,22,ink,ink,0)+circle(32,25,20.8,white,white,0)+circle(26,31,16.5,white,ink,1.7);
+  }else if(suit===1){
+   art+=`<path d="M26 5L34 15L49 10L42 25L52 35L38 40L40 55L26 47L12 55L14 40L1 35L11 25L5 10L19 15Z" fill="${ink}"/>`+circle(26,31,16.7,white,ink,1.3);
+  }else{
+   art+=curl(5,10,0,.75)+curl(48,12,90,.7)+curl(7,53,-90,.72)+curl(44,50,180,.7)+circle(26,31,18.3,white,ink,1.8)+circle(26,31,15.4,white,ink,.8);
+  }
+  art+=digit(26,31,rank>9?25:30);
+  art+=`<text x="55" y="13" text-anchor="middle" font-family="Georgia,serif" font-size="11" font-weight="700" fill="${ink}">${rank}</text>`;
+  art+=`<text x="49" y="69" text-anchor="middle" font-family="Batang, 'Noto Serif CJK KR',serif" font-size="15" font-weight="700" fill="${ink}">${['雲','星','月','日'][suit]}</text>`;
+ }
+ return art;
+}
+function card(c,action){
+ const n=action?btn('',action,'tile'):el('div',undefined,'tile'),names=['cloud','star','moon','sun'];
+ n.classList.add('tile-'+names[c.suit]);n.classList.toggle('tile-two',c.rank===2);n.dataset.rank=String(c.rank);
+ const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 64 88');svg.setAttribute('aria-hidden','true');svg.setAttribute('focusable','false');svg.setAttribute('class','tile-face');svg.innerHTML=tileArt(c);
+ n.append(svg,el('small',R.suits[c.suit]));n.setAttribute('aria-label',R.suits[c.suit]+' '+c.rank);if(c.id)n.dataset.card=c.id;return n;
+}
 
 function toast(message){clearTimeout(toastTimer);$('toast').textContent=message;$('toast').hidden=false;toastTimer=setTimeout(()=>$('toast').hidden=true,4300);}
 function fail(e){$('status').textContent=e.message||String(e);toast(e.message||String(e));}
@@ -43,3 +93,4 @@ const references=[['1','싱글','한 개'],['2','페어','같은 숫자 둘'],['
 function showRules(){const box=dialog('렉시오 · 규칙과 족보'),content=el('div',undefined,'rules-content');content.append(el('p','같은 개수로 더 강한 조합을 내고, 손패를 먼저 비워요. 5라운드 뒤 점수칩이 가장 많은 사람이 최종 승리해요.'));for(const [title,text] of [['준비와 첫 차례','3인: 숫자 1~9를 12개씩 / 4인: 1~13을 13개씩 / 5인: 1~15를 12개씩 받아요. 각자 점수칩 64점으로 시작해요. 매 라운드 구름 3을 가진 사람이 먼저 내며, 구름 3을 꼭 포함할 필요는 없어요.'],['숫자와 문양','숫자는 3 < 4 < … < 15 < 1 < 2 순서로 강해요. 같은 숫자는 구름 < 별 < 달 < 해 순서예요. 3·4인에서는 범위 밖 숫자는 빼요.'],['내 차례와 패스','1·2·3·5개 중 하나를 내요. 이어 낼 때는 개수가 같고 더 강해야 해요. 낼 수 있어도 패스할 수 있으며 다음 차례에 다시 낼 수 있어요. 나머지가 모두 연속 패스하면 마지막으로 낸 사람이 새 조합을 먼저 내요. 4개는 낼 수 없어요.']])content.append(el('h3',title),el('p',text));content.append(el('h3','족보 · 아래로 갈수록 강해요'));const examples=[[{rank:7,suit:3}],[{rank:6,suit:0},{rank:6,suit:3}],[0,1,2].map(s=>({rank:8,suit:s})),[3,4,5,6,7].map((n,i)=>({rank:n,suit:i%4})),[3,5,7,9,1].map(n=>({rank:n,suit:2})),[0,1,2].map(s=>({rank:5,suit:s})).concat([0,1].map(s=>({rank:7,suit:s}))),[0,1,2,3].map(s=>({rank:9,suit:s})).concat([{rank:4,suit:0}]),[3,4,5,6,7].map(n=>({rank:n,suit:3}))];references.forEach((r,i)=>{content.append(el('h3',r[1]+' · '+r[0]+'개'),el('p',r[2]));const row=el('div',undefined,'reference-example');examples[i].forEach(c=>row.append(card(c)));content.append(row);});for(const [title,text] of [['5개끼리 비교할 때','스트레이트 < 플러시 < 풀하우스 < 포카드 < 스트레이트 플러시 순서예요. 종류가 다르면 족보가 먼저예요. 같은 종류이면 스트레이트는 가장 강한 숫자, 플러시는 강한 숫자부터, 풀하우스는 트리플 숫자, 포카드는 네 개짜리 숫자를 비교해요. 같은 숫자 스트레이트는 가장 강한 타일의 문양으로 비교해요.'],['1로 이어 붙이는 스트레이트','1·2·3·4·5와 2·3·4·5·6이 가장 강한 두 스트레이트예요. 그다음은 가장 큰 숫자 뒤에 1을 붙인 조합이에요: 3인 6·7·8·9·1, 4인 10·11·12·13·1, 5인 12·13·14·15·1. 그 뒤에 2까지 이어 붙일 수는 없어요.'],['2 검사와 점수','누군가 타일을 다 내면 즉시 라운드가 끝나요. 각자의 남은 수에 2 한 개마다 2배를 곱해요. 예: 5개 중 2가 두 개면 5×4=20개예요. 환산 개수가 많은 사람이 적은 사람에게 차이만큼 칩을 줘요.'],['칩이 떨어지면','환산 개수가 적은 사람부터 차례로 받아요. 지불 중 0점이 되면 즉시 탈락하고 이후 정산에서 받거나 내지 못해요. 5라운드 뒤 최다 칩이 승리해요. 이 온라인판은 탈락으로 참가자가 3명 미만이 되면 일찍 종료해요.'],['온라인 진행','친구와 할 때는 방장이 턴 제한시간을 정해요. 시간이 끝나면 컴퓨터가 이번 행동을 대신해요. 컴퓨터와 시작하는 모드는 시간 제한이 없어요. 추천은 합법적인 수 중 손패를 줄이는 기준으로 고른 제안이에요.']])content.append(el('h3',title),el('p',text));const link=el('a','공식 규칙과 예시 보기');link.href='https://lexio.co.kr/bbs/board.php?bo_table=0102';link.target='_blank';link.rel='noopener';content.append(link);box.append(content);showDialog(box);}
 function updateClock(){if(!state||state.phase==='lobby')return;const n=$('clock');n.hidden=state.phase!=='playing';if(!state.turnLimitSeconds){n.textContent='시간 제한 없음';n.classList.remove('urgent');return;}if(!state.turnDeadline){n.textContent='컴퓨터 진행';n.classList.remove('urgent');return;}const seconds=Math.max(0,Math.ceil((state.turnDeadline-Date.now()-serverOffset)/1000));n.textContent=seconds?'남은 시간 '+seconds+'초':'시간 종료 · 자동 진행';n.classList.toggle('urgent',seconds<=10);}
 $('create').onclick=()=>enter('create');$('join').onclick=()=>enter('join');$('solo').onclick=()=>enter('solo');$('start').onclick=()=>send('start');$('addBot').onclick=()=>send('add-bot');$('fillBots').onclick=()=>send('fill-bots');$('capacity').onchange=()=>send('capacity',{capacity:Number($('capacity').value)});$('turnSeconds').onchange=()=>send('turn-limit',{seconds:Number($('turnSeconds').value)});$('share').onclick=share;$('shareLobby').onclick=share;$('rules').onclick=showRules;$('fullscreen').onclick=fullscreen;$('suggest').onclick=showLegal;$('recommend').onclick=recommend;$('sort').onclick=()=>{sortSuit=!sortSuit;drawHand();};$('clearSelection').onclick=()=>{selected.clear();$('recommendWhy').textContent='';markSelection();};$('play').onclick=()=>send('action',{type:'play',cards:[...selected]});$('pass').onclick=()=>send('action',{type:'pass'});for(const b of document.querySelectorAll('[data-leave]'))b.onclick=()=>{stopped=true;controller?.abort();sessionStorage.removeItem('lexio-token');location.href='/lexio/';};document.addEventListener('fullscreenchange',()=>{$('fullscreen').textContent=document.fullscreenElement?'전체화면 종료':'전체화면';$('fullscreen').setAttribute('aria-pressed',String(!!document.fullscreenElement));});setInterval(updateClock,250);$('name').value=localStorage.getItem('lexio-name')||'';$('code').value=new URLSearchParams(location.search).get('room')||'';$('reference').replaceChildren(...references.map(r=>{const row=el('div',undefined,'reference-row');row.append(el('b',r[0]+'개'),el('span',r[1]+' · '+r[2]));return row;}));if(new URLSearchParams(location.search).has('rules'))showRules();if(token)api('state').then(render).then(connect).catch(e=>{token='';sessionStorage.removeItem('lexio-token');fail(e);});
+
