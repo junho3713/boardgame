@@ -305,3 +305,13 @@
 .master-lead{font-size:17px;font-weight:700;color:#334d3a}.master-steps{padding-left:24px;line-height:1.9;font-size:15px}.master-steps li+li{margin-top:10px}.master-current{padding:10px;background:#f2e2b8;color:#654223;border-radius:5px;font-size:13px}.reservation-guide button[data-card]{outline:2px solid #ffe18c;outline-offset:2px}
 @media(max-width:760px){.own-card-areas{grid-template-columns:1fr;gap:20px}#acquired.evolution-roster{max-height:440px}.owned-evolution-row{grid-template-columns:76px minmax(0,1fr);gap:10px}.owned-evolution-row>.pokemon-card{width:76px}.evolution-info h3{font-size:16px}.evolution-need{grid-template-columns:1fr}.evolution-color .gem{width:30px;height:30px}.evolution-check{font-size:14px}.bank-token.master-guide-button{min-height:65px}.master-steps{font-size:14px}.master-help-label{font-size:9px}}
 @media(orientation:landscape) and (max-height:560px) and (max-width:1200px){.playing .own-card-areas{grid-template-columns:1fr}#acquired.evolution-roster{max-height:280px}.playing .bank-token.master-guide-button{min-height:45px}.playing .master-help-label{font-size:8px}}
+
+/* Explicit card actions; automatic payment uses colored tokens before gold. */
+.take-mode{flex-wrap:wrap;gap:6px}.take-mode button{white-space:nowrap}
+#reserveMode[aria-pressed="true"]{background:#f1d796;color:#302714;border-color:#ffe8b6}
+#inspectMode[aria-pressed="true"]{background:#dce8cc;color:#203b2a;border-color:#e6f1d8}
+body.reserving #market .dev-card{border-color:#f1d796;outline:2px dashed #f1d796;outline-offset:2px}
+body.reserving #market .afford-label{display:none}
+body.reserving #nobles .special-pile .dev-card{filter:saturate(.45)}
+body.inspecting #market .dev-card{cursor:help}
+@media(max-width:600px){.take-mode button{padding:6px 9px;font-size:11px}.take-controls{gap:7px}.take-action{min-width:0}#takeHelp{line-height:1.5}}

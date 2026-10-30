@@ -268,3 +268,13 @@
 .board-area>.board-assets{border-top:0;padding-top:0}
 @media(max-width:760px){.board-area{grid-template-areas:'market bank' 'controls controls' 'assets assets' 'nobles nobles'}.market-row>.deck-card{overflow:hidden;padding:2px;gap:3px}.market-row>.deck-card span{display:none}.market-row>.deck-card strong{font-size:8px;line-height:1.1;white-space:nowrap}.market-row>.deck-card small{font-size:7px;line-height:1.1;overflow-wrap:normal}.board-area>.take-controls{gap:8px;padding:9px 0}.take-controls .take-action{margin:0}.take-controls .take-action p{font-size:10px}}
 @media(orientation:landscape) and (max-height:560px) and (max-width:1200px){.playing .board-area{grid-template-areas:'market bank nobles' 'controls controls nobles' 'assets assets nobles'}.playing .board-area>.take-controls{padding:5px 0}.playing .market-row>.deck-card span{display:none}.playing .market-row>.deck-card{overflow:hidden}}
+
+/* Explicit card actions; automatic payment uses colored tokens before gold. */
+.take-mode{flex-wrap:wrap;gap:6px}.take-mode button{white-space:nowrap}
+#reserveMode[aria-pressed="true"]{background:#f1d796;color:#302714;border-color:#ffe8b6}
+#inspectMode[aria-pressed="true"]{background:#dce8cc;color:#203b2a;border-color:#e6f1d8}
+body.reserving #market .dev-card{border-color:#f1d796;outline:2px dashed #f1d796;outline-offset:2px}
+body.reserving #market .afford-label{display:none}
+body.reserving #nobles .special-pile .dev-card{filter:saturate(.45)}
+body.inspecting #market .dev-card{cursor:help}
+@media(max-width:600px){.take-mode button{padding:6px 9px;font-size:11px}.take-controls{gap:7px}.take-action{min-width:0}#takeHelp{line-height:1.5}}
