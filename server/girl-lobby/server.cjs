@@ -3,6 +3,7 @@ const http=require('node:http'),fs=require('node:fs'),path=require('node:path'),
 const cardTypes=JSON.parse(fs.readFileSync(path.join(__dirname,'../../play/girl/cards.json'),'utf8'));
 const game=require('./game.cjs');
 function createApp(){
+ const lexioHandler=require('../lexio/server.cjs').createHandler();
  const yachtHandler=require('../yacht/server.cjs').createHandler();
  const princessHandler=require('../princess/server.cjs').createHandler();
  const dalmutiHandler=require('../dalmuti/server.cjs').createHandler();
@@ -17,6 +18,7 @@ function createApp(){
  const server=http.createServer(async(req,res)=>{
   try{
    const canonical=process.env.PUBLIC_ORIGIN;if(canonical&&req.url!=='/healthz'){const target=new URL(canonical);if(req.headers.host!==target.host){res.writeHead(307,{Location:target.origin+req.url,'Cache-Control':'no-store'});res.end();return;}}
+   if(req.url.startsWith('/lexio')){await lexioHandler(req,res);return;}
    if(req.url.startsWith('/yacht')){await yachtHandler(req,res);return;}
    if(req.url.startsWith('/princess')){await princessHandler(req,res);return;}
    if(req.url.startsWith('/dalmuti')){await dalmutiHandler(req,res);return;}
