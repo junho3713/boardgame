@@ -73,9 +73,9 @@ function autoStep(g){
  const available=colors.filter(c=>g.bank[c]>0);if(available.length){act(g,p.id,{type:'take',tokens:Object.fromEntries(shuffle(available).slice(0,3).map(c=>[c,1]))});return;}if(canReserve(g,p)){const card=Object.values(g.market).flat()[0];if(card)act(g,p.id,{type:'reserve',card:card.id});else act(g,p.id,{type:'reserve',blind:true,tier:[1,2,3].find(t=>g.decks[t].length)});return;}act(g,p.id,{type:'pass'});
 }
 function botStep(g){need(g.players[g.current].bot,'컴퓨터 차례가 아니에요.');autoStep(g);}
-function timeoutTurn(g){
+function timeoutTurn(g,seconds=30){
  need(g.phase==='playing','게임이 진행 중이 아니에요.');const turn=g.turn,p=g.players[g.current];
- event(g,'timeout',null,null,null,p.name+'님의 30초가 지나 컴퓨터가 이번 차례의 남은 선택을 마쳐요.');
+ event(g,'timeout',null,null,null,p.name+'님의 '+seconds+'초가 지나 컴퓨터가 이번 차례의 남은 선택을 마쳐요.');
  for(let step=0;step<4&&g.phase==='playing'&&g.turn===turn;step++)autoStep(g);
  need(g.phase!=='playing'||g.turn!==turn,'시간 종료 처리를 완료하지 못했어요.');invariant(g);
 }

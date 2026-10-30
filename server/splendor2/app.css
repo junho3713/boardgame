@@ -150,3 +150,121 @@
 }
 
 @media(prefers-reduced-motion:reduce){.owned-pile:hover .dev-card,.bank-token.picked{transform:none}}
+
+/* The active table uses new 2D artwork and locally drawn gem tokens. */
+.gem-white{--token-ring:#fffdf4;--token-edge:#9eafb6}
+.gem-blue{--token-ring:#2c6fab;--token-edge:#16436e}
+.gem-green{--token-ring:#287d50;--token-edge:#154c30}
+.gem-red{--token-ring:#bd4050;--token-edge:#762330}
+.gem-black{--token-ring:#68452f;--token-edge:#3d281e}
+.gem-gold{--token-ring:#e8bb43;--token-edge:#9d6e1c}
+.gem .token-rim{fill:var(--token-ring);stroke:var(--token-edge);stroke-width:3.2}
+.gem .token-inner{fill:#fff0cd;stroke:var(--token-edge);stroke-width:1.1}
+.gem .gem-facet{fill:none;stroke:var(--gem-stroke);stroke-width:1.35;opacity:.9}
+.gem .gold-mark{fill:#fff0b4;stroke:#9d722a;stroke-width:1.3}
+.illustrated{container-type:inline-size;background:#fbf0d4;border-color:#d9c491}
+.illustrated .card-art{position:absolute;inset:20cqw 0 44cqw;z-index:0;background-size:500% 500%;background-repeat:no-repeat;background-color:#b8a27a}
+.illustrated .card-fallback{z-index:1;padding:0;background:linear-gradient(to bottom,#fff4da 0 20cqw,transparent 20cqw,transparent calc(100% - 44cqw),#fff4da calc(100% - 44cqw));color:#293e35}
+.illustrated .card-points{top:0;left:5cqw;line-height:1.1;font-size:clamp(10px,18cqw,25px);text-shadow:none}
+.illustrated .card-fallback>.gem{width:16cqw;height:16cqw;top:1.5cqw;right:4cqw}
+.illustrated .card-costs{display:grid;grid-template-columns:repeat(2,max-content);gap:2cqw;left:4cqw;bottom:3cqw;max-width:92%;width:max-content}
+.illustrated .card-costs .chip{padding:1cqw 2cqw;gap:1cqw;background:#fffaf0;border:1px solid #b7a78a;border-radius:3px;line-height:1;color:#263d32}
+.illustrated .card-costs .gem{width:clamp(9px,13cqw,18px);height:clamp(9px,13cqw,18px)}
+.illustrated .card-costs .chip strong{font-size:clamp(10px,13cqw,18px);line-height:1.1}
+.noble-card.illustrated .card-art{inset:0}
+.noble-card.illustrated .card-costs{display:flex;flex-wrap:wrap;gap:2cqw;max-width:94%;left:3cqw;bottom:3cqw}
+.noble-card.illustrated .noble-emblem{top:3cqw;right:5cqw;left:auto;font-size:clamp(7px,10cqw,12px);color:#3f4b37}
+.noble-card.illustrated .card-costs .chip{padding:1cqw}
+.noble-card.illustrated .card-costs .gem{width:clamp(6px,12cqw,15px);height:clamp(6px,12cqw,15px)}
+.noble-card.illustrated .card-costs .chip strong{font-size:clamp(7px,12cqw,14px)}
+
+/* Card requirements: colored number circles with a separate outlined gem. */
+.illustrated .card-art{inset:20cqw 0 0}
+.illustrated .card-fallback{background:linear-gradient(to bottom,#fff4da 0 20cqw,transparent 20cqw)}
+.illustrated .card-costs{display:flex;flex-direction:column;align-items:flex-start;gap:1.4cqw;left:4cqw;bottom:4cqw;max-width:92%;width:max-content}
+.cost-badge{--cost-color:#fff9ed;--cost-ink:#23352e;display:inline-flex;align-items:center;gap:0;position:relative;line-height:1;white-space:nowrap}
+.cost-blue{--cost-color:#245f98;--cost-ink:#fff}.cost-green{--cost-color:#23764b;--cost-ink:#fff}.cost-red{--cost-color:#a92f40;--cost-ink:#fff}.cost-black{--cost-color:#68452f;--cost-ink:#fff}
+.illustrated .card-costs .cost-value{display:grid;place-items:center;width:clamp(14px,24cqw,34px);height:clamp(14px,24cqw,34px);border:clamp(1.5px,1.8cqw,2.4px) solid #fff;border-radius:50%;background:var(--cost-color);color:var(--cost-ink);font-family:'Malgun Gothic','Apple SD Gothic Neo',system-ui,sans-serif;font-size:clamp(11px,18cqw,25px);font-weight:800;font-variant-numeric:tabular-nums;line-height:1;letter-spacing:-.045em;text-shadow:none;box-shadow:0 1px 3px #071b1b9c}
+.illustrated .card-costs .cost-gem{width:clamp(10px,16cqw,23px);height:clamp(10px,16cqw,23px);margin-left:-.5cqw;filter:drop-shadow(0 1px 1px #071b1b80)}
+.cost-gem .cost-gem-outline>*{stroke:#fff;stroke-width:5.5;fill:none}.cost-gem .cost-gem-outline .gem-facet{display:none}
+.illustrated:has(.afford-label) .card-costs{bottom:calc(4cqw + 14px)}
+.noble-card.illustrated .card-costs{display:flex;flex-direction:column;flex-wrap:nowrap;gap:1cqw;left:4cqw;bottom:3cqw;max-width:92%}
+.noble-card.illustrated .card-costs .cost-value{width:clamp(12px,22cqw,27px);height:clamp(12px,22cqw,27px);font-size:clamp(9px,16cqw,19px)}
+.noble-card.illustrated .card-costs .cost-gem{width:clamp(9px,15cqw,18px);height:clamp(9px,15cqw,18px)}
+@media(max-width:600px){.illustrated:has(.afford-label) .card-costs{bottom:calc(3cqw + 12px)}}
+
+@container (max-width:66px){
+ .card-costs[data-count="4"]{display:grid;grid-template-columns:repeat(2,max-content);gap:2cqw 1cqw}
+ .card-costs[data-count="4"] .cost-value{width:clamp(11px,24cqw,16px);height:clamp(11px,24cqw,16px);font-size:clamp(9px,18cqw,12px);border-width:1.5px}
+ .card-costs[data-count="4"] .cost-gem{width:clamp(7px,14cqw,10px);height:clamp(7px,14cqw,10px)}
+}
+
+/* Put the personal token and bonus summary into the open space on the board. */
+.board-area{grid-template-areas:"market bank nobles" "assets assets nobles" "controls controls controls";row-gap:12px;align-items:start}
+.board-area>.board-assets{grid-area:assets;align-self:end;min-width:0;margin:0;padding:12px 0 0;background:transparent;border:0;border-top:1px solid #78947466;border-radius:0}
+.board-assets .asset-heading{margin-bottom:9px;gap:10px}
+.board-assets .asset-heading h2{font-size:13px}
+.board-assets .asset-heading .asset-stats{font-size:11px}
+.board-assets .asset-heading .quiet{min-height:30px;font-size:10px;padding:4px 8px}
+.board-assets .asset-rails{grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.board-assets .asset-rails h3{font-size:11px;margin-bottom:7px}
+.board-assets .asset-rails .small{font-size:10px;line-height:1.6;margin-top:6px}
+.board-assets .token-assets .token-line{min-height:48px;gap:7px 11px;justify-content:flex-start;flex-wrap:wrap}
+.board-assets .token-assets .chip{flex-direction:row;gap:4px}
+.board-assets .token-assets .gem{width:27px;height:27px}
+.board-assets .token-assets .chip strong{font-size:17px}
+.board-assets .bonus-line{gap:7px}
+.board-assets .bonus-card{max-width:45px;height:54px;padding:4px 6px}
+.board-assets .bonus-card>.gem{width:15px;height:15px;top:5px;right:4px}
+.board-assets .bonus-card>strong{font-size:20px}
+.board-assets .bonus-card>small{font-size:9px}
+.own-card-areas{margin-top:0}
+@media(max-width:1120px){
+ .board-assets .token-assets .gem{width:24px;height:24px}
+ .board-assets .token-assets .chip strong{font-size:15px}
+ .board-assets .token-assets .token-line{gap:6px 8px}
+ .board-assets .bonus-card{height:49px;padding:4px}
+ .board-assets .bonus-card>strong{font-size:18px}
+}
+@media(max-width:760px){
+ .board-area{grid-template-areas:"market bank" "assets assets" "nobles nobles" "controls controls";row-gap:12px}
+ .board-area>.board-assets{padding-top:11px}
+ .board-assets .asset-heading{gap:8px}
+ .board-assets .asset-heading .asset-stats{font-size:10px}
+ .board-assets .asset-rails{grid-template-columns:1fr;gap:12px}
+ .board-assets .token-assets .token-line{min-height:30px;gap:7px 13px}
+ .board-assets .token-assets .gem{width:26px;height:26px}
+ .board-assets .bonus-line{gap:8px}
+ .board-assets .bonus-card{max-width:48px;height:53px;padding:4px 6px}
+ .board-assets .bonus-card>strong{font-size:20px}
+}
+@media(orientation:landscape) and (max-height:560px) and (max-width:1200px){
+ .playing .board-area{grid-template-areas:"market bank nobles" "assets assets nobles" "controls controls controls";row-gap:8px}
+ .playing .board-assets{padding-top:8px}
+ .playing .board-assets .asset-heading{margin-bottom:7px;gap:7px}
+ .playing .board-assets .asset-heading h2{font-size:11px}
+ .playing .board-assets .asset-heading .asset-stats{font-size:9px}
+ .playing .board-assets .asset-heading .quiet{font-size:9px;min-height:27px;padding:3px 6px}
+ .playing .board-assets .asset-rails{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+ .playing .board-assets .asset-rails h3{font-size:10px;margin-bottom:6px}
+ .playing .board-assets .asset-rails .small{font-size:8px;margin-top:5px}
+ .playing .board-assets .token-assets .token-line{min-height:32px;gap:4px 6px;flex-wrap:wrap;justify-content:flex-start}
+ .playing .board-assets .token-assets .chip{flex-direction:row}
+ .playing .board-assets .token-assets .gem{width:21px;height:21px}
+ .playing .board-assets .token-assets .chip strong{font-size:12px}
+ .playing .board-assets .bonus-line{gap:5px}
+ .playing .board-assets .bonus-card{height:44px;max-width:35px;padding:4px}
+ .playing .board-assets .bonus-card>.gem{width:11px;height:11px;top:4px;right:3px}
+ .playing .board-assets .bonus-card>strong{font-size:16px}
+ .playing .board-assets .bonus-card>small{font-size:8px}
+ .playing .own-card-areas{margin-top:0}
+}
+
+.turn-clock{padding:6px 10px;border:1px solid #90a88f;border-radius:5px;color:#ecf3de;background:#25443a;font-weight:750;font-size:13px;white-space:nowrap;font-variant-numeric:tabular-nums}.turn-clock.urgent{background:#7d302c;border-color:#ffb7a0;color:#fff3d9}.board-assets .asset-rails{grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:24px}.board-assets .token-assets .token-line{min-height:60px;gap:10px 14px}.board-assets .token-assets .gem{width:40px;height:40px}.board-assets .token-assets .chip strong{font-size:22px}.board-assets .bonus-card{max-width:51px;height:61px}.board-assets .bonus-card>.gem{width:17px;height:17px}.board-assets .bonus-card>strong{font-size:23px}@media(max-width:1120px){.board-assets .asset-rails{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:18px}.board-assets .token-assets .gem{width:34px;height:34px}.board-assets .token-assets .chip strong{font-size:20px}.board-assets .token-assets .token-line{gap:8px 12px}.board-assets .bonus-card{height:56px}.board-assets .bonus-card>strong{font-size:21px}}@media(max-width:760px){.board-assets .asset-rails{grid-template-columns:1fr;gap:14px}.board-assets .token-assets .token-line{min-height:50px;gap:8px 11px}.board-assets .token-assets .gem{width:36px;height:36px}.board-assets .token-assets .chip strong{font-size:21px}.board-assets .bonus-card{max-width:51px;height:58px}.turn-clock{font-size:11px;padding:5px 8px}}@media(orientation:landscape) and (max-height:560px) and (max-width:1200px){.playing .board-assets .asset-rails{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:14px}.playing .board-assets .token-assets .gem{width:29px;height:29px}.playing .board-assets .token-assets .chip strong{font-size:17px}.playing .board-assets .token-assets .token-line{gap:6px 9px;min-height:46px}.playing .board-assets .bonus-card{height:48px}.playing .board-assets .bonus-card>strong{font-size:18px}.playing .turn-clock{font-size:10px;padding:4px 7px}}
+
+/* Action strip sits in the open space above personal tokens and discount cards. */
+.board-area{grid-template-areas:'market bank nobles' 'controls controls nobles' 'assets assets nobles'}
+.board-area>.take-controls{margin:0;padding:9px 0;border-top:1px solid #78947466;border-bottom:1px solid #78947466;align-items:center}
+.board-area>.board-assets{border-top:0;padding-top:0}
+@media(max-width:760px){.board-area{grid-template-areas:'market bank' 'controls controls' 'assets assets' 'nobles nobles'}.market-row>.deck-card{overflow:hidden;padding:2px;gap:3px}.market-row>.deck-card span{display:none}.market-row>.deck-card strong{font-size:8px;line-height:1.1;white-space:nowrap}.market-row>.deck-card small{font-size:7px;line-height:1.1;overflow-wrap:normal}.board-area>.take-controls{gap:8px;padding:9px 0}.take-controls .take-action{margin:0}.take-controls .take-action p{font-size:10px}}
+@media(orientation:landscape) and (max-height:560px) and (max-width:1200px){.playing .board-area{grid-template-areas:'market bank nobles' 'controls controls nobles' 'assets assets nobles'}.playing .board-area>.take-controls{padding:5px 0}.playing .market-row>.deck-card span{display:none}.playing .market-row>.deck-card{overflow:hidden}}
