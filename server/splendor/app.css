@@ -152,8 +152,14 @@
 @media(prefers-reduced-motion:reduce){.owned-pile:hover .dev-card,.bank-token.picked{transform:none}}
 
 /* The active table uses new 2D artwork and locally drawn gem tokens. */
-.gem .token-rim{fill:#f3e2b8;stroke:#98734a;stroke-width:1.8}
-.gem .token-inner{fill:#e6d0a0;stroke:#b2986a;stroke-width:.8}
+.gem-white{--token-ring:#fffdf4;--token-edge:#9eafb6}
+.gem-blue{--token-ring:#2c6fab;--token-edge:#16436e}
+.gem-green{--token-ring:#287d50;--token-edge:#154c30}
+.gem-red{--token-ring:#bd4050;--token-edge:#762330}
+.gem-black{--token-ring:#68452f;--token-edge:#3d281e}
+.gem-gold{--token-ring:#e8bb43;--token-edge:#9d6e1c}
+.gem .token-rim{fill:var(--token-ring);stroke:var(--token-edge);stroke-width:3.2}
+.gem .token-inner{fill:#fff0cd;stroke:var(--token-edge);stroke-width:1.1}
 .gem .gem-facet{fill:none;stroke:var(--gem-stroke);stroke-width:1.35;opacity:.9}
 .gem .gold-mark{fill:#fff0b4;stroke:#9d722a;stroke-width:1.3}
 .illustrated{container-type:inline-size;background:#fbf0d4;border-color:#d9c491}
