@@ -23,6 +23,10 @@
     document.querySelector('#lessonTrack').textContent = `${step.track}개`;
     document.querySelector('#lessonTitle').textContent = titles[current];
     document.querySelector('#lessonText').textContent = explanations[current];
+    const briefcase = '<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M14 12V7h12v5" fill="none" stroke="#174f87" stroke-width="4"/><rect x="3" y="12" width="34" height="24" rx="4" fill="#397fc1" stroke="#174f87" stroke-width="2"/><path d="M4 23h32" stroke="#9ac9ed" stroke-width="2"/><rect x="17" y="20" width="6" height="7" rx="1" fill="#d3e8f7"/></svg>';
+    const group = (label,count,active,track=false) => `<div class="token-place" data-active="${active}"><strong>${label}</strong><div class="${track?'tokens-track':''}"><div class="token-pieces">${count?briefcase.repeat(count):'<span class="empty">없음</span>'}</div></div><span>${count}개</span></div>`;
+    const moves = ['아직 토큰을 옮기기 전이에요.','내 돈 $30 → 은행','시장 파랑 한 개 → 내 가림막 뒤','시장 파랑 한 개 → 매수 트랙','파랑 주식과 구매 기록을 구분해요.'];
+    document.querySelector('#lessonPicture').innerHTML = group('주식 시장',step.market,current===2||current===3)+group('내가 산 주식',step.owned,current===2)+group('매수 트랙',step.track,current===3,true)+`<p class="movement-note">${moves[current]}</p>`;
     previous.disabled = current === 0;
     next.textContent = current === steps.length - 1 ? '처음부터 다시 보기' : '다음 단계';
   }
