@@ -1,0 +1,11 @@
+달무티 비공식 온라인 플레이판
+
+규칙: Richard Garfield / Wizards of the Coast, The Great Dalmuti.
+공식 룰북: https://media.wizards.com/2015/downloads/ah/great_dalmuti_rules.pdf
+
+덱 구성과 공개 구현 참고: bhzunami/Great-Dalmuti (MIT, Copyright (c) 2016 Nicolas).
+https://github.com/bhzunami/Great-Dalmuti
+원본 라이선스는 LICENSE.upstream에 보존했습니다.
+현재 게임 엔진·한국어 UI·방 서버는 사이트에 맞춰 구현했습니다.
+카드 앞면·뒷면·아이콘은 이 플레이판에서 그린 숫자 카드 디자인입니다.
+공식 카드 이미지나 로고를 포함하지 않습니다.
