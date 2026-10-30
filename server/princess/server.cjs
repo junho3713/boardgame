@@ -1,4 +1,5 @@
 'use strict';
+const RoomChat=require('../shared/room-chat.cjs');
 // GPL-3.0-only. Rule reducer and generated artwork: anicolao/rebelprincess.
 const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
 const enginePromise=import('./vendor/rules.mjs');
@@ -105,6 +106,7 @@ function createHandler(){
     if(member)return json(res,200,{ok:true});if(r.g.hands||Object.keys(r.g.princessCommitments).length)throw Error('공주 선택이 확정된 방이에요. 새 방을 만들어 주세요.');if(r.g.players.length>=6)throw Error('6명이 모두 입장했어요.');const name=String(body.payload?.displayName||'').trim().slice(0,30);if(!name)throw Error('이름을 입력해 주세요.');accept(r,uid,'player/joined',{displayName:name});broadcast(r);return json(res,200,{ok:true});
    }
    if(!member)return json(res,403,{error:'이름과 방 코드를 입력해 먼저 입장해 주세요.'});
+   if(p==='/api/chat'){const player=r.g.players.find(player=>player.uid===uid);RoomChat.respond(req,res,r,{id:uid,name:player.displayName},body,json);return;}
    if(p==='/api/stream'&&req.method==='GET'){res.writeHead(200,{'Content-Type':'text/event-stream','Cache-Control':'no-cache, no-transform','Connection':'keep-alive','X-Accel-Buffering':'no'});const client={res,uid};r.clients.add(client);res.write('data: '+JSON.stringify(project(r,uid))+'\n\n');req.on('close',()=>r.clients.delete(client));return;}
    if((p==='/api/bots'||p==='/api/settings')&&req.method==='POST'){if(!host)throw Error('방장만 설정할 수 있어요.');if(r.g.hands||Object.keys(r.g.princessCommitments).length)throw Error('공주 확정 전까지만 변경할 수 있어요.');if(p==='/api/bots')addBot(r);else{if(!limits.includes(body.turnSeconds))throw Error('제한시간을 다시 선택해 주세요.');r.turnSeconds=body.turnSeconds;}broadcast(r);return json(res,200,{ok:true});}
    if(p==='/api/event'&&req.method==='POST'){

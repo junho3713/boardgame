@@ -1,4 +1,5 @@
 'use strict';
+const RoomChat=require('../shared/room-chat.cjs');
 const http=require('node:http'),fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
 const cardTypes=JSON.parse(fs.readFileSync(path.join(__dirname,'../../play/girl/cards.json'),'utf8'));
 const game=require('./game.cjs');
@@ -18,6 +19,7 @@ function createApp(){
  const server=http.createServer(async(req,res)=>{
   try{
    const canonical=process.env.PUBLIC_ORIGIN;if(canonical&&req.url!=='/healthz'){const target=new URL(canonical);if(req.headers.host!==target.host){res.writeHead(307,{Location:target.origin+req.url,'Cache-Control':'no-store'});res.end();return;}}
+   if(RoomChat.serve(req,res))return;
    if(req.url.startsWith('/lexio')){await lexioHandler(req,res);return;}
    if(req.url.startsWith('/yacht')){await yachtHandler(req,res);return;}
    if(req.url.startsWith('/princess')){await princessHandler(req,res);return;}
@@ -44,6 +46,7 @@ function createApp(){
     const p=player(name);r.players.push(p);sessions.set(p.token,{r,p});return json(res,200,{token:p.token,state:project(r,p)});
    }
    const token=(req.headers.authorization||'').replace(/^Bearer /,''),session=sessions.get(token);if(!session)return json(res,401,{error:'방에 다시 입장해 주세요.'});const {r,p}=session;
+   if(req.url==='/api/chat'){RoomChat.respond(req,res,r,p,body,json);return;}
    if(req.url==='/api/state'&&req.method==='GET')return json(res,200,project(r,p));
    if(req.url==='/api/deal'&&req.method==='POST'){
     if(p.id!==r.host)return json(res,403,{error:'방장만 카드를 나눠줄 수 있어요.'});if(r.phase!=='lobby')return json(res,409,{error:'이미 나눠줬어요.'});if(r.players.length<3)return json(res,409,{error:'3명 이상 입장하면 시작할 수 있어요.'});

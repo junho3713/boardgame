@@ -71,6 +71,7 @@ function render(s){if(!s)return Promise.resolve();renderChain=renderChain.then((
 function capture(){return new Map(Array.from(document.querySelectorAll('[data-ref]')).map(n=>[n.dataset.ref,n.getBoundingClientRect()]));}
 async function animate(previous,rects){if(!previous||reduced())return;const last=previous.events?.at(-1)?.n||0,events=(state.events||[]).filter(e=>e.n>last&&e.from&&e.to);if(!events.length)return;moving=true;const next=capture();try{await Promise.all(events.map(async e=>{const a=rects.get(e.from)||next.get(e.from),b=next.get(e.to)||rects.get(e.to);if(!a||!b)return;const flyer=el('div',undefined,'flight');flyer.style.left=a.left+a.width/2-27+'px';flyer.style.top=a.top+a.height/2-37+'px';if(e.card)flyer.append(card(e.card));else if(e.type==='tokens'||e.type==='return'){const c=all.find(c=>e.tokens?.[c])||'gold';flyer.append(chip(c,sum(e.tokens),false));}else flyer.append(back());document.body.append(flyer);const dx=b.left+b.width/2-a.left-a.width/2,dy=b.top+b.height/2-a.top-a.height/2;try{await flyer.animate([{transform:'translate(0,0) scale(.9)',opacity:1},{transform:`translate(${dx*.5}px,${dy*.5-25}px) scale(1.12)`,opacity:1,offset:.5},{transform:`translate(${dx}px,${dy}px) scale(.7)`,opacity:.6}],{duration:760,easing:'cubic-bezier(.16,1,.3,1)',fill:'forwards'}).finished;}catch{}flyer.remove();}));}finally{moving=false;}}
 async function commit(s){
+ RoomTools.update(s);
  if(Number.isFinite(s.serverNow))serverOffset=s.serverNow-Date.now();
  renderChat(s);
  if(state&&state.code===s.code&&s.version<=state.version)return;const previous=state,rects=capture(),newGame=!!previous&&(s.code!==previous.code||s.gameNumber!==previous.gameNumber);if(newGame){closeModal();mode='different';}if(!previous||s.code!==previous.code||s.version!==previous.version){pick={};if(mode==='reserve'||mode==='inspect')mode='different';if(versionDialog!==null)closeModal();}state=s;$('setup').hidden=true;$('lobby').hidden=s.phase!=='lobby';$('table').hidden=s.phase==='lobby';document.body.classList.toggle('playing',s.phase!=='lobby');
@@ -186,3 +187,5 @@ $('create').onclick=()=>enter('create');$('solo').onclick=()=>enter('solo');$('j
 
 
 if(new URLSearchParams(location.search).has('rules'))showRules();
+
+RoomTools.init({transport:body=>api('chat',body),invitePath:'/splendor3/?room=',chat:false});

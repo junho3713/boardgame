@@ -8,7 +8,7 @@ async function api(route,body){const r=await fetch('/api/'+route,{method:body?'P
 function focusPanel(){const p=$('actionPanel');p.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth',block:'start'});p.focus({preventScroll:true});}
 async function send(route,body={}){if(busy)return;busy=true;clearTimeout(botTimer);$('status').textContent='';try{render(await api(route,{...body,version:state.version}));}catch(e){$('status').textContent=e.message;try{render(await api('state'),true);}catch{}$('status').scrollIntoView({block:'center'});}finally{busy=false;scheduleBot();}}
 async function enter(route){if(busy)return;busy=true;$('status').textContent='게임을 준비하고 있어요…';try{const d=await api(route,{name:$('name').value.trim()||'나',bots:Number($('bots').value),code:$('code').value});token=d.token;sessionStorage.setItem('girl-test-token',token);state=null;selected=null;render(d.state);$('status').textContent='';poll();}catch(e){$('status').textContent=e.message;}finally{busy=false;scheduleBot();}}
-function render(s,force=false){
+function render(s,force=false){RoomTools.update(s);
  if(!force&&state&&state.code===s.code&&state.phase===s.phase&&state.version===s.version&&s.phase!=='lobby')return;
  const previous=state;state=s;$('entry').hidden=true;$('game').hidden=s.phase==='lobby';$('lobby').hidden=s.phase!=='lobby';
  if(s.phase==='lobby'){renderLobby(s);return;}
@@ -53,3 +53,6 @@ $('solo').onclick=()=>enter('solo');$('create').onclick=()=>enter('rooms');$('jo
 for(const b of document.querySelectorAll('[data-leave]'))b.onclick=()=>{sessionStorage.removeItem('girl-test-token');location.reload();};
 fetch('/cards.json').then(r=>r.json()).then(cs=>cs.forEach(c=>TYPES[c.id]=c)).catch(()=>{});
 if(token)api('state').then(s=>{render(s);poll();}).catch(()=>{token='';sessionStorage.removeItem('girl-test-token');$('status').textContent='이전 시험 방이 만료됐어요. 새 게임을 시작해 주세요.';});
+
+RoomTools.init({transport:body=>api('chat',body),invitePath:'/?room=',fallbackTargets:['#lobby h2','#game .controls']});
+$('code').value=new URLSearchParams(location.search).get('room')||$('code').value;

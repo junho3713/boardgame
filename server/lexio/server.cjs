@@ -1,4 +1,5 @@
 'use strict';
+const RoomChat=require('../shared/room-chat.cjs');
 const crypto=require('node:crypto'),fs=require('node:fs'),path=require('node:path'),game=require('./game.cjs');
 function createHandler(){
  const rooms=new Map(),sessions=new Map(),ttl=2*60*60*1000;
@@ -40,7 +41,9 @@ function createHandler(){
    if(req.method==='POST'&&route==='/lexio/api/join'){
     const r=rooms.get(String(body.code||'').trim().toUpperCase());if(!r){json(res,404,{error:'방이 없거나 만료됐어요. 코드를 확인해 주세요.'});return;}if(r.game||r.players.length>=r.capacity){json(res,409,{error:r.game?'이미 시작한 방이에요.':'이 방의 자리가 모두 찼어요.'});return;}const p=person(String(body.name||'플레이어').trim().slice(0,16)||'플레이어');r.players.push(p);r.version++;sessions.set(p.token,{r,p});broadcast(r);json(res,200,{token:p.token,state:project(r,p)});return;
    }
-   const auth=sessions.get((req.headers.authorization||'').replace(/^Bearer /,''));if(!auth){json(res,401,{error:'방이 만료됐어요. 새 방을 만들거나 다시 입장해 주세요.'});return;}const {r,p}=auth;enforceDeadline(r);
+   const auth=sessions.get((req.headers.authorization||'').replace(/^Bearer /,''));if(!auth){json(res,401,{error:'방이 만료됐어요. 새 방을 만들거나 다시 입장해 주세요.'});return;}const {r,p}=auth;
+   if(route==='/lexio/api/chat'){RoomChat.respond(req,res,r,p,body,json);return;}
+   enforceDeadline(r);
    if(req.method==='GET'&&route==='/lexio/api/state'){if(url.searchParams.get('v')===String(r.version)){res.writeHead(204,{'Cache-Control':'no-store'});res.end();}else json(res,200,project(r,p));return;}
    if(req.method==='GET'&&route==='/lexio/api/events'){
     if(r.streams.size>=16){json(res,429,{error:'이 방의 연결이 너무 많아요. 사용하지 않는 창을 닫아 주세요.'});return;}res.writeHead(200,{'Content-Type':'text/event-stream; charset=utf-8','Cache-Control':'no-cache, no-transform','Connection':'keep-alive','X-Accel-Buffering':'no'});const stream={res,player:p};r.streams.add(stream);res.write('event: state\ndata: '+JSON.stringify(project(r,p))+'\n\n');const heartbeat=setInterval(()=>{if(Date.now()-r.created>ttl){expire(r);return;}res.write(': keepalive\n\n');},20000);heartbeat.unref?.();res.on('close',()=>{clearInterval(heartbeat);r.streams.delete(stream);});return;

@@ -1,4 +1,5 @@
 'use strict';
+const RoomChat=require('../shared/room-chat.cjs');
 const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto'),G=require('./game.cjs');
 function createHandler(){const rooms=new Map(),sessions=new Map(),ttl=2*60*60*1000;
  const json=(res,status,data)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});res.end(JSON.stringify(data));};
@@ -20,6 +21,7 @@ function createHandler(){const rooms=new Map(),sessions=new Map(),ttl=2*60*60*10
    const r=rooms.get(String(body.code||'').trim().toUpperCase());if(!r)throw Error('방 코드를 확인해 주세요. 서버 재시작 후에는 새 방을 만들어야 해요.');if(r.game)throw Error('이미 시작한 방이에요.');if(r.players.length>=r.capacity)throw Error('방이 가득 찼어요.');const p=player(String(body.name||'나').trim().slice(0,16)||'나');r.players.push(p);r.updated=Date.now();r.version++;sessions.set(p.token,{r,p});broadcast(r);return json(res,200,{token:p.token,state:project(r,p)});
   }
   const session=sessions.get((req.headers.authorization||'').replace(/^Bearer /,''));if(!session)return json(res,401,{error:'이름과 방 코드로 다시 입장해 주세요.'});const {r,p}=session;
+  if(route==='/api/chat'){RoomChat.respond(req,res,r,p,body,json);return;}
   if(route==='/api/state')return json(res,200,project(r,p));
   if(route==='/api/stream'&&req.method==='GET'){res.writeHead(200,{'Content-Type':'text/event-stream','Cache-Control':'no-cache, no-transform','Connection':'keep-alive','X-Accel-Buffering':'no'});const c={res,p};r.clients.add(c);res.write('data: '+JSON.stringify(project(r,p))+'\n\n');req.on('close',()=>r.clients.delete(c));return;}
   if(req.method!=='POST')return json(res,405,{error:'지원하지 않는 요청이에요.'});
