@@ -1,0 +1,10 @@
+스플렌더 포켓몬 · 비공식 팬 플레이판
+
+카드 수치 참고: LeonJoeeee/splendor-pokemon (MIT, 원본 고지 LICENSE.upstream).
+https://github.com/LeonJoeeee/splendor-pokemon
+수치는 커뮤니티 전사 자료로 실물 카드와 차이가 발견되면 수정할 수 있습니다.
+한국어 인터페이스·멀티플레이: junho3713/boardgame.
+포켓몬 그림: PokéAPI sprites의 official-artwork (실행 중 외부 URL에서 불러옴).
+https://github.com/PokeAPI/sprites
+포켓몬 캐릭터·이미지의 권리는 Nintendo / Creatures / GAME FREAK / Pokémon 등 각 권리자에게 있습니다. MIT는 해당 이미지의 사용 허가를 뜻하지 않습니다.
+이 팬 프로젝트는 권리자의 공식 서비스가 아닙니다.
