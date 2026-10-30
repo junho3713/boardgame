@@ -12,6 +12,7 @@ function createApp(){
  function project(r,p){if(r.game)game.tick(r.game);return r.game?{code:r.code,host:r.host,...game.view(r.game,p.id)}:{code:r.code,phase:r.phase,host:r.host,me:p.id,players:r.players.map(x=>({id:x.id,name:x.name,cards:0})),hand:[]};}
  const server=http.createServer(async(req,res)=>{
   try{
+   const canonical=process.env.PUBLIC_ORIGIN;if(canonical&&req.url!=='/healthz'){const target=new URL(canonical);if(req.headers.host!==target.host){res.writeHead(307,{Location:target.origin+req.url,'Cache-Control':'no-store'});res.end();return;}}
    if(req.url.startsWith('/splendor2')){await splendor2Handler(req,res);return;}
    if(req.url.startsWith('/splendor')){await splendorHandler(req,res);return;}
    if(req.url==='/healthz'&&req.method==='GET')return json(res,200,{ok:true});
