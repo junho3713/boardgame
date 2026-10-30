@@ -37,7 +37,7 @@ function legalPlays(g,p){
 }
 function nextAlive(g,start){for(let d=1;d<=g.players.length;d++){const i=(start+d)%g.players.length;if(g.players[i].hand.length)return i;}throw Error('다음 플레이어를 찾지 못했어요.');}
 function endRound(g){const last=g.players.find(p=>p.hand.length);if(last&&!g.finishes.includes(last.id))g.finishes.push(last.id);g.phase='roundEnd';const ranking=g.finishes.map((id,i)=>{const p=g.players.find(p=>p.id===id);return {id,name:p.name,place:i+1,nextRole:role(i,g.players.length)};});g.players.find(p=>p.id===ranking[0].id).wins++;g.result={ranking};g.turn++;event(g,'round-end',ranking[0].id,ranking[0].name+'님이 이번 판 대달무티! 다음 판은 이 순서로 자리를 바꾸고 시작해요.');}
-function clearTrick(g){const last=g.players.findIndex(p=>p.id===g.top.by),leader=g.players[last].hand.length?last:nextAlive(g,last);g.discard.push(...g.pile);g.pile=[];g.top=null;g.passed=[];g.current=leader;event(g,'clear',g.players[leader].id,'모두 연속 패스해서 바닥을 비웠어요. '+g.players[leader].name+'님이 새 묶음을 먼저 내요.');}
+function clearTrick(g,reason='모두 연속 패스해서 바닥을 비웠어요.'){const last=g.players.findIndex(p=>p.id===g.top.by),leader=g.players[last].hand.length?last:nextAlive(g,last);g.discard.push(...g.pile);g.pile=[];g.top=null;g.passed=[];g.current=leader;event(g,'clear',g.players[leader].id,reason+' '+g.players[leader].name+'님이 새 묶음을 먼저 내요.');}
 function act(g,id,a){
  const p=g.players[g.current];need(p&&p.id===id,'아직 내 선택 차례가 아니에요.');
  if(g.phase==='revolution'){
@@ -62,6 +62,7 @@ function act(g,id,a){
  p.hand=p.hand.filter(c=>!a.cards.includes(c.id));g.pile.push(...cards);g.top={by:id,rank:set.rank,count:set.count,cards};g.passed=[];event(g,'play',id,p.name+'님이 '+(set.rank===13?'광대':set.rank+' '+names[set.rank])+' '+set.count+'장을 냈어요.',cards);
  if(!p.hand.length){g.finishes.push(id);event(g,'out',id,p.name+'님이 손패를 모두 냈어요! 이번 판 '+g.finishes.length+'등이에요.');}
  if(g.finishes.length===g.players.length-1){endRound(g);return;}
+ if(set.rank===1){clearTrick(g,'1보다 낮은 숫자가 없어 모두 자동 패스했어요.');g.turn++;return;}
  g.current=nextAlive(g,g.current);g.turn++;
 }
 function nextRound(g){need(g.phase==='roundEnd','이번 판이 끝난 뒤 다음 판을 시작할 수 있어요.');g.players=g.finishes.map(id=>g.players.find(p=>p.id===id));g.round++;g.turn++;deal(g);}
