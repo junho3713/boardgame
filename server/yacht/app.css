@@ -2,3 +2,17 @@
 @media(max-width:800px){main{padding:12px}.game-layout{grid-template-columns:1fr;gap:14px}.dice-panel{position:static;padding:15px}.dice-tray{padding:26px 20px 32px;gap:13px;max-width:440px;margin:12px auto}.die{max-width:68px}.dice-help{min-height:0}.last-action{margin-top:12px;padding:10px 0;min-height:0}.record{margin-top:0}.scores-panel{padding:14px}.score-wrap{max-height:640px}.site-header{gap:8px;flex-wrap:wrap}.site-header h1{font-size:21px}.site-header button{padding:6px 9px;min-height:37px;font-size:12px}.turn-bar{gap:8px;padding:11px}.turn-bar>strong{font-size:14px;flex-basis:100%}.turn-bar button{font-size:11px;padding:6px 9px;min-height:34px}.setup,.lobby{margin:22px auto 40px;padding:22px}.score-wrap th:first-child{min-width:112px}.score-wrap .my-column{left:112px}.score-wrap th,.score-wrap td{min-width:75px}.panel-heading h2{font-size:17px}}
 @media(max-height:500px) and (min-width:650px){.game-layout{grid-template-columns:minmax(260px,35%) minmax(0,1fr)}.score-wrap{max-height:calc(100svh - 150px)}.dice-panel{position:static}.dice-tray{padding:18px 10px 28px;gap:8px}.site-header{margin-bottom:10px}.site-header h1{font-size:19px}.turn-bar{padding:7px}.turn-bar>strong{flex-basis:auto}.turn-order{padding-bottom:7px}.dice-panel .record{display:none}.action-help{font-size:12px}.dice-panel,.scores-panel{padding:12px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
+
+/* Compact dice diagrams keep the sticky score-label column readable on phones. */
+.category-label{display:flex;flex-direction:column;align-items:flex-start;gap:4px;line-height:1.3;white-space:nowrap}
+.category-label.single-die{flex-direction:row;align-items:center;gap:7px}
+.category-dice{display:inline-flex;align-items:center;gap:2px;flex:none}
+.category-die{display:block;width:16px;height:16px;flex:none}
+.single-die .category-die{width:20px;height:20px}
+.category-die rect{fill:#fffdf5;stroke:#607864;stroke-width:1.3}
+.category-die circle{fill:#244638}
+.category-die.dice-group-gap{margin-left:3px}
+.rule-link:has(.category-label){display:block;text-align:left;min-height:40px;padding:5px 2px}
+.dialog th .category-label{margin:2px 0}
+.dialog th .category-die{width:18px;height:18px}
+@media(max-width:800px){.category-label{gap:3px}.category-die{width:15px;height:15px}.single-die .category-die{width:18px;height:18px}.category-label.single-die{gap:6px}.rule-link:has(.category-label){font-size:12px}}
