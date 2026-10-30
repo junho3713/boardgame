@@ -16,6 +16,7 @@
 @media(prefers-reduced-motion:reduce){.tile{transition:none}.tile.selected{transform:none}}
 
 /* White-edition faces: suit patterns remain readable independently of color. */
+/* Approved face images supply the suit emblem; the accessible name stays on the tile. */
 .tile{padding:0;gap:0;aspect-ratio:64/94;min-height:0;height:auto;overflow:visible;border:2px solid #d0d2ca;border-radius:7px;background:#fffefb;color:var(--suit);box-shadow:0 4px 0 #aeb7ac,0 6px 9px #071f2655;isolation:isolate}
 .hand .tile,.table-cards .tile,.combo-option .tile{min-height:0;height:auto;aspect-ratio:64/94}
 .tile:hover{background:#fffefb;border-color:#b7c4b5}
@@ -27,6 +28,7 @@
 .table-cards .tile{flex-basis:72px;width:72px}
 .combo-option .tile{flex-basis:42px;width:42px}.combo-option .tile .tile-face{width:calc(100% - 2px);height:calc(100% - 2px)}
 .combo-option .tile small{display:none}
+.tile small{display:none}
 .reference-example .tile{flex-basis:58px;width:58px}
 @media(max-width:680px){.tile{flex-basis:48px;width:48px}.hand .tile{flex-basis:calc((100% - 35px)/6);width:calc((100% - 35px)/6);min-height:0}.table-cards .tile{flex-basis:48px;width:48px;min-height:0}.tile small{font-size:8px;bottom:3px;padding:1px 2px}.reference-example .tile{flex-basis:48px;width:48px}.combo-option .tile{flex-basis:42px;width:42px}}
 @media(max-height:520px) and (orientation:landscape){.hand .tile{flex-basis:53px;width:53px;min-height:0}}

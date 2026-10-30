@@ -3,50 +3,16 @@ const $=id=>document.getElementById(id),el=(tag,text,cls)=>{const n=document.cre
 const R=LexioRules;
 let token=sessionStorage.getItem('lexio-token')||'',state=null,busy=false,moving=false,selected=new Set(),modal=null,modalBound=false,stopped=false,controller=null,chain=Promise.resolve(),serverOffset=0,toastTimer,sortSuit=false;
 const me=()=>state.players.find(p=>p.id===state.me),reduced=()=>matchMedia('(prefers-reduced-motion:reduce)').matches;
-// Vector faces based on the white-edition reference: no external image requests.
+// Approved numberless artwork; numerals remain crisp SVG text in every tile size.
 function tileArt(c){
- const suit=Number(c.suit),rank=Number(c.rank),white='#fffefb',ink=['#222428','#dc6411','#166344','#c82735'][suit];
- const line=(x1,y1,x2,y2,width=1.4,color=ink)=>`<path d="M${x1} ${y1}L${x2} ${y2}" fill="none" stroke="${color}" stroke-width="${width}"/>`;
- const circle=(x,y,r,fill=white,stroke=ink,width=1.6)=>`<circle cx="${x}" cy="${y}" r="${r}" fill="${fill}" stroke="${stroke}" stroke-width="${width}"/>`;
- const curl=(x,y,rotate=0,scale=1,color=ink)=>`<g transform="translate(${x} ${y}) rotate(${rotate}) scale(${scale})" fill="none" stroke="${color}" stroke-width="1.65" stroke-linecap="round"><path d="M1 15C-3 7 1 0 8 1C16 2 16 12 10 12C5 12 4 6 8 5C12 4 13 8 10 9M3 16C8 20 18 17 17 9M2 4L-1 1M15 3L18 0"/></g>`;
- const digit=(x,y,size=30,color=ink)=>`<text x="${x}" y="${(y+size*.31).toFixed(2)}" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="700" font-size="${size}" fill="${color}"${rank>9?' textLength="27" lengthAdjust="spacingAndGlyphs"':''}>${rank}</text>`;
- let art=`<rect width="64" height="88" rx="3" fill="${white}"/>`;
+ const suit=Number(c.suit),rank=Number(c.rank),names=['cloud','star','moon','sun'];
  if(rank===2){
-  if(suit===3){
-   for(let i=0;i<36;i++){const a=i*Math.PI/18,x=32+Math.cos(a)*85,y=39+Math.sin(a)*85;art+=line(32,39,x.toFixed(2),y.toFixed(2),i%3===0?2.5:1.5);}
-   for(const [x,y] of [[6,7],[58,7],[6,77],[58,77]])art+=circle(x,y,4.3,white,ink,1.3);
-   art+=circle(32,39,21.7,white,ink,2.5)+circle(32,39,17.4,white,ink,1.2)+digit(32,39,33);
-  }else if(suit===2){
-   art+=`<rect width="64" height="88" rx="3" fill="${ink}"/>`;
-   for(const y of [5,8,11,77,80,83])art+=line(4,y,60,y,.8,white);
-   art+=`<path d="M3 15C15 16 17 4 12 1C27 6 20 24 6 23ZM61 73C49 72 47 84 52 87C37 82 44 64 58 65Z" fill="${white}"/>`;
-   art+=circle(32,39,22,white,white,1)+circle(32,39,17,ink,ink,1)+digit(32,39,34,white);
-  }else if(suit===1){
-   art+=`<path d="M32-8L41 16L76 6L51 34L76 64L41 59L32 88L23 59L-12 64L13 34L-12 6L23 16Z" fill="${ink}"/>`;
-   for(const [x,y] of [[7,8],[57,8],[7,76],[57,76]])art+=`<path d="M${x} ${y-5}l1.7 3.3 3.8 1.7-3.8 1.7L${x} ${y+5}l-1.7-3.3L${x-5.5} ${y}l3.8-1.7Z" fill="${ink}"/>`;
-   art+=circle(32,39,23,white,ink,1)+circle(32,39,17.5,white,ink,1.2)+digit(32,39,33);
-  }else{
-   for(const [x,y,r,s] of [[3,3,0,.94],[61,4,90,1],[4,85,-90,1],[61,85,180,1],[3,30,0,.9],[62,57,180,.9],[26,1,0,.8],[39,87,180,.8]])art+=curl(x,y,r,s);
-   art+=`<path d="M2 22C11 19 18 22 15 28M62 63C53 66 46 63 49 57M1 63C9 61 12 68 8 73M63 22C55 24 52 17 56 12" fill="none" stroke="${ink}" stroke-width="2"/>`;
-   art+=circle(32,39,23,white,ink,2.2)+circle(32,39,18.1,white,ink,1.2)+digit(32,39,33);
-  }
- }else{
-  if(suit===3){
-   art+=circle(26,31,21.4,white,ink,1.2);
-   for(let i=0;i<16;i++){const a=i*Math.PI/8;art+=line((26+Math.cos(a)*17.5).toFixed(2),(31+Math.sin(a)*17.5).toFixed(2),(26+Math.cos(a)*21).toFixed(2),(31+Math.sin(a)*21).toFixed(2),1.3);}
-   art+=circle(26,31,16,white,ink,1.5);
-  }else if(suit===2){
-   art+=circle(26,31,22,ink,ink,0)+circle(32,25,20.8,white,white,0)+circle(26,31,16.5,white,ink,1.7);
-  }else if(suit===1){
-   art+=`<path d="M26 5L34 15L49 10L42 25L52 35L38 40L40 55L26 47L12 55L14 40L1 35L11 25L5 10L19 15Z" fill="${ink}"/>`+circle(26,31,16.7,white,ink,1.3);
-  }else{
-   art+=curl(5,10,0,.75)+curl(48,12,90,.7)+curl(7,53,-90,.72)+curl(44,50,180,.7)+circle(26,31,18.3,white,ink,1.8)+circle(26,31,15.4,white,ink,.8);
-  }
-  art+=digit(26,31,rank>9?25:30);
-  art+=`<text x="55" y="13" text-anchor="middle" font-family="Georgia,serif" font-size="11" font-weight="700" fill="${ink}">${rank}</text>`;
-  art+=`<text x="49" y="69" text-anchor="middle" font-family="Batang, 'Noto Serif CJK KR',serif" font-size="15" font-weight="700" fill="${ink}">${['雲','星','月','日'][suit]}</text>`;
+  const crop=[{x:249,y:5,w:60,h:82},{x:168,y:5,w:61,h:82},{x:88,y:5,w:59,h:82},{x:3,y:5,w:60,h:82}][suit];
+  return `<svg x="0" y="0" width="64" height="88" viewBox="${crop.x} ${crop.y} ${crop.w} ${crop.h}" preserveAspectRatio="none"><image href="/lexio/assets/twos.png" x="0" y="0" width="315" height="91"/></svg>`;
  }
- return art;
+ const centers=[{x:26.2,y:27},{x:24.4,y:24.8},{x:24.1,y:24.6},{x:25.7,y:24.9}],p=centers[suit],ink=['#17191c','#df570a','#087840','#d20d2c'][suit];
+ const size=rank>9?21:25;
+ return `<image href="/lexio/assets/${names[suit]}.webp" x="0" y="0" width="64" height="88" preserveAspectRatio="none"/><text x="${p.x}" y="${(p.y+size*.31).toFixed(2)}" text-anchor="middle" font-family="Georgia,'Times New Roman',serif" font-size="${size}" font-weight="700" fill="${ink}">${rank}</text>`;
 }
 function card(c,action){
  const n=action?btn('',action,'tile'):el('div',undefined,'tile'),names=['cloud','star','moon','sun'];
