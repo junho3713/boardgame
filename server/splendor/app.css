@@ -198,3 +198,64 @@
  .card-costs[data-count="4"] .cost-value{width:clamp(11px,24cqw,16px);height:clamp(11px,24cqw,16px);font-size:clamp(9px,18cqw,12px);border-width:1.5px}
  .card-costs[data-count="4"] .cost-gem{width:clamp(7px,14cqw,10px);height:clamp(7px,14cqw,10px)}
 }
+
+/* Put the personal token and bonus summary into the open space on the board. */
+.board-area{grid-template-areas:"market bank nobles" "assets assets nobles" "controls controls controls";row-gap:12px;align-items:start}
+.board-area>.board-assets{grid-area:assets;align-self:end;min-width:0;margin:0;padding:12px 0 0;background:transparent;border:0;border-top:1px solid #78947466;border-radius:0}
+.board-assets .asset-heading{margin-bottom:9px;gap:10px}
+.board-assets .asset-heading h2{font-size:13px}
+.board-assets .asset-heading .asset-stats{font-size:11px}
+.board-assets .asset-heading .quiet{min-height:30px;font-size:10px;padding:4px 8px}
+.board-assets .asset-rails{grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.board-assets .asset-rails h3{font-size:11px;margin-bottom:7px}
+.board-assets .asset-rails .small{font-size:10px;line-height:1.6;margin-top:6px}
+.board-assets .token-assets .token-line{min-height:48px;gap:7px 11px;justify-content:flex-start;flex-wrap:wrap}
+.board-assets .token-assets .chip{flex-direction:row;gap:4px}
+.board-assets .token-assets .gem{width:27px;height:27px}
+.board-assets .token-assets .chip strong{font-size:17px}
+.board-assets .bonus-line{gap:7px}
+.board-assets .bonus-card{max-width:45px;height:54px;padding:4px 6px}
+.board-assets .bonus-card>.gem{width:15px;height:15px;top:5px;right:4px}
+.board-assets .bonus-card>strong{font-size:20px}
+.board-assets .bonus-card>small{font-size:9px}
+.own-card-areas{margin-top:0}
+@media(max-width:1120px){
+ .board-assets .token-assets .gem{width:24px;height:24px}
+ .board-assets .token-assets .chip strong{font-size:15px}
+ .board-assets .token-assets .token-line{gap:6px 8px}
+ .board-assets .bonus-card{height:49px;padding:4px}
+ .board-assets .bonus-card>strong{font-size:18px}
+}
+@media(max-width:760px){
+ .board-area{grid-template-areas:"market bank" "assets assets" "nobles nobles" "controls controls";row-gap:12px}
+ .board-area>.board-assets{padding-top:11px}
+ .board-assets .asset-heading{gap:8px}
+ .board-assets .asset-heading .asset-stats{font-size:10px}
+ .board-assets .asset-rails{grid-template-columns:1fr;gap:12px}
+ .board-assets .token-assets .token-line{min-height:30px;gap:7px 13px}
+ .board-assets .token-assets .gem{width:26px;height:26px}
+ .board-assets .bonus-line{gap:8px}
+ .board-assets .bonus-card{max-width:48px;height:53px;padding:4px 6px}
+ .board-assets .bonus-card>strong{font-size:20px}
+}
+@media(orientation:landscape) and (max-height:560px) and (max-width:1200px){
+ .playing .board-area{grid-template-areas:"market bank nobles" "assets assets nobles" "controls controls controls";row-gap:8px}
+ .playing .board-assets{padding-top:8px}
+ .playing .board-assets .asset-heading{margin-bottom:7px;gap:7px}
+ .playing .board-assets .asset-heading h2{font-size:11px}
+ .playing .board-assets .asset-heading .asset-stats{font-size:9px}
+ .playing .board-assets .asset-heading .quiet{font-size:9px;min-height:27px;padding:3px 6px}
+ .playing .board-assets .asset-rails{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+ .playing .board-assets .asset-rails h3{font-size:10px;margin-bottom:6px}
+ .playing .board-assets .asset-rails .small{font-size:8px;margin-top:5px}
+ .playing .board-assets .token-assets .token-line{min-height:32px;gap:4px 6px;flex-wrap:wrap;justify-content:flex-start}
+ .playing .board-assets .token-assets .chip{flex-direction:row}
+ .playing .board-assets .token-assets .gem{width:21px;height:21px}
+ .playing .board-assets .token-assets .chip strong{font-size:12px}
+ .playing .board-assets .bonus-line{gap:5px}
+ .playing .board-assets .bonus-card{height:44px;max-width:35px;padding:4px}
+ .playing .board-assets .bonus-card>.gem{width:11px;height:11px;top:4px;right:3px}
+ .playing .board-assets .bonus-card>strong{font-size:16px}
+ .playing .board-assets .bonus-card>small{font-size:8px}
+ .playing .own-card-areas{margin-top:0}
+}
