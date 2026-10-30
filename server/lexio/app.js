@@ -12,7 +12,7 @@ function tileArt(c){
  }
  const centers=[{x:26.2,y:27},{x:24.4,y:24.8},{x:24.1,y:24.6},{x:25.7,y:24.9}],p=centers[suit],ink=['#17191c','#df570a','#087840','#d20d2c'][suit];
  const size=25;
- return `<image href="/lexio/assets/${names[suit]}.webp" x="0" y="0" width="64" height="88" preserveAspectRatio="none"/><text x="${p.x}" y="${(p.y+size*.31).toFixed(2)}" text-anchor="middle" font-family="'Times New Roman','Liberation Serif','Noto Serif',serif" font-size="${size}" font-weight="400" fill="${ink}">${rank}</text>`;
+ return `<image href="/lexio/assets/${names[suit]}.webp" x="0" y="0" width="64" height="88" preserveAspectRatio="none"/><text x="${p.x}" y="${(p.y+size*.31).toFixed(2)}" text-anchor="middle" font-family="'Times New Roman','Liberation Serif','Noto Serif',serif" font-size="${size}" font-weight="700" fill="${ink}">${rank}</text>`;
 }
 function card(c,action){
  const n=action?btn('',action,'tile'):el('div',undefined,'tile'),names=['cloud','star','moon','sun'];
