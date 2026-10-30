@@ -35,3 +35,23 @@
   render();
   lesson.hidden = false;
 })();
+
+(() => {
+  const color=document.querySelector('#referenceColor'),black=document.querySelector('#referenceBlack'),out=document.querySelector('#referenceResult');
+  if(!color||!black||!out)return;
+  function update(){
+    const c=Number(color.value),b=Number(black.value);
+    document.querySelectorAll('.reference-grid [data-value]').forEach(el=>{el.classList.remove('chosen');el.removeAttribute('aria-current');});
+    if(color.value===''||black.value===''||!Number.isInteger(c)||!Number.isInteger(b)||c<0||b<0||c+b>12){out.dataset.error='true';out.innerHTML='<strong>토큰 수를 확인해 주세요.</strong><p>0 이상의 정수를 넣고, 두 수의 합이 12개를 넘지 않게 해요. 실제로 뽑은 다른 색 토큰은 입력하지 않아요.</p>';return;}
+    out.dataset.error='false';
+    const value=b>=2?c-b:c,vertical=Math.ceil(Math.abs(value)/2),horizontal=value===0?'왼쪽 한 칸':value>0?(value%2===0?'오른쪽 한 칸':''):(Math.abs(value)%2===0?'왼쪽 한 칸':'');
+    const parts=[];if(value!==0)parts.push(`${value>0?'위':'아래'} ${vertical}칸`);if(horizontal)parts.push(horizontal);
+    const found=document.querySelector(`.reference-grid [data-value="${value}"]`);if(found){found.classList.add('chosen');found.setAttribute('aria-current','true');}
+    const formula=b>=2?`${c} − ${b} = ${value}`:`계산값 ${value}`;
+    const why=b===1?'검정이 한 개이므로 빼지 않아요. 금값에는 영향을 주지만, 이 색의 주가는 색 토큰 수 그대로 읽어요.':b===0?'검정이 없으므로 그 색의 토큰 수 그대로 읽어요.':'검정이 두 개 이상이므로 그 색 개수에서 검정 수를 빼요.';
+    out.innerHTML=`<strong>${formula}</strong><p>${why}</p><p><b>${parts.join(' + ')}</b> 이동해요.${value===0?' 0은 제자리 유지가 아니에요.':''}</p>${Math.abs(value)>6?'<p>표 밖의 값이에요. 같은 배치를 위아래로 이어 읽어요.</p>':''}<p class="note">가장자리에 닿으면 아래의 예외 규칙을 적용해요.</p>`;
+  }
+  color.addEventListener('input',update);black.addEventListener('input',update);
+  document.querySelectorAll('#referencePresets button').forEach(button=>button.addEventListener('click',()=>{color.value=button.dataset.color;black.value=button.dataset.black;update();}));
+  document.querySelector('#referenceControls').hidden=false;document.querySelector('#referencePresets').hidden=false;update();
+})();
