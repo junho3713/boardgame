@@ -1,13 +1,22 @@
 'use strict';
-const {test}=require('node:test'),A=require('node:assert/strict'),http=require('node:http'),{createHandler}=require('./server.cjs');
+const {test}=require('node:test'),A=require('node:assert/strict'),http=require('node:http'),{createHandler}=require('./server.cjs'),G=require('../../play/pokemon-kanto/game.js');
 test('two humans submit concurrently; SSE, secrecy, stale turns, auth, rematch and cleanup',async()=>{
  const server=http.createServer(createHandler());await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port+'/kanto/api/',stop=new AbortController();
  async function call(route,body,token){const r=await fetch(base+route,{method:body===undefined?'GET':'POST',headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},...(body===undefined?{}:{body:JSON.stringify(body)})});return{status:r.status,data:await r.json()};}
+ async function growToBattle(state,tokens){
+  while(state.game.phase==='growth'){
+   const g=state.game,i=g.growth.current,card=g.growth.market.findIndex((s,c)=>G.accessible(g,c)&&g.players[i].team.some(u=>G.canGrow(u,s.kind))),to=g.players[i].team.findIndex(u=>G.canGrow(u,g.growth.market[card].kind));
+   const r=await call('action',{type:'grow',card,to,pick:g.growth.picks,turn:1,match:state.gameNumber},tokens[i]);A.equal(r.status,200);state=r.data;
+  }
+  A.equal(state.game.phase,'growthReady');const responses=await Promise.all(tokens.map(token=>call('action',{type:'beginBattle',turn:1,match:state.gameNumber},token)));responses.forEach(r=>A.equal(r.status,200));return(await call('state',undefined,tokens[0])).data;
+ }
  try{
-  const host=(await call('create',{name:'Alpha',partner:6})).data,guest=(await call('join',{name:'Beta',partner:9,code:host.state.code})).data;
-  A.equal(guest.state.players[0].partner,null);A.equal(host.state.players[0].partner,6);A.equal((await call('state')).status,401);
+  const host=(await call('create',{name:'Alpha',partner:4})).data,guest=(await call('join',{name:'Beta',partner:7,code:host.state.code})).data;
+  A.equal(guest.state.players[0].partner,null);A.equal(host.state.players[0].partner,4);A.equal((await call('state')).status,401);
   A.equal((await call('start',{version:guest.state.version},guest.token)).status,400);
-  let state=(await call('start',{version:guest.state.version},host.token)).data;A.equal(state.game.phase,'choose');A.equal(state.players[1].partner,9);
+  let state=(await call('start',{version:guest.state.version},host.token)).data;A.equal(state.game.phase,'growth');A.equal(state.players[1].partner,7);
+  A.equal((await call('action',{type:'grow',card:7,to:0,pick:-1,turn:1,match:1},host.token)).status,400);
+  state=await growToBattle(state,[host.token,guest.token]);
   const stream=await fetch(base+'events',{headers:{Authorization:'Bearer '+guest.token},signal:stop.signal}),reader=stream.body.getReader();await reader.read();
   const body={type:'commit',action:{kind:'move',move:1},turn:1,match:state.gameNumber,version:state.version,player:1};
   let response=await call('action',body,host.token);A.equal(response.status,200);A.equal(response.data.game.pending[0].move,1);
@@ -24,15 +33,16 @@ test('two humans submit concurrently; SSE, secrecy, stale turns, auth, rematch a
   A.equal((await call('chat',{text:'테스트'},host.token)).status,200);
   A.equal((await call('leave',{},guest.token)).status,200);state=(await call('state',undefined,host.token)).data;A.equal(state.game.result.forfeit,true);A.equal(state.game.result.winner,0);
   A.equal((await call('rematch',{version:state.version},host.token)).status,400);A.equal((await call('state',undefined,guest.token)).status,401);
-  A.equal((await call('leave',{},host.token)).status,200);A.equal((await call('join',{partner:3,code:state.code})).status,400);
-  const h2=(await call('create',{partner:6})).data,g2=(await call('join',{partner:3,code:h2.state.code})).data;
+  A.equal((await call('leave',{},host.token)).status,200);A.equal((await call('join',{partner:1,code:state.code})).status,400);
+  const h2=(await call('create',{partner:4})).data,g2=(await call('join',{partner:1,code:h2.state.code})).data;
   state=(await call('start',{version:g2.state.version},h2.token)).data;
+  state=await growToBattle(state,[h2.token,g2.token]);
   for(let turn=1;turn<=30;turn++){
    await Promise.all([h2.token,g2.token].map(token=>call('action',{type:'commit',action:{kind:'guard'},turn,match:1},token)));
    if(turn<30)await Promise.all([h2.token,g2.token].map(token=>call('action',{type:'ready',turn,match:1},token)));
   }
   state=(await call('state',undefined,h2.token)).data;A.equal(state.game.phase,'finished');
-  state=(await call('rematch',{version:state.version},h2.token)).data;A.equal(state.gameNumber,2);A.equal(state.game.turn,1);A.equal(state.game.phase,'choose');
+  state=(await call('rematch',{version:state.version},h2.token)).data;A.equal(state.gameNumber,2);A.equal(state.game.turn,1);A.equal(state.game.phase,'growth');A.equal(state.game.growth.picks,0);
   A.equal((await call('action',{type:'commit',action:{kind:'guard'},turn:1,match:1},h2.token)).status,409);
   await call('leave',{},h2.token);await call('leave',{},g2.token);
   const cors=await fetch(base+'state',{method:'OPTIONS',headers:{Origin:'https://junho3713.github.io'}});A.equal(cors.status,204);A.equal(cors.headers.get('Access-Control-Allow-Origin'),'https://junho3713.github.io');

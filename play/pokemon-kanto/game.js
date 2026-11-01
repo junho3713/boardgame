@@ -1,15 +1,47 @@
 (function(root,factory){if(typeof module==='object'&&module.exports)module.exports=factory();else root.KantoDuel=factory();})(typeof globalThis!=='undefined'?globalThis:this,function(){
 'use strict';
-const CONFIG={maxTurns:30,maxEnergy:4},starters=[6,9,3];
+const CONFIG={maxTurns:30,maxEnergy:4},starters=[4,7,1];
 const types={fire:{name:'불꽃',color:'#bd543b'},water:{name:'물',color:'#397b99'},grass:{name:'풀',color:'#4c8055'}};
 const data={
  6:{name:'리자몽',type:'fire',moves:[{name:'불꽃 견제',cost:1,power:18,kind:'pursuit'},{name:'화염방사',cost:3,power:36,kind:'burst'},{name:'화염 페인트',cost:2,power:10,kind:'pierce'}]},
  9:{name:'거북왕',type:'water',moves:[{name:'물대포',cost:1,power:16,kind:'pursuit'},{name:'하이드로펌프',cost:3,power:34,kind:'burst'},{name:'물결 페인트',cost:2,power:10,kind:'pierce'}]},
  3:{name:'이상해꽃',type:'grass',moves:[{name:'덩굴채찍',cost:1,power:17,kind:'pursuit'},{name:'솔라빔',cost:3,power:35,kind:'burst'},{name:'씨앗 페인트',cost:2,power:10,kind:'pierce'}]}
 };
+const families=[[4,5,6],[7,8,9],[1,2,3]];
+const labels={4:'파이리',5:'리자드',7:'꼬부기',8:'어니부기',1:'이상해씨',2:'이상해풀'};
+families.forEach(line=>line.forEach((id,stage)=>{
+ if(stage<2){const final=data[line[2]];data[id]={name:labels[id],type:final.type,moves:final.moves.map((m,j)=>({...m,power:m.power-(2-stage)*2,name:j===1&&stage===0?({4:'불꽃세례',7:'물의파동',1:'잎날가르기'}[id]):m.name}))};}
+ data[id].stage=stage;data[id].line=line;data[id].next=line[stage+1]||null;
+}));
+const growthCards={
+ evolve:{name:'진화의 순간',icon:'✦',text:'한 단계 진화 · 최대 HP +10 · 기술 피해 +2. 1차 진화는 추격 +6, 최종 진화는 관통 예측 +6을 해금해요.'},
+ pursuit:{name:'추격 특훈',icon:'➶',text:'교체를 맞힌 견제 기술의 추가 피해 +8. 같은 포켓몬에게 한 번만 배울 수 있어요.'},
+ pierce:{name:'간파 특훈',icon:'◎',text:'방어를 맞힌 페인트의 추가 피해 +8. 같은 포켓몬에게 한 번만 배울 수 있어요.'},
+ stamina:{name:'체력 특훈',icon:'♥',text:'최대 HP +10. 같은 포켓몬에게 한 번만 배울 수 있어요.'}
+};
+const maxHp=u=>u.maxHp||100;
+const moveStats=(u,j)=>{const m=data[u.species].moves[j];return{...m,bonus:m.kind==='pursuit'?18+(data[u.species].stage>=1?6:0)+(u.traits?.pursuit?8:0):m.kind==='pierce'?22+(data[u.species].stage>=2?6:0)+(u.traits?.pierce?8:0):0};};
+function accessible(g,card){if(!Number.isInteger(card)||card<0||card>=12||g.growth.market[card].taken)return false;const children=card<3?[3+card,4+card]:card<7?[7+card-3,8+card-3]:[];return children.every(j=>g.growth.market[j].taken);}
+function canGrow(u,kind){return kind==='evolve'?!!data[u.species].next:!!growthCards[kind]&&!u.traits[kind];}
+function grow(g,i,a){
+ if(i!==g.growth.current||a.pick!==g.growth.picks||!accessible(g,a.card)||!Number.isInteger(a.to)||!g.players[i].team[a.to])throw Error('지금 가져올 수 있는 카드와 내 차례를 확인해 주세요.');
+ const slot=g.growth.market[a.card],u=g.players[i].team[a.to],kind=slot.kind;if(!canGrow(u,kind))throw Error('다른 포켓몬에게 사용해 주세요. 같은 특훈은 중복할 수 없고 최종 진화 뒤에는 더 진화하지 않아요.');
+ const before={species:u.species,maxHp:maxHp(u)};
+ if(kind==='evolve'){u.species=data[u.species].next;u.maxHp+=10;u.hp+=10;}
+ else{u.traits[kind]=true;if(kind==='stamina'){u.maxHp+=10;u.hp+=10;}}
+ slot.taken={player:i,to:a.to};g.growth.log.push({player:i,to:a.to,kind,before,after:{species:u.species,maxHp:maxHp(u)}});
+ g.growth.picks++;g.growth.current=1-i;
+ if(g.growth.picks===8){g.phase='growthReady';g.ready=[false,false];}
+}
+function growthAI(g,i){
+ const choices=[];g.growth.market.forEach((slot,card)=>{if(accessible(g,card))g.players[i].team.forEach((u,to)=>{if(canGrow(u,slot.kind))choices.push({type:'grow',card,to,pick:g.growth.picks,score:(slot.kind==='evolve'?8:5)+(to===g.players[i].active?2:0)+(slot.kind==='pierce'&&data[u.species].stage>=1?1:0)+random(g)*5});});});
+ choices.sort((a,b)=>b.score-a.score);const a=choices[0];if(!a)throw Error('육성할 카드를 찾지 못했어요.');return{type:a.type,card:a.card,to:a.to,pick:a.pick};
+}
 const clone=x=>JSON.parse(JSON.stringify(x)),active=(g,i)=>g.players[i].team[g.players[i].active];
-function newGame(leads=[6,9],seed=1,names=['나','연습 AI']){
- return{schema:3,phase:'choose',turn:1,rng:seed>>>0||1,players:names.map((name,i)=>({name,active:Math.max(0,starters.indexOf(leads[i])),team:starters.map(species=>({species,hp:100,energy:3,guard:0,exposed:0}))})),pending:[null,null],ready:[false,false],replacements:[null,null],last:null,history:[],result:null};
+function newGame(leads=[4,7],seed=1,names=['나','연습 AI']){
+ const g={schema:4,phase:'growth',turn:1,rng:seed>>>0||1,players:names.map((name,i)=>({name,active:Math.max(0,starters.indexOf(leads[i])),team:starters.map(species=>({species,hp:100,maxHp:100,traits:{},energy:3,guard:0,exposed:0}))})),pending:[null,null],ready:[false,false],replacements:[null,null],last:null,history:[],result:null,growth:{current:seed%2,picks:0,market:[],log:[]}};
+ const deck=['evolve','evolve','evolve','evolve','evolve','evolve','pursuit','pursuit','pierce','pierce','stamina','stamina'];
+ for(let j=deck.length-1;j>0;j--){const k=Math.floor(random(g)*(j+1));[deck[j],deck[k]]=[deck[k],deck[j]];}g.growth.market=deck.map(kind=>({kind,taken:null}));return g;
 }
 function advantage(a,b){return{fire:'grass',grass:'water',water:'fire'}[a]===b?8:({fire:'grass',grass:'water',water:'fire'}[b]===a?-6:0);}
 function guardRate(u){return[.75,.4,0][Math.min(2,u.guard)];}
@@ -28,15 +60,15 @@ function resolve(g){
  actions.forEach((a,i)=>{
   const p=g.players[i],old=active(g,i);
   if(a.kind==='switch'){p.active=a.to;active(g,i).energy--;old.guard=0;}
-  if(a.kind==='move'){const m=data[old.species].moves[a.move];old.energy-=m.cost;heavy[i]=m.kind==='burst';}
+  if(a.kind==='move'){const m=moveStats(old,a.move);old.energy-=m.cost;heavy[i]=m.kind==='burst';}
   const u=active(g,i);if(a.kind==='guard'){rates[i]=guardRate(u);u.guard++;notes[i].push('방어: 피해 '+Math.round(rates[i]*100)+'% 감소');}else u.guard=0;
  });
  const hits=actions.map((a,i)=>{
   if(a.kind!=='move')return null;
-  const u=active(g,i),target=active(g,1-i),m=data[u.species].moves[a.move],opp=actions[1-i];
+  const u=active(g,i),target=active(g,1-i),m=moveStats(u,a.move),opp=actions[1-i];
   let counter=0,read='none';
-  if(m.kind==='pursuit'){if(opp.kind==='switch'){counter=18;read='success';notes[i].push('교체 예측 성공! 추격 피해 +18');}else{read='miss';notes[i].push('교체는 없었어요. 기본 피해만 적용');}}
-  if(m.kind==='pierce'){if(opp.kind==='guard'){counter=22;read='success';notes[i].push('방어 예측 성공! +22, 방어 감소 무시');}else{read='miss';notes[i].push('방어 예측 빗나감: 낮은 기본 피해만 적용');}}
+  if(m.kind==='pursuit'){if(opp.kind==='switch'){counter=m.bonus;read='success';notes[i].push('교체 예측 성공! 추격 피해 +'+counter);}else{read='miss';notes[i].push('교체는 없었어요. 기본 피해만 적용');}}
+  if(m.kind==='pierce'){if(opp.kind==='guard'){counter=m.bonus;read='success';notes[i].push('방어 예측 성공! +'+counter+', 방어 감소 무시');}else{read='miss';notes[i].push('방어 예측 빗나감: 낮은 기본 피해만 적용');}}
   const type=advantage(data[u.species].type,data[target.species].type),exposed=target.exposed?8:0,raw=Math.max(1,m.power+counter+type+exposed),blocked=opp.kind==='guard'&&m.kind!=='pierce'?Math.ceil(raw*rates[1-i]):0;
   return{move:m.name,base:m.power,counter,type,exposed,blocked,damage:raw-blocked,target:target.species,read};
  });
@@ -57,7 +89,10 @@ function advance(g){
 }
 function act(g,i,a){
  if(i!==0&&i!==1)throw Error('플레이어를 확인해 주세요.');
- if(g.phase==='choose'&&a.type==='commit'){
+ if(g.phase==='growth'&&a.type==='grow'){grow(g,i,a);
+ }else if(g.phase==='growthReady'&&a.type==='beginBattle'){
+  if(g.ready[i])throw Error('상대의 배틀 준비를 기다려 주세요.');g.ready[i]=true;if(g.ready.every(Boolean)){g.phase='choose';g.ready=[false,false];}
+ }else if(g.phase==='choose'&&a.type==='commit'){
   if(!a.action||!legal(g,i).some(x=>same(x,a.action)))throw Error('이미 확정했거나 사용할 수 없는 행동이에요.');
   g.pending[i]=clone(legal(g,i).find(x=>same(x,a.action)));
   if(g.pending.every(Boolean))resolve(g);
@@ -92,9 +127,10 @@ function ai(g,i){
 }
 function replacement(g,i){return g.players[i].team.map((u,to)=>({u,to})).filter(x=>x.u.hp>0).sort((a,b)=>b.u.hp-a.u.hp)[0]?.to;}
 function assert(g){
- if(g.schema!==3||!['choose','reveal','replace','finished'].includes(g.phase)||g.players.length!==2||g.turn<1||g.turn>30)throw Error('저장된 게임 형식을 확인해 주세요.');
- g.players.forEach(p=>{if(p.team.length!==3||!Number.isInteger(p.active)||!p.team[p.active])throw Error('잘못된 팀');p.team.forEach(u=>{if(!data[u.species]||!Number.isInteger(u.hp)||u.hp<0||u.hp>100||!Number.isInteger(u.energy)||u.energy<0||u.energy>4)throw Error('잘못된 능력치');});});return true;
+ if(g.schema!==4||!['growth','growthReady','choose','reveal','replace','finished'].includes(g.phase)||g.players.length!==2||g.turn<1||g.turn>30)throw Error('저장된 게임 형식을 확인해 주세요.');
+ if(!g.growth||g.growth.picks<0||g.growth.picks>8||g.growth.market.length!==12||g.growth.log.length!==g.growth.picks)throw Error('잘못된 육성 상태');
+ g.players.forEach(p=>{if(p.team.length!==3||!Number.isInteger(p.active)||!p.team[p.active])throw Error('잘못된 팀');p.team.forEach(u=>{if(!data[u.species]||!Number.isInteger(u.hp)||u.hp<0||u.hp>maxHp(u)||!Number.isInteger(u.energy)||u.energy<0||u.energy>4)throw Error('잘못된 능력치');});});return true;
 }
-return{CONFIG,starters,types,data,newGame,active,advantage,guardRate,legal,label,act,view,ai,replacement,assert};
+return{CONFIG,starters,types,data,families,growthCards,maxHp,moveStats,accessible,canGrow,growthAI,newGame,active,advantage,guardRate,legal,label,act,view,ai,replacement,assert};
 });
 
