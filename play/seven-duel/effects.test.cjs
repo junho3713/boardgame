@@ -13,3 +13,11 @@ test('Gate costs twice its slot and only removes the selected god from its deck'
  const g=G.newGame(true,1);g.phase='play';g.age=2;g.current=0;g.players[0].coins=100;g.pantheonSlots[0]={id:'gate',used:false};const total=Object.values(g.mythDecks).reduce((n,a)=>n+a.length,0);G.act(g,0,{type:'invoke',slot:0});A.equal(g.players[0].coins,94);const choice=g.tasks[0].options[0];G.act(g,0,{type:'choice',task:g.tasks[0].id,value:choice});for(let n=0;g.phase==='choice'&&n<10;n++)G.act(g,0,G.ai(g));A.equal(Object.values(g.mythDecks).reduce((n,a)=>n+a.length,0),total-1);A.ok(g.players[0].gods.includes(choice));
 });
 
+test('Urbanism pays its initial six coins once and a true chain grants four more',()=>{
+ const g=G.newGame(false,2);g.phase='choice';g.current=0;g.flow={actor:0,replay:false};g.tasks=[{id:901,player:0,kind:'boxProgress',options:['token_urbanism'],title:'진보'}];
+ G.act(g,0,{type:'choice',task:901,value:'token_urbanism'});A.equal(g.players[0].coins,13);
+ g.current=0;g.phase='play';g.players[0].city=['blue_theater'];const slot=g.market.findIndex((s,j)=>G.available(g,j));g.market[slot].id='blue_statue';g.market[slot].face=true;
+ G.act(g,0,{type:'build',slot});A.equal(g.players[0].coins,17);
+});
+
+

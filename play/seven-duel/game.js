@@ -72,7 +72,6 @@ function grant(g,i,id,kind='building'){
  const p=g.players[i],c=C[id];
  if(kind==='building')p.city.push(id);else if(kind==='token')p.tokens.push(id);
  if(c.coins)p.coins+=c.coins.n*multiplier(g,i,c.coins);
- if(id===tok('urbanism'))p.coins+=6;
  if(c.loot)g.players[1-i].coins=Math.max(0,g.players[1-i].coins-c.loot);
  if(c.shields)advanceMilitary(g,i,c.shields+(c.type==='red'&&has(p,tok('strategy'))?1:0));
  if(c.replay||(kind==='wonder'&&has(p,tok('theology'))))g.flow.replay=true;
