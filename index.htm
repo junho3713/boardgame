@@ -310,7 +310,7 @@
         const splendor = games.find(game => game.name === '스플렌더');
         games.push({name:'스플렌더 포켓몬', min:splendor.min, max:splendor.max, themes:[...splendor.themes], onlineOnly:true});
         games.push({name:'요트 다이스', min:2, max:10, themes:['주사위','전략'], onlineOnly:true});
-        games.push({name:'관동 카드 리그', min:1, max:1, themes:['카드','전략'], onlineOnly:true});
+        games.push({name:'관동 카드 리그', min:1, max:2, themes:['카드','전략'], onlineOnly:true, hiddenFromOnline:true});
         let onlineOnly = new URLSearchParams(location.search).get('mode') === 'online';
         const modeControl = document.getElementById('onlineMode');
         modeControl.checked = onlineOnly;
@@ -349,7 +349,7 @@
                     matchTheme = game.themes.includes(currentTheme);
                 }
 
-                const matchMode = onlineOnly ? Boolean(onlineGames[game.name]) : !game.onlineOnly;
+                const matchMode = onlineOnly ? Boolean(onlineGames[game.name]) && !game.hiddenFromOnline : !game.onlineOnly;
                 return matchMode && matchPlayer && matchTheme;
             });
 
