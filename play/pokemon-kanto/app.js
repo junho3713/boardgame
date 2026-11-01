@@ -156,7 +156,7 @@ function renderGrowth(){
  const heading=el('div',undefined,'section-title');heading.append(el('div',undefined,'growth-intro'),el('span','선택 '+growth.picks+' / 8','badge'));heading.firstChild.append(el('p','GROW TOGETHER / BUILD YOUR TEAM','eyebrow'),el('h2',ready?'내가 키운 팀':'먼저, 내 팀을 키워 볼까요?'));panel.append(heading);
  const team=el('div',undefined,'growth-team');
  own.team.forEach((u,to)=>{
-  const c=G.data[u.species],n=button('',()=>{growthTarget=to;render();},'growth-unit'+(growthTarget===to?' selected':''));n.setAttribute('aria-pressed',String(growthTarget===to));n.disabled=ready||busy;
+  const c=G.data[u.species],marked=(ready?own.active:growthTarget)===to,n=button('',()=>{growthTarget=to;render();},'growth-unit'+(marked?' selected':''));n.setAttribute('aria-pressed',String(marked));n.disabled=ready||busy;
   n.append(picture(u.species),el('strong',c.name),el('span',c.stage===0?'기본형':c.stage===1?'1차 진화':'최종 진화'),el('small','HP '+G.maxHp(u)+' · 견제 '+G.moveStats(u,0).power),el('small',traitsText(u)));
   if(to===own.active)n.append(el('b','배틀 선발','lead-label'));team.append(n);
  });panel.append(team);
