@@ -84,7 +84,7 @@ function fighter(i){
  const u=current(i),c=G.data[u.species],n=el('div',undefined,'fighter'),text=el('div');text.style.setProperty('--type',G.types[c.type].color);text.append(el('span',G.types[c.type].name+' · 배틀 포켓몬','type-name'),el('h3',c.name),el('div','HP '+u.hp+' / 100','hp-label'));
  const bar=el('div',undefined,'bar'+(u.hp<=30?' low':'')),fill=el('span');fill.style.width=u.hp+'%';bar.append(fill);text.append(bar);
  const energy=el('div','◆ '.repeat(u.energy)+'◇ '.repeat(4-u.energy),'energy');energy.append(el('small','에너지 '+u.energy+' / 4'));text.append(energy);
- if(u.exposed)text.append(el('div','빈틈! 이번 턴 받는 피해 +8','warn'));
+ if(u.exposed&&game.phase!=='finished')text.append(el('div','빈틈! '+(game.phase==='choose'?'이번':'다음')+' 턴 받는 피해 +8','warn'));
  text.append(el('div','다음 방어: 피해 '+Math.round(G.guardRate(u)*100)+'% 감소','small muted'));n.append(picture(u.species),text);return n;
 }
 function bench(i){
@@ -129,7 +129,7 @@ function render(){
  }else if(phase==='reveal'){
   $('phaseTitle').textContent='동시 공개! 예측이 맞았나요?';$('phaseHint').textContent='두 공격은 동시에 적용돼요. 기절한 쪽도 이미 선택한 공격은 실행해요.';drawResult($('revealPanel'),true);
  }else{
-  $('phaseTitle').textContent=game.result.winner===null?'무승부':game.result.winner===viewer?'승리! 상대의 수를 읽었어요.':'대전 종료 · 다음에는 다른 수를!';
+  $('phaseTitle').textContent=game.result.winner===null?'무승부':game.result.winner===viewer?'승리!':'대전 종료 · 다음에는 다른 수를!';
   $('phaseHint').textContent=game.result.reason+(game.result.forfeit?'':' · 남은 포켓몬 수, 남은 HP 순서로 승부를 가려요.');
   const f=$('finishPanel');f.replaceChildren(el('h2',game.result.winner===null?'양쪽이 비겼어요.':game.players[game.result.winner].name+' 승리'));
   if(game.last)drawResult(f,false);
