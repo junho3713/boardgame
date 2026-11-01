@@ -58,6 +58,7 @@ function createHandler(){
     sessions.delete(p.token);for(const s of [...r.streams])if(s.p===p){s.res.end();r.streams.delete(s);}
     if(!r.game){r.players=r.players.filter(x=>x!==p);if(!r.players.length){expire(r);json(res,200,{ok:true});return;}r.host=r.players[0].id;}
     else{p.left=true;if(r.game.phase!=='finished'){r.game.phase='finished';r.game.result={winner:1-index,points:[...r.game.points],forfeit:true};r.game.log.push({n:++r.game.sequence,text:p.name+'님이 방을 나가 상대가 승리했어요.'});}}
+    if(r.players.every(player=>player.left)){expire(r);json(res,200,{ok:true});return;}
     r.version++;schedule(r);broadcast(r);json(res,200,{ok:true});return;
    }else{json(res,404,{error:'요청을 찾지 못했어요.'});return;}
    r.updated=Date.now();r.version++;schedule(r);json(res,200,project(r,p));broadcast(r);

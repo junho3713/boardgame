@@ -35,6 +35,7 @@ test('two players share drafts and battle while private cards and commands stay 
   assert.equal((await call('leave',{version:-99},host.token)).status,200);
   const end=(await call('state',undefined,guest.token)).data;assert.equal(end.phase,'finished');assert.equal(end.game.result.winner,1);assert.equal(end.game.result.forfeit,true);
   assert.equal((await call('state',undefined,host.token)).status,401);
+  assert.equal((await call('leave',{},guest.token)).status,200);assert.equal((await call('join',{name:'Late',partner:1,code:host.state.code})).status,400);
   const cors=await fetch(base+'state',{method:'OPTIONS',headers:{Origin:'https://junho3713.github.io','Access-Control-Request-Method':'GET'}});
   assert.equal(cors.status,204);assert.equal(cors.headers.get('Access-Control-Allow-Origin'),'https://junho3713.github.io');
   assert.equal((await fetch(base+'state',{method:'OPTIONS',headers:{Origin:'https://other.example'}})).status,403);
