@@ -3,19 +3,14 @@ const crypto=require('node:crypto'),fs=require('node:fs'),path=require('node:pat
 function createHandler(){
  const rooms=new Map(),sessions=new Map(),ttl=2*60*60*1000;
  const json=(res,status,value)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});res.end(JSON.stringify(value));};
- function expire(r){clearTimeout(r.timer);for(const p of r.players)sessions.delete(p.token);for(const s of r.streams)s.res.end();rooms.delete(r.code);}
+ function expire(r){for(const p of r.players)sessions.delete(p.token);for(const s of r.streams)s.res.end();rooms.delete(r.code);}
  function project(r,p){
   const meIndex=r.players.findIndex(x=>x.id===p.id);let game=null;
-  if(r.game){game=structuredClone(r.game);delete game.rng;game.market.forEach(slot=>{if(slot.hidden&&!slot.taken)slot.card={kind:'hidden'};});}
-  return{code:r.code,host:r.host,me:p.id,meIndex,version:r.version,gameNumber:r.gameNumber,serverNow:Date.now(),nextBeatAt:r.nextBeatAt||null,phase:game?game.phase:'lobby',players:r.players.map(x=>({id:x.id,name:x.name,partner:x.partner,left:!!x.left})),game};
+  if(r.game)game=G.view(r.game,meIndex);
+  return{code:r.code,host:r.host,me:p.id,meIndex,version:r.version,gameNumber:r.gameNumber,serverNow:Date.now(),nextBeatAt:r.nextBeatAt||null,phase:game?game.phase:'lobby',players:r.players.map(x=>({id:x.id,name:x.name,partner:r.game||x.id===p.id?x.partner:null,left:!!x.left})),game};
  }
  function broadcast(r){for(const s of [...r.streams]){try{s.res.write('event: state\ndata: '+JSON.stringify(project(r,s.p))+'\n\n');}catch{r.streams.delete(s);}}}
- function schedule(r){
-  clearTimeout(r.timer);if(r.game?.phase!=='battle'){r.nextBeatAt=null;return;}
-  if(!r.nextBeatAt)r.nextBeatAt=Date.now()+G.CONFIG.introMs;
-  r.timer=setTimeout(()=>{try{G.stepBattle(r.game);G.assert(r.game);r.version++;r.updated=Date.now();r.nextBeatAt=r.game.phase==='battle'?Date.now()+G.CONFIG.beatMs:null;schedule(r);broadcast(r);}catch(e){console.error('Kanto battle:',e.message);r.nextBeatAt=null;broadcast(r);}},Math.max(0,r.nextBeatAt-Date.now()));r.timer.unref?.();
- }
- function start(r){r.game=G.newGame(r.players.map(p=>p.partner),crypto.randomInt(1,0x7fffffff),r.players.map(p=>p.name));r.gameNumber++;r.nextBeatAt=null;}
+ function start(r){r.game=G.newGame(r.players.map(p=>p.partner),crypto.randomInt(1,0x7fffffff),r.players.map(p=>p.name));r.gameNumber++;}
  const cleanup=setInterval(()=>{for(const r of rooms.values())if(Date.now()-r.updated>ttl)expire(r);},30000);cleanup.unref?.();
  return async function handle(req,res){
   const url=new URL(req.url,'http://local'),route=url.pathname;
@@ -47,22 +42,23 @@ function createHandler(){
     const heartbeat=setInterval(()=>{res.write(': keepalive\n\n');},20000);heartbeat.unref?.();res.on('close',()=>{clearInterval(heartbeat);r.streams.delete(s);});return;
    }
    if(req.method!=='POST'){json(res,405,{error:'지원하지 않는 요청이에요.'});return;}
-   const intervention=route==='/kanto/api/action'&&body.type==='command';
-   if(!intervention&&route!=='/kanto/api/leave'&&body.version!==r.version){json(res,409,{error:'상태가 바뀌었어요. 새 화면에서 다시 선택해 주세요.',state:project(r,p)});return;}
+   if(!['/kanto/api/action','/kanto/api/leave'].includes(route)&&body.version!==r.version){json(res,409,{error:'상태가 바뀌었어요. 새 화면에서 다시 선택해 주세요.',state:project(r,p)});return;}
    if(route==='/kanto/api/start'){if(p.id!==r.host||r.game||r.players.length!==2)throw Error('두 명이 모이면 방장이 시작할 수 있어요.');start(r);}
    else if(route==='/kanto/api/rematch'){if(p.id!==r.host||r.game?.phase!=='finished'||r.players.some(p=>p.left))throw Error('두 명이 남아 있을 때 방장이 다시 시작할 수 있어요.');start(r);}
    else if(route==='/kanto/api/action'){
     if(!r.game)throw Error('먼저 대전을 시작해 주세요.');
+    if(body.turn!==r.game.turn||body.match!==r.gameNumber){json(res,409,{error:'턴이나 대전이 바뀌었어요. 새 화면에서 선택해 주세요.',state:project(r,p)});return;}
     G.act(r.game,index,body);G.assert(r.game);
    }else if(route==='/kanto/api/leave'){
     sessions.delete(p.token);for(const s of [...r.streams])if(s.p===p){s.res.end();r.streams.delete(s);}
     if(!r.game){r.players=r.players.filter(x=>x!==p);if(!r.players.length){expire(r);json(res,200,{ok:true});return;}r.host=r.players[0].id;}
-    else{p.left=true;if(r.game.phase!=='finished'){r.game.phase='finished';r.game.result={winner:1-index,points:[...r.game.points],forfeit:true};r.game.log.push({n:++r.game.sequence,text:p.name+'님이 방을 나가 상대가 승리했어요.'});}}
+    else{p.left=true;if(r.game.phase!=='finished'){r.game.phase='finished';r.game.result={winner:1-index,forfeit:true,reason:p.name+'님이 방을 나갔어요.'};r.game.pending=[null,null];r.game.replacements=[null,null];}}
     if(r.players.every(player=>player.left)){expire(r);json(res,200,{ok:true});return;}
-    r.version++;schedule(r);broadcast(r);json(res,200,{ok:true});return;
+    r.version++;broadcast(r);json(res,200,{ok:true});return;
    }else{json(res,404,{error:'요청을 찾지 못했어요.'});return;}
-   r.updated=Date.now();r.version++;schedule(r);json(res,200,project(r,p));broadcast(r);
+   r.updated=Date.now();r.version++;json(res,200,project(r,p));broadcast(r);
   }catch(e){if(!res.headersSent)json(res,400,{error:e.message||'처리하지 못했어요.'});else res.end();}
  };
 }
 module.exports={createHandler};
+
