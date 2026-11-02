@@ -298,6 +298,7 @@
         ];
 
         const onlineGames = {
+            '레지스탕스 아발론': 'https://jjinmak-boardgame.onrender.com/avalon/',
             '7원더스 대결': 'https://jjinmak-boardgame.onrender.com/seven-duel/',
             '관동 카드 리그': 'play/pokemon-kanto/index.html',
             '차가운 그녀가 눈을 뜨기 전에': 'https://jjinmak-boardgame.onrender.com/',
@@ -313,6 +314,7 @@
         games.push({name:'요트 다이스', min:2, max:10, themes:['주사위','전략'], onlineOnly:true});
         games.push({name:'7원더스 대결', min:1, max:2, themes:['전략','문명','카드'], onlineOnly:true});
         games.push({name:'관동 카드 리그', min:1, max:2, themes:['카드','전략'], onlineOnly:true, hiddenFromOnline:true});
+        games.push({name:'레지스탕스 아발론', min:5, max:10, themes:['마피아','블러핑','파티'], onlineOnly:true});
         let onlineOnly = new URLSearchParams(location.search).get('mode') === 'online';
         const modeControl = document.getElementById('onlineMode');
         modeControl.checked = onlineOnly;
@@ -365,7 +367,7 @@
 
             sortedList.forEach(game => {
                 const card = document.createElement('div');
-                const hasDetails = ['7원더스 대결','관동 카드 리그','요트 다이스','스플렌더 포켓몬','나르','차가운 그녀가 눈을 뜨기 전에','스플렌더','달무티','노터치 크라켄 디럭스','프린세스의 반란 디럭스','스파이폴2','렉시오','블랙 프라이데이'].includes(game.name);
+                const hasDetails = ['레지스탕스 아발론','7원더스 대결','관동 카드 리그','요트 다이스','스플렌더 포켓몬','나르','차가운 그녀가 눈을 뜨기 전에','스플렌더','달무티','노터치 크라켄 디럭스','프린세스의 반란 디럭스','스파이폴2','렉시오','블랙 프라이데이'].includes(game.name);
                 const playUrl = onlineOnly ? onlineGames[game.name] : '';
                 card.className = 'game-card' + (hasDetails ? ' has-details' : '') + (playUrl ? ' has-online' : '');
 
@@ -379,7 +381,7 @@
                             <div class="game-tags">${tagsHtml}</div>
                         </div>
                     </div>
-                    <div class="game-actions"><div class="game-players">${game.min === game.max ? game.min : game.min + '-' + game.max}인</div>${game.name === '7원더스 대결' ? '<a class="details-button" href="https://jjinmak-boardgame.onrender.com/seven-duel/?rules=1" aria-label="7원더스 대결 기본판과 판테온 규칙 보기">규칙 보기</a>' : game.name === '관동 카드 리그' ? '<a class="details-button" href="play/pokemon-kanto/index.html?rules=1" aria-label="관동 카드 리그 게임 방법 보기">게임 방법</a>' : game.name === '요트 다이스' ? '<a class="details-button" href="https://jjinmak-boardgame.onrender.com/yacht/?rules=1" aria-label="요트 다이스 규칙 보기">규칙 보기</a>' : game.name === '스플렌더 포켓몬' ? '<a class="details-button" href="https://jjinmak-boardgame.onrender.com/splendor3/?rules=1" aria-label="스플렌더 포켓몬 규칙 보기">규칙 보기</a>' : game.name === '나르' ? '<button type="button" class="details-button" data-knarr-details aria-haspopup="dialog" aria-controls="knarrDetails" aria-label="나르 자세히 보기">자세히 보기</button>' : game.name === '차가운 그녀가 눈을 뜨기 전에' ? '<a class="details-button" href="play/girl/index.html" aria-label="차가운 그녀가 눈을 뜨기 전에 카드와 규칙 보기">카드·규칙</a>' : game.name === '스플렌더' ? '<a class="details-button" href="play/splendor/index.html" aria-label="스플렌더 규칙과 멀티플레이 보기">자세히 보기</a>' : game.name === '달무티' ? '<a class="details-button" href="play/dalmuti/index.html" aria-label="달무티 기본 규칙과 예시 보기">자세히 보기</a>' : game.name === '노터치 크라켄 디럭스' ? '<a class="details-button" href="play/kraken/index.html" aria-label="노터치 크라켄 디럭스 규칙과 실제 카드 보기">자세히 보기</a>' : game.name === '프린세스의 반란 디럭스' ? '<a class="details-button" href="play/princess/index.html" aria-label="프린세스의 반란 디럭스 규칙과 카드 보기">자세히 보기</a>' : game.name === '스파이폴2' ? '<a class="details-button" href="play/spyfall2/index.html" aria-label="스파이폴 2 규칙과 장소 보기">자세히 보기</a>' : game.name === '블랙 프라이데이' ? '<a class="details-button" href="play/black-friday/index.html" aria-label="블랙 프라이데이 쉬운 규칙과 예시 보기">자세히 보기</a>' : game.name === '렉시오' ? '<a class="details-button" href="play/lexio/index.html" aria-label="렉시오 규칙과 타일 족보 보기">자세히 보기</a>' : ''}
+                    <div class="game-actions"><div class="game-players">${game.min === game.max ? game.min : game.min + '-' + game.max}인</div>${game.name === '레지스탕스 아발론' ? '<a class="details-button" href="https://jjinmak-boardgame.onrender.com/avalon/?rules=1" aria-label="레지스탕스 아발론 역할과 규칙 보기">규칙 보기</a>' : game.name === '7원더스 대결' ? '<a class="details-button" href="https://jjinmak-boardgame.onrender.com/seven-duel/?rules=1" aria-label="7원더스 대결 기본판과 판테온 규칙 보기">규칙 보기</a>' : game.name === '관동 카드 리그' ? '<a class="details-button" href="play/pokemon-kanto/index.html?rules=1" aria-label="관동 카드 리그 게임 방법 보기">게임 방법</a>' : game.name === '요트 다이스' ? '<a class="details-button" href="https://jjinmak-boardgame.onrender.com/yacht/?rules=1" aria-label="요트 다이스 규칙 보기">규칙 보기</a>' : game.name === '스플렌더 포켓몬' ? '<a class="details-button" href="https://jjinmak-boardgame.onrender.com/splendor3/?rules=1" aria-label="스플렌더 포켓몬 규칙 보기">규칙 보기</a>' : game.name === '나르' ? '<button type="button" class="details-button" data-knarr-details aria-haspopup="dialog" aria-controls="knarrDetails" aria-label="나르 자세히 보기">자세히 보기</button>' : game.name === '차가운 그녀가 눈을 뜨기 전에' ? '<a class="details-button" href="play/girl/index.html" aria-label="차가운 그녀가 눈을 뜨기 전에 카드와 규칙 보기">카드·규칙</a>' : game.name === '스플렌더' ? '<a class="details-button" href="play/splendor/index.html" aria-label="스플렌더 규칙과 멀티플레이 보기">자세히 보기</a>' : game.name === '달무티' ? '<a class="details-button" href="play/dalmuti/index.html" aria-label="달무티 기본 규칙과 예시 보기">자세히 보기</a>' : game.name === '노터치 크라켄 디럭스' ? '<a class="details-button" href="play/kraken/index.html" aria-label="노터치 크라켄 디럭스 규칙과 실제 카드 보기">자세히 보기</a>' : game.name === '프린세스의 반란 디럭스' ? '<a class="details-button" href="play/princess/index.html" aria-label="프린세스의 반란 디럭스 규칙과 카드 보기">자세히 보기</a>' : game.name === '스파이폴2' ? '<a class="details-button" href="play/spyfall2/index.html" aria-label="스파이폴 2 규칙과 장소 보기">자세히 보기</a>' : game.name === '블랙 프라이데이' ? '<a class="details-button" href="play/black-friday/index.html" aria-label="블랙 프라이데이 쉬운 규칙과 예시 보기">자세히 보기</a>' : game.name === '렉시오' ? '<a class="details-button" href="play/lexio/index.html" aria-label="렉시오 규칙과 타일 족보 보기">자세히 보기</a>' : ''}
                     ${playUrl ? '<a class="online-play" href="'+playUrl+'" aria-label="'+game.name+' 온라인 플레이하기">플레이하기</a>' : ''}</div>
                 `;
                 listEl.appendChild(card);
