@@ -86,7 +86,7 @@ const TYPES={swordEmpress:{name:'사검의 군주',hp:64000,damage:0,rate:100,ra
  machinegun:{name:'기관총병',icon:'≋',hp:160,damage:9,rate:.2,range:280,speed:126,r:12,cost:95,role:'빠른 연사 · 경장갑 ×1 / 장갑 ×0.8'},
  mortar:{name:'박격포병',icon:'◉',hp:90,damage:64,rate:3.6,range:700,minRange:135,speed:116,r:12,cost:140,splash:70,role:'레이저 포탑 우선 · 고정 낙탄 2초 · 건물 ×1.2 · 사거리 135~700'},
  rocket:{name:'바주카병',icon:'⌁',hp:120,damage:80,rate:1.85,range:295,speed:128,r:12,cost:120,splash:38,role:'장갑 ×1 · 경장갑 ×0.5 · 소형 폭발'},
- sniper:{name:'저격병',icon:'⌖',hp:100,damage:100,rate:2.35,range:560,speed:137,r:11,cost:110,role:'경장갑 ×1 / 장갑 ×0.5 · 얼음 마녀 우선 사격'},
+ sniper:{name:'저격병',icon:'⌖',hp:100,damage:100,rate:2.35,range:560,speed:137,r:11,cost:110,role:'경장갑 ×1 / 장갑 ×0.5 · 얼음 마녀 → 박격포병 우선 사격'},
  guntruck:{name:'전투트럭',icon:'▱',hp:280,damage:12,rate:.22,range:265,speed:150,r:22,cost:150,role:'기동 연사 · 경장갑 ×1 / 장갑 ×0.8'},
  tank:{name:'전차',icon:'▰',hp:600,damage:100,rate:2.3,range:310,speed:95,r:26,cost:260,splash:60,role:'장갑 ×1 · 경장갑 ×0.5 · 범위 포격'},
  artillery:{name:'적 포병',icon:'⊕',hp:520,damage:0,rate:99,range:0,speed:0,r:27,cost:0,role:'포격을 지휘하는 장갑 목표'},
@@ -524,8 +524,8 @@ class FrontGame{
  }
  selectCombatTarget(u,candidates=this.combatCandidates(),threats=this.attackingEnemies(),s=this.stats(u)){
   if(u.team===0&&u.type==='sniper'){
-   const mages=candidates.filter(a=>a.type==='blizzardMage'&&this.canTarget(u,a)&&this.visible(a)&&this.targetDistance(u,a)<s.range&&this.targetDistance(u,a)>=(s.minRange||0)&&this.lineClear(u,a,0,{fireTeam:u.team}));
-   mages.sort((a,b)=>this.targetDistance(u,a)-this.targetDistance(u,b)||a.hp-b.hp);if(mages.length)return mages[0];
+   const priority=candidates.filter(a=>['blizzardMage','mortar'].includes(a.type)&&this.canTarget(u,a)&&this.visible(a)&&this.targetDistance(u,a)<s.range&&this.targetDistance(u,a)>=(s.minRange||0)&&this.lineClear(u,a,0,{fireTeam:u.team}));
+   priority.sort((a,b)=>Number(a.type!=='blizzardMage')-Number(b.type!=='blizzardMage')||this.targetDistance(u,a)-this.targetDistance(u,b)||a.hp-b.hp);if(priority.length)return priority[0];
   }
   // Mortars neutralize reachable lasers before spending slow shells on mobile foes.
   // Only target selection changes; movement, minimum range and manual focus stay intact.
@@ -1681,7 +1681,8 @@ class FrontGame{
    else if(u.type==='leader'){
     let dest=this.time<this.enemyAdvanceAt?{x:800,y:450}:{x:800+Math.sin(this.time*.022)*330,y:2280};const seen=this.alive(0).filter(a=>this.canTarget(u,a)&&dist(u,a)<450);if(seen.length){dest=seen[0];if(u.hp<u.maxHp*.3)dest={x:800,y:360};}
     if((!target||dist(u,dest)>s.range*.82)&&dist(u,dest)>15)this.navigate(u,dest.x,dest.y,dt,s.speed*.58);
-   }else if(u.patrol){const chase=this.pursuitTarget(u),c=this.pursuitPoint(u,chase);if(!target&&dist(u,c)>(chase.built?1:8))this.navigate(u,c.x,c.y,dt,s.speed);}
+   }else if(u.team!==0&&this.followRoomEscort(u,dt,s)){}
+   else if(u.patrol){const chase=this.pursuitTarget(u),c=this.pursuitPoint(u,chase);if(!target&&dist(u,c)>(chase.built?1:8))this.navigate(u,c.x,c.y,dt,s.speed);}
    else{
     const c=u.team?enemy:player,facing=u.team?Math.atan2(player.y-c.y,player.x-c.x):this.formationFacing,goal=this.squadMovePoint(u,this.formationPoint(u,c,facing));
     if(dist(u,goal)>12)this.navigate(u,goal.x,goal.y,dt,this.squadFollowSpeed(u,u.regroup?.goal||goal,s.speed*(dist(u,c)>280?1.3:1)));

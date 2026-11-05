@@ -72,7 +72,7 @@ function seek(game,seconds,{heal=false}={}){
  for(const key of ['shots','effects','pickups','barrages','mortarShells','butterflyGusts','luckyMines','luckyGlues','luckyGlueHistory','luckySprays','luckySalvos','enemyLuckySalvos'])game[key]=[];
  game.trialBoss=null;game.currentOptions=[];game.pendingChoice=null;game.turnChoice=null;game.choiceKind='level';game.bossState.claimed=Math.max(0,game.bossState.claimed||0);game.bossState.rewards=game.bossState.claimed;
  const s=game.roomCampaign,index=room.bosses.findIndex(b=>b.at>=target),rush=room.bossRush.pairs.findIndex(b=>b.at>=target);
- Object.assign(s,{bossCursor:index<0?room.bosses.length:index,rushCursor:rush<0?room.bossRush.pairs.length:rush,bossReadyAt:target,recoveryUntil:0,nextSpawnAt:target+.2,phaseAt:game.roomPhase().at,surgeWindow:null,tankScheduleVersion:170,tanksDone:room.tanks.map(at=>at<target),tankSpawned:room.tanks.filter(at=>at<target).length,nextTankAttemptAt:target});
+ Object.assign(s,{bossCursor:index<0?room.bosses.length:index,rushCursor:rush<0?room.bossRush.pairs.length:rush,bossReadyAt:target,recoveryUntil:0,waveSpawnDebt:0,nextSpawnAt:target+.2,phaseAt:game.roomPhase().at,surgeWindow:null,tankScheduleVersion:170,tanksDone:room.tanks.map(at=>at<target),tankSpawned:room.tanks.filter(at=>at<target).length,nextTankAttemptAt:target});
  game.finalBattle={spawned:false,killed:false};game.bossState.warned=false;game.bossState.nextAt=game.roomNextBossAt();
  // The 7:30 warning / 8:00 artillery event is testable, but is not replayed after its crisis window.
  Object.assign(game.crisis,{phase:target<510?'idle':'cleared',warnAt:450,startAt:Math.max(480,target),nextSalvo:target,nextEscort:target,battery:[]});

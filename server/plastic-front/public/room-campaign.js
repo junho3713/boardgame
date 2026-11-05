@@ -14,7 +14,8 @@ const config={version:116,duration:1200,enemyLuckyInterval:5,recoverySeconds:16,
  laser:{range:370,opacity:.3,color:'#ec443b'},
  opening:[{type:'ant',x:760,y:2240},{type:'ant',x:860,y:2240},{type:'ant',x:855,y:2110},{type:'bayonet',x:740,y:2050},{type:'bladeGuard',x:950,y:2020}],
  roadCaptains:[['road-soldier','bayonet','길목 장난감 병정',5600,1],['road-blade','bladeGuard','블랙 실드 검병 대장',3600,2],['road-bike','bikeRaider','바이크 돌격대장',2160,2]],
- caps:{blizzardMage:2,butterfly:2,sniper:3,machinegun:4,hornet:3,honeybee:8,bikeRaider:3,rhinoBeetle:4,stagBeetle:5,crimsonAce:3,lucky:4},
+ mageEscort:{from:360,mortars:4,spacing:60,depth:80},
+ caps:{blizzardMage:2,mortar:8,butterfly:2,sniper:3,machinegun:4,hornet:3,honeybee:8,bikeRaider:3,rhinoBeetle:4,stagBeetle:5,crimsonAce:3,lucky:4},
  guardians:{version:142,midLaser:{id:'room-threequarter-laser',x:1500,fraction:.5},midMage:{id:'room-half-mage',x:1500,fraction:.75},finalMage:{id:'room-final-mage',x:1340,offset:280},finalMages:[{id:'room-final-mage',x:1340,offset:280},{id:'room-final-mage-right',x:1660,offset:280}],rearLasers:[{id:'room-final-rear-laser-left',x:950,offset:-400},{id:'room-final-rear-laser-right',x:2050,offset:-400}],finalLasers:[{id:'room-final-laser',x:1225,offset:260},{id:'room-final-laser-right',x:1775,offset:260}]},
  fortifications:{version:121,missiles:[{id:'room-hq-missile-left',x:980,y:1040},{id:'room-hq-missile-right',x:2020,y:1040},{id:'room-hq-missile-rear-left',x:1050,y:300},{id:'room-hq-missile-rear-right',x:1950,y:300}],guardian:{midLaser:{hp:2.6,defense:20},finalLaser:{hp:3.2,defense:30},midMage:{hp:3.2,damage:1.25,rate:.9,defense:18},finalMage:{hp:4,damage:1.35,rate:.9,defense:24},post:{hp:1.8,damage:1.25,defense:15},hq:{hp:1.75,damage:1.3,defense:20},garrison:{hp:1.5,damage:1,defense:8}},
   lines:[{id:'first-patrol',y:6200,roster:['ant','ant','bayonet']},{id:'laser-approach',y:4800,roster:['ant','ant','bladeGuard']},{id:'laser-left',x:450,y:4300,roster:['bladeGuard','machinegun']},{id:'laser-right',x:2550,y:4300,roster:['bladeGuard','machinegun']},{id:'approach',y:5600,roster:['bladeGuard','bayonet','machinegun']},{id:'laser',y:4200,roster:['bayonet','bladeGuard','machinegun','machinegun','sniper']},{id:'witch',y:2400,roster:['stagBeetle','bladeGuard','machinegun','sniper']},{id:'final',y:1600,roster:['stagBeetle','bladeGuard','bladeGuard','machinegun','machinegun','sniper']}],leash:600,engage:650},
@@ -168,6 +169,22 @@ const methods={
   const portal=this.roomPortalAlive(),late=portal&&this.time>=900;const plan={surge,count:beat.density<.6?1:surge?Math.min(r.maxBatch,p.batch+r.extra):Math.min(6,p.batch+(beat.density>1&&this.time>=240?1:0)),interval:p.interval/beat.density*(surge?r.intervalScale:1),forced:surge?(r.rosters.filter(row=>row.at<=this.time).at(-1)?.types||[]):[],window:p.at+':'+Math.floor((this.time-p.at)/config.rhythm.cycle)};if(!portal){const late=this.time>=config.lateWaves.from;plan.count=Math.max(1,Math.ceil(plan.count*(late?config.lateWaves.closedCount:.65)));plan.interval*=late?config.lateWaves.closedInterval:1.4;}else if(late&&beat.density>=.6){plan.count=Math.min(12,plan.count+4);plan.interval*=.55;plan.surge=true;plan.forced=['machinegun','sniper','butterfly','bikeRaider'];}if(this.time>=config.bossRush.from&&this.time>=(this.roomCampaign?.recoveryUntil||0)){const row=config.bossRush.troops[this.units.some(u=>u.boss&&!u.roadCaptain&&u.hp>0)?'boss':'between'];plan.count=portal?row.openCount:row.closedCount;plan.interval=portal?row.openInterval:row.closedInterval;plan.surge=false;plan.forced=[];}return plan;
  },
  spawnRoomEnemy(type,lane=null){if(!this.roomCanSpawn(type))return null;const c=this.commander(0),view=this.spawnView(),offset=lane===null?((this.serial%5)-2)*120:lane*config.surges.frontWidth,forward={x:clamp(c.x+offset,80,config.layout.width-80),y:view.top-120},p=this.northernSpawn(this.serial+1,55,lane===null&&this.roomCampaign?.spawned%3===2?null:forward);if(!p)return null;const team=['machinegun','sniper','crimsonAce','lucky'].includes(type)?1:2,u=this.addUnit(team,type,p.x,p.y,true);u.assault=true;u.roomWave=true;if(type==='blizzardMage')Object.assign(u,{mobileMage:true,activeStage:1,cooldown:1.2});return u;},
+ roomCanSpawnMageGroup(){
+  const r=config.mageEscort,scale=this.coop?this.coopSpawnScale:1;
+  return this.time>=r.from&&this.roomCanSpawn('blizzardMage')&&this.roomEnemyCount()+1+r.mortars<=this.roomWaveCap()&&this.roomEnemyCount('mortar')+r.mortars<=Math.ceil(config.caps.mortar*scale);
+ },
+ spawnRoomMageGroup(lane=null){
+  if(!this.roomCanSpawnMageGroup())return null;const mage=this.spawnRoomEnemy('blizzardMage',lane);if(!mage)return null;
+  const r=config.mageEscort,group=[mage];mage.roomEscortGroup=mage.id;
+  for(let i=0;i<r.mortars;i++){const u=this.addUnit(mage.team,'mortar',mage.x+(i-(r.mortars-1)/2)*r.spacing,mage.y-r.depth,true);Object.assign(u,{assault:true,roomWave:true,roomEscortGroup:mage.id,roomEscortLeaderId:mage.id,roomEscortSlot:i});group.push(u);}
+  return group;
+ },
+ followRoomEscort(u,dt,s){
+  if(!u.roomEscortLeaderId)return false;const mage=this.units.find(v=>v.id===u.roomEscortLeaderId&&v.hp>0);if(!mage)return false;
+  const r=config.mageEscort,angle=mage.aimFace??mage.face,side=(u.roomEscortSlot-(r.mortars-1)/2)*r.spacing;
+  const goal={x:mage.x-Math.cos(angle)*r.depth-Math.sin(angle)*side,y:mage.y-Math.sin(angle)*r.depth+Math.cos(angle)*side};
+  if(d(u,goal)>18)this.navigate(u,goal.x,goal.y,dt,s.speed);return true;
+ },
  updateRoomScheduledTanks(){
   const s=this.roomCampaign;if(s.tankScheduleVersion!==170){const actual=Math.max(0,Math.min(config.tanks.length,Math.max(Math.floor(s.tankSpawned||0),this.units.filter(u=>u.type==='crimsonAce'&&!u.boss&&u.roomWave&&u.hp>0).length)));s.tankSpawned=actual;s.tanksDone=config.tanks.map((_,i)=>i<actual);s.tankScheduleVersion=170;}
   if(this.time<(s.nextTankAttemptAt||0))return;
@@ -182,11 +199,14 @@ const methods={
   this.updateRoomScheduledTanks();
   if(this.time>=config.midgame.from)s.nextSpawnAt=Math.min(s.nextSpawnAt,this.time+plan.interval);
   if(this.time<s.nextSpawnAt)return;s.nextSpawnAt=this.time+plan.interval;
+  const debt=s.waveSpawnDebt||0,count=Math.max(0,plan.count-debt);s.waveSpawnDebt=Math.max(0,debt-plan.count);
+  const eligible=type=>type==='blizzardMage'?this.roomCanSpawnMageGroup():this.roomCanSpawn(type);
   const melee=['ant','bayonet','bladeGuard','stagBeetle','rhinoBeetle'];
-  for(let i=0;i<plan.count;i++){
-   const forced=plan.forced[i];let type=forced&&p.mix[forced]>0&&this.roomCanSpawn(forced)?forced:null;
-   if(!type){const pool=Object.entries(p.mix).filter(([t])=>this.roomCanSpawn(t)&&(i<4||melee.includes(t))),total=pool.reduce((n,[,w])=>n+w,0);if(!total)break;let roll=this.random()*total;type=pool.at(-1)[0];for(const [t,w]of pool){roll-=w;if(roll<0){type=t;break;}}}
+  for(let i=0;i<count;i++){
+   const forced=plan.forced[i];let type=forced&&p.mix[forced]>0&&eligible(forced)?forced:null;
+   if(!type){const pool=Object.entries(p.mix).filter(([t])=>eligible(t)&&(i<4||melee.includes(t))),total=pool.reduce((n,[,w])=>n+w,0);if(!total)break;let roll=this.random()*total;type=pool.at(-1)[0];for(const [t,w]of pool){roll-=w;if(roll<0){type=t;break;}}}
    const lane=plan.surge?config.surges.lanes[(i+s.spawned)%config.surges.lanes.length]:null;
+   if(type==='blizzardMage'){const group=this.spawnRoomMageGroup(lane);if(!group){s.nextSpawnAt=this.time+2;break;}s.spawned+=group.length;s.waveSpawnDebt+=Math.max(0,group.length-(count-i));i+=group.length-1;continue;}
    if(!this.spawnRoomEnemy(type,lane)){s.nextSpawnAt=this.time+2;break;}s.spawned++;
   }
  },
