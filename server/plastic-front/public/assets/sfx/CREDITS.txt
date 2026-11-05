@@ -1,0 +1,72 @@
+PLASTIC FRONT combat sound samples — v0.34
+
+Source material:
+1. Gunshots — kurt
+   https://opengameart.org/content/gunshots
+   Files: 22 Magnum.wav, Black Powder.wav
+   License: CC0 1.0 (as listed by the uploader)
+   Used for: rifle, truck, tank, mortar-launch, rocket.
+   Former machinegun sample replaced in v0.33.
+2. Residue-sfx — FacadeGaikan / PlanetKillerGames
+   https://opengameart.org/content/residue-sfx
+   https://www.planetkillergames.net/
+   Files: zipper.wav, boom.ogg
+   License: CC0 1.0
+   Used for: impact. The former zipper-based rocket was replaced in v0.32.
+3. Muffled Distant Explosion — NenadSimic
+   https://opengameart.org/content/muffled-distant-explosion
+   File: NenadSimic - Muffled Distant Explosion.wav
+   License: CC0 1.0
+   Used for: artillery.
+4. Sniper Shot — LeMudCrab
+   https://freesound.org/people/LeMudCrab/sounds/163460/
+   Public high-quality preview:
+   https://cdn.freesound.org/previews/163/163460_2263027-hq.mp3
+   License: CC0 1.0 (confirmed on source page, 2026-10-23)
+   Used for: the v0.32 sniper, replaced by the user recording in v0.33.
+   The uploader describes a high-powered rifle recording, exact rifle unknown.
+   Source copy: art/sfx/sniper-shot-163460.mp3 in the source repository.
+
+CC0: https://creativecommons.org/publicdomain/zero/1.0/
+
+Edits: individual-shot extraction, mono conversion, trim/fades, filtering,
+pitch changes, peak normalization and 44.1 kHz / 96 kbit/s MP3 encoding.
+These are designed game sound effects, not authentic recordings of every
+named weapon. No music is included. Original assets remain with their authors.
+
+v0.32: sniper preserves the recorded rifle attack with 26 ms lead-in trim,
+gentle filtering, a short low-level echo and peak normalization. Rocket is
+rebuilt from the same existing cannon-derived tank sample with a slightly
+higher pitch, fuller low mids and a short tail. No tank, rifle, machinegun,
+truck, mortar, impact or artillery files were changed. Recipe:
+tools/refresh-heavy-sfx.py (ffmpeg, numpy). Both revised sounds are mono
+44.1 kHz / 128 kbit/s MP3; runtime loudness stays behind the existing master
+volume, compressor, distance falloff, pause/mute and voice-count limits.
+
+5. User-supplied recordings (2026-10-23)
+   514228__superphat__sniper-rifle.wav → art/sfx/user-sniper-514228.wav
+   capaholiczsfx-machine-gun-529098.mp3 → art/sfx/user-machinegun-529098.mp3
+   Applied as supplied by the project owner. License metadata was not
+   independently verified; no new license is assigned to these recordings.
+   Sniper: 0.017–1.920 s, keeps the recorded attack and reverb (1.903 s).
+   Machinegun: one complete shot at 0.066–0.154 s from the burst, 15 ms end
+   fade + 30 ms silence pad (0.118 s). Engine controls the firing interval.
+   Mono 44.1 kHz / 128 kbit/s MP3, peak-normalized to 0.90 before encoding.
+   No added echo, filtering or pitch shift in these two offline edits.
+   Recipe: tools/refresh-heavy-sfx.py; source files retained in art/sfx.
+   Existing runtime distance/mixer/mute/voice limits still apply.
+
+v0.34 machinegun: the previous isolated 88 ms shot is replaced with two
+adjacent recorded attacks at 0.066–0.234 s of the supplied MP3. Pitch-preserving
+atempo=0.84 spaces attacks about 100 ms apart; 0.2 s output with a 15 ms tail
+fade. At the unchanged 0.2 s base attack interval this gives about 10 audible
+reports/s, twice v0.33's 5 reports/s, without doubling game damage. This keeps
+the recorded inter-shot body instead of padding a chopped single shot. Other
+weapon samples are unchanged. Recipe: tools/refresh-heavy-sfx.py.
+
+v0.41 rifle.mp3: user-provided u_f09vejvoga-gun-shot-350315.mp3,
+first single report and natural tail extracted at 0.132–0.982 s, normalized,
+0.5 ms fade-in and 90 ms tail fade. Used by riflemen and commanders.
+Ultimate repeats this same report every 0.2 simulated seconds with its own
+mixer channel/priority. Source supplied by user; no additional license claim.
+Reproduce with tools/refresh-rifle-sfx.py; original at art/sfx/user-gunshot-350315.mp3.

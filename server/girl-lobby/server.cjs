@@ -4,6 +4,7 @@ const http=require('node:http'),fs=require('node:fs'),path=require('node:path'),
 const cardTypes=JSON.parse(fs.readFileSync(path.join(__dirname,'../../play/girl/cards.json'),'utf8'));
 const game=require('./game.cjs');
 function createApp(){
+ const plasticFrontHandler=require('../plastic-front/server.cjs').createHandler();
  const avalonHandler=require('../avalon/server.cjs').createHandler();
  const sevenDuelHandler=require('../seven-duel/server.cjs').createHandler();
  const kantoHandler=require('../kanto/server.cjs').createHandler();
@@ -23,6 +24,7 @@ function createApp(){
   try{
    const canonical=process.env.PUBLIC_ORIGIN;if(canonical&&req.url!=='/healthz'){const target=new URL(canonical);if(req.headers.host!==target.host){res.writeHead(307,{Location:target.origin+req.url,'Cache-Control':'no-store'});res.end();return;}}
    if(RoomChat.serve(req,res))return;
+   if(req.url==='/plastic-front'||req.url.startsWith('/plastic-front/')||req.url.startsWith('/plastic-front?')){await plasticFrontHandler(req,res);return;}
    if(req.url.startsWith('/avalon')){await avalonHandler(req,res);return;}
    if(req.url.startsWith('/seven-duel')){await sevenDuelHandler(req,res);return;}
    if(req.url.startsWith('/kanto')){await kantoHandler(req,res);return;}

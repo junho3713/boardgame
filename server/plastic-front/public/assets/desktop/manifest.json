@@ -1,0 +1,326 @@
+{
+  "version": 9,
+  "models": {
+    "three": {
+      "file": "power-strip-3.png",
+      "width": 1448,
+      "height": 1086,
+      "crop": [
+        107,
+        366,
+        1234,
+        448
+      ],
+      "sha256": "8553afba2ab8f4fa518d7cb6d34837d27442bf80141592bfc6d903ca561e283f",
+      "source": "uploaded",
+      "footprintW": 1199,
+      "footprintH": 406
+    },
+    "four": {
+      "file": "power-strip-4.png",
+      "width": 1448,
+      "height": 1086,
+      "crop": [
+        48,
+        363,
+        1358,
+        429
+      ],
+      "sha256": "c53d90258fb6b1313d04e84a7b4d838c8ef3bf894feb356683e20136b7d4fa18",
+      "source": "uploaded",
+      "footprintW": 1344,
+      "footprintH": 398
+    }
+  },
+  "props": {
+    "smileMug": {
+      "file": "smile-mug.png",
+      "width": 1254,
+      "height": 1254,
+      "crop": [
+        281,
+        150,
+        860,
+        933
+      ],
+      "anchor": [
+        590,
+        880
+      ],
+      "footprintW": 620,
+      "footprintH": 400,
+      "sha256": "4abb0bc56d8a7a75bc2a34ae92bc294500fc97b8148ea276ed1bd60680b40075",
+      "source": "uploaded"
+    },
+    "toiletRoll": {
+      "file": "toilet-roll-upright.png",
+      "width": 1254,
+      "height": 1254,
+      "crop": [
+        263,
+        102,
+        832,
+        1049
+      ],
+      "anchor": [
+        626,
+        910
+      ],
+      "footprintW": 710,
+      "footprintH": 460,
+      "sha256": "f4afdd60800b5b9b192da5ea2c96ce34e8ceb4da0c63b774c05c3dad6103754d",
+      "source": "generated"
+    }
+  },
+  "notebook": {
+    "file": "defense-notebook.png",
+    "width": 1122,
+    "height": 1402,
+    "crop": [
+      9,
+      32,
+      1111,
+      1293
+    ],
+    "sha256": "ae71326b24123b12f37d0c06c84887bc48df9bb681f294cfc9a437461a35123a",
+    "source": "uploaded"
+  },
+  "items": {
+    "eraser": {
+      "file": "pink-eraser-shadowed.png",
+      "crop": [
+        0,
+        0,
+        1536,
+        1024
+      ],
+      "polygon": [
+        [
+          242.976,
+          578.645
+        ],
+        [
+          258.851,
+          506.278
+        ],
+        [
+          366.995,
+          418.835
+        ],
+        [
+          1065.466,
+          258.02
+        ],
+        [
+          1278.777,
+          260.031
+        ],
+        [
+          1357.157,
+          335.413
+        ],
+        [
+          1375.016,
+          449.993
+        ],
+        [
+          1365.094,
+          561.559
+        ],
+        [
+          1303.581,
+          627.895
+        ],
+        [
+          517.801,
+          843.99
+        ],
+        [
+          334.254,
+          817.857
+        ],
+        [
+          268.772,
+          746.496
+        ]
+      ],
+      "slices": 20,
+      "width": 1536,
+      "height": 1024,
+      "sha256": "4999df447aa1025179fa2e3d03fb0fcdfb62a978d47c4de0dbfe5caf16a59398",
+      "source": "generated",
+      "originalFile": "pink-eraser.png",
+      "bodyCrop": [
+        240,
+        254,
+        1137,
+        592
+      ],
+      "shadow": "upper-left key / lower-right soft cast and contact shadow"
+    },
+    "mug": {
+      "file": "iced-coffee-shadowed.png",
+      "crop": [
+        0,
+        0,
+        985,
+        1597
+      ],
+      "anchor": [
+        457.0,
+        1398.967
+      ],
+      "footprintW": 600.0,
+      "floor": [
+        0.18,
+        0.38,
+        0.64,
+        0.24
+      ],
+      "width": 985,
+      "height": 1597,
+      "sha256": "dfec994d518b1f00fdbda06aa2d51792b66c4b2aae22be89672e621ebf4d33f3",
+      "source": "generated",
+      "originalFile": "iced-coffee.png",
+      "bodyCrop": [
+        111,
+        111,
+        714,
+        1357
+      ],
+      "shadow": "upper-left key / lower-right soft cast and contact shadow"
+    },
+    "mechanicalPencil": {
+      "file": "mechanical-pencil-shadowed.png",
+      "crop": [
+        0,
+        0,
+        2171,
+        724
+      ],
+      "polygon": [
+        [
+          48.106,
+          640.066
+        ],
+        [
+          191.285,
+          587.731
+        ],
+        [
+          346.045,
+          497.715
+        ],
+        [
+          417.634,
+          453.754
+        ],
+        [
+          732.418,
+          368.971
+        ],
+        [
+          771.372,
+          384.671
+        ],
+        [
+          1901.014,
+          88.456
+        ],
+        [
+          2004.187,
+          72.755
+        ],
+        [
+          2123.152,
+          60.195
+        ],
+        [
+          2151.578,
+          113.576
+        ],
+        [
+          2149.472,
+          196.266
+        ],
+        [
+          2118.941,
+          245.461
+        ],
+        [
+          1915.753,
+          312.449
+        ],
+        [
+          1859.955,
+          339.663
+        ],
+        [
+          1759.94,
+          362.691
+        ],
+        [
+          1740.99,
+          348.037
+        ],
+        [
+          857.7,
+          587.731
+        ],
+        [
+          790.322,
+          623.319
+        ],
+        [
+          738.735,
+          639.019
+        ],
+        [
+          654.512,
+          649.486
+        ],
+        [
+          609.242,
+          657.86
+        ],
+        [
+          415.529,
+          649.486
+        ],
+        [
+          388.156,
+          635.879
+        ],
+        [
+          220.763,
+          648.44
+        ],
+        [
+          189.179,
+          640.066
+        ],
+        [
+          102.851,
+          652.626
+        ],
+        [
+          51.264,
+          654.72
+        ]
+      ],
+      "slices": 40,
+      "width": 2171,
+      "height": 724,
+      "sha256": "27d8cfdeb29f3c569d8c70ab6d904dce5beabe3f9aa335a98547bba5e136dd03",
+      "source": "generated",
+      "originalFile": "mechanical-pencil.png",
+      "bodyCrop": [
+        46,
+        11,
+        2114,
+        650
+      ],
+      "shadow": "upper-left key / lower-right soft cast and contact shadow"
+    }
+  }
+}

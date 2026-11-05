@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="500" viewBox="0 0 1600 500"><defs><linearGradient id="t0" gradientUnits="userSpaceOnUse" x1="0" x2="0" y1="57" y2="64"><stop stop-color="#ffffff"/><stop offset=".38" stop-color="#f3f3f3"/><stop offset="1" stop-color="#bfc4c8"/></linearGradient>
+<linearGradient id="t1" gradientUnits="userSpaceOnUse" x1="0" x2="0" y1="152" y2="159"><stop stop-color="#ffffff"/><stop offset=".38" stop-color="#f3f3f3"/><stop offset="1" stop-color="#bfc4c8"/></linearGradient>
+<linearGradient id="t2" gradientUnits="userSpaceOnUse" x1="0" x2="0" y1="247" y2="254"><stop stop-color="#ffffff"/><stop offset=".38" stop-color="#f3f3f3"/><stop offset="1" stop-color="#bfc4c8"/></linearGradient>
+<linearGradient id="t3" gradientUnits="userSpaceOnUse" x1="0" x2="0" y1="342" y2="349"><stop stop-color="#ffffff"/><stop offset=".38" stop-color="#f3f3f3"/><stop offset="1" stop-color="#bfc4c8"/></linearGradient>
+<linearGradient id="t4" gradientUnits="userSpaceOnUse" x1="0" x2="0" y1="437" y2="444"><stop stop-color="#ffffff"/><stop offset=".38" stop-color="#f3f3f3"/><stop offset="1" stop-color="#bfc4c8"/></linearGradient></defs><path d="M 30 60 Q 800 64 1570 60" fill="none" stroke="url(#t0)" stroke-width="6" stroke-linecap="butt"/>
+<path d="M 30 155 Q 800 159 1570 155" fill="none" stroke="url(#t1)" stroke-width="6" stroke-linecap="butt"/>
+<path d="M 30 250 Q 800 254 1570 250" fill="none" stroke="url(#t2)" stroke-width="6" stroke-linecap="butt"/>
+<path d="M 30 345 Q 800 349 1570 345" fill="none" stroke="url(#t3)" stroke-width="6" stroke-linecap="butt"/>
+<path d="M 30 440 Q 800 444 1570 440" fill="none" stroke="url(#t4)" stroke-width="6" stroke-linecap="butt"/></svg>
+
