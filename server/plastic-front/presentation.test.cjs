@@ -25,7 +25,7 @@ test('healing has front, side and back actions while hit and defeat override an 
 test('evolved Lucky names appear at every star level and each co-op squad uses its own evolution state',()=>{
  const g=new CoopGame();g.start();g.withOwner(0,()=>{g.tech[0].lucky=5;g.abilities.speed=5;g.checkEvolutions();});
  const green=g.addUnit(0,'lucky',100,200),blue=g.withOwner(1,()=>g.addUnit(0,'lucky',300,200));
- for(const star of [1,2,3]){green.star=star;g.withOwner(1,()=>{const label=labels.evolution(g,green);assert.equal(label.text,'슈퍼 럭키 레토나');assert.equal(label.y,248);assert.equal(labels.evolution(g,blue),null);});}
+ for(const star of [1,2,3]){green.star=star;g.withOwner(1,()=>{const label=labels.evolution(g,green);assert.equal(label.text,'슈퍼 럭키 레토나');assert.equal(label.y,green.y-(star>=2?93:90));assert.equal(labels.evolution(g,blue),null);});}
  g.withOwner(1,()=>{g.tech[0].lucky=5;g.abilities.speed=5;g.checkEvolutions();});assert.equal(labels.evolution(g,blue).text,'슈퍼 럭키 레토나');
 });
 test('all refined action frames and anchors fit their actual atlas dimensions with generated alpha retained',()=>{

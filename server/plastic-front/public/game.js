@@ -470,7 +470,7 @@ function drawUnitRaw(u){
  ctx.restore();
  if(u.type==='blizzardMage')text(ctx,(u.iceShield&&game.time<=u.iceShield.until?'아이스 실드 · 박격포 차단':(u.mobileMage?'이동형 얼음 마녀':'얼음 마녀')+' · 사거리 '+window.FrontGuardians.range),u.x,u.y-103,11,'#c4edff');
  if(u.boss&&['bayonetCaptain','bladeGuard','bikeRaider'].includes(u.type))text(ctx,'BOSS / '+u.bossName,u.x,u.y-176,13,'#ffe294');
- if(u.type==='lucky')battleFx.luckyReels(ctx,u,game);
+ if(u.type==='lucky'){ctx.save();ctx.translate(0,-16);battleFx.luckyReels(ctx,u,game);ctx.restore();}
  if(!u.boss&&u.type==='bikeRaider'&&(!u.bikeAttack||u.bikeAttack.phase!=='windup'))text(ctx,game.time<(u.bikeRecoverUntil||0)?'제동 · 공격 기회':'바이크 돌격병',u.x,u.y-88,10,'#ffd2be');
 
  if(!u.boss&&types[u.type].stab&&(u.type==='bayonetCaptain'||u.bayonetAttack||game.units.find(v=>v.type==='bayonet'&&v.hp>0&&game.visible(v))===u))text(ctx,u.bayonetAttack?'총검 준비!':types[u.type].name,u.x,u.y-(u.type==='bayonetCaptain'?99:78),10,u.bayonetAttack?'#ffd796':u.type==='bayonetCaptain'?'#ffdc80':'#ead3a2');
