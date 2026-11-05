@@ -36,8 +36,9 @@ $('manualContinue').onclick=async()=>{enableAudio();await gameAssetsReady;let la
 setInterval(()=>{if(waveTestBackup)normalRunSave.claim();if(!COOP?.active&&selectedMode!=='idle'&&['playing','paused','choice','resupply'].includes(game.phase)&&!runSave.claim()){refreshManualSave();}},3000);
 
 
+const waveSetup=new window.FrontWaveTestSetup();
 function renderWaveTest(){
- const supported=game.isRoomCampaign()&&game.mode==='pve',available=supported&&['ready','playing','paused'].includes(game.phase);
+ const supported=!COOP?.active&&game.isRoomCampaign()&&game.mode==='pve',available=supported&&['ready','playing','paused'].includes(game.phase);
  for(const id of ['pauseWaveTest','settingsWaveTest']){$(id).hidden=!supported;$(id).disabled=!available;}
  $('waveTestStrip').hidden=!waveTestBackup;$('waveTestLabel').textContent=`웨이브 테스트 · ${Math.floor((game.waveTestTarget||0)/60)}:${pad((game.waveTestTarget||0)%60)}`;
  $('returnWaveTest').hidden=!waveTestBackup;
@@ -45,15 +46,15 @@ function renderWaveTest(){
 }
 function waveTestTime(){const min=Number($('waveTestMinute').value),sec=Number($('waveTestSecond').value);return Number.isInteger(min)&&Number.isInteger(sec)&&min>=0&&min<=20&&sec>=0&&sec<60&&min*60+sec<=1200?min*60+sec:NaN;}
 async function openWaveTest(){
- if(!game.isRoomCampaign()||game.mode!=='pve')return;
+ if(COOP?.active||!game.isRoomCampaign()||game.mode!=='pve')return;
  if(autoSession.busy){toast('부재중 계산이 끝나면 테스트를 열 수 있습니다.');return;}
  if(!['ready','playing','paused'].includes(game.phase))return;
  if(selectedMode==='idle'&&autoPilot?.active)await autoSession.tick();
  waveTestReturn=!$('displayOverlay').hidden?displayReturn:game.phase;waveTestFocus=document.activeElement;
  $('displayOverlay').hidden=true;clearInput();if(game.phase==='playing')game.phase='paused';autoCheckpoint();combatAudio.sync(game.phase);
- $('waveTestCurrent').textContent=`현재 ${Math.floor(game.time/60)}분 ${Math.floor(game.time%60)}초 · Lv.${game.level} · 생존 ${game.alive(0).length}기 / 현재 분대 유지`;
+ $('waveTestCurrent').textContent=`현재 ${Math.floor(game.time/60)}분 ${Math.floor(game.time%60)}초 · Lv.${game.level} · 생존 ${game.alive(0).length}기 / 편성 선택 가능`;
  $('waveTestStatus').textContent='테스트 골드와 진행은 원래 저장에 반영되지 않습니다.';
- $('waveTestOverlay').hidden=false;syncWavePreset();$('waveTestMinute').focus();updateUI();
+ waveSetup.open(game,waveTestTime());$('waveTestOverlay').hidden=false;syncWavePreset();$('waveTestMinute').focus();updateUI();
 }
 function closeWaveTest(){
  $('waveTestOverlay').hidden=true;if(game.phase==='paused'&&waveTestReturn==='playing'){game.phase='playing';if(selectedMode==='idle'){autoSession.at=Date.now();autoSession.save();}}
@@ -64,6 +65,7 @@ async function beginWaveTest(){
  const target=waveTestTime();if(!Number.isFinite(target)){$('waveTestStatus').textContent='0:00부터 20:00 사이의 분·초를 입력하세요.';return;}
  $('beginWaveTest').disabled=true;
  try{
+  const loadout=waveSetup.value();
   await gameAssetsReady;
   if(!waveTestBackup){
    // Clone before detaching anything. A failure leaves the original operation in place.
@@ -75,8 +77,9 @@ async function beginWaveTest(){
    autoSession=new window.FrontAutoSession({...autoSessionOptions,key:'plastic-front-wave-test-auto',storage:window.FrontWaveTest.memoryStorage()});
   }
   window.FrontWaveTest.seek(game,target,{heal:$('waveTestHeal').checked});
+  if(loadout)window.FrontWaveTest.applyLoadout(game,loadout);
   if(autoPilot){autoPilot.active=true;autoPilot.remainder=0;for(const key of ['nextThink','nextBuild','nextPermanent','nextAdvance','dodgeUntil','supplyPauseUntil','hqGuardUntil'])autoPilot[key]=0;for(const key of ['escape','motion','supply','baseDefense','advanceState','lineAnchor'])autoPilot[key]=null;autoPilot.action='웨이브 테스트 · AI 준비';}
-  hideWaveModals();clearInput();game.phase='playing';if(autoPilot)autoSession.attach(autoPilot);rosterKey='';refreshManualSave();updateUI();toast(`${Math.floor(target/60)}분 ${target%60}초 웨이브 테스트 · 현재 분대·강화 유지`);
+  hideWaveModals();clearInput();game.phase='playing';if(autoPilot)autoSession.attach(autoPilot);rosterKey='';refreshManualSave();updateUI();toast(`${Math.floor(target/60)}분 ${target%60}초 웨이브 테스트 · ${loadout?'시험 편성·강화 적용':'현재 분대·강화 유지'}`);
  }catch(error){$('waveTestStatus').textContent=error.message||'테스트를 시작하지 못했습니다.';}finally{$('beginWaveTest').disabled=false;}
 }
 function stopWaveTest(showPause=true){
@@ -89,9 +92,9 @@ function stopWaveTest(showPause=true){
 for(const id of ['pauseWaveTest','settingsWaveTest','changeWaveTest'])$(id).onclick=openWaveTest;
 $('closeWaveTest').onclick=closeWaveTest;$('beginWaveTest').onclick=beginWaveTest;
 for(const id of ['exitWaveTest','returnWaveTest'])$(id).onclick=()=>stopWaveTest();
-$('waveTestOverlay').addEventListener('keydown',e=>{if(e.key!=='Tab')return;const nodes=[...$('waveTestOverlay').querySelectorAll('button,input')].filter(n=>!n.disabled&&!n.hidden),first=nodes[0],last=nodes.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}});
+$('waveTestOverlay').addEventListener('keydown',e=>{if(e.key!=='Tab')return;const nodes=[...$('waveTestOverlay').querySelectorAll('button,input,select')].filter(n=>!n.disabled&&!n.hidden),first=nodes[0],last=nodes.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}});
 $('waveTestPresets').onclick=e=>{const b=e.target.closest('[data-wave-minute]');if(!b)return;$('waveTestMinute').value=b.dataset.waveMinute;$('waveTestSecond').value=0;syncWavePreset();};
-function syncWavePreset(){const time=waveTestTime();document.querySelectorAll('[data-wave-minute]').forEach(n=>n.classList.toggle('selected',Number(n.dataset.waveMinute)*60===time));$('waveTestPreview').textContent=window.FrontWaveTest.describe(time)||'0:00부터 20:00 사이를 선택하세요.';}
+function syncWavePreset(){const time=waveTestTime();waveSetup.update(time);document.querySelectorAll('[data-wave-minute]').forEach(n=>n.classList.toggle('selected',Number(n.dataset.waveMinute)*60===time));$('waveTestPreview').textContent=window.FrontWaveTest.describe(time)||'0:00부터 20:00 사이를 선택하세요.';}
 $('waveTestMinute').oninput=$('waveTestSecond').oninput=syncWavePreset;
 window.addEventListener('pagehide',()=>{if(waveTestBackup){normalAutoSession.release();normalRunSave.release();}});
 
@@ -465,7 +468,7 @@ function drawUnitRaw(u){
  if(u.type==='blizzardMage')window.FrontGuardianFX.shield(ctx,u,game.time);
  if(u.flash){ctx.globalAlpha=u.flash/.13*.65;circle(ctx,0,0,types[u.type].r+2,null,'#fff4c8');ctx.globalAlpha=1;}
  ctx.restore();
- if(u.type==='blizzardMage')text(ctx,(u.iceShield&&game.time<=u.iceShield.until?'아이스 실드 · 박격포 차단':'얼음 마녀 · 사거리 '+window.FrontGuardians.range),u.x,u.y-103,11,'#c4edff');
+ if(u.type==='blizzardMage')text(ctx,(u.iceShield&&game.time<=u.iceShield.until?'아이스 실드 · 박격포 차단':(u.mobileMage?'이동형 얼음 마녀':'얼음 마녀')+' · 사거리 '+window.FrontGuardians.range),u.x,u.y-103,11,'#c4edff');
  if(u.boss&&['bayonetCaptain','bladeGuard','bikeRaider'].includes(u.type))text(ctx,'BOSS / '+u.bossName,u.x,u.y-176,13,'#ffe294');
  if(u.type==='lucky')battleFx.luckyReels(ctx,u,game);
  if(!u.boss&&u.type==='bikeRaider'&&(!u.bikeAttack||u.bikeAttack.phase!=='windup'))text(ctx,game.time<(u.bikeRecoverUntil||0)?'제동 · 공격 기회':'바이크 돌격병',u.x,u.y-88,10,'#ffd2be');

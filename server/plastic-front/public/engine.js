@@ -75,7 +75,7 @@ const FLYING_WAVES=WAVE_CONFIGS.survival.flying;
 const TYPES={swordEmpress:{name:'사검의 군주',hp:64000,damage:0,rate:100,range:0,speed:0,r:28,cost:0,stationary:true},
  butterfly:{name:'치유 약화 나비',icon:'❃',hp:520,damage:0,rate:7,range:BUTTERFLY.range,speed:86,r:17,cost:0,flying:true,flightHeight:42,role:'경장갑 비행 · 바람에 맞으면 6초간 받는 치유량 50% 감소 · 야전 의무관 정화로 해제'},
  crimsonAce:{name:'진홍 전차 에이스',icon:'▰',hp:900,damage:82,rate:2.8,range:365,speed:76,r:31,cost:0,splash:65,vehicle:true,role:'적 전용 중장갑 · 붉은 머리 전차 지휘관 · 독립 포탑 조준과 범위 포격 · 8분 정기 보스'},
- blizzardMage:{name:'얼음 마녀',icon:'❄',hp:GUARDIANS.mageHp,damage:GUARDIANS.mageDamage,rate:GUARDIANS.mageRate,range:GUARDIANS.range,speed:0,r:17,cost:0,stationary:true,role:'고정 수비 · 광역 빙결 속박 2초 · 아이스 실드로 박격포 차단 · 저격병으로 공략'},
+ blizzardMage:{name:'얼음 마녀',icon:'❄',hp:GUARDIANS.mageHp,damage:GUARDIANS.mageDamage,rate:GUARDIANS.mageRate,range:GUARDIANS.range,speed:0,r:17,cost:0,stationary:true,role:'고정 수비 · 광역 빙결 속박 2초 · 아이스 실드로 박격포 차단 · 저격병 우선 공략'},
  bikeRaider:{name:'바이크 돌격병',icon:'➤',hp:420,damage:40,rate:6,range:420,speed:112,r:19,cost:0,charge:true,role:'적 전용 군용 바이크 · 1.25초 방향 예고 후 직선 돌진 · 돌진 후 0.9초 빈틈'},
  bladeGuard:{name:'블랙 실드 검병',icon:'⚔',hp:140,damage:14,rate:1.7,range:56,speed:86,r:13,cost:0,windup:.5,stab:true,slash:true,role:'초반부터 등장 · 경장갑 근접 적 · 0.5초 준비 후 분홍색 칼날 베기'},
  honeybee:{name:'꿀벌',icon:'✥',hp:360,damage:16,rate:1.15,range:40,speed:112,r:14,cost:0,flying:true,flightHeight:36,role:'4분부터 6마리씩 · 비행 근접 · 경장갑'},
@@ -86,7 +86,7 @@ const TYPES={swordEmpress:{name:'사검의 군주',hp:64000,damage:0,rate:100,ra
  machinegun:{name:'기관총병',icon:'≋',hp:160,damage:9,rate:.2,range:280,speed:126,r:12,cost:95,role:'빠른 연사 · 경장갑 ×1 / 장갑 ×0.8'},
  mortar:{name:'박격포병',icon:'◉',hp:90,damage:64,rate:3.6,range:700,minRange:135,speed:116,r:12,cost:140,splash:70,role:'레이저 포탑 우선 · 고정 낙탄 2초 · 건물 ×1.2 · 사거리 135~700'},
  rocket:{name:'바주카병',icon:'⌁',hp:120,damage:80,rate:1.85,range:295,speed:128,r:12,cost:120,splash:38,role:'장갑 ×1 · 경장갑 ×0.5 · 소형 폭발'},
- sniper:{name:'저격병',icon:'⌖',hp:100,damage:100,rate:2.35,range:560,speed:137,r:11,cost:110,role:'경장갑 ×1 / 장갑 ×0.5 · 위협·빈사 적 우선'},
+ sniper:{name:'저격병',icon:'⌖',hp:100,damage:100,rate:2.35,range:560,speed:137,r:11,cost:110,role:'경장갑 ×1 / 장갑 ×0.5 · 얼음 마녀 우선 사격'},
  guntruck:{name:'전투트럭',icon:'▱',hp:280,damage:12,rate:.22,range:265,speed:150,r:22,cost:150,role:'기동 연사 · 경장갑 ×1 / 장갑 ×0.8'},
  tank:{name:'전차',icon:'▰',hp:600,damage:100,rate:2.3,range:310,speed:95,r:26,cost:260,splash:60,role:'장갑 ×1 · 경장갑 ×0.5 · 범위 포격'},
  artillery:{name:'적 포병',icon:'⊕',hp:520,damage:0,rate:99,range:0,speed:0,r:27,cost:0,role:'포격을 지휘하는 장갑 목표'},
@@ -381,9 +381,10 @@ class FrontGame{
    }if(this.time+1e-8<gust.ends)active.push(gust);
   }this.butterflyGusts=active;
  }
- updateBlizzard(u){
+ updateBlizzard(u,dt=0){
   if(this.mission.stage<(u.activeStage||2))return;
-  const s=this.stats(u),valid=a=>a.hp>0&&dist(a,u)<=s.range&&this.lineClear(u,a,0,{fireTeam:1});
+  const s=this.stats(u),valid=a=>this.canTarget(u,a)&&dist(a,u)<=s.range&&this.lineClear(u,a,0,{fireTeam:u.team});
+  if(u.mobileMage&&!u.blizzardCast){const target=this.alive(0).filter(a=>this.canTarget(u,a)).sort((a,b)=>dist(u,a)-dist(u,b))[0];if(target&&(dist(u,target)>s.range*.75||!this.lineClear(u,target,0,{fireTeam:u.team}))){u.face=u.aimFace=Math.atan2(target.y-u.y,target.x-u.x);this.navigate(u,target.x,target.y,dt,s.speed);}}
   const cast=u.blizzardCast;
   if(cast){if(this.time<cast.hitAt)return;u.blizzardCast=null;
    if(u.hp<=0)return;
@@ -454,7 +455,7 @@ class FrontGame{
  enemyDamageScale(u){if(!this.isRoomCampaign()||u?.team===0||u?.defenseKind==='laserTower')return 1;const r=ROOM_CAMPAIGN.config.combat;return (r?.damageScale??1)*(u?.type==='bikeRaider'?(r?.bikeDamageScale??1):1)*(u?.boss?(r?.bossDamageScale??1):1);}
  enemyHealthScale(u){if(!this.isRoomCampaign()||u.team===0)return 1;const r=ROOM_CAMPAIGN.config.combat;return u.boss?(r.bossHpScale??1)*(r.bossHpExtra?.[u.type]??1):(r.hpScale??1);}
  stats(u){
-  const b=this.isFlameCommander(u)?{...TYPES.leader,name:'화염방사 대장',damage:FLAME.damage,rate:FLAME.rate,range:FLAME.range}:this.isSwordCommander(u)?{...TYPES.leader,name:'시온',damage:SWORD.damage,rate:SWORD.rate,range:SWORD.range}:TYPES[u.type],level=u.team===0&&u.type==='leader'?this.commanderLevel(u):ROSTER.includes(u.type)?Math.max(1,this.tech[u.team]?.[u.type]||1):1,p=this.profile.upgrades,ally=u.team===0,r=this.abilities,tier=u.threat||0,e=ally&&this.evolved[u.type]?u.type:null,fort=this.roomDefenseRules(u);
+  const b=u.type==='blizzardMage'&&u.mobileMage?{...TYPES.blizzardMage,speed:85,stationary:false,role:'이동형 얼음 마녀 · 광역 빙결 속박 · 아이스 실드 · 저격병 우선 공략'}:this.isFlameCommander(u)?{...TYPES.leader,name:'화염방사 대장',damage:FLAME.damage,rate:FLAME.rate,range:FLAME.range}:this.isSwordCommander(u)?{...TYPES.leader,name:'시온',damage:SWORD.damage,rate:SWORD.rate,range:SWORD.range}:TYPES[u.type],level=u.team===0&&u.type==='leader'?this.commanderLevel(u):ROSTER.includes(u.type)?Math.max(1,this.tech[u.team]?.[u.type]||1):1,p=this.profile.upgrades,ally=u.team===0,r=this.abilities,tier=u.threat||0,e=ally&&this.evolved[u.type]?u.type:null,fort=this.roomDefenseRules(u);
   const enemyPower=(this.mode==='pve'&&u.team===1&&ROSTER.includes(u.type)?(u.type==='sniper'?.6:.85):1.25)*(!ally?this.enemyDamageScale(u):1);
   const hpBonus=(e==='tank'||e==='medic'||e==='machinegun'?1.2:e==='rifle'?1.15:e==='guntruck'?1.1:1)*(this.isRoomCampaign()?(this.bossPatternRules(u)?.hpScale||1):1)*(fort?.hp||1);
   const damageBonus=e==='tank'||e==='mortar'?1.35:e==='machinegun'?1.2:e==='rifle'?1.3:e==='rocket'?1.25:e==='guntruck'?1.15:1;
@@ -522,6 +523,10 @@ class FrontGame{
   return [tier,tier===0?Number(!ranged):0,tier===0?Number(!low):0,tier<2?target.hp:0,-affinity,tier===3?target.hp:0,this.targetDistance(u,target),target.id||0];
  }
  selectCombatTarget(u,candidates=this.combatCandidates(),threats=this.attackingEnemies(),s=this.stats(u)){
+  if(u.team===0&&u.type==='sniper'){
+   const mages=candidates.filter(a=>a.type==='blizzardMage'&&this.canTarget(u,a)&&this.visible(a)&&this.targetDistance(u,a)<s.range&&this.targetDistance(u,a)>=(s.minRange||0)&&this.lineClear(u,a,0,{fireTeam:u.team}));
+   mages.sort((a,b)=>this.targetDistance(u,a)-this.targetDistance(u,b)||a.hp-b.hp);if(mages.length)return mages[0];
+  }
   // Mortars neutralize reachable lasers before spending slow shells on mobile foes.
   // Only target selection changes; movement, minimum range and manual focus stay intact.
   if(u.team===0&&u.type==='mortar'){
@@ -736,8 +741,9 @@ class FrontGame{
   u.navVX=(u.x-oldX)/dt;u.navVY=(u.y-oldY)/dt;
  }
 
+ isStationary(u){return !!TYPES[u.type]?.stationary&&!u.mobileMage;}
  move(u,dx,dy,dt,speed){
-  if(this.time<(u.rootedUntil||0)||TYPES[u.type]?.stationary)return;
+  if(this.time<(u.rootedUntil||0)||this.isStationary(u))return;
   if(this.time<(u.slowUntil||0))speed*=1-clamp(u.slowAmount||.3,0,.9);
   if(u.bossPattern==='soldierDash'){const p=this.bossPatternRules(u);if(p&&this.time%p.every<p.duration)speed*=p.speed;}
   if(this.time<(u.luckySlowUntil||0))speed*=1-(this.isFlying(u)?LUCKY.flyingSlow:LUCKY.groundSlow);
@@ -1217,7 +1223,7 @@ class FrontGame{
   const valid=(u,p)=>(this.isFlying(u)?p.x>=45&&p.x<=this.bounds().width-45&&p.y>=70&&p.y<=this.bounds().height-70:this.freePosition(p.x,p.y,this.collisionRadius(u)))&&(u.team!==0||p.y>=this.frontline());
   for(let pass=0;pass<2;pass++)for(let i=0;i<live.length;i++)for(let j=i+1;j<live.length;j++){
    const a=live[i],b=live[j];if(a.team!==b.team||this.isFlying(a)!==this.isFlying(b))continue;const d=dist(a,b),need=this.collisionRadius(a)+this.collisionRadius(b);if(d>=need)continue;
-   const overlap=need-d,angle=(a.id*13+b.id*7)*2.399963,dx=d?(a.x-b.x)/d:Math.cos(angle),dy=d?(a.y-b.y)/d:Math.sin(angle),canA=a.type!=='leader'&&!a.bikeAttack&&!TYPES[a.type]?.stationary&&this.time>=(a.rootedUntil||0),canB=b.type!=='leader'&&!b.bikeAttack&&!TYPES[b.type]?.stationary&&this.time>=(b.rootedUntil||0),massA=a.type==='tank'||a.type==='crimsonAce'?4:a.type==='guntruck'?3:1,massB=b.type==='tank'||b.type==='crimsonAce'?4:b.type==='guntruck'?3:1,amountA=overlap*(canA&&canB?massB/(massA+massB):1),amountB=overlap*(canA&&canB?massA/(massA+massB):1);
+   const overlap=need-d,angle=(a.id*13+b.id*7)*2.399963,dx=d?(a.x-b.x)/d:Math.cos(angle),dy=d?(a.y-b.y)/d:Math.sin(angle),canA=a.type!=='leader'&&!a.bikeAttack&&!this.isStationary(a)&&this.time>=(a.rootedUntil||0),canB=b.type!=='leader'&&!b.bikeAttack&&!this.isStationary(b)&&this.time>=(b.rootedUntil||0),massA=a.type==='tank'||a.type==='crimsonAce'?4:a.type==='guntruck'?3:1,massB=b.type==='tank'||b.type==='crimsonAce'?4:b.type==='guntruck'?3:1,amountA=overlap*(canA&&canB?massB/(massA+massB):1),amountB=overlap*(canA&&canB?massA/(massA+massB):1);
    const pa={x:a.x+dx*amountA,y:a.y+dy*amountA},pb={x:b.x-dx*amountB,y:b.y-dy*amountB},moveA=canA&&valid(a,pa),moveB=canB&&valid(b,pb);
    if(moveA){a.x=pa.x;a.y=pa.y;}if(moveB){b.x=pb.x;b.y=pb.y;}
    // If a wall blocks one body, give its share to the body with room.
@@ -1649,7 +1655,7 @@ class FrontGame{
    if((u.roadCaptain||u.roomGarrison)&&!this.updateRoadCaptain(u,dt))continue;
    if(u.type==='lucky'){if(u.team===0)this.updateLuckyUnit(u);else if(this.isRoomCampaign())this.updateEnemyLucky(u);}
    u.flash=Math.max(0,u.flash-dt);u.recoil=Math.max(0,(u.recoil||0)-dt);const s=this.stats(u);u.cooldown-=dt;
-   if(u.type==='blizzardMage'){this.updateBlizzard(u);continue;}
+   if(u.type==='blizzardMage'){this.updateBlizzard(u,dt);continue;}
    if(u.type==='butterfly'){this.updateButterfly(u,dt);continue;}
    if(u.type==='artillery')continue;
    if(this.updateBossPattern(u,dt))continue;
