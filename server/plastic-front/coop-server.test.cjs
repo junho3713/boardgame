@@ -5,12 +5,14 @@ test('two clients authenticate, grow independently without pausing, reconnect an
  let clock=10000;const handler=createCoopHandler({automatic:false,now:()=>clock});const app=http.createServer(handler);await new Promise(r=>app.listen(0,'127.0.0.1',r));const origin=`http://127.0.0.1:${app.address().port}/plastic-front/api/coop`;
  async function call(route,body,token){const response=await fetch(origin+route,{method:body?'POST':'GET',headers:{...(body?{'Content-Type':'application/json'}:{}),...(token?{Authorization:'Bearer '+token}:{})},...(body?{body:JSON.stringify(body)}:{})});return {status:response.status,data:await response.json()};}
  try{
-  const a=(await call('/rooms',{name:'초록'})).data,b=(await call('/join',{name:'파랑',code:a.state.code})).data;
+  const a=(await call('/rooms',{name:'초록',medicSkin:'rina'})).data,b=(await call('/join',{name:'파랑',medicSkin:'invalid',code:a.state.code})).data;
   assert.equal(a.state.owner,0);assert.equal(b.state.owner,1);assert.ok(!('token' in b.state.players[0]));
   assert.equal((await call('/join',{code:a.state.code})).status,409);assert.equal((await call('/state')).status,401);
   assert.equal((await call('/command',{action:'start'},b.token)).status,403);
   assert.equal((await call('/command',{action:'start'},a.token)).status,200);
   const r=handler.rooms.get(a.state.code),g=r.game;
+  assert.equal(g.withOwner(0,()=>g.addUnit(0,'medic',800,900)).appearance,'rina');
+  assert.equal(g.withOwner(1,()=>g.addUnit(0,'medic',1000,900)).appearance,'classic');
   g.withOwner(0,()=>{g.xp=g.neededXP();});handler.step();
   const green=(await call('/state',null,a.token)).data,blue=(await call('/state',null,b.token)).data;
   assert.equal(green.choosing,true);assert.equal(blue.choosing,false);assert.equal(green.phase,'playing');assert.equal(blue.game.fields.level,1);assert.equal(green.game.fields.level,2);assert.ok(green.invulnerable>4.9);

@@ -14,7 +14,7 @@ function createCoopHandler({now=Date.now,automatic=true}={}){
   if(includeGame&&r.started){r.game.coopSelectOwner(p.owner);if(!r.cached||now()-r.cachedAt>=100){r.cached={};r.cachedAt=now();}if(!r.cached[p.owner])r.cached[p.owner]=pack(r.game);data.game=r.cached[p.owner];r.game.coopSelectOwner(0);}
   return data;
  }
- function player(r,name){const p={owner:r.players.length,name,token:crypto.randomBytes(32).toString('hex'),seen:now(),rateAt:now(),requests:0};r.players.push(p);sessions.set(p.token,{r,p});return p;}
+ function player(r,name,medicSkin){const p={owner:r.players.length,name,medicSkinId:medicSkin==='rina'?'rina':'classic',token:crypto.randomBytes(32).toString('hex'),seen:now(),rateAt:now(),requests:0};r.players.push(p);sessions.set(p.token,{r,p});return p;}
  function events(r){return Object.fromEntries(['toast','level','end','fire','explosion'].map(type=>[type,data=>{
    if(type==='level'||type==='end')r.cached=null;
    if(type==='level')r.round++;
@@ -40,9 +40,9 @@ function createCoopHandler({now=Date.now,automatic=true}={}){
      if(creation.size>1000)creation.clear();creation.set(ip,limit&&now()-limit.at<60000?{at:limit.at,n:limit.n+1}:{at:now(),n:1});
      if(rooms.size>=3)fail(503,'협동 시험방이 모두 사용 중입니다. 잠시 후 다시 시도해 주세요.');
      let code;do{code=crypto.randomBytes(3).toString('hex').toUpperCase();}while(rooms.has(code));
-     const r={code,players:[],touched:now(),started:false,paused:false,pauseReason:'',round:0,events:[],eventId:0,cached:null};const p=player(r,name);rooms.set(code,r);return json(req,res,201,{token:p.token,state:publicRoom(r,p)});
+     const r={code,players:[],touched:now(),started:false,paused:false,pauseReason:'',round:0,events:[],eventId:0,cached:null};const p=player(r,name,body.medicSkin);rooms.set(code,r);return json(req,res,201,{token:p.token,state:publicRoom(r,p)});
     }
-    const r=rooms.get(String(body.code||'').trim().toUpperCase());if(!r)fail(404,'방 코드를 확인해 주세요.');if(r.started)fail(409,'이미 출격한 방입니다.');if(r.players.length>=2)fail(409,'2명이 모두 입장했습니다.');const p=player(r,name);r.touched=now();return json(req,res,200,{token:p.token,state:publicRoom(r,p)});
+    const r=rooms.get(String(body.code||'').trim().toUpperCase());if(!r)fail(404,'방 코드를 확인해 주세요.');if(r.started)fail(409,'이미 출격한 방입니다.');if(r.players.length>=2)fail(409,'2명이 모두 입장했습니다.');const p=player(r,name,body.medicSkin);r.touched=now();return json(req,res,200,{token:p.token,state:publicRoom(r,p)});
    }
    const token=(req.headers.authorization||'').replace(/^Bearer /,''),session=sessions.get(token);if(!session)fail(401,'방에 다시 입장해 주세요.');const {r,p}=session;
    if(now()-p.rateAt>=1000){p.rateAt=now();p.requests=0;}if(++p.requests>45)fail(429,'조작 요청이 너무 빠릅니다.');p.seen=now();r.touched=now();
@@ -56,7 +56,7 @@ function createCoopHandler({now=Date.now,automatic=true}={}){
    const action=body.action;
    if(action==='start'){
     if(p.owner!==0)fail(403,'초록 방장만 출격할 수 있습니다.');if(r.started)fail(409,'이미 출격했습니다.');if(r.players.length!==2||r.players.some(q=>!connected(q)))fail(409,'두 대장이 연결되면 출격할 수 있습니다.');
-    r.game=new CoopGame(events(r));r.started=true;r.game.start();
+    r.game=new CoopGame(events(r),{medicSkins:r.players.map(p=>p.medicSkinId)});r.started=true;r.game.start();
    }else{
     if(!r.started)fail(409,'아직 출격하지 않았습니다.');const g=r.game;
     if(action==='pause'){r.paused=true;r.pauseReason='대장이 작전을 일시정지했습니다.';}

@@ -409,7 +409,7 @@ function drawUnit(u){
  const alpha=clamp((now-s.at)/50,0,1);ctx.save();ctx.translate((s.px-s.x)*(1-alpha),(s.py-s.y)*(1-alpha));drawUnitRaw(u);ctx.restore();
 }
 function drawUnitRaw(u){
- const t=u.team,alive=u.hp>0,evolved=t===0&&game.evolved[u.type];if(!alive){if(u.type==='medic'&&t===0&&u.appearance==='rina'&&Number.isFinite(u.diedAt)){ctx.save();ctx.translate(u.x,u.y);unitModels.draw(ctx,u,game.time);ctx.restore();}if(u.guardianRespawn&&Number.isFinite(u.respawnAt)&&game.mission.stage>=3&&game.visible(u))text(ctx,'얼음 마녀 귀환 · '+Math.max(0,Math.ceil(u.respawnAt-game.time))+'초',u.x,u.y+28,11,'#acdfff');if(u.type==='leader'&&t===0){const p=point(u);text(ctx,`복귀 ${Math.ceil(u.deadUntil-game.time)}초`,u.x,u.y-25,13,'#f5edc6');}return;}
+ const t=u.team,alive=u.hp>0,evolved=window.FrontUnitLabels.isEvolved(game,u);if(!alive){if(u.type==='medic'&&t===0&&u.appearance==='rina'&&Number.isFinite(u.diedAt)){ctx.save();ctx.translate(u.x,u.y);unitModels.draw(ctx,u,game.time);ctx.restore();}if(u.guardianRespawn&&Number.isFinite(u.respawnAt)&&game.mission.stage>=3&&game.visible(u))text(ctx,'얼음 마녀 귀환 · '+Math.max(0,Math.ceil(u.respawnAt-game.time))+'초',u.x,u.y+28,11,'#acdfff');if(u.type==='leader'&&t===0){const p=point(u);text(ctx,`복귀 ${Math.ceil(u.deadUntil-game.time)}초`,u.x,u.y-25,13,'#f5edc6');}return;}
  if(t&&!game.visible(u))return;
  const col=t===2?'#77543a':t?'#bd6e55':'#5f863e',light=t===2?'#a17b4d':t?'#d88c71':'#84a953',dark=t===2?'#493c2b':t?'#82472f':'#36592b';ctx.save();ctx.translate(u.x,u.y);
 
@@ -469,7 +469,7 @@ function drawUnitRaw(u){
  if(u.boss&&['bayonetCaptain','bladeGuard','bikeRaider'].includes(u.type))text(ctx,'BOSS / '+u.bossName,u.x,u.y-176,13,'#ffe294');
  if(u.type==='lucky')battleFx.luckyReels(ctx,u,game);
  if(!u.boss&&u.type==='bikeRaider'&&(!u.bikeAttack||u.bikeAttack.phase!=='windup'))text(ctx,game.time<(u.bikeRecoverUntil||0)?'제동 · 공격 기회':'바이크 돌격병',u.x,u.y-88,10,'#ffd2be');
- if(evolved&&u.type!=='lucky'&&!(u.star>=2))text(ctx,unitName(u.type),u.x,u.y-(u.type==='tank'||u.type==='crimsonAce'||u.type==='guntruck'?90:u.type==='medic'&&u.appearance==='rina'?98:79),10,'#ffe3a0');
+
  if(!u.boss&&types[u.type].stab&&(u.type==='bayonetCaptain'||u.bayonetAttack||game.units.find(v=>v.type==='bayonet'&&v.hp>0&&game.visible(v))===u))text(ctx,u.bayonetAttack?'총검 준비!':types[u.type].name,u.x,u.y-(u.type==='bayonetCaptain'?99:78),10,u.bayonetAttack?'#ffd796':u.type==='bayonetCaptain'?'#ffdc80':'#ead3a2');
  if(!u.boss&&u.type==='bladeGuard'&&(u.bayonetAttack||game.units.find(v=>v.type==='bladeGuard'&&v.hp>0&&game.visible(v))===u))text(ctx,u.bayonetAttack?'베기 준비!':'블랙 실드 검병',u.x,u.y-86,10,u.bayonetAttack?'#ffb0df':'#e8bcd7');
  if(u.type==='crimsonAce')text(ctx,(u.boss?'BOSS / ':'')+'진홍 전차 에이스 · 중장갑',u.x,u.y-158*(u.boss?1.35:1),u.boss?12:10,'#f1bd7d');
@@ -480,9 +480,10 @@ function drawUnitRaw(u){
   const vehicle=['tank','crimsonAce','guntruck','artillery','lucky'].includes(u.type),human=roster.includes(u.type)&&!vehicle||u.type==='leader'||types[u.type].stab,w=u.boss?84:vehicle?48:30;
   const rise=(u.type==='medic'&&u.team===0&&u.appearance==='rina'?78+(u.star>=2?8:0):types[u.type].flying?(u.visualFlightHeight??types[u.type].flightHeight)+42:u.type==='crimsonAce'?140:u.type==='rhinoBeetle'?88:u.type==='stagBeetle'?76:vehicle?79:u.type==='bayonetCaptain'?90:types[u.type].stab?75:human?66:u.type==='bruteBeetle'?58:35)*(u.boss?1.35:1)-(u.star>=2?(vehicle?10:8):0),y=u.y-rise;
   rr(ctx,u.x-w/2-1,y-1,w+2,6,2,'#172a20aa');rr(ctx,u.x-w/2,y,w,4,2,'#293d2d88');rr(ctx,u.x-w/2,y,w*u.hp/u.maxHp,4,2,u.boss?'#e6af57':t?'#e0a184':'#dceca2');
-  if(u.star>=2){text(ctx,'★'.repeat(u.star),u.x,y-6,12,u.star===3?'#ffd36c':'#ffe4a0');if(evolved&&u.type!=='lucky')text(ctx,unitName(u.type),u.x,y-24,10,'#ffe3a0');}
+  if(u.star>=2){text(ctx,'★'.repeat(u.star),u.x,y-6,12,u.star===3?'#ffd36c':'#ffe4a0');}
  }
 
+ const evolutionLabel=window.FrontUnitLabels.evolution(game,u);if(evolutionLabel)text(ctx,evolutionLabel.text,evolutionLabel.x,evolutionLabel.y,evolutionLabel.size,'#ffe3a0');
 }
 function point(u){return{x:(u.x-game.camera.x)*scale+W/2,y:(u.y-game.camera.y)*scale+H/2};}
 function drawFog(){
@@ -544,7 +545,7 @@ function draw(dt){
  for(const u of game.units.filter(u=>types[u.type].flying).sort((a,b)=>a.y-b.y))drawUnit(u);
  for(const u of game.units.filter(u=>u.hp>0&&u.type==='sniper'&&game.visible(u)&&u.sniperAim&&game.visible(u.sniperAim.target)).slice(0,12))battleFx.drawLaser(ctx,u,game.time,{crouched:unitModels.crouched(u),muzzle:unitModels.weaponPoint(u)});
  window.FrontGuardianFX.air(ctx,game);battleFx.drawLuckySprays(ctx,game,fxVisible);
- for(const p of game.shots){if(!fxVisible(p))continue;battleFx.drawShot(ctx,p,game.evolved[p.source.type]);}
+ for(const p of game.shots){if(!fxVisible(p))continue;battleFx.drawShot(ctx,p,game.coop&&p.source.team===0?game.withOwner(p.source.coopOwner,()=>game.evolved[p.source.type]):game.evolved[p.source.type]);}
  for(const e of game.effects){
   if(!fxVisible(e)||battleFx.drawEvent(ctx,e))continue;
   const k=e.t/e.max;ctx.save();ctx.globalAlpha=k;

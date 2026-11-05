@@ -2,12 +2,13 @@
 (function(root){'use strict';
 const node=typeof module!=='undefined'&&module.exports,api=node?require('./engine.js'):root;if(node){require('./sword-boss.js');require('./two-star.js');}
 const Game=api.FrontGame,Profile=api.FrontProfile;
-const controls=['input','moveOrder','focusTarget','focusAutomatic','formationFacing','formationEnemy','ultimate','cash','tech','abilities','evolved','profile','level','xp','runGold','losses','salvaged','nextRecoveryAt','cardShownCounts','choiceKind','currentOptions','turnChoice','pendingChoice','retreated','lastCommanderLoss','stageSupplied','rallyUntil','rallyReady','constructionLine','mageShieldQuest','laserExposureQuest'];
+const controls=['input','moveOrder','focusTarget','focusAutomatic','formationFacing','formationEnemy','ultimate','cash','tech','abilities','evolved','profile','level','xp','runGold','losses','salvaged','nextRecoveryAt','cardShownCounts','choiceKind','currentOptions','turnChoice','pendingChoice','retreated','lastCommanderLoss','stageSupplied','rallyUntil','rallyReady','constructionLine','mageShieldQuest','laserExposureQuest','medicSkinId'];
 class CoopGame extends Game{
- constructor(events={}){
-  super(events,new Profile(),{map:'livingroom-star'});
+ constructor(events={},settings={}){
+  super(events,new Profile(),{map:'livingroom-star',medicSkin:settings.medicSkins?.[0]});
   this.coop=true;this.coopOwner=0;this.coopStates=[{},{}];this.coopChoosing=[false,false];this.coopRounds=[0,0];this.coopInvulnerable=[0,0];this.coopSpawnScale=1.8;this.coopSpawnRemainder=0;
   for(const key of controls){this.coopStates[0][key]=this[key];this.coopStates[1][key]=key==='profile'?new Profile():structuredClone(this[key]);}
+  this.coopStates[1].medicSkinId=settings.medicSkins?.[1]==='rina'?'rina':'classic';
   for(const state of this.coopStates){state.bossRewards=0;state.bossClaimed=0;}
   for(const u of this.units)if(u.team===0)u.coopOwner=0;
   const c=this.commander(0);
@@ -37,6 +38,7 @@ class CoopGame extends Game{
   const owner=source?.team===0?source.coopOwner:target.team===0?target.coopOwner:this.coopOwner;
   return this.coop&&Number.isInteger(owner)?this.withOwner(owner,()=>super.damage(target,amount,source)):super.damage(target,amount,source);
  }
+ applyPoison(target,...args){if(this.coop&&target.team===0&&this.time<this.coopInvulnerable[target.coopOwner])return;return super.applyPoison(target,...args);}
  defenseFactor(target,source){return this.coop&&target.team===0&&Number.isInteger(target.coopOwner)?this.withOwner(target.coopOwner,()=>super.defenseFactor(target,source)):super.defenseFactor(target,source);}
  setMoveOrder(...args){return this.scoped(()=>super.setMoveOrder(...args));}
  followCommander(){return this.scoped(()=>super.followCommander());}

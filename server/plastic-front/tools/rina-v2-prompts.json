@@ -1,0 +1,13 @@
+{
+  "mode": "built-in image_gen",
+  "intent": "identity-preserving style refinement and action variants",
+  "transparent_background": true,
+  "final_prompt_specification": {
+    "shared": "Refine Rina, the blonde adult chibi medic, into a compact 2.8-head painted 3D toy that matches the existing Plastic Front cast. Preserve blonde bob and olive hair clip, olive vest and shorts, black undershirt and gloves, cream boots, medical backpack and mint injector. Elevated orthographic game camera, fixed scale, upper-left key light, dimensional facial forms, strong dark side planes and contact shading. Genuine transparent background; no text, numbers, floor or cast shadows. Keep body proportions, costume and equipment consistent in every frame. Each pose fully visible in an evenly spaced sprite-sheet cell.",
+    "directions": "Eight standing views in a 4-column, 2-row sheet: front, front-left, left, back-left, back, back-right, right, front-right. Fixed elevated orthographic camera.",
+    "walks": "For each of front, front-left, left side, back-left and back, create eight distinct sequential walk poses in a 4-column, 2-row sheet: heel contact, down, passing, up, opposite contact, down, passing, up. Alternate planted feet and bent knees, subtle backpack and hand counter-motion; preserve identity, perspective and lighting.",
+    "heals": "4-column, 3-row sheet. Four front-facing treatment frames, four left-side treatment frames, four back-facing treatment frames. Aim and operate the mint injector, then recover; keep feet planted.",
+    "reactions": "4-column, 2-row sheet. Four sequential hit-recoil frames above; four sequential defeat poses below, from stumble through collapse to lying down. Keep anatomy, volume and equipment consistent."
+  },
+  "packing": "Generated alpha preserved. Only deterministic cell cropping, neighboring-cell sliver exclusion, scale registration, atlas packing and review compositing. No semantic drawing, frame warping or background replacement."
+}
