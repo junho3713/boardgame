@@ -34,10 +34,10 @@ test('mortar escorts follow a moving mage, continue their own pursuit after her 
  mage.hp=0;for(const u of escorts)a.equal(g.followRoomEscort(u,.1,g.stats(u)),false);
 });
 test('a five-unit escort group consumes future wave slots rather than multiplying regular wave counts',()=>{
- const g=scene();g.time=360;g.units=[];g.northernSpawn=()=>({x:1500,y:6000});g.random=()=>0;g.roomWavePlan=()=>({count:3,interval:1,forced:[],surge:false});g.roomPhase=()=>({at:360,name:'test',cap:100,mix:{blizzardMage:1}});g.updateRoomScheduledTanks=()=>{};
+ const g=scene();g.time=360;g.units=[];g.northernSpawn=()=>({x:1500,y:6000});g.random=()=>0;g.roomWavePlan=()=>({count:3,interval:1,forced:[],surge:false});g.roomPhase=()=>({at:360,name:'test',cap:100,mix:{blizzardMage:1,ant:1}});g.updateRoomScheduledTanks=()=>{};
  let groups=0;
- for(let i=0;i<60;i++){g.units=[];g.roomCampaign.nextSpawnAt=g.time;const before=g.roomCampaign.spawned;g.updateRoomWaves();const added=g.roomCampaign.spawned-before;if(added){a.equal(added,5);groups++;}g.time+=1;}
- a.equal(g.roomCampaign.spawned,180);a.equal(groups,36);a.equal(g.roomCampaign.waveSpawnDebt,0);
+ for(let i=0;i<60;i++){g.units=[];g.roomCampaign.nextSpawnAt=g.time;const before=g.roomCampaign.spawned;g.updateRoomWaves();const added=g.roomCampaign.spawned-before;if(g.units.some(u=>u.mobileMage)){a.equal(added,5);groups++;}else a.ok(added<=3);g.time+=1;}
+ a.equal(g.roomCampaign.spawned,180);a.equal(groups,1);a.equal(g.roomCampaign.waveSpawnDebt,0);
 });
 test('roaming ice mages approach, stop to cast, freeze targets and use the original mortar shield; fixed guards stay planted',()=>{
  const g=scene(),leader=g.addUnit(0,'leader',1500,6500),mage=g.addUnit(2,'blizzardMage',1500,5800),fixed=g.addUnit(1,'blizzardMage',1800,5800);Object.assign(mage,{mobileMage:true,activeStage:1,cooldown:0});fixed.fixedGuard=true;fixed.activeStage=1;

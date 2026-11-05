@@ -452,7 +452,7 @@ class FrontGame{
  isFrontCommander(u){return this.isFlameCommander(u)||this.isSwordCommander(u);}
  isFlameCommander(u){return u?.team===0&&u.type==='leader'&&(u.appearance||this.commanderId)==='blaze';}
  // Balance multipliers apply when attacks are created, never again on impact.
- enemyDamageScale(u){if(!this.isRoomCampaign()||u?.team===0||u?.defenseKind==='laserTower')return 1;const r=ROOM_CAMPAIGN.config.combat;return (r?.damageScale??1)*(u?.type==='bikeRaider'?(r?.bikeDamageScale??1):1)*(u?.boss?(r?.bossDamageScale??1):1);}
+ enemyDamageScale(u){if(!this.isRoomCampaign()||u?.team===0||u?.defenseKind==='laserTower')return 1;const r=ROOM_CAMPAIGN.config.combat,a=ROOM_CAMPAIGN.config.attrition,pressure=this.starExperiment&&this.starMax===2&&!this.coop&&this.time>=a.from&&u.roomWave&&!u.boss&&u.type!=='mortar'?(this.time>=a.lateAt?a.lateWaveDamage:a.soloTwoStarWaveDamage):1,mortar=u.type==='mortar'&&!u.boss?(this.time>=a.lateAt?a.lateMortarDamage:a.mortarDamage):1;return pressure*mortar*(r?.damageScale??1)*(u?.type==='bikeRaider'?(r?.bikeDamageScale??1):1)*(u?.boss?(r?.bossDamageScale??1):1)*(this.bossPatternRules(u)?.damageMultiplier??1);}
  enemyHealthScale(u){if(!this.isRoomCampaign()||u.team===0)return 1;const r=ROOM_CAMPAIGN.config.combat;return u.boss?(r.bossHpScale??1)*(r.bossHpExtra?.[u.type]??1):(r.hpScale??1);}
  stats(u){
   const b=u.type==='blizzardMage'&&u.mobileMage?{...TYPES.blizzardMage,speed:85,stationary:false,role:'이동형 얼음 마녀 · 광역 빙결 속박 · 아이스 실드 · 저격병 우선 공략'}:this.isFlameCommander(u)?{...TYPES.leader,name:'화염방사 대장',damage:FLAME.damage,rate:FLAME.rate,range:FLAME.range}:this.isSwordCommander(u)?{...TYPES.leader,name:'시온',damage:SWORD.damage,rate:SWORD.rate,range:SWORD.range}:TYPES[u.type],level=u.team===0&&u.type==='leader'?this.commanderLevel(u):ROSTER.includes(u.type)?Math.max(1,this.tech[u.team]?.[u.type]||1):1,p=this.profile.upgrades,ally=u.team===0,r=this.abilities,tier=u.threat||0,e=ally&&this.evolved[u.type]?u.type:null,fort=this.roomDefenseRules(u);
@@ -521,6 +521,11 @@ class FrontGame{
   const low=target.hp<=target.maxHp*.3,heavy=target.boss||target.maxHp>=1000,kind=target.base?'base':target.structure?'structure':target.type,affinity=multiplier(u.type,kind),ranged=target.base||target.structure||target.type==='artillery'||(TYPES[target.type]&&!TYPES[target.type].charge&&this.stats(target).range>=100);
   const tier=threats.has(target)?0:low?1:heavy?3:2;
   return [tier,tier===0?Number(!ranged):0,tier===0?Number(!low):0,tier<2?target.hp:0,-affinity,tier===3?target.hp:0,this.targetDistance(u,target),target.id||0];
+ }
+ selectEnemyMortarTarget(u,s=this.stats(u)){
+  const infantry=new Set(['rifle','machinegun','sniper','rocket','mortar','medic']),targets=this.units.filter(t=>this.canTarget(u,t)&&t.team===0&&infantry.has(t.type)&&this.targetDistance(u,t)>=(s.minRange||0)&&this.targetDistance(u,t)<s.range);
+  const density=t=>targets.reduce((n,a)=>n+(dist(a,t)<=(s.splash||70)?1:0),0);
+  return targets.sort((a,b)=>density(b)-density(a)||Number(b.type==='medic')-Number(a.type==='medic')||this.targetDistance(u,a)-this.targetDistance(u,b))[0]||null;
  }
  selectCombatTarget(u,candidates=this.combatCandidates(),threats=this.attackingEnemies(),s=this.stats(u)){
   if(u.team===0&&u.type==='sniper'){
@@ -1565,6 +1570,11 @@ class FrontGame{
    for(let i=0;i<=n;i++){const d=length*i/n;hazards.push({x:start.x+Math.cos(a.angle)*d,y:start.y+Math.sin(a.angle)*d,radius:(a.halfWidth||BIKE.halfWidth)+36,landAt:a.chargeAt+a.distance/(a.speed||BIKE.speed),source:u,bike:true});}
   }return hazards;
  }
+ infantryChargeDamage(fraction){
+  const types=['rifle','machinegun','sniper','rocket','mortar','medic'],troops=this.units.filter(u=>u.team===0&&u.hp>0&&types.includes(u.type));
+  const samples=troops.length?troops:(this.coop?[0,1]:[0]).flatMap(owner=>types.map(type=>({team:0,type,coopOwner:owner})));
+  return samples.reduce((total,u)=>total+(troops.length?u.maxHp:this.stats(u).hp),0)/samples.length*fraction;
+ }
  startBikeCharge(u,target,rules=BIKE){
   if(u.hp<=0||!target||!this.canTarget(u,target)||this.targetDistance(u,target)>(rules.range??this.stats(u).range)||u.cooldown>0)return false;
   if(!target.built&&!target.base&&!this.lineClear(u,target,this.collisionRadius(u)))return false;
@@ -1573,11 +1583,13 @@ class FrontGame{
   for(let d=8;d<=rules.distance;d+=8){const p={x:u.x+Math.cos(angle)*d,y:u.y+Math.sin(angle)*d};if(p.x<45||p.x>this.bounds().width-45||p.y<70||p.y>this.bounds().height-70||!this.lineClear(origin,p,r))break;distance=d;}
   if(distance<12){if(!target.built||this.targetDistance(u,target)>r+8)return false;distance=8;}
   u.bikeAttack={phase:'windup',origin,angle,startedAt:this.time,chargeAt:this.time+rules.windup,distance,remaining:distance,traveled:0,hit:[],target,halfWidth:rules.halfWidth,speed:rules.speed};
+  if(rules.infantryHpDamage!==undefined)u.bikeAttack.impactDamage=this.infantryChargeDamage(rules.infantryHpDamage);
   u.face=u.moveFace=u.aimFace=angle;u.route=null;u.cooldown=rules.cooldown;return true;
  }
  updateBike(u,dt,rules=BIKE){
   const s=this.stats(u),a=u.bikeAttack;
   if(a){
+   if(rules.infantryHpDamage!==undefined&&!Number.isFinite(a.impactDamage))a.impactDamage=this.infantryChargeDamage(rules.infantryHpDamage);
    u.face=u.moveFace=u.aimFace=a.angle;
    if(a.phase==='windup'){if(this.time+1e-8<a.chargeAt)return;a.phase='charge';this.notify('fire',u);}
    let remaining=Math.min(a.remaining,rules.speed*dt*(this.time<(u.luckySlowUntil||0)?1-LUCKY.groundSlow:1));
@@ -1591,7 +1603,7 @@ class FrontGame{
      const dx=next.x-from.x,dy=next.y-from.y,t=clamp(((target.x-from.x)*dx+(target.y-from.y)*dy)/(step*step),0,1),p={x:from.x+dx*t,y:from.y+dy*t};
      const distance=target.built?Math.hypot(Math.max(0,Math.abs(p.x-target.x)-target.w/2),Math.max(0,Math.abs(p.y-target.y)-target.h/2)):Math.max(0,dist(p,target)-(target.r||TYPES[target.type]?.r||12));
      if(distance>(target.built?Math.max(r+8,rules.halfWidth):rules.halfWidth+1))continue;
-     a.hit.push(target);this.damage(target,s.damage*(rules.damageScale??1),u);
+     a.hit.push(target);const impact=rules.infantryHpDamage!==undefined?a.impactDamage/this.defenseFactor(target,u):s.damage*(rules.damageScale??1);this.damage(target,impact,u);
      this.effects.push({kind:'bikeImpact',x:p.x,y:p.y,angle:a.angle,t:.3,max:.3,team:u.team});
      if(target.built||target.base){a.remaining=0;remaining=0;break;}
     }
@@ -1667,6 +1679,7 @@ class FrontGame{
     if(target&&u.cooldown<=1e-8){this.heal(target,s.heal,u);u.healStartedAt=this.time;u.healUntil=this.time+.7;u.healAngle=Math.atan2(target.y-u.y,target.x-u.x);u.cooldown=s.rate;this.effects.push({kind:'heal',x:target.x,y:target.y,t:.5,max:.5,team:u.team});}
    }else{
     if(u.team===0)target=this.selectCombatTarget(u,combatCandidates,combatThreats,s);else for(const a of [...this.units,...this.buildings.filter(b=>b.hp>0)]){if(!this.canTarget(u,a))continue;const d=this.targetDistance(u,a),score=d/Math.max(.25,multiplier(u.type,a.type));if(d<s.range&&d>=(s.minRange||0)&&score<nearest){target=a;nearest=score;}}
+    if(u.team!==0&&u.type==='mortar'&&u.roomWave)target=this.selectEnemyMortarTarget(u,s)||target;
     if(target&&u.team!==0&&u.type!=='mortar'){const screen=this.screeningUnit(u,target);if(screen&&dist(u,screen)<s.range)target=screen;}
     const b=(u.team===1||u.team!==0&&(this.isDesktopDefense()||TYPES[u.type]?.stab))?this.bases[0]:null;if(!target&&b&&this.canTarget(u,b)&&(TYPES[u.type]?.stab||this.isDesktopDefense()&&MELEE.has(u.type)?this.targetDistance(u,b)<s.range:dist(u,b)>=(s.minRange||0)&&dist(u,b)<s.range+45))target=b;
     if(u.team===0&&this.focusTarget&&!this.focusAutomatic&&dist(u,this.focusTarget)>=(s.minRange||0)&&dist(u,this.focusTarget)<s.range+(this.focusTarget.base||this.focusTarget.structure?35:0))target=this.focusTarget;
