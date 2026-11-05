@@ -549,7 +549,7 @@ class FrontGame{
  queueCost(queue,team=0){let total=0;for(const [type,n]of Object.entries(queue)){if(!Number.isInteger(n)||n<0||n>30)return Infinity;if(type==='truck'){if(n>0)return Infinity;}else if(ROSTER.includes(type))total+=TYPES[type].cost*n;else return Infinity;}return total;}
  supportValid(queue,team=0){
   if(this.choiceKind==='boss'||this.phase!=='choice'||this.turnChoice||!queue||typeof queue!=='object')return false;
-  const cost=this.queueCost(queue,team),count=this.units.filter(u=>u.team===team&&u.hp>0&&!u.patrol&&u.type!=='leader').length;
+  const cost=this.queueCost(queue,team),count=this.units.filter(u=>u.team===team&&u.hp>0&&!u.patrol&&u.type!=='leader'&&(!this.coop||u.coopOwner===this.coopOwner)).length;
   const troops=Object.entries(queue).filter(([t])=>t!=='truck').reduce((n,[t,q])=>n+q,0),trucks=queue.truck||0;
   return cost>0&&Number.isFinite(cost)&&cost<=this.cash[team]&&this.trucks[team]+trucks<=7&&count+troops<=this.capacity(team)&&!Object.entries(queue).some(([t,n])=>n>0&&t!=='truck'&&(!this.tech[team][t]||n>this.recruitmentRemaining(t,team)));
  }
@@ -583,7 +583,7 @@ class FrontGame{
  buy(type,team=0){
   if(!['playing','choice','resupply'].includes(this.phase))return false;
   if(type==='truck')return false;
-  if(!this.tech[team][type]||!TYPES[type]||this.recruitmentRemaining(type,team)<=0||this.cash[team]<TYPES[type].cost||this.units.filter(u=>u.team===team&&u.hp>0&&!u.patrol&&u.type!=='leader').length>=this.capacity(team))return false;
+  if(!this.tech[team][type]||!TYPES[type]||this.recruitmentRemaining(type,team)<=0||this.cash[team]<TYPES[type].cost||this.units.filter(u=>u.team===team&&u.hp>0&&!u.patrol&&u.type!=='leader'&&(!this.coop||u.coopOwner===this.coopOwner)).length>=this.capacity(team))return false;
   this.cash[team]-=TYPES[type].cost;const leader=this.commander(team);const a=this.serial*2.4;
   const u=this.addUnit(team,type,leader.x+Math.cos(a)*65,leader.y+Math.sin(a)*65);u.x=clamp(u.x,55,this.bounds().width-55);u.y=clamp(u.y,90,this.bounds().height-90);
   if(team===0){Object.assign(u,this.formationPoint(u,leader));this.resolvePosition(u);}
@@ -958,7 +958,7 @@ class FrontGame{
  }
  updateBuildings(dt){
   if(this.phase!=='playing')return;
-  for(const b of this.buildings){if(b.hp<=0||b.buildUntil>this.time)continue;const spec=this.buildingStats(b.kind,b.team);if(!spec||b.kind==='barricade')continue;
+  for(const b of this.buildings){if(b.hp<=0||b.buildUntil>this.time)continue;this.coopSelectOwner?.(b.coopOwner);const spec=this.buildingStats(b.kind,b.team);if(!spec||b.kind==='barricade')continue;
    if(b.kind==='repairBot'){this.updateRepairBot(b,dt);continue;}
    b.cooldown-=dt;if(b.cooldown>0)continue;
    if(b.kind==='repair'){b.cooldown=spec.rate;let repaired=false;for(const u of [...this.alive(0).filter(u=>ARMORED.has(u.type)),this.bases[0]])if(dist(b,u)<spec.range+(u.base?80:0)&&u.hp<u.maxHp){this.heal(u,u.base?4:8);repaired=true;}if(repaired)this.effects.push({kind:'heal',x:b.x,y:b.y,t:.5,max:.5,team:0});continue;}
@@ -1172,7 +1172,7 @@ class FrontGame{
   if(flameFront){anchor=commander;if(this.formationEnemy?.hp>0&&this.visible(this.formationEnemy))facing=Math.atan2(this.formationEnemy.y-commander.y,this.formationEnemy.x-commander.x);}
   if(rearCombat){anchor=commander;facing=Math.atan2(this.formationEnemy.y-commander.y,this.formationEnemy.x-commander.x);}
   const projection=p=>(p.x-commander.x)*Math.cos(facing)+(p.y-commander.y)*Math.sin(facing),behind=p=>(!flameFront||projection(p)<=12)&&(!rearCombat||projection(p)<=-24);
-  const group=this.units.filter(a=>a.team===u.team&&a.hp>0&&!a.patrol&&a.type!=='leader').sort((a,b)=>a.id-b.id),hasArmor=group.some(a=>a.type==='tank'||a.type==='guntruck');
+  const group=this.units.filter(a=>a.team===u.team&&a.hp>0&&!a.patrol&&a.type!=='leader'&&(!this.coop||u.team!==0||a.coopOwner===u.coopOwner)).sort((a,b)=>a.id-b.id),hasArmor=group.some(a=>a.type==='tank'||a.type==='guntruck');
   const bands=[{types:['tank','guntruck'],depth:120,spacing:72,row:65,cols:4},{types:['rifle'],depth:hasArmor?55:100,spacing:39,row:45,cols:6},{types:['machinegun'],depth:hasArmor?25:50,spacing:44,row:46,cols:5},{types:['rocket'],depth:10,spacing:42,row:48,cols:5},{types:['lucky'],depth:10,spacing:64,row:65,cols:4},{types:['sniper'],depth:-78,spacing:42,row:46,cols:5},{types:['mortar'],depth:-102,spacing:46,row:48,cols:5},{types:['medic'],depth:u.team===0?-108:-124,spacing:u.team===0?40:42,row:u.team===0?36:46,cols:u.team===0?6:5}],slots=[];
   let cursor=flameFront?0:120;
   for(const band of bands){
@@ -1634,15 +1634,17 @@ class FrontGame{
  }
  update(dt){
   if(this.phase!=='playing')return;dt=Math.min(dt,.05);if(this.bossIntro?.remaining>0){this.bossIntro.remaining=Math.max(0,this.bossIntro.remaining-dt);return;}this.time+=dt;this.syncEnemyGrowth();this.updateGuardianRespawns();this.updateMageQuest();this.updateLaserQuest();
-  for(let t=0;t<2;t++)this.cash[t]+=this.income(t)*dt;
-  if(this.mode!=='crisis')this.gainXP(dt*(this.mode==='pve'?1.3:3.1));if(this.mode==='duel')this.enemyAct();else if(this.mode==='pve')this.updateMission(dt);if(this.phase!=='playing')return;
-  this.updateSwarm();this.updateBosses();if(this.bossIntro?.remaining>0)return;this.updateArtillery();if(this.mode==='pve')this.updateDefenses(dt);this.updateBuildings(dt);if(this.phase!=='playing')return;
+  if(this.coop)this.coopIncome(dt);else for(let t=0;t<2;t++)this.cash[t]+=this.income(t)*dt;
+  if(!this.coop&&this.mode!=='crisis')this.gainXP(dt*(this.mode==='pve'?1.3:3.1));if(this.mode==='duel')this.enemyAct();else if(this.mode==='pve')this.updateMission(dt);if(this.phase!=='playing')return;
+  this.updateSwarm();this.updateBosses();if(this.bossIntro?.remaining>0)return;this.updateArtillery();if(this.mode==='pve')this.updateDefenses(dt);this.updateBuildings(dt);this.coopSelectOwner?.(0);if(this.phase!=='playing')return;
   if(this.focusTarget&&(this.focusTarget.hp<=0||!this.visible(this.focusTarget)))this.focusTarget=null;
   if(this.input.x||this.input.y)this.moveOrder=null;
   const player=this.commander(0),enemy=this.commander(1);this.updateFormationFacing(dt);this.updateUltimate();if(this.phase!=='playing')return;
   const pressure=this.pressure().tier;if(pressure>this.lastPressure){this.lastPressure=pressure;this.notify('toast',`위협 Lv.${pressure+1} · 증원 증가 / 강한 적 출현 / 새 적의 체력·공격력 상승`);}
   const combatThreats=this.attackingEnemies(),combatCandidates=this.combatCandidates();
   for(const u of this.units){
+   this.coopSelectOwner?.(u.team===0?u.coopOwner:0);
+   const player=this.commander(0);
    if(u.hp<=0){if(u.type==='leader'&&u.deadUntil&&this.time>=u.deadUntil){const c=u.type==='leader'?this.bases[u.team]:this.commander(u.team);u.x=c.x+(this.random()-.5)*90;u.y=c.y+(u.team?70:-70);this.resolvePosition(u);u.route=null;u.hp=u.maxHp=this.stats(u).hp;u.deadUntil=0;this.effects.push({kind:'drop',x:u.x,y:u.y,t:1,max:1,team:u.team});}continue;}
    if((u.roadCaptain||u.roomGarrison)&&!this.updateRoadCaptain(u,dt))continue;
    if(u.type==='lucky'){if(u.team===0)this.updateLuckyUnit(u);else if(this.isRoomCampaign())this.updateEnemyLucky(u);}
@@ -1679,12 +1681,14 @@ class FrontGame{
     if(dist(u,goal)>12)this.navigate(u,goal.x,goal.y,dt,this.squadFollowSpeed(u,u.regroup?.goal||goal,s.speed*(dist(u,c)>280?1.3:1)));
    }
   }
+  this.coopSelectOwner?.(0);
   if(player.ultimatePose?.active)player.face=player.aimFace=player.ultimatePose.angle;
   const live=this.units.filter(u=>u.hp>0);
   this.updateLuckyObjects(dt);
   this.separateCrowd(live);
   live.forEach(u=>this.resolvePosition(u));
-  for(const p of this.pickups){if(p.active&&player.hp>0&&dist(p,player)<60){p.active=false;this.gainXP(18);this.cash[0]+=25;this.awardGold(5);this.notify('toast','보급품 확보 · +25 자원 / +18 XP');this.effects.push({kind:'drop',x:p.x,y:p.y,t:.6,max:.6,team:0});}}
+  if(this.coop)this.coopCollectPickups();
+  for(const p of this.pickups){if(!this.coop&&p.active&&player.hp>0&&dist(p,player)<60){p.active=false;this.gainXP(18);this.cash[0]+=25;this.awardGold(5);this.notify('toast','보급품 확보 · +25 자원 / +18 XP');this.effects.push({kind:'drop',x:p.x,y:p.y,t:.6,max:.6,team:0});}}
   for(const p of this.shots){p.life-=dt;if(p.target.hp<=0){p.life=0;continue;}const d=dist(p,p.target),step=p.speed*dt;if(d<step+10){this.impact(p);p.life=0;}else{p.x+=(p.target.x-p.x)/d*step;p.y+=(p.target.y-p.y)/d*step;}}
   this.updateMortars();this.updateButterflyGusts();this.updateMedicCleanses();this.updatePoisons();
   this.units=this.units.filter(u=>u.type==='leader'||u.guardianRespawn||u.hp>0||u.diedAt===undefined||this.time-u.diedAt<(u.type==='medic'&&u.team===0&&u.appearance==='rina'?1.2:.8));

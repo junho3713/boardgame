@@ -13,7 +13,9 @@ const TYPES = {
 };
 
 function createHandler() {
+  const coop = require('./coop-server.cjs').createCoopHandler();
   return async function servePlasticFront(req, res) {
+    if (req.url.split('?')[0].startsWith('/plastic-front/api/coop/')) return coop(req,res);
     const reply = (status) => { res.writeHead(status, {'Cache-Control': 'no-store'}); res.end(); };
     if (!['GET', 'HEAD'].includes(req.method)) {
       res.setHeader('Allow', 'GET, HEAD');
