@@ -1,4 +1,4 @@
-importScripts('waves-survival.js?v=178','waves-defense.js?v=178','room-campaign.js?v=20261105b','engine.js?v=20261105b','sword-boss.js?v=178','two-star.js?v=178','autoplay.js?v=178');
+importScripts('waves-survival.js?v=178','waves-defense.js?v=178','room-campaign.js?v=20261105c','engine.js?v=20261105b','sword-boss.js?v=178','two-star.js?v=178','autoplay.js?v=178');
 let operation=0;
 self.onmessage=e=>{
  const id=++operation;let p,done=0,total=Math.min(86400,Math.max(0,Number(e.data.seconds)||0)),lastReport=0;

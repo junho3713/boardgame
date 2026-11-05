@@ -8,6 +8,15 @@ function dive(g,target,miss=false){
  boss.bossAction={phase:'dive',started:g.time-pattern.descent,until:g.time,target,x:target.x+(miss?200:0),y:target.y,fromX:boss.x,fromY:boss.y};
  g.updateVenomDive(boss,pattern);return boss;
 }
+test('hornet warns for 0.6 seconds then completes its dive and half-HP impact in 0.1 seconds',()=>{
+ const g=new CoopGame();g.start();const t=g.owned(0)[0],hp=t.hp,boss=g.addUnit(2,'hornet',t.x+150,t.y);
+ g.units=[t,boss];Object.assign(boss,{boss:true,bossPattern:'venomDive'});g.updateVenomDive(boss,pattern);aPhase('rise');
+ g.time=.25;g.updateVenomDive(boss,pattern);aPhase('high');assert.equal(boss.bossAction.until,.85);
+ g.time=.849;g.updateVenomDive(boss,pattern);aPhase('high');
+ g.time=.85;g.updateVenomDive(boss,pattern);aPhase('dive');assert.equal(t.hp,hp);
+ g.time=.95;g.updateVenomDive(boss,pattern);aPhase('low');assert.ok(Math.abs(t.hp-hp*.5)<1e-7);
+ function aPhase(phase){assert.equal(boss.bossAction.phase,phase);}
+});
 test('boss dive removes half maximum HP at every star and armor level, once per impact',()=>{
  for(const type of ['rifle','medic','tank','lucky'])for(const star of [1,2,3]){
   const g=new FrontGame({},new FrontProfile(),{map:'livingroom-star3'});g.start();g.abilities.defense=5;
