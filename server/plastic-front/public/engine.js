@@ -136,7 +136,7 @@ const EVOLUTIONS={
  machinegun:{name:'보급 기관총병',ability:'gold',detail:'사격 속도 +33% · 공격력 +20% · 최대 체력 +20%'},
  mortar:{name:'중박격포 분대',ability:'capacity',detail:'공격력 +35% · 폭발 범위 +30 · 사거리 +70 · 낙탄 시간 2초 유지'},
  lucky:{name:'슈퍼 럭키 레토나',ability:'speed',detail:'꽝 40→30% · 스프레이 10→17% · 777 미사일 2→5% · 끈끈이 폭탄/지뢰 확률 유지'},
- medic:{name:'야전 의무관',ability:'defense',detail:'치료량 +40% · 치료 간격 1초 고정 · 치료 범위 +60 · 방어력 +12 · 최대 체력 +20% · 10초마다 최대 5명의 빙결·치유 감소·둔화·중독 정화'}
+ medic:{name:'야전 의무관',ability:'defense',detail:'1초마다 최대 3명 치료 · 각 대상 치료량 +40% · 치료 범위 +60 · 방어력 +12 · 최대 체력 +20% · 10초마다 최대 5명의 빙결·치유 감소·둔화·중독 정화'}
 };
 const FIELD_CARDS={fieldSupply:{name:'현장 보급',icon:'▣',detail:'생산 자원 +90',kind:'supply'},fieldRepair:{name:'긴급 치료',icon:'✚',detail:'살아 있는 아군 최대 체력의 40% 회복',kind:'repair'},fieldGold:{name:'골드 상자',icon:'◈',detail:'기본 골드 +15 · 골드 획득량 보너스 적용',kind:'gold'}};
 const ROOM_RULES={width:ROOM_CAMPAIGN.config.layout.width,height:ROOM_CAMPAIGN.config.layout.height,stage2At:120,stage3At:360,finalAt:WAVE_CONFIGS.survival.boss.final.at,assembly:2,sniperAim:.5,turretSpeed:5};
@@ -1680,8 +1680,9 @@ class FrontGame{
    const channeling=u===player&&this.ultimateStatus().active;if(this.isSwordCommander(u))this.updateSwordAttack(u);if(u.type!=='tank'&&u.type!=='crimsonAce'&&u.type!=='guntruck'&&!channeling)u.aimFace=null;
    let target=null,nearest=Infinity;
    if(u.type==='medic'){
-    for(const a of [...this.units,...this.buildings.filter(b=>b.kind==='repairBot'&&b.buildUntil<=this.time)]){const d=dist(u,a);if(a.team===u.team&&a.hp>0&&a.hp<a.maxHp&&d<s.range&&d<nearest){target=a;nearest=d;}}
-    if(target&&u.cooldown<=1e-8){this.heal(target,s.heal,u);u.healStartedAt=this.time;u.healUntil=this.time+.7;u.healAngle=Math.atan2(target.y-u.y,target.x-u.x);u.cooldown=s.rate;this.effects.push({kind:'heal',x:target.x,y:target.y,t:.5,max:.5,team:u.team});}
+    const patients=[...new Set([...this.units,...this.buildings.filter(b=>b.kind==='repairBot'&&b.buildUntil<=this.time)])].filter(a=>a.team===u.team&&a.hp>0&&a.hp<a.maxHp&&dist(u,a)<s.range).sort((a,b)=>dist(u,a)-dist(u,b)).slice(0,this.evolutionEnabled(u)?3:1);
+    target=patients[0]||null;if(target)nearest=dist(u,target);
+    if(target&&u.cooldown<=1e-8){for(const patient of patients){this.heal(patient,s.heal,u);this.effects.push({kind:'heal',x:patient.x,y:patient.y,t:.5,max:.5,team:u.team});}u.healStartedAt=this.time;u.healUntil=this.time+.7;u.healAngle=Math.atan2(target.y-u.y,target.x-u.x);u.cooldown=s.rate;}
    }else{
     if(u.team===0)target=this.selectCombatTarget(u,combatCandidates,combatThreats,s);else for(const a of [...this.units,...this.buildings.filter(b=>b.hp>0)]){if(!this.canTarget(u,a))continue;const d=this.targetDistance(u,a),score=d/Math.max(.25,multiplier(u.type,a.type));if(d<s.range&&d>=(s.minRange||0)&&score<nearest){target=a;nearest=score;}}
     // Finish the turret's aim before reconsidering almost equidistant moving targets.

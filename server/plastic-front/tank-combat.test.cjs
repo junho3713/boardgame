@@ -31,7 +31,7 @@ test('ordinary red tanks warn and land one rear shell; the red boss keeps three 
   g.update(.05);const barrage=u.bossBarrage,count=boss?3:1;a.equal(barrage.targets.length,count);a.deepEqual(barrage.targets[0],{x:rear.x,y:rear.y});a.equal(g.effects.filter(e=>e.kind==='bossBarrageWarn'&&e.source===u).length,count);a.equal(g.bossHazards().length,count);a.ok(g.shots.some(p=>p.source===u),'direct shot must remain');
   a.ok(Math.abs(barrage.hitAt-g.time-1.5)<1e-8);const hp=rear.hp;g.time=barrage.hitAt-.01;g.updateBossPattern(u,.01);a.equal(g.mortarShells.length,0);
   g.time=barrage.hitAt;g.updateBossPattern(u,.01);const shells=g.mortarShells.filter(p=>p.source===u);a.equal(shells.length,count);
-  for(const p of shells){a.equal(p.radius,100);a.equal(p.damage,g.stats(u).damage*1.35);a.equal(p.landAt,g.time+.25);}
+  for(const p of shells){a.equal(p.radius,100);a.equal(p.damage,g.stats(u).damage*1.35*(boss?.85:1));a.equal(p.landAt,g.time+.25);}
   g.time=shells[0].landAt;g.updateMortars();a.ok(rear.hp<hp);a.equal(u.bossBarrage,null);
   g.time=u.nextBossSkillAt-.001;g.updateBossPattern(u,.01);a.equal(u.bossBarrage,null);g.time=u.nextBossSkillAt;g.updateBossPattern(u,.01);a.equal(u.bossBarrage.targets.length,count);
  }
@@ -45,4 +45,29 @@ test('moving after a red tank warning avoids its fixed landing point, and a dead
   g.time+=.3;g.updateMortars();a.equal(rear.hp,hp);
  }
  const g=scene(),ally=g.addUnit(0,'crimsonAce',1500,6000);g.addUnit(0,'leader',1500,6400);g.updateBossPattern(ally,.05);a.equal(ally.bossBarrage,undefined);
+});
+
+test('the actual 19-minute red boss rear shells deal 15% less damage while its direct fire and ordinary red tanks stay unchanged',()=>{
+ const near=(actual,expected)=>a.ok(Math.abs(actual-expected)<1e-7,`${actual} != ${expected}`);
+ for(const coop of [false,true]){
+  const g=scene(coop);g.time=1140;g.roomCampaign.rushCursor=3;g.roomCampaign.bossReadyAt=0;
+  durable(g.addUnit(0,'leader',1500,7900));g.northernSpawn=()=>({x:1500,y:7000});
+  a.equal(g.updateRoomBossRush(),true);
+  const boss=g.units.find(u=>u.boss&&u.type==='crimsonAce');a.ok(boss);a.equal(boss.bossRushPair,'room-rush-3');a.equal(boss.bossPattern,'rearBarrage');
+  const priorDamage=g.stats({...boss,bossPattern:null}).damage,damage=g.stats(boss).damage;
+  near(priorDamage,816.3228125);near(damage,priorDamage);near(g.bossArmorPenetration(boss),.4);
+  const target=durable(coop?g.withOwner(1,()=>g.addUnit(0,'tank',1500,7300)):g.addUnit(0,'tank',1500,7300));
+  const hp=target.hp,defense=g.defenseFactor(target,boss),shot=g.fireUnitProjectiles(boss,target,g.attackRoll(boss))[0];
+  near(shot.damage,priorDamage);g.impact(shot);near(hp-target.hp,priorDamage*defense);
+  g.updateBossPattern(boss,.01);const warning=boss.bossBarrage;a.equal(warning.targets.length,3);near(warning.hitAt-g.time,1.5);near(boss.nextBossSkillAt-g.time,7);
+  g.time=warning.hitAt;g.updateBossPattern(boss,.01);const shells=g.mortarShells.filter(p=>p.source===boss);a.equal(shells.length,3);
+  for(const shell of shells){near(shell.damage,priorDamage*1.35*.85);a.equal(shell.radius,100);near(shell.landAt-g.time,.25);}
+  const afterDirect=target.hp;g.time=shells[0].landAt;g.updateMortars();near(afterDirect-target.hp,priorDamage*1.35*.85*defense);
+  const regular=g.spawnRoomEnemy('crimsonAce');a.ok(regular&&!regular.boss&&regular.roomWave);
+  // The existing late solo two-star wave reduction remains separate from the new boss reduction.
+  near(g.stats(regular).damage,82*1.25*1.25*2.9*(coop?1:.85));
+  g.updateBossPattern(regular,.01);a.equal(regular.bossBarrage.targets.length,1);
+  g.time=regular.bossBarrage.hitAt;g.updateBossPattern(regular,.01);const ordinaryShells=g.mortarShells.filter(p=>p.source===regular);
+  a.equal(ordinaryShells.length,1);near(ordinaryShells[0].damage,g.stats(regular).damage*1.35);
+ }
 });
