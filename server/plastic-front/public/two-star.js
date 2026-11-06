@@ -13,6 +13,11 @@ p.abilityBonus=function(key,level=this.abilities[key]||0){if(this.starExperiment
 p.stats=function(u){const s=stats.call(this,u),r=u.star===3&&this.isThreeStarExperiment()?RULES.three:RULES;return this.starExperiment&&u.team===0&&u.star>=2?{...s,hp:s.hp*r.hp,damage:s.damage*r.damage,heal:s.heal*r.heal}:s;};
 p.fusionCandidates=function(type,star=1){return this.starExperiment&&this.mode==='pve'&&roster.includes(type)?this.alive(0).filter(u=>u.type===type&&(u.star||1)===star):[];};
 p.twoStarCount=function(type){return this.alive(0).filter(u=>u.type===type&&u.star===2).length;};
+p.recoverTwoStarLoss=function(u){
+ if(!this.starExperiment||this.mode!=='pve'||u.team!==0||u.star!==2||u.hp>0||u.merged||u.recoveredAs||!roster.includes(u.type))return null;
+ const recover=()=>{const survivor=this.addUnit(0,u.type,u.x,u.y);survivor.star=1;u.recoveredAs=survivor.id;this.effects.push({kind:'drop',x:survivor.x,y:survivor.y,t:1,max:1,team:0});return survivor;};
+ return this.coop?this.withOwner(u.coopOwner,recover):recover();
+};
 p.recruitmentRemaining=function(type,team=0){
  if(!this.starExperiment||this.mode!=='pve'||team!==0||!roster.includes(type))return remaining.call(this,type,team);
  if(this.isThreeStarExperiment()&&this.threeStarCount(type))return 0;

@@ -6,7 +6,8 @@ class FrontModels{
  ensure(type,team){
   // Enemy-only art is shared by both hostile simulation teams, including garrisons.
   const sharedEnemy=team!==0&&['bladeGuard','bikeRaider','crimsonAce','lucky','ant','soldierAnt','beetle','bruteBeetle','stagBeetle','rhinoBeetle','honeybee','hornet','butterfly'].includes(type);
-  const key=type+'-'+(sharedEnemy?2:team);if(this.assets.has(key))return this.assets.get(key);
+  // Mage escorts belong to the insect simulation team but use the hostile infantry atlas.
+  const key=type+'-'+(type==='mortar'&&team!==0?1:sharedEnemy?2:team);if(this.assets.has(key))return this.assets.get(key);
   const data=this.manifest?.models[key];if(!data)return null;
   let complete;const item={layers:{},ready:false,loading:new Promise(resolve=>{complete=resolve;})};this.assets.set(key,item);let count=0,failed=false;const settled=()=>{count++;if(count===Object.keys(data).length){item.ready=!failed;if(item.ready)this.loaded++;complete();}};
   for(const [layer,spec]of Object.entries(data)){

@@ -3,6 +3,16 @@ const {test}=require('node:test'),assert=require('node:assert/strict'),fs=requir
 const {CoopGame}=require('./public/coop-engine.js'),{pack,unpack}=require('./public/autoplay.js');
 const {applySnapshot}=require('./public/coop-state.js'),labels=require('./public/unit-labels.js');
 function renderer(){const w={};vm.runInNewContext(fs.readFileSync(__dirname+'/public/medic-skin.js','utf8'),{window:w,Math,WeakMap,Promise,fetch:()=>new Promise(()=>{})});const r=Object.create(w.FrontMedicSkin.prototype);r.motion=new WeakMap();r.manifest=JSON.parse(fs.readFileSync(__dirname+'/public/assets/rina/manifest-v2.json'));return r;}
+
+test('insect-team mortar escorts load and draw the hostile infantry atlas instead of procedural fallback',async()=>{
+ const w={},requests=[];class Image{set src(value){requests.push(value);queueMicrotask(()=>this.onload());}}
+ vm.runInNewContext(fs.readFileSync(__dirname+'/public/models.js','utf8'),{window:w,Image,Math,WeakMap,Map,Promise});
+ const model=Object.create(w.FrontModels.prototype);Object.assign(model,{manifest:JSON.parse(fs.readFileSync(__dirname+'/public/assets/models/manifest.json')),assets:new Map(),motion:new WeakMap(),loaded:0,failures:0});
+ const escort=model.ensure('mortar',2);assert.ok(escort);await escort.loading;assert.ok(escort.ready);assert.equal(model.ensure('mortar',1),escort);assert.match(requests[0],/mortar-1-body\.webp/);
+ const draws=[],ctx={save(){},restore(){},scale(){},drawImage(...args){draws.push(args);}};
+ for(let d=0;d<8;d++)assert.equal(model.draw(ctx,{id:d,type:'mortar',team:2,hp:100,x:0,y:0,face:d*Math.PI/4,walk:0},1),true);
+ assert.equal(draws.length,8);assert.ok(new Set(draws.map(args=>args[1]+':'+args[2])).size>=8);assert.equal(model.failures,0);
+});
 test('co-op snapshots retain walking identity and remap all combat references without retaining stale fields',()=>{
  const server=new CoopGame(),client=new CoopGame();applySnapshot(client,pack(server),unpack);
  const actor=client.units.find(u=>u.team===0&&u.coopOwner===1),source=server.units.find(u=>u.id===actor.id);const motion=new WeakMap([[actor,{phase:.4}]]);

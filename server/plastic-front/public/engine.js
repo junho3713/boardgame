@@ -806,7 +806,7 @@ class FrontGame{
    const squadLoss=target.type==='leader'&&target.team===0?this.applyCommanderLosses():0,lossNotice=squadLoss?` · 병력 ${squadLoss}기 손실`:'';
    if(target.type==='leader'&&target.team===0&&this.hasInvulnerableHQ()){this.retreated++;target.deadUntil=this.retreated<3?this.time+5:0;if(this.retreated>=3)this.finish('lose','commander');else this.notify('toast',`지휘관 후퇴${lossNotice} · 남은 기회 ${3-this.retreated}회 / 5초 후 복귀`);return;}
    if(target.type==='leader'){const penalty=this.mode==='duel'?70:300;if(target.team===0)this.retreated++;this.bases[target.team].hp=Math.max(0,this.bases[target.team].hp-penalty);target.deadUntil=this.time+5;if(!target.team)this.notify('toast',this.mode!=='duel'?`지휘관 후퇴${lossNotice} · 남은 기회 ${Math.max(0,3-this.retreated)}회 / 5초 후 복귀`:`지휘관 후퇴${lossNotice} · 5초 후 본진 복귀 / 본진 −70`);if(this.bases[target.team].hp<=0)this.finish(target.team===0?'lose':'win','base');}
-   else{target.deadUntil=0;if(target.team<2){this.losses[target.team]++;if(target.team===0){const recovered=this.mode==='pve'?Math.floor(TYPES[target.type].cost*.25):0;this.cash[0]+=recovered;this.salvaged+=recovered;this.notify('toast',`${TYPES[target.type].name} 전사 · 자동 복귀 없음${recovered?` · 장비 회수 +${recovered} 자원`:''}`);}}}
+   else{target.deadUntil=0;if(target.team<2){this.losses[target.team]++;if(target.team===0){const survivor=this.recoverTwoStarLoss?.(target);if(survivor){this.notify('toast',`${TYPES[target.type].name} 2성 전사 · 같은 병과 1성 1기 복귀`);this.notify('change');return;}const recovered=this.mode==='pve'?Math.floor(TYPES[target.type].cost*.25):0;this.cash[0]+=recovered;this.salvaged+=recovered;this.notify('toast',`${TYPES[target.type].name} 전사 · 자동 복귀 없음${recovered?` · 장비 회수 +${recovered} 자원`:''}`);}}}
   }
  }
  screeningUnit(attacker,target){
