@@ -1080,7 +1080,7 @@ class FrontGame{
     const affinity=alliedJackpot&&!ARMORED.has(kind)?LUCKY.alliedMissileLight:multiplier(p.damageType||'mortar',kind);
     const amount=p.damage*affinity*(1-(1-edge)*d/p.radius);if(p.enemyJackpot)this.damageEnemyJackpot(u,amount,p);else this.damage(u,amount,p.source);
    }
-   this.effects.push({kind:'explosion',x:p.x,y:p.y,radius:p.radius,t:.7,max:.7,team:p.team});
+   this.effects.push({kind:'explosion',x:p.x,y:p.y,radius:p.radius,t:.7,max:.7,team:p.team,visualKind:p.kind==='missile'&&p.source?.type==='lucky'?'jackpot':p.evoStyle||p.kind});
    if(p.evoStyle)this.effects.push({kind:'evoBlast',x:p.x,y:p.y,radius:p.radius,style:p.evoStyle,index:p.evoIndex,t:.7,max:.7,team:p.team});
    if(p.critical)this.effects.push({kind:'critical',x:p.x,y:p.y-25,t:.7,max:.7,team:p.team});
    this.notify('explosion',{x:p.x,y:p.y,kind:p.kind==='missile'?'rocket':'mortar',team:p.team});

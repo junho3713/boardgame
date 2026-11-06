@@ -16,7 +16,7 @@
 | 레토나 | 기존 777과 별개인 보스킬러 룰렛 심볼. 사거리 480 안에 보이는 공격 가능한 보스가 있을 때 기본 진화 룰렛의 꽝 8%p를 전환. 3성은 기존 꽝 3%p만 전환하여 777 14% 등 기존 당첨 확률을 유지 |
 | 의무병 | 기존 정화 조건·효과·대상 수·주기 유지. 정화 시 병사 연결선, 파동, 해제 파편을 추가 |
 
-- 보스킬러는 무광 검정 몸체·굵은 노란 띠·주황 추진 불꽃·연기를 가진 별도 유도 미사일 1발입니다. 기본 피해 1,400 × 기존 레토나 강화 배율, 보스 1명에게만 피해를 주며 주변 적에 범위 피해를 주지 않습니다. 최대 체력 비례 피해는 없습니다. 추첨 도중 보스가 사라지면 보스킬러를 제외한 일반 보상을 재추첨하고 표시도 수정합니다. 발수 저장은 없습니다.
+- 보스킬러는 무광 검정 몸체·굵은 노란 띠·주황 추진 불꽃·연기를 가진 별도 유도 미사일 1발입니다. 기본 피해 4,444 × 기존 레토나 강화 배율, 적 방어력 44% 무시(방어력의 56%만 적용), 보스 1명에게만 피해를 주며 주변 적에 범위 피해를 주지 않습니다. 최대 체력 비례 피해는 없습니다. 추첨 도중 보스가 사라지면 보스킬러를 제외한 일반 보상을 재추첨하고 표시도 수정합니다. 발수 저장은 없습니다.
 - 진화 때 이름·핵심 보상과 확장 파동을 표시하고, 병력의 다음 공격을 즉시 준비합니다. 기관총 예열/과열 표시, 관통 감쇠 궤적, 도탄 연결, 전차 연쇄 폭발, 바주카 분열 폭발, 박격포 이중 착탄, 보스킬러 발사·명중 연출과 효과음을 구분합니다.
 - 추가 공격과 폭발은 시뮬레이션 시간으로 진행하므로 일시정지 중 멈춥니다. 발사 전 시전자가 전사하면 예약 사격을 취소합니다. 저장/복원·협동 소유자·3성 공격 예산을 유지하며 새 작전과 웨이브 테스트 시간 이동 시 예약 공격을 비웁니다.
 - 검증: 게임·협동·HTTP 전체 회귀 테스트 및 실제 브라우저의 9개 병과 대표 공격·실시간 재생·게임 시작 확인.
@@ -120,3 +120,31 @@
 - 검증은 실제 20Hz 엔진과 자동 조작을 사용합니다. 자동 조작의 전열/보충 정책은 인간 플레이와 다르므로 자동 결과를 모든 편성의 클리어 보장으로 해석하지 않습니다.
 
 - 마녀·박격포 편대는 60초 간격으로 다음 일반 증원에 우선 편성합니다. 기존 편대가 살아 있어 동시 상한이 찼으면 대기합니다. 무작위 편대 연속 생성과 장시간 부재의 편차를 줄이되, 5기분 웨이브 수량 회계를 그대로 사용합니다.
+
+## 전투 이펙트 소재 개선 및 보스킬러 조정 (2026-11-06)
+
+- 보스킬러 기본 피해 4,444, 적 방어력 44% 무시. 기존 Lucky 강화 배율과 단일 보스 제한을 유지합니다. 기존 피해 경로에서 계산하므로 무적·그로기·처치 보상·협동 소유권이 유지됩니다. 777은 700 × 7발, 기존 확률·강화·경장갑 75%·폭발 가장자리 75%를 유지합니다.
+- 검은 탄체/노란 띠 보스킬러와 붉은 탄체/아이보리 띠 777을 투명 3D 스프라이트로 교체했습니다. 재질 명암·패널·노즐·꼬리날개가 있으며, 추진 불꽃과 월드 좌표에 남는 연기 항적은 시뮬레이션 시간에 따라 움직입니다.
+- 공중 미사일·박격포 탄체는 유닛 뒤에 가려지지 않도록 유닛을 그린 뒤 표시하고, 착탄 경고는 지면에 유지합니다. 비행·곡선·발수·판정은 그대로입니다.
+- 포구 섬광, 소총 강화탄, 기관총 과열 관통, 저격·도탄 접촉 불꽃, 바주카 분열탄, 전차 연쇄 폭발, 박격포 이중 착탄에 질감 소재를 적용했습니다. 폭발은 짧은 섬광→불규칙 화염→상승 연기·지면 먼지·파편 순서로 표시합니다. 진화 보조 이벤트는 완전한 화염을 중복 표시하지 않습니다.
+- 의무병 정화는 흐르는 연결광·입체 결정·해제 파편을 표시하고, 진화 순간에는 금빛 상승 입자·짧은 광주·회전하는 빛의 궤적을 표시합니다.
+- 소재는 최초 1회 준비하여 재사용합니다. 파티클 상한은 모바일 240/데스크톱 360을 유지합니다. 이미지 로딩 실패 시 기존 탄체와 생성된 소재로 대체합니다. 같은 시각의 반복 렌더 및 일시정지에서는 연기가 늘어나지 않습니다.
+- 새 런타임 파일: public/impact-materials.js, public/projectile-materials.js. 생성 이미지: public/assets/effects/boss-killer-v20261106.png, jackpot-missile-v20261106.png, impact-fire-v20261106.png. 검증용 별도 장면은 배포하지 않습니다.
+
+### 생성 소재 출처
+
+내장 image_gen 도구로 새 이미지를 생성했습니다. 원본의 투명 알파를 유지하여 미사일은 768×256 PNG, 화염은 512×512 PNG로 최적화했습니다. 다음은 사용한 최종 프롬프트입니다.
+
+**boss-killer-v20261106.png**
+
+> Use case: stylized-concept. Asset type: production game sprite, one isolated anti-boss missile for a polished 3D miniature military tabletop game. A single premium black missile pointing exactly horizontally RIGHT, rear engine exactly LEFT, viewed from slightly above at 25 degrees so upper surfaces and one side show, orthographic projection, no foreshortening of long axis. Slim long charcoal-black lacquered steel body, pointed rounded dark nose cone on the right, one unmistakable broad warm yellow warning band just behind nose, small yellow rear band, four swept metallic tail fins with beveled edges, detailed circular dark engine nozzle at left, subtle mechanical panel seams, restrained bolts, cool soft edge highlights, warm bounce light, moderately stylized chunky miniature proportions that remain readable at 70 pixels wide, beautifully rendered metal volume, crisp silhouette. Center missile, fill 85 percent canvas width, comfortably fit tail fins. TRANSPARENT background with genuine alpha. Object only, NO flame, NO smoke, NO ground shadow, NO glow halo, NO labels, NO text, NO watermark, NO other objects. High-quality hand-finished 3D game asset, not a flat vector icon, not pixel art.
+
+**jackpot-missile-v20261106.png**
+
+> Use case: stylized-concept. Asset type: production game sprite for a polished miniature military tabletop game. One isolated premium RED jackpot rocket pointing exactly horizontally RIGHT, engine rear LEFT. View from slightly above 25 degrees, orthographic and long axis horizontal. Chunky slim missile with bright vermilion red lacquered metal body, tapered rounded dark-red pointed nose right, one broad creamy ivory band behind the nose and thin brass ring near rear, four red swept stabilizer fins with dark bevels, metallic engine nozzle on left, finely crafted panel joins and sparse small rivets, glossy light reflections defining volume, warm bounce light, jewel-like polished game asset. No logos, no text or numerals. Crisp strong silhouette readable at 60 pixels wide. Entire object centered and fills 85% of wide canvas, no cropping. Genuine TRANSPARENT alpha backdrop, no flame no smoke no glow no ground shadow no other objects. High quality stylized 3D render matching realistic miniature toy soldiers. NOT flat vector, NOT pixel art.
+
+**impact-fire-v20261106.png**
+
+> Use case: stylized-concept. Asset type: high-quality game VFX sprite texture. One isolated compact fiery explosion cloud, almost round with an irregular organically billowing silhouette, center of mass centered. Realistic volumetric simulation rendered as a polished miniature 3D game effect. White-hot small core, rich incandescent yellow and orange turbulent folded fire lobes, dark burnt-orange cavities, charcoal smoke curling around upper outside edges, individual curling lobes rather than smooth blobs, fine ember specks close to cloud. Light comes from inside the fire, wonderful depth and contrast. Viewed orthographically with modest perspective from above, floating isolated in clear air, no ground no surroundings, no shockwave ring, no straight radial star lines, no debris outside the cloud, no huge trailing plume. The cloud occupies 80% of a square canvas with generous transparent margin. Genuinely transparent alpha background and clean soft dissipating edges, no black rectangular background, no floor shadow, no text. This is a single reusable animation texture for a game, NOT a photograph of a scene and NOT a flat vector illustration.
+
+검증 결과: 전체 91개 Node 테스트 통과. 실제 브라우저에서 10개 공격 장면, 진화 순간, 정화, 재생/정지, 게임 시작과 20분 진화 편성을 확인했으며 콘솔 오류가 없었습니다.

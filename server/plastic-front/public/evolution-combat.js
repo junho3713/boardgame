@@ -5,7 +5,7 @@ function install(api){
  if(p.evolutionRewardsVersion)return;p.evolutionRewardsVersion=1;
  const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y),kind=t=>t.base?'base':t.structure?'structure':t.type;
  const shot=p.fireUnitProjectiles,impact=p.impact,mortar=p.launchMortar,stats=p.stats,odds=p.luckyOdds,cast=p.castLucky,check=p.checkEvolutions;
- const details={rifle:'3점사 · 마지막 강화탄',machinegun:'3초 예열 → 4초 과열 관통',sniper:'최대 3명 관통 · 100/50/25%',rocket:'착탄 뒤 5개 분열탄',mortar:'비행 1초 · 0.25초 간격 2발 · 각 70%',tank:'전방 연쇄 폭발 · 100/60/40% · 중복 적중 없음',guntruck:'최대 4명 도탄 · 100/70/50/35%',lucky:'보스 출현 시 꽝 일부를 보스킬러로 전환',medic:'기존 상태이상 정화 · 파동·연결 연출'};
+ const details={rifle:'3점사 · 마지막 강화탄',machinegun:'3초 예열 → 4초 과열 관통',sniper:'최대 3명 관통 · 100/50/25%',rocket:'착탄 뒤 5개 분열탄',mortar:'비행 1초 · 0.25초 간격 2발 · 각 70%',tank:'전방 연쇄 폭발 · 100/60/40% · 중복 적중 없음',guntruck:'최대 4명 도탄 · 100/70/50/35%',lucky:'보스킬러 기본 4444 · 방어력 44% 무시 · 보스 출현 시 꽝 일부 전환',medic:'기존 상태이상 정화 · 파동·연결 연출'};
  EVOLUTIONS.mortar.detail=EVOLUTIONS.mortar.detail.replace('낙탄 시간 2초 유지','진화 포탄 비행 1초');
  for(const [type,detail]of Object.entries(details))EVOLUTIONS[type].detail+=' · '+detail;
  p.evolutionEnabled=function(u){if(!u||u.team!==0)return false;return !!(this.coop?this.withOwner(u.coopOwner,()=>this.evolved[u.type]):this.evolved[u.type]);};
@@ -51,7 +51,10 @@ function install(api){
  p.impact=function(b){
   if(b.kind==='bossKiller'){
    if(b.target?.hp>0&&b.target.boss&&this.canTarget(b.source,b.target)){
-    this.damage(b.target,b.damage,b.source);this.effects.push({kind:'explosion',x:b.target.x,y:b.target.y,radius:110,t:.9,max:.9,team:0});this.effects.push({kind:'evoBossImpact',x:b.target.x,y:b.target.y,radius:110,t:1,max:1,team:0});this.notify('explosion',{x:b.target.x,y:b.target.y,team:0,kind:'bossKiller'});
+    // Hostile bosses receive no cover bonus. Reduce their remaining armor, then
+    // compensate the input so damage() still owns immunity, defense and kill credit.
+    const defense=this.defenseFactor(b.target,b.source),pierced=1/(1+(1/defense-1)*.56);
+    this.damage(b.target,b.damage*pierced/defense,b.source);this.effects.push({kind:'explosion',x:b.target.x,y:b.target.y,radius:110,t:.9,max:.9,team:0,visualKind:'bossKiller'});this.effects.push({kind:'evoBossImpact',x:b.target.x,y:b.target.y,radius:110,t:1,max:1,team:0});this.notify('explosion',{x:b.target.x,y:b.target.y,team:0,kind:'bossKiller'});
    }return;
   }
   if(!b.evoStyle)return impact.call(this,b);
@@ -89,7 +92,7 @@ function install(api){
   const target=this.bossKillerTarget(u);
   if(!target){const base=this.luckyOdds(u),fallback=this.luckyOutcome(this.random(),base);if(u.luckyRoll?.kind==='bossKiller'){u.luckyRoll.kind=fallback;u.luckyRoll.bossKillerAvailable=false;}return cast.call(this,u,fallback);}
   const scale=this.coop?this.withOwner(u.coopOwner,()=>this.luckyScale(u)):this.luckyScale(u);
-  this.shots.push({x:u.x,y:u.y,target,source:u,damage:1400*scale,speed:440,kind:'bossKiller',team:0,life:3,splash:0,evoStyle:'bossKiller'});
+  this.shots.push({x:u.x,y:u.y,target,source:u,damage:4444*scale,speed:440,kind:'bossKiller',team:0,life:3,splash:0,evoStyle:'bossKiller'});
   this.effects.push({kind:'evoBossLaunch',x:u.x,y:u.y,target,t:1,max:1,team:0});this.notify('fire',{...u,luckySound:'bossKiller'});this.notify('toast','보스킬러 당첨! 검은 미사일 발사');
  };
  p.checkEvolutions=function(){const before={...this.evolved};check.call(this);for(const type of Object.keys(EVOLUTIONS))if(this.evolved[type]&&!before[type]){

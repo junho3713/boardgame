@@ -11,7 +11,7 @@ try{profile=window.FrontProfile.read(localStorage,profileKey);}catch{profile=new
 const worldModels=new window.FrontWorldModels(()=>buildTerrain());
 const swordView=new window.FrontSwordBossView();
 const unitModels=new window.FrontModels(),battleFx=new window.FrontEffects({budget:window.matchMedia("(pointer:coarse)").matches?240:360,weaponPoint:e=>unitModels.weaponPoint(e)});
-const gameAssetsReady=Promise.all([unitModels.ready,swordView.ready,window.FrontPortal.ready,upgradeArt.ready,unitArt.ready]);
+const gameAssetsReady=Promise.all([unitModels.ready,swordView.ready,window.FrontPortal.ready,upgradeArt.ready,unitArt.ready,battleFx.prepareCombatMaterials()]);
 let battlefield='livingroom';try{battlefield=['backyard','desktop','livingroom-star','livingroom-star3'].includes(localStorage.getItem('plastic-front-map'))?localStorage.getItem('plastic-front-map'):'livingroom';}catch{}
 const requestedMap=new URLSearchParams(location.search).get('map');if(['livingroom','livingroom-star','livingroom-star3','backyard','desktop'].includes(requestedMap))battlefield=requestedMap;
 let selectedCommander='sarge';try{selectedCommander=['shino','blaze','shion'].includes(localStorage.getItem('plastic-front-commander'))?localStorage.getItem('plastic-front-commander'):'sarge';}catch{}
@@ -399,7 +399,6 @@ function drawMortarShell(p){
  ctx.setLineDash([6,5]);circle(ctx,p.x,p.y,p.radius+4,null,color);ctx.setLineDash([]);
  ctx.strokeStyle=color;ctx.beginPath();ctx.moveTo(p.x-12,p.y);ctx.lineTo(p.x+12,p.y);ctx.moveTo(p.x,p.y-12);ctx.lineTo(p.x,p.y+12);ctx.stroke();
  text(ctx,`${friendly?'아군':'적'} ${p.kind==='missile'?'미사일':'박격포'} · ${Math.max(0,p.landAt-game.time).toFixed(1)}초`,p.x,p.y+p.radius+20,12,color);
- battleFx.drawMortar(ctx,p,game.time);
 }
 // Presentation-only interpolation leaves combat, saves and AI on the fixed simulation clock.
 const aiVisualPositions=new WeakMap();
@@ -549,6 +548,7 @@ function draw(dt){
  for(const u of game.units.filter(u=>types[u.type].flying).sort((a,b)=>a.y-b.y))drawUnit(u);
  for(const u of game.units.filter(u=>u.hp>0&&u.type==='sniper'&&game.visible(u)&&u.sniperAim&&game.visible(u.sniperAim.target)).slice(0,12))battleFx.drawLaser(ctx,u,game.time,{crouched:unitModels.crouched(u),muzzle:unitModels.weaponPoint(u)});
  window.FrontGuardianFX.air(ctx,game);battleFx.drawLuckySprays(ctx,game,fxVisible);
+ for(const p of game.mortarShells){const pose=battleFx.mortarPose(p,game.time);if(fxVisible(pose))battleFx.drawMortar(ctx,p,game.time); }
  for(const p of game.shots){if(!fxVisible(p))continue;battleFx.drawShot(ctx,p,game.coop&&p.source.team===0?game.withOwner(p.source.coopOwner,()=>game.evolved[p.source.type]):game.evolved[p.source.type]);}
  for(const e of game.effects){
   if(!fxVisible(e)||battleFx.drawEvent(ctx,e))continue;

@@ -60,8 +60,28 @@ test('boss-killer odds consume only blank probability, preserve 777, and require
 });
 test('boss-killer is a separate single-boss projectile, uses existing Lucky scale, and falls back if the boss leaves',()=>{
  const g=scene(),u=actor(g,'lucky'),boss=enemy(g,1300,6000,'tank');boss.boss=true;const crowd=enemy(g,1301,6000),hp=crowd.hp;
- g.castLucky(u,'bossKiller');a.equal(g.shots.length,1);const b=g.shots[0];a.equal(b.kind,'bossKiller');near(b.damage,1400*g.luckyScale(u));const before=boss.hp;g.impact(b);a.ok(boss.hp<before);a.equal(crowd.hp,hp);a.equal(g.luckySalvos.length,0);
+ g.castLucky(u,'bossKiller');a.equal(g.shots.length,1);const b=g.shots[0];a.equal(b.kind,'bossKiller');near(b.damage,4444*g.luckyScale(u));const before=boss.hp;g.impact(b);a.ok(boss.hp<before);a.equal(crowd.hp,hp);a.equal(g.luckySalvos.length,0);
  boss.hp=0;g.random=()=>.99;g.castLucky(u,'bossKiller');a.equal(g.shots.length,1);a.equal(g.luckySalvos.length,0);
+});
+test('boss-killer ignores 44% of boss defense through ordinary damage handling in solo and co-op',()=>{
+ for(const coop of [false,true])for(const star of [1,3])for(const type of ['rifle','tank','crimsonAce']){
+  const g=scene(coop),owner=coop?1:0,u=actor(g,'lucky',1000,6000,owner),boss=enemy(g,1300,6000,type);u.star=star;boss.boss=true;
+  if(coop)g.withOwner(owner,()=>{g.tech[0].lucky=4;g.abilities.damage=2;});else{g.tech[0].lucky=4;g.abilities.damage=2;}
+  const scale=coop?g.withOwner(owner,()=>g.luckyScale(u)):g.luckyScale(u),defense=g.stats(boss).defense;
+  const before=boss.hp;g.castLucky(u,'bossKiller');const missile=g.shots.at(-1);near(missile.damage,4444*scale);g.impact(missile);
+  near(before-boss.hp,4444*scale*100/(100+defense*.56));near(g.defenseFactor(boss,u),100/(100+defense));
+  a.equal(missile.source,u);a.ok(g.effects.some(e=>e.kind==='hit'));
+  const ordinary=g.addUnit(0,'rifle',1000,6000),hp=boss.hp;g.impact(g.fireUnitProjectiles(ordinary,boss,{damage:100},g.stats(ordinary))[0]);
+  near(hp-boss.hp,100*(type==='rifle'?1:.8)*100/(100+defense));
+  g.castLucky(u,'missiles');a.equal(g.luckySalvos.at(-1).remaining,7);near(g.luckySalvos.at(-1).damage,700*scale);
+ }
+});
+test('boss-killer preserves boss invulnerability, groggy multipliers and ordinary kill rewards',()=>{
+ const g=scene(),u=actor(g,'lucky'),boss=enemy(g,1300,6000,'hornet');boss.boss=true;g.castLucky(u,'bossKiller');const b=g.shots[0],hp=boss.hp;
+ boss.bossPattern='venomDive';boss.bossAction={phase:'high'};g.impact(b);a.equal(boss.hp,hp);
+ boss.bossAction=null;boss.groggyUntil=10;const rules=g.bossPatternRules;g.bossPatternRules=t=>t===boss?{vulnerable:1.5}:rules.call(g,t);
+ g.impact(b);near(hp-boss.hp,b.damage*100/(100+g.stats(boss).defense*.56)*1.5);
+ boss.hp=1;const kills=g.kills,rewards=g.bossState.rewards;g.impact(b);a.equal(boss.hp,0);a.equal(g.kills,kills+1);a.equal(g.bossState.rewards,rewards+1);a.ok(g.effects.some(e=>e.kind==='burst'));
 });
 test('saved delayed attacks and siege groups restore exact source references, hit history and coop ownership',()=>{
  const g=scene(true),u=actor(g,'rifle',1000,6000,1),t=enemy(g);g.fireUnitProjectiles(u,t,{damage:100},g.stats(u));const tank=actor(g,'tank',1000,6200,1),q=enemy(g,1200,6200);g.impact(g.fireUnitProjectiles(tank,q,{damage:100},g.stats(tank))[0]);

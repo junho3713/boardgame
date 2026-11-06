@@ -85,8 +85,8 @@ class FrontEffects{
   for(const e of game.effects){if(this.seen.has(e))continue;this.seen.add(e);if(visible(e))this.emit(e);}
   for(const [key,e]of this.flameJets)if(!game.effects.includes(e))this.flameJets.delete(key);
   if(game.phase!=='playing')return;
-  for(const p of game.mortarShells||[]){const last=this.trails.get(p)??-1;if(game.time-last<.11)continue;this.trails.set(p,game.time);const q=this.mortarPose(p,game.time);if(visible(q))this.add({kind:'whiteSmoke',x:q.x,y:q.y,vx:0,vy:-4,size:p.kind==='missile'?(p.source?.type==='lucky'?11:7):3.5,growth:p.kind==='missile'?14:5,life:p.kind==='missile'?.5:.24,team:p.team,alpha:p.kind==='missile'?.4:.2});}
-  for(const p of game.shots){if(p.kind!=='rocket'||!visible(p))continue;const last=this.trails.get(p)??-1;if(game.time-last<.045)continue;this.trails.set(p,game.time);this.add({kind:'whiteSmoke',x:p.x,y:p.y-15,vx:0,vy:-8,size:7,growth:13,life:.5,team:p.team,alpha:.22});}
+  for(const p of game.mortarShells||[]){if(this.emitMaterialTrail){this.emitMaterialTrail(p,this.mortarPose(p,game.time),game.time,visible);continue;}const last=this.trails.get(p)??-1;if(game.time-last<.11)continue;this.trails.set(p,game.time);const q=this.mortarPose(p,game.time);if(visible(q))this.add({kind:'whiteSmoke',x:q.x,y:q.y,vx:0,vy:-4,size:p.kind==='missile'?(p.source?.type==='lucky'?11:7):3.5,growth:p.kind==='missile'?14:5,life:p.kind==='missile'?.5:.24,team:p.team,alpha:p.kind==='missile'?.4:.2});}
+  for(const p of game.shots){if(this.emitMaterialTrail&&['rocket','bossKiller'].includes(p.kind)){this.emitMaterialTrail(p,this.materialShotPose(p),game.time,visible);continue;}if(p.kind!=='rocket'||!visible(p))continue;const last=this.trails.get(p)??-1;if(game.time-last<.045)continue;this.trails.set(p,game.time);this.add({kind:'whiteSmoke',x:p.x,y:p.y-15,vx:0,vy:-8,size:7,growth:13,life:.5,team:p.team,alpha:.22});}
  }
  blob(ctx,image,x,y,size,alpha=1){ctx.globalAlpha=clamp(alpha,0,1);ctx.drawImage(image,x-size,y-size,size*2,size*2);}
  ground(ctx,visible=()=>true){ctx.save();for(const s of this.scorches)if(visible(s)){ctx.save();ctx.translate(s.x,s.y);ctx.scale(1,.65);this.blob(ctx,this.textures.scorch,0,0,s.r,(1-s.age/s.life)*.45);ctx.restore();}ctx.restore();}
@@ -180,6 +180,8 @@ class FrontEffects{
   return true;
  }
  drawEvent(ctx,e){
+  if(e.kind==='explosion'&&this.drawImpactMaterial?.(ctx,e,{boss:e.visualKind==='bossKiller',style:e.visualKind}))return true;
+  if(e.kind==='muzzle'&&this.drawMuzzleMaterial?.(ctx,e))return true;
   const k=clamp(e.t/e.max,0,1),p=1-k;
   if(!['shionSlash','shionSpin','bossSlashWarn','bossDiveWarn','bossBarrageWarn','bossGroggy','butterflyWarn','butterflyWind','healingWeaken','cleanse','muzzle','explosion','hit','burst','tracer','heal','evolve','ultimateVolley','sting','bayonetWarn','bayonetThrust','bladeSlash','flame','luckyGlueThrow','luckyGlue','luckySpray','luckyJackpot'].includes(e.kind))return false;
   ctx.save();
