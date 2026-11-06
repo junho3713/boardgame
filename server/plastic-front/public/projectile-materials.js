@@ -20,14 +20,14 @@ function install(Effects){
   this.combatAssets=a;return a.ready.then(()=>{if(a.fire?.naturalWidth)this.impactFireImage=a.fire;});
  };
  p.missileGeometry=function(kind,size=1,anchor='tip'){
-  const width=(kind==='boss'?76:58)*size*MISSILE_LENGTH_SCALE,offset=anchor==='tip'?-width*.47:0;
-  return{width,offset,nozzle:offset-width*.462};
+  const scale=kind==='boss'&&anchor==='tip'?1.2:1,width=(kind==='boss'?76:58)*size*MISSILE_LENGTH_SCALE*scale,offset=anchor==='tip'?-width*.47:0;
+  return{width,scale,offset,nozzle:offset-width*.462};
  };
  p.drawMaterialMissile=function(c,x,y,angle,time,kind='boss',size=1,{exhaust=true,anchor='center'}={}){
   const a=this.combatAssets||loadAssets(),image=a[kind];if(!image?.complete||!image.naturalWidth)return false;
-  const {width,offset,nozzle}=this.missileGeometry(kind,size,anchor),height=width/MISSILE_LENGTH_SCALE*image.naturalHeight/image.naturalWidth;
+  const {width,scale,offset,nozzle}=this.missileGeometry(kind,size,anchor),height=width/MISSILE_LENGTH_SCALE*image.naturalHeight/image.naturalWidth;
   c.save();c.translate(x,y);c.rotate(angle);
-  if(exhaust)this.drawPropulsion(c,nozzle,0,time,kind==='boss'?1.12*size:.83*size);
+  if(exhaust)this.drawPropulsion(c,nozzle,0,time,(kind==='boss'?1.12:.83)*size*scale);
   c.globalCompositeOperation='source-over';c.globalAlpha=1;c.drawImage(image,offset-width/2,-height/2,width,height);c.restore();return true;
  };
  p.drawPropulsion=function(c,x,y,time,size=1){

@@ -9,7 +9,8 @@ function install(Effects){
  const p=Effects.prototype,draw=p.drawEvent,shot=p.drawShot,symbol=p.paintLuckySymbol;
  p.drawBossKiller=function(c,x,y,angle,time=0,size=1,{anchor='tip'}={}){
   if(this.drawMaterialMissile?.(c,x,y,angle,time,'boss',size,{anchor}))return;
-  c.save();c.translate(x,y);c.rotate(angle);c.scale(size,size);if(anchor==='tip')c.translate(-25,0);
+  const visualSize=size*(this.missileGeometry?.('boss',1,anchor).scale??1);
+  c.save();c.translate(x,y);c.rotate(angle);c.scale(visualSize,visualSize);if(anchor==='tip')c.translate(-25,0);
   for(let i=0;i<4;i++){c.fillStyle='#263430'+['45','38','28','18'][i];c.beginPath();c.ellipse(-30-i*12,Math.sin(time*9+i)*3,8+i*2,5+i*2,0,0,TAU);c.fill();}
   const flame=24+Math.sin(time*53)*5,g=c.createLinearGradient(-52,0,-17,0);g.addColorStop(0,'#ff6c1800');g.addColorStop(.6,'#ff9d27');g.addColorStop(1,'#fff4b8');c.fillStyle=g;
   c.beginPath();c.moveTo(-17,-5);c.quadraticCurveTo(-30,-8,-17-flame,0);c.quadraticCurveTo(-30,8,-17,5);c.fill();
