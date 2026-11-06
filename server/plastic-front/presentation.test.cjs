@@ -20,6 +20,18 @@ test('co-op snapshots retain walking identity and remap all combat references wi
  const packet=pack(server),before=JSON.stringify(packet);applySnapshot(client,packet,unpack);
  assert.equal(client.units.find(u=>u.id===actor.id),actor);assert.equal(motion.get(actor).phase,.4);assert.equal(actor.x,source.x);assert.equal(actor.stalePose,undefined);assert.equal(client.shots[0].source,actor);assert.equal(JSON.stringify(packet),before);
 });
+
+test('an actual roaming mage and all four escorts draw in eight directions, including the mage casting frame',async()=>{
+ const w={},requests=[];class Image{set src(value){requests.push(value);queueMicrotask(()=>this.onload());}}
+ vm.runInNewContext(fs.readFileSync(__dirname+'/public/models.js','utf8'),{window:w,Image,Math,WeakMap,Map,Promise});
+ const model=Object.create(w.FrontModels.prototype);Object.assign(model,{manifest:JSON.parse(fs.readFileSync(__dirname+'/public/assets/models/manifest.json')),assets:new Map(),motion:new WeakMap(),loaded:0,failures:0});
+ const g=new CoopGame();g.start();g.time=360;g.units=g.units.filter(u=>u.team===0);g.northernSpawn=()=>({x:1500,y:6000});const group=g.spawnRoomMageGroup();assert.equal(group.length,5);
+ for(const u of group){const item=model.ensure(u.type,u.team);assert.ok(item,'missing model: '+u.type+' / team '+u.team);await item.loading;assert.ok(item.ready);}
+ assert.ok(requests.some(url=>url.includes('blizzardMage-1-v095.webp')));assert.equal(model.ensure('blizzardMage',2),model.ensure('blizzardMage',1));
+ const draws=[],ctx={save(){},restore(){},scale(){},translate(){},drawImage(...args){draws.push(args);}};
+ for(const u of group)for(let d=0;d<8;d++){u.face=u.aimFace=d*Math.PI/4;assert.equal(model.draw(ctx,u,g.time),true);}
+ assert.equal(draws.length,40);const mage=group[0];mage.blizzardCast={};model.draw(ctx,mage,g.time+.05);assert.equal(draws.at(-1)[2],256);assert.equal(mage.team,2);assert.equal(model.failures,0);
+});
 test('the medic keeps eight directional walking views and the same frozen pose on a paused clock',()=>{
  const r=renderer(),expected=['walkFront','walkFrontLeft','walkSide','walkBackLeft','walkBack','walkBackLeft','walkSide','walkFrontLeft'];
  for(let i=0;i<8;i++){
@@ -28,9 +40,30 @@ test('the medic keeps eight directional walking views and the same frozen pose o
   assert.equal(pose.direction,i);assert.equal(pose.state,expected[i]);assert.equal(pose.flip,[5,6,7].includes(i));assert.equal(r.pose(u,1.1),pose);
  }
 });
+
+test('mage walking advances with travel, freezes on a paused clock, and yields to idle or casting',async()=>{
+ const w={};class Image{set src(value){queueMicrotask(()=>this.onload());}}
+ vm.runInNewContext(fs.readFileSync(__dirname+'/public/models.js','utf8'),{window:w,Image,Math,WeakMap,Map,Promise});
+ const model=Object.create(w.FrontModels.prototype);Object.assign(model,{manifest:JSON.parse(fs.readFileSync(__dirname+'/public/assets/models/manifest.json')),assets:new Map(),motion:new WeakMap(),loaded:0,failures:0});
+ const item=model.ensure('blizzardMage',2);await item.loading;assert.ok(item.layers.walk.ready);assert.equal(item.layers.walk.frames,8);assert.equal(item.layers.walk.directions,8);
+ const draws=[],ctx={save(){},restore(){},scale(){},translate(){},drawImage(...args){draws.push(args);}},u={id:1,type:'blizzardMage',team:2,hp:100,x:1000,y:6000,face:0,walk:0};
+ model.draw(ctx,u,10);aState(false,0);u.x+=9;u.walk+=1.08;model.draw(ctx,u,10.1);aState(true,1);const phase=model.motion.get(u).walkPhase;model.draw(ctx,u,10.1);aState(true,1);assert.equal(model.motion.get(u).walkPhase,phase);
+ model.draw(ctx,u,11);aState(false,0);u.x+=9;u.blizzardCast={};model.draw(ctx,u,11.1);aState(false,1);assert.equal(draws.at(-1)[0],item.layers.body.image);assert.equal(model.motion.get(u).walkPhase,phase);
+ u.blizzardCast=null;u.x+=9;model.draw(ctx,u,11.2);aState(true,2);assert.equal(draws.at(-1)[0],item.layers.walk.image);
+ function aState(walking,frame){assert.equal(model.motion.get(u).walking,walking);assert.equal(model.motion.get(u).frame,frame);}
+ const atlas=fs.readFileSync(__dirname+'/public/assets/models/blizzardMage-walk-v20261106.webp');assert.equal(atlas.toString('ascii',0,4),'RIFF');assert.equal(atlas.readUInt32LE(4)+8,atlas.length);assert.equal(atlas.toString('ascii',12,16),'VP8X');assert.equal(atlas.readUIntLE(24,3)+1,2048);assert.equal(atlas.readUIntLE(27,3)+1,2048);assert.ok(atlas[20]&16);
+});
 test('healing has front, side and back actions while hit and defeat override an ongoing stride',()=>{
  const r=renderer();
  for(const [direction,state]of [[0,'heal'],[2,'healSide'],[4,'healBack']]){const u={id:10+direction,x:0,y:0,face:Math.PI/2+direction*Math.PI/4,healAngle:Math.PI/2+direction*Math.PI/4,healStartedAt:1,healUntil:1.7,hp:100};assert.equal(r.pose(u,1.2).state,state);u.hurtStartedAt=1.2;u.hurtUntil=1.52;u.x+=3;assert.equal(r.pose(u,1.3).state,'hit');u.hp=0;u.diedAt=1.4;assert.equal(r.pose(u,1.7).state,'death');}
+});
+
+test('a missing walking download still shows the original mage instead of procedural fallback',async()=>{
+ const w={};class Image{set src(value){queueMicrotask(()=>value.includes('blizzardMage-walk-')?this.onerror():this.onload());}}
+ vm.runInNewContext(fs.readFileSync(__dirname+'/public/models.js','utf8'),{window:w,Image,Math,WeakMap,Map,Promise});
+ const model=Object.create(w.FrontModels.prototype);Object.assign(model,{manifest:JSON.parse(fs.readFileSync(__dirname+'/public/assets/models/manifest.json')),assets:new Map(),motion:new WeakMap(),loaded:0,failures:0});
+ const item=model.ensure('blizzardMage',2);await item.loading;assert.ok(item.ready);assert.equal(item.layers.walk.ready,false);assert.equal(model.failures,1);
+ const ctx={save(){},restore(){},scale(){},translate(){},drawImage(){}};assert.equal(model.draw(ctx,{id:1,type:'blizzardMage',team:2,hp:100,x:0,y:0,face:0,walk:0},1),true);
 });
 test('evolved Lucky names appear at every star level and each co-op squad uses its own evolution state',()=>{
  const g=new CoopGame();g.start();g.withOwner(0,()=>{g.tech[0].lucky=5;g.abilities.speed=5;g.checkEvolutions();});

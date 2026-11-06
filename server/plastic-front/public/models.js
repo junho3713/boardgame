@@ -6,12 +6,13 @@ class FrontModels{
  ensure(type,team){
   // Enemy-only art is shared by both hostile simulation teams, including garrisons.
   const sharedEnemy=team!==0&&['bladeGuard','bikeRaider','crimsonAce','lucky','ant','soldierAnt','beetle','bruteBeetle','stagBeetle','rhinoBeetle','honeybee','hornet','butterfly'].includes(type);
-  // Mage escorts belong to the insect simulation team but use the hostile infantry atlas.
-  const key=type+'-'+(type==='mortar'&&team!==0?1:sharedEnemy?2:team);if(this.assets.has(key))return this.assets.get(key);
+  // Roaming mages and their escorts share the hostile support atlases across both enemy teams.
+  const key=type+'-'+(['mortar','blizzardMage'].includes(type)&&team!==0?1:sharedEnemy?2:team);if(this.assets.has(key))return this.assets.get(key);
   const data=this.manifest?.models[key];if(!data)return null;
-  let complete;const item={layers:{},ready:false,loading:new Promise(resolve=>{complete=resolve;})};this.assets.set(key,item);let count=0,failed=false;const settled=()=>{count++;if(count===Object.keys(data).length){item.ready=!failed;if(item.ready)this.loaded++;complete();}};
-  for(const [layer,spec]of Object.entries(data)){
-   const image=new Image();item.layers[layer]={...spec,image};image.onload=()=>{if(spec.hairFlaps)item.layers[layer].hairLayers=this.hairAtlases(image,spec);if(spec.secondaryHair)item.layers[layer].secondaryLayers=this.swordHairAtlases(image,spec);if(spec.wingFlaps)item.layers[layer].flightLayers=this.flightAtlases(image,spec);if(spec.groundShadow)item.layers[layer].shadow=this.groundAtlas(image);settled();};image.onerror=()=>{failed=true;this.failures++;settled();};image.src='assets/models/'+spec.file+'?v='+this.manifest.version;
+  const layers=type==='blizzardMage'?{...data,walk:{...data.body,file:'blizzardMage-walk-v20261106.webp',frames:8,anchors:undefined,mirrorFrames:undefined,walkFrames:[0,1,2,3,4,5,6,7],walkStride:72}}:data;
+  let complete;const item={layers:{},ready:false,loading:new Promise(resolve=>{complete=resolve;})};this.assets.set(key,item);let count=0,failed=false;const settled=()=>{count++;if(count===Object.keys(layers).length){item.ready=!failed;if(item.ready)this.loaded++;complete();}};
+  for(const [layer,spec]of Object.entries(layers)){
+   const image=new Image();item.layers[layer]={...spec,image,ready:false};image.onload=()=>{const display=type==='blizzardMage'&&layer==='body'?this.mageAtlas(image,spec):image;item.layers[layer].image=display;item.layers[layer].ready=true;if(spec.hairFlaps)item.layers[layer].hairLayers=this.hairAtlases(display,spec);if(spec.secondaryHair)item.layers[layer].secondaryLayers=this.swordHairAtlases(display,spec);if(spec.wingFlaps)item.layers[layer].flightLayers=this.flightAtlases(display,spec);if(spec.groundShadow)item.layers[layer].shadow=this.groundAtlas(display);settled();};image.onerror=()=>{if(layer!=='walk')failed=true;this.failures++;settled();};image.src='assets/models/'+spec.file+'?v='+(layer==='walk'?'20261106':this.manifest.version);
   }
   return item;
  }
@@ -51,10 +52,38 @@ class FrontModels{
   ctx.restore();
   if(elapsed>0||fresh){Object.assign(state,{x:u.x,y:u.y,time,walk:u.walk||0,frame:walking?legFrame:upperFrame,upperFrame:firing?upperFrame:walking?legFrame:upperFrame,walking,face,bodyAngle:aim,direction});this.motion.set(u,state);}return true;
  }
+ drawMage(ctx,u,time,item){
+  const state=this.motion.get(u)||{x:u.x,y:u.y,time,walkPhase:0},fresh=!this.motion.has(u),dt=Math.max(0,time-state.time),dx=u.x-state.x,dy=u.y-state.y,travel=Math.hypot(dx,dy),casting=!!(u.blizzardCast||time<(u.castUntil||0)),moved=dt>0&&travel>.035&&travel/dt>3;
+  const walking=!casting&&!!item.layers.walk?.ready&&(dt===0?!!state.walking:moved);
+  if(dt>0&&walking)state.walkPhase=(state.walkPhase+Math.min(travel,35)/item.layers.walk.walkStride)%1;
+  const face=walking?(dt===0?state.face:Math.atan2(dy,dx)):(u.aimFace??u.face??-Math.PI/2),step=TAU/8,wanted=face+Math.PI/2;
+  let aim=state.bodyAngle;if(!Number.isFinite(aim)||Math.abs(angleDelta(wanted,aim))>step/2+.10)aim=Math.round(wanted/step)*step;
+  const spec=walking?item.layers.walk:item.layers.body,frame=casting?1:walking?spec.walkFrames[Math.floor(state.walkPhase*8)%8]:0;
+  ctx.save();if(Number.isFinite(u.guardianReturnedAt)){const enter=Math.max(0,Math.min(1,(time-u.guardianReturnedAt)/1.2));ctx.globalAlpha*=.25+.75*enter;ctx.translate(0,-18*(1-enter));ctx.scale(.78+.22*enter,.78+.22*enter);}
+  this.ground(ctx,spec,aim,frame);this.sprite(ctx,spec,aim,frame,0,walking?0:Math.sin(time*2.1+(u.id||0))*.65);ctx.restore();
+  if(dt>0||fresh){Object.assign(state,{x:u.x,y:u.y,time,walking,casting,frame,face,bodyAngle:aim});this.motion.set(u,state);}return true;
+ }
+ mageAtlas(image,spec){
+  if(typeof document==='undefined')return image;
+  // Remove disconnected source-sheet scraps once per frame, keeping the original body and its soft edge.
+  const canvas=document.createElement('canvas');canvas.width=image.naturalWidth;canvas.height=image.naturalHeight;const ctx=canvas.getContext('2d');if(!ctx?.getImageData)return image;ctx.drawImage(image,0,0);
+  const pixels=ctx.getImageData(0,0,canvas.width,canvas.height),c=spec.cell,n=c*c,labels=new Int32Array(n),queue=new Int32Array(n),data=pixels.data;
+  for(let oy=0;oy<canvas.height;oy+=c)for(let ox=0;ox<canvas.width;ox+=c){
+   labels.fill(0);let serial=0,best=0,bestSize=0;
+   for(let i=0;i<n;i++){
+    const alpha=(((oy+Math.floor(i/c))*canvas.width+ox+i%c)*4)+3;if(labels[i]||data[alpha]<32)continue;
+    const label=++serial;let head=0,tail=1;queue[0]=i;labels[i]=label;
+    while(head<tail){const at=queue[head++],x=at%c,y=Math.floor(at/c);for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const nx=x+dx,ny=y+dy;if(nx<0||ny<0||nx>=c||ny>=c)continue;const next=ny*c+nx;if(labels[next]||data[(((oy+ny)*canvas.width+ox+nx)*4)+3]<32)continue;labels[next]=label;queue[tail++]=next;}}
+    if(tail>bestSize){bestSize=tail;best=label;}
+   }
+   for(let i=0;i<n;i++){if(labels[i]===best)continue;const x=i%c,y=Math.floor(i/c),alpha=(((oy+y)*canvas.width+ox+x)*4)+3;let edge=false;if(data[alpha]>0&&data[alpha]<32)for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const nx=x+dx,ny=y+dy;if(nx>=0&&ny>=0&&nx<c&&ny<c&&labels[ny*c+nx]===best)edge=true;}if(!edge)data[alpha]=0;}
+  }
+  ctx.putImageData(pixels,0,0);return canvas;
+ }
  groundAtlas(image){
   // Cache an alpha silhouette once, rather than read / recolor pixels every frame.
   if(typeof document==='undefined')return null;
-  const atlas=document.createElement('canvas');atlas.width=image.naturalWidth;atlas.height=image.naturalHeight;const c=atlas.getContext('2d');if(!c)return null;
+  const atlas=document.createElement('canvas');atlas.width=image.naturalWidth||image.width;atlas.height=image.naturalHeight||image.height;const c=atlas.getContext('2d');if(!c)return null;
   c.drawImage(image,0,0);c.globalCompositeOperation='source-in';c.fillStyle='#182523';c.fillRect(0,0,atlas.width,atlas.height);return atlas;
  }
  ground(ctx,spec,angle,frame,contact=true){
@@ -107,7 +136,7 @@ class FrontModels{
  }
  draw(ctx,u,time){
   if(u.team===0&&u.type==='medic'&&u.appearance==='rina'){if(this.rina?.loaded)return this.rina.draw(ctx,u,time);if(u.hp<=0)return true;}
-  const ultimate=u.type==='leader'&&u.team===0&&u.ultimatePose?.active,captain=u.type==='bayonetCaptain',visual=u.type==='leader'&&u.team===0&&u.appearance==='shion'?'commanderShion':captain?'bayonet':u.type==='leader'&&u.team===0&&u.appearance==='blaze'?(u.flameSkin==='hwarin'?'commanderHwarin':'commanderBlaze'):ultimate?(u.appearance==='shino'?'commanderShinoUltimate':'commanderSargeUltimate'):u.type==='leader'&&u.team===0&&u.appearance==='shino'?'commanderShino':u.type==='sniper'&&u.team===0&&['kayla','hayeon'].includes(u.appearance)?'sniperKayla':u.defenseKind==='laserTower'?'laserTower':u.type;let item=this.ensure(visual,visual==='bayonet'?1:u.team);if(!item?.ready&&visual!==u.type)item=this.ensure(u.type,u.team);if(!item?.ready)return false;if(visual==='commanderShion')return this.drawSword(ctx,u,time,item);if(visual==='commanderHwarin')return this.drawHwarin(ctx,u,time,item);
+  const ultimate=u.type==='leader'&&u.team===0&&u.ultimatePose?.active,captain=u.type==='bayonetCaptain',visual=u.type==='leader'&&u.team===0&&u.appearance==='shion'?'commanderShion':captain?'bayonet':u.type==='leader'&&u.team===0&&u.appearance==='blaze'?(u.flameSkin==='hwarin'?'commanderHwarin':'commanderBlaze'):ultimate?(u.appearance==='shino'?'commanderShinoUltimate':'commanderSargeUltimate'):u.type==='leader'&&u.team===0&&u.appearance==='shino'?'commanderShino':u.type==='sniper'&&u.team===0&&['kayla','hayeon'].includes(u.appearance)?'sniperKayla':u.defenseKind==='laserTower'?'laserTower':u.type;let item=this.ensure(visual,visual==='bayonet'?1:u.team);if(!item?.ready&&visual!==u.type)item=this.ensure(u.type,u.team);if(!item?.ready)return false;if(visual==='commanderShion')return this.drawSword(ctx,u,time,item);if(visual==='commanderHwarin')return this.drawHwarin(ctx,u,time,item);if(visual==='blizzardMage')return this.drawMage(ctx,u,time,item);
   const vehicle=!!item.layers.turret||!!item.layers.body.vehicle,aimFace=vehicle&&Number.isFinite(u.turretFace)?u.turretFace:Number.isFinite(u.aimFace)?u.aimFace:u.face;
   let state=this.motion.get(u);const aim=aimFace+Math.PI/2,fresh=!state,custom=!!item.layers.body.groundShadow;
   if(!state){state={x:u.x,y:u.y,time,body:(Number.isFinite(u.moveFace)?u.moveFace:u.face)+Math.PI/2,walk:u.walk||0};this.motion.set(u,state);}
