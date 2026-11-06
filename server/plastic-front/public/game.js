@@ -486,7 +486,7 @@ function drawUnitRaw(u){
   if(u.star>=2){text(ctx,'★'.repeat(u.star),u.x,y-6,12,u.star===3?'#ffd36c':'#ffe4a0');}
  }
 
- const evolutionLabel=window.FrontUnitLabels.evolution(game,u);if(evolutionLabel)text(ctx,evolutionLabel.text,evolutionLabel.x,evolutionLabel.y,evolutionLabel.size,'#ffe3a0');
+ const evolutionLabel=window.FrontUnitLabels.evolution(game,u,ctx);if(evolutionLabel)text(ctx,evolutionLabel.text,evolutionLabel.x,evolutionLabel.y,evolutionLabel.size,'#ffe3a0');
 }
 function point(u){return{x:(u.x-game.camera.x)*scale+W/2,y:(u.y-game.camera.y)*scale+H/2};}
 function drawFog(){

@@ -68,7 +68,7 @@ test('a missing walking download still shows the original mage instead of proced
 test('evolved Lucky names appear at every star level and each co-op squad uses its own evolution state',()=>{
  const g=new CoopGame();g.start();g.withOwner(0,()=>{g.tech[0].lucky=5;g.abilities.speed=5;g.checkEvolutions();});
  const green=g.addUnit(0,'lucky',100,200),blue=g.withOwner(1,()=>g.addUnit(0,'lucky',300,200));
- for(const star of [1,2,3]){green.star=star;g.withOwner(1,()=>{const label=labels.evolution(g,green);assert.equal(label.text,'슈퍼 럭키 레토나');assert.equal(label.y,green.y-(star>=2?93:90));assert.equal(labels.evolution(g,blue),null);});}
+ for(const star of [1,2,3]){green.star=star;g.withOwner(1,()=>{const label=labels.evolution(g,green);assert.equal(label.text,'슈퍼 럭키 레토나');assert.equal(label.y,green.y-90);assert.equal(labels.evolution(g,blue),null);});}
  g.withOwner(1,()=>{g.tech[0].lucky=5;g.abilities.speed=5;g.checkEvolutions();});assert.equal(labels.evolution(g,blue).text,'슈퍼 럭키 레토나');
 });
 test('all refined action frames and anchors fit their actual atlas dimensions with generated alpha retained',()=>{
@@ -86,4 +86,16 @@ test('all refined action frames and anchors fit their actual atlas dimensions wi
   assert.ok(width&&height&&alpha,name);assert.equal(s.frames.length,name.startsWith('walk')||name==='directions'?8:4);
   for(const f of s.frames){const [x,y,w,h]=f.rect;assert.equal(h,320);assert.equal(f.anchor[1],306);assert.ok(w>f.anchor[0]);assert.ok(x>=0&&y>=0&&x+w<=width&&y+h<=height,name);}
  }
+});
+
+
+test('evolution glyph bottoms sit exactly four pixels above star tops across infantry, vehicles, skins and stars',()=>{
+ const g=new CoopGame();g.start();
+ const ctx={font:'original',save(){this.saved=this.font;},restore(){this.font=this.saved;},measureText(t){return t.startsWith('★')?{actualBoundingBoxAscent:9.5}:{actualBoundingBoxDescent:1.5};}};
+ for(const type of ['rifle','tank','guntruck','lucky','medic'])for(const star of [2,3])for(const rina of type==='medic'?[false,true]:[false]){
+  g.evolved[type]=true;const u=g.addUnit(0,type,100,200);Object.assign(u,{star,...(rina?{appearance:'rina'}:{})});
+  const label=labels.evolution(g,u,ctx),vehicle=['tank','guntruck','lucky'].includes(type),healthY=u.y-((vehicle?79:rina?86:66)-(vehicle?10:8));
+  aGap(healthY-6-9.5-(label.y+1.5));aFont();
+ }
+ function aGap(gap){assert.equal(gap,4);}function aFont(){assert.equal(ctx.font,'original');}
 });
