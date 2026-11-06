@@ -24,12 +24,14 @@ class FrontModels{
  }
  drawSword(ctx,u,time,item){
   const spec=item.layers.body,old=this.motion.get(u),fresh=!old,state=old||{x:u.x,y:u.y,time,walk:u.walk||0,walkPhase:0},elapsed=Math.max(0,time-state.time),dx=u.x-state.x,dy=u.y-state.y,travel=Math.hypot(dx,dy),moved=travel>.12&&Math.abs((u.walk||0)-state.walk)>.01,walking=elapsed===0?!!state.walking:moved;
+  if(!Number.isFinite(state.walkPhase))state.walkPhase=0;
   if(elapsed>0&&walking)state.walkPhase=(state.walkPhase+(travel||Math.abs((u.walk||0)-state.walk)/.12)/(spec.walkStride||70))%1;
-  const spin=u.ultimatePose?.active,swing=u.swordPose&&time<u.swordPose.endsAt,face=spin?u.ultimatePose.angle:swing?u.swordPose.angle:walking?(elapsed===0?state.face:Math.atan2(dy,dx)):(u.aimFace??u.face),step=TAU/8,wanted=face+Math.PI/2;
+  const spin=u.ultimatePose?.active,swing=u.swordPose&&time<u.swordPose.endsAt,poseFace=spin?u.ultimatePose.angle:swing?u.swordPose.angle:walking?(elapsed===0?state.face:Math.atan2(dy,dx)):(u.aimFace??u.face),face=Number.isFinite(poseFace)?poseFace:Number.isFinite(u.face)?u.face:0,step=TAU/8,wanted=face+Math.PI/2;
   let aim=spin?wanted:state.bodyAngle;if(!Number.isFinite(aim)||(!spin&&Math.abs(angleDelta(wanted,aim))>step/2+.10))aim=Math.round(wanted/step)*step;
   let frame=walking?spec.walkFrames[Math.floor(state.walkPhase*spec.walkFrames.length)]:0;
-  if(spin){const phase=((time-(u.ultimatePose.startedAt??0))%.5)/.5;frame=spec.attackFrames[Math.min(3,Math.floor(phase*4))];}
+  if(spin){const phase=(Math.max(0,time-(u.ultimatePose.startedAt??time))%.5)/.5;frame=spec.attackFrames[Math.min(3,Math.floor(phase*4))];}
   else if(swing){const a=u.swordPose,phase=(time-a.startedAt)/Math.max(.01,a.endsAt-a.startedAt);frame=time<a.hitAt?5:phase<.55?6:phase<.76?7:8;}
+  if(!Number.isInteger(frame)||frame<0||frame>=spec.frames)frame=0;
   const hurt=Math.max(0,Math.min(1,((u.hurtUntil||0)-time)/.18)),phase=state.walkPhase*Math.PI*2,bob=walking?-Math.abs(Math.sin(phase))*.4:Math.sin(time*2.4+(u.id||0))*.18;
   ctx.save();this.ground(ctx,spec,aim,frame);if(hurt)ctx.translate(Math.cos(u.hurtAngle||0)*hurt*2,Math.sin(u.hurtAngle||0)*hurt*2);ctx.rotate(spin?Math.sin(time*19)*.025:swing?Math.sin((time-u.swordPose.startedAt)*14)*.035:0);this.sprite(ctx,spec,aim,frame,0,bob,time*2.1+phase*.65);ctx.restore();
   if(elapsed>0||fresh){Object.assign(state,{x:u.x,y:u.y,time,walk:u.walk||0,frame,walking,face,bodyAngle:aim});this.motion.set(u,state);}return true;
@@ -136,7 +138,7 @@ class FrontModels{
  }
  draw(ctx,u,time){
   if(u.team===0&&u.type==='medic'&&u.appearance==='rina'){if(this.rina?.loaded)return this.rina.draw(ctx,u,time);if(u.hp<=0)return true;}
-  const ultimate=u.type==='leader'&&u.team===0&&u.ultimatePose?.active,captain=u.type==='bayonetCaptain',visual=u.type==='leader'&&u.team===0&&u.appearance==='shion'?'commanderShion':captain?'bayonet':u.type==='leader'&&u.team===0&&u.appearance==='blaze'?(u.flameSkin==='hwarin'?'commanderHwarin':'commanderBlaze'):ultimate?(u.appearance==='shino'?'commanderShinoUltimate':'commanderSargeUltimate'):u.type==='leader'&&u.team===0&&u.appearance==='shino'?'commanderShino':u.type==='sniper'&&u.team===0&&['kayla','hayeon'].includes(u.appearance)?'sniperKayla':u.defenseKind==='laserTower'?'laserTower':u.type;let item=this.ensure(visual,visual==='bayonet'?1:u.team);if(!item?.ready&&visual!==u.type)item=this.ensure(u.type,u.team);if(!item?.ready)return false;if(visual==='commanderShion')return this.drawSword(ctx,u,time,item);if(visual==='commanderHwarin')return this.drawHwarin(ctx,u,time,item);if(visual==='blizzardMage')return this.drawMage(ctx,u,time,item);
+  const ultimate=u.type==='leader'&&u.team===0&&u.ultimatePose?.active,captain=u.type==='bayonetCaptain';let visual=u.type==='leader'&&u.team===0&&u.appearance==='shion'?'commanderShion':captain?'bayonet':u.type==='leader'&&u.team===0&&u.appearance==='blaze'?(u.flameSkin==='hwarin'?'commanderHwarin':'commanderBlaze'):ultimate?(u.appearance==='shino'?'commanderShinoUltimate':'commanderSargeUltimate'):u.type==='leader'&&u.team===0&&u.appearance==='shino'?'commanderShino':u.type==='sniper'&&u.team===0&&['kayla','hayeon'].includes(u.appearance)?'sniperKayla':u.defenseKind==='laserTower'?'laserTower':u.type;let item=this.ensure(visual,visual==='bayonet'?1:u.team);if(!item?.ready&&visual!==u.type){item=this.ensure(u.type,u.team);visual=u.type;}if(!item?.ready)return false;if(visual==='commanderShion')return this.drawSword(ctx,u,time,item);if(visual==='commanderHwarin')return this.drawHwarin(ctx,u,time,item);if(visual==='blizzardMage')return this.drawMage(ctx,u,time,item);
   const vehicle=!!item.layers.turret||!!item.layers.body.vehicle,aimFace=vehicle&&Number.isFinite(u.turretFace)?u.turretFace:Number.isFinite(u.aimFace)?u.aimFace:u.face;
   let state=this.motion.get(u);const aim=aimFace+Math.PI/2,fresh=!state,custom=!!item.layers.body.groundShadow;
   if(!state){state={x:u.x,y:u.y,time,body:(Number.isFinite(u.moveFace)?u.moveFace:u.face)+Math.PI/2,walk:u.walk||0};this.motion.set(u,state);}
