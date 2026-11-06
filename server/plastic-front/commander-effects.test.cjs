@@ -88,3 +88,20 @@ test('simultaneous and catch-up ultimate events respect the mobile particle and 
  for(let batch=1;batch<=4;batch++){game.time+=.05;game.effects=events.map(e=>({...e,at:e.at+batch*60}));fx.update(game);a.ok(fx.particles.length<=240);a.ok(fx.ultEmissionTimes.size<=128);}
  fx.update({...game,time:game.time+.05,effects:[],units:[]});a.equal(fx.ultimateActors.size,0);
 });
+
+test('main and boss-practice entrypoint script orders boot a playable engine and upgraded ultimate renderer',()=>{
+ const runtime=new Set(['waves-survival.js','waves-defense.js','room-campaign.js','engine.js','evolution-combat.js','sword-boss.js','two-star.js','coop-engine.js','effects.js','impact-materials.js','projectile-materials.js','evolution-effects.js','commander-effects.js']);
+ for(const entry of ['index.html','boss-test.html']){
+  const html=fs.readFileSync(__dirname+'/public/'+entry,'utf8'),window={},context=vm.createContext({window,Math,Map,Set,WeakMap,WeakSet,Promise,structuredClone});
+  for(const match of html.matchAll(/<script\b[^>]*\bsrc=["']([^"']+)["'][^>]*>/g)){
+   const file=match[1].split('?')[0];if(runtime.has(file))vm.runInContext(fs.readFileSync(__dirname+'/public/'+file,'utf8'),context,{filename:entry+':'+file});
+  }
+  const g=entry==='boss-test.html'?window.FrontSwordBoss.create({commander:'shion',counts:{rifle:1},evolved:true}):new window.FrontGame({},undefined,{map:'livingroom-star',commander:'shion'});
+  g.start();g.level=10;a.equal(g.useUltimate(),true,entry);g.updateUltimate();
+  const event=g.effects.find(e=>e.kind==='shionSpin');a.ok(event,entry+' must produce the actual sword ultimate');
+  const textures=Object.fromEntries(['glow','flame','fire','smoke','whiteSmoke','dust','scorch'].map(k=>[k,{}])),fx=new window.FrontEffects({textures}),ctx=canvas();
+  fx.emit(event);a.equal(fx.particles.length,18,entry+' must install the upgraded blade emitter');a.equal(fx.drawEvent(ctx,event),true);ctx.assertRestored();
+  for(let step=0;step<8;step++)g.update(.05);
+  a.ok(g.time>.3,entry+' must advance actual gameplay after starting');a.equal(g.phase,'playing');
+ }
+});
