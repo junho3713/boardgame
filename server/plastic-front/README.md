@@ -148,3 +148,12 @@
 > Use case: stylized-concept. Asset type: high-quality game VFX sprite texture. One isolated compact fiery explosion cloud, almost round with an irregular organically billowing silhouette, center of mass centered. Realistic volumetric simulation rendered as a polished miniature 3D game effect. White-hot small core, rich incandescent yellow and orange turbulent folded fire lobes, dark burnt-orange cavities, charcoal smoke curling around upper outside edges, individual curling lobes rather than smooth blobs, fine ember specks close to cloud. Light comes from inside the fire, wonderful depth and contrast. Viewed orthographically with modest perspective from above, floating isolated in clear air, no ground no surroundings, no shockwave ring, no straight radial star lines, no debris outside the cloud, no huge trailing plume. The cloud occupies 80% of a square canvas with generous transparent margin. Genuinely transparent alpha background and clean soft dissipating edges, no black rectangular background, no floor shadow, no text. This is a single reusable animation texture for a game, NOT a photograph of a scene and NOT a flat vector illustration.
 
 검증 결과: 전체 91개 Node 테스트 통과. 실제 브라우저에서 10개 공격 장면, 진화 순간, 정화, 재생/정지, 게임 시작과 20분 진화 편성을 확인했으며 콘솔 오류가 없었습니다.
+
+
+## 미사일 비행과 식별 개선 (2026-11-06)
+
+- 777의 고정 곡률을 거리 비례 곡률로 바꿔 근접·수직 목표에서 후진하거나 갑자기 뒤집히던 경로를 수정했습니다. 7개 발사 경로는 유지하며 출발 후 가속하고 정확한 접선 방향으로 회전합니다. 1초 비행, 발수, 피해 및 확률은 유지합니다.
+- 보스킬러는 발사 위치를 고정하여 차량 이동에 따라 경로가 흔들리지 않습니다. 근거리에서 즉시 사라지지 않도록 비행 시간을 최소 0.6초, 최대 1.1초로 잡고 가속 유도 비행을 사용합니다. 이동·비행 보스의 실제 화면상 경로를 따라 탄두가 회전하며 탄두가 닿는 높이에서 폭발합니다. 기본 피해 4,444, 방어력 44% 무시와 당첨 확률은 유지합니다.
+- 미사일 표시 기준을 탄체 중심에서 탄두로 맞췄습니다. 탄체·노즐·불꽃·연기 위치가 같은 크기 계산을 사용합니다. 보스킬러 발사 섬광, 표적 잠금, 발사/적중 표시를 강화했습니다.
+- 저장된 비행 정보는 재개·협동 스냅샷에서 보존됩니다. 새 비행 정보가 없는 예전 저장은 기존 방식으로 처리합니다.
+- 검증: 전체 98개 Node 테스트 통과. 신규 비행 회귀 검사에는 777 200개 방향/거리/발사선 조합, 접선·착탄 시간, 근접 보스킬러 최소 비행·단일 피해, 일시정지, 이동·비행 표적, 저장 복원과 구버전 호환이 포함됩니다.

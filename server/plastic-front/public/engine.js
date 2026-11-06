@@ -1720,7 +1720,7 @@ class FrontGame{
   live.forEach(u=>this.resolvePosition(u));
   if(this.coop)this.coopCollectPickups();
   for(const p of this.pickups){if(!this.coop&&p.active&&player.hp>0&&dist(p,player)<60){p.active=false;this.gainXP(18);this.cash[0]+=25;this.awardGold(5);this.notify('toast','보급품 확보 · +25 자원 / +18 XP');this.effects.push({kind:'drop',x:p.x,y:p.y,t:.6,max:.6,team:0});}}
-  for(const p of this.shots){p.life-=dt;if(p.target.hp<=0){p.life=0;continue;}const d=dist(p,p.target),step=p.speed*dt;if(d<step+10){this.impact(p);p.life=0;}else{p.x+=(p.target.x-p.x)/d*step;p.y+=(p.target.y-p.y)/d*step;}}
+  for(const p of this.shots){p.life-=dt;if(p.target.hp<=0){p.life=0;continue;}if(p.kind==='bossKiller'&&p.guidedFlight&&this.updateBossKillerFlight){this.updateBossKillerFlight(p,dt);continue;}const d=dist(p,p.target),step=p.speed*dt;if(d<step+10){this.impact(p);p.life=0;}else{p.x+=(p.target.x-p.x)/d*step;p.y+=(p.target.y-p.y)/d*step;}}
   this.updateMortars();this.updateButterflyGusts();this.updateMedicCleanses();this.updatePoisons();
   this.units=this.units.filter(u=>u.type==='leader'||u.guardianRespawn||u.hp>0||u.diedAt===undefined||this.time-u.diedAt<(u.type==='medic'&&u.team===0&&u.appearance==='rina'?1.2:.8));
   this.shots=this.shots.filter(p=>p.life>0);this.effects.forEach(e=>e.t-=dt);this.effects=this.effects.filter(e=>e.t>0);

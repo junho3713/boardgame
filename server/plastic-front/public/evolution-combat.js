@@ -54,7 +54,8 @@ function install(api){
     // Hostile bosses receive no cover bonus. Reduce their remaining armor, then
     // compensate the input so damage() still owns immunity, defense and kill credit.
     const defense=this.defenseFactor(b.target,b.source),pierced=1/(1+(1/defense-1)*.56);
-    this.damage(b.target,b.damage*pierced/defense,b.source);this.effects.push({kind:'explosion',x:b.target.x,y:b.target.y,radius:110,t:.9,max:.9,team:0,visualKind:'bossKiller'});this.effects.push({kind:'evoBossImpact',x:b.target.x,y:b.target.y,radius:110,t:1,max:1,team:0});this.notify('explosion',{x:b.target.x,y:b.target.y,team:0,kind:'bossKiller'});
+    const y=b.target.y-(b.guidedFlight?.targetHeight||0);
+    this.damage(b.target,b.damage*pierced/defense,b.source);this.effects.push({kind:'explosion',x:b.target.x,y,radius:110,t:.9,max:.9,team:0,visualKind:'bossKiller'});this.effects.push({kind:'evoBossImpact',x:b.target.x,y,radius:110,t:1,max:1,team:0});this.notify('explosion',{x:b.target.x,y:b.target.y,team:0,kind:'bossKiller'});
    }return;
   }
   if(!b.evoStyle)return impact.call(this,b);
@@ -92,8 +93,22 @@ function install(api){
   const target=this.bossKillerTarget(u);
   if(!target){const base=this.luckyOdds(u),fallback=this.luckyOutcome(this.random(),base);if(u.luckyRoll?.kind==='bossKiller'){u.luckyRoll.kind=fallback;u.luckyRoll.bossKillerAvailable=false;}return cast.call(this,u,fallback);}
   const scale=this.coop?this.withOwner(u.coopOwner,()=>this.luckyScale(u)):this.luckyScale(u);
-  this.shots.push({x:u.x,y:u.y,target,source:u,damage:4444*scale,speed:440,kind:'bossKiller',team:0,life:3,splash:0,evoStyle:'bossKiller'});
-  this.effects.push({kind:'evoBossLaunch',x:u.x,y:u.y,target,t:1,max:1,team:0});this.notify('fire',{...u,luckySound:'bossKiller'});this.notify('toast','보스킬러 당첨! 검은 미사일 발사');
+  const duration=Math.max(.6,Math.min(1.1,distance(u,target)/440)),launchHeight=30,targetHeight=16+(target.visualFlightHeight??TYPES[target.type]?.flightHeight??0);
+  const heading=Math.atan2(target.y-targetHeight-u.y+launchHeight,target.x-u.x);
+  const guidedFlight={startedAt:this.time,duration,fromX:u.x,fromY:u.y,launchHeight,targetHeight,distance:distance(u,target),progress:0,heading,previousX:u.x,previousY:u.y-launchHeight};
+  this.shots.push({x:u.x,y:u.y,target,source:u,damage:4444*scale,speed:440,kind:'bossKiller',team:0,life:3,splash:0,evoStyle:'bossKiller',guidedFlight});
+  this.effects.push({kind:'evoBossLaunch',x:u.x,y:u.y,launchY:u.y-launchHeight,angle:heading,targetHeight,target,t:duration+.15,max:duration+.15,team:0});this.notify('fire',{...u,luckySound:'bossKiller'});this.notify('toast','보스킬러 당첨! 검은 미사일 발사');
+ };
+ p.updateBossKillerFlight=function(b,dt){
+  const f=b.guidedFlight;if(!f||b.life<=0)return;
+  const k=Math.max(0,Math.min(1,(this.time-f.startedAt)/f.duration)),q=.6*k+.4*k*k;
+  b.x=f.fromX+(b.target.x-f.fromX)*q;b.y=f.fromY+(b.target.y-f.fromY)*q;
+  f.targetHeight=16+(b.target.visualFlightHeight??TYPES[b.target.type]?.flightHeight??0);
+  const height=f.launchHeight*(1-q)+f.targetHeight*q+Math.sin(Math.PI*k)*Math.min(18,f.distance*.055),screenY=b.y-height;
+  const dx=b.x-f.previousX,dy=screenY-f.previousY;
+  if(Math.hypot(dx,dy)>.001)f.heading=Math.atan2(dy,dx);
+  f.previousX=b.x;f.previousY=screenY;f.progress=k;
+  if(k>=1){b.life=0;this.impact(b);}
  };
  p.checkEvolutions=function(){const before={...this.evolved};check.call(this);for(const type of Object.keys(EVOLUTIONS))if(this.evolved[type]&&!before[type]){
   const owner=this.coopOwner,c=this.commander(0);for(const u of this.alive(0))if(u.type===type&&(!this.coop||u.coopOwner===owner)){u.cooldown=Math.min(u.cooldown,0);if(type==='lucky')u.nextLuckyAt=this.time;}this.effects.push({kind:'evoAwaken',x:c.x,y:c.y,unitType:type,name:EVOLUTIONS[type].name,detail:details[type],coopOwner:owner,t:2,max:2,team:0});this.notify('explosion',{x:c.x,y:c.y,team:0,kind:'evolution'});
