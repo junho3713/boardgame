@@ -247,6 +247,7 @@ const methods={
  bossFlightHeight(u){const p=this.bossPatternRules(u),a=u.bossAction;if(u.bossPattern!=='venomDive'||!p)return null;if(!a)return 48;if(a.phase==='rise')return 48+(p.height-48)*clamp((this.time-a.started)/p.rise,0,1);if(a.phase==='high')return p.height;if(a.phase==='dive')return p.height+(p.lowHeight-p.height)*clamp((this.time-a.started)/p.descent,0,1);return p.lowHeight;},
  bossInvulnerable(u){return u.hp>0&&u.bossPattern==='venomDive'&&u.bossAction?.phase==='high';},
  updateBossPattern(u,dt){
+  if(u.team!==0&&u.type==='crimsonAce'&&!u.boss){this.updateBossBarrage(u,{...config.patterns.rearBarrage,shots:1});return false;}
   const p=this.bossPatternRules(u);if(!p)return false;
   if(u.bossPattern==='rhinoCharge'){
    if(this.time<(u.groggyUntil||0))return true;
@@ -324,7 +325,7 @@ const methods={
   const v=shell.enemyJackpot,spent=v.spent[target.id]||0,budget=Math.max(0,target.maxHp*.5-spent),damage=Math.max(0,Math.min(raw*this.defenseFactor(target),budget));if(!damage)return;
   const before=target.hp;this.damage(target,damage/this.defenseFactor(target),shell.source);v.spent[target.id]=spent+Math.max(0,before-target.hp);
  },
- bossHazards(){const result=[];for(const u of this.units){if(!u.boss||u.hp<=0)continue;if(u.bossBarrage)for(const point of u.bossBarrage.targets||[u.bossBarrage])result.push({x:point.x,y:point.y,radius:config.patterns.rearBarrage.radius,landAt:u.bossBarrage.hitAt+.25});const a=u.bossAction;if(u.bossPattern==='venomDive'&&a&&a.phase!=='low')result.push({x:a.x,y:a.y,radius:55,landAt:a.until});if(u.bossPattern==='wideSlash'&&a)result.push({x:u.x+Math.cos(a.angle)*70,y:u.y+Math.sin(a.angle)*70,radius:85,landAt:a.hitAt});}return result;}
+ bossHazards(){const result=[];for(const u of this.units){if(u.hp<=0||!u.boss&&!u.bossBarrage)continue;if(u.bossBarrage)for(const point of u.bossBarrage.targets||[u.bossBarrage])result.push({x:point.x,y:point.y,radius:config.patterns.rearBarrage.radius,landAt:u.bossBarrage.hitAt+.25});const a=u.bossAction;if(u.bossPattern==='venomDive'&&a&&a.phase!=='low')result.push({x:a.x,y:a.y,radius:55,landAt:a.until});if(u.bossPattern==='wideSlash'&&a)result.push({x:u.x+Math.cos(a.angle)*70,y:u.y+Math.sin(a.angle)*70,radius:85,landAt:a.hitAt});}return result;}
 };
 root.FrontRoomCampaign={config,methods};if(typeof module!=='undefined')module.exports={config,methods};
 })(typeof window!=='undefined'?window:globalThis);

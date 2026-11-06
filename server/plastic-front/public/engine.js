@@ -1682,6 +1682,12 @@ class FrontGame{
     if(target&&u.cooldown<=1e-8){this.heal(target,s.heal,u);u.healStartedAt=this.time;u.healUntil=this.time+.7;u.healAngle=Math.atan2(target.y-u.y,target.x-u.x);u.cooldown=s.rate;this.effects.push({kind:'heal',x:target.x,y:target.y,t:.5,max:.5,team:u.team});}
    }else{
     if(u.team===0)target=this.selectCombatTarget(u,combatCandidates,combatThreats,s);else for(const a of [...this.units,...this.buildings.filter(b=>b.hp>0)]){if(!this.canTarget(u,a))continue;const d=this.targetDistance(u,a),score=d/Math.max(.25,multiplier(u.type,a.type));if(d<s.range&&d>=(s.minRange||0)&&score<nearest){target=a;nearest=score;}}
+    // Finish the turret's aim before reconsidering almost equidistant moving targets.
+    if(u.team!==0&&u.type==='tank'){
+     const locked=[...this.units,...this.buildings].find(a=>a.id===u.tankAimTargetId);
+     if(locked&&this.canTarget(u,locked)&&this.targetDistance(u,locked)<s.range&&this.targetDistance(u,locked)>=(s.minRange||0))target=locked;
+     u.tankAimTargetId=target?.id??null;
+    }
     if(u.team!==0&&u.type==='mortar'&&u.roomWave)target=this.selectEnemyMortarTarget(u,s)||target;
     if(target&&u.team!==0&&u.type!=='mortar'){const screen=this.screeningUnit(u,target);if(screen&&dist(u,screen)<s.range)target=screen;}
     const b=(u.team===1||u.team!==0&&(this.isDesktopDefense()||TYPES[u.type]?.stab))?this.bases[0]:null;if(!target&&b&&this.canTarget(u,b)&&(TYPES[u.type]?.stab||this.isDesktopDefense()&&MELEE.has(u.type)?this.targetDistance(u,b)<s.range:dist(u,b)>=(s.minRange||0)&&dist(u,b)<s.range+45))target=b;
