@@ -530,7 +530,7 @@ function draw(dt){
  }
  if(game.moveOrder){const p=game.moveOrder;circle(ctx,p.x,p.y,25,null,'#f7efb7');circle(ctx,p.x,p.y,5,'#f7efb7');text(ctx,'집결 지점',p.x,p.y+44,13,'#fff3bc');}
  if(game.focusTarget){const u=game.focusTarget;circle(ctx,u.x,u.y,(u.r||types[u.type]?.r||20)+14,null,'#fff1a5');text(ctx,'집중 공격',u.x,u.y-52,13,'#fff1a5');}
- if(game.ultimateStatus().active)battleFx.drawUltimateArea(ctx,player,game.ultimate,game.time);
+ for(const u of game.units)if(u.team===0&&u.type==='leader'&&u.hp>0&&u.ultimatePose?.active)battleFx.drawUltimateArea(ctx,u,u===player?game.ultimate:u.ultimatePose,game.time);
  if(game.isDesktopDefense()){
   const view=window.FrontDesktop,visibleTroops=game.units.filter(u=>u.hp>0),props=game.obstacles.filter(o=>view.visible(o,game.camera,halfW,halfH)),entities=[...game.units.filter(u=>!types[u.type].flying).map(u=>({depth:u.y,u})),...props.map(o=>({depth:view.depth(o),o}))].sort((a,b)=>a.depth-b.depth);
   for(const e of entities)if(e.u)drawUnit(e.u);else{ctx.save();ctx.globalAlpha=view.opacity(e.o,visibleTroops);view.obstacle(ctx,e.o);ctx.restore();}
