@@ -1,6 +1,7 @@
 /* Bounded, simulation-time combat VFX. Only presentation; never damages or moves a unit. */
 ((root)=>{'use strict';
 const TAU=Math.PI*2,clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const enhancedFaces=roll=>roll.bossKillerAvailable||roll.kind==='bossKiller'?['glue','mine','spray','missiles','bossKiller']:['glue','mine','spray','missiles'];
 class FrontEffects{
  constructor({budget=360,textures=null,weaponPoint=null}={}){this.budget=budget;this.textures=textures||this.makeTextures();this.weaponPoint=weaponPoint;this.reset();this.stickyAsset();this.cleanseAsset();this.healingReductionAsset();}
  healingReductionAsset(){
@@ -158,10 +159,10 @@ class FrontEffects{
   if(!single&&u.star>=2&&u.luckyChannels){for(let i=0;i<3;i++){ctx.save();ctx.translate(0,-i*48);this.luckyReels(ctx,{...u,luckyRoll:u.luckyChannels[i].roll,luckyChannelIndex:i},game,true);ctx.restore();}return;}
   if(u.hp<=0)return;const reserve=[...(game.luckySalvos||[]),...(game.enemyLuckySalvos||[])].filter(v=>v.source?.id===u.id&&v.remaining>0&&(u.luckyChannelIndex===undefined||(v.rouletteChannel??0)===u.luckyChannelIndex)),ammo=reserve.reduce((n,v)=>n+v.remaining,0);if(ammo)this.luckyReserveBadge(ctx,u,ammo);
   const roll=u.luckyRoll;if(!roll||game.time>roll.endsAt+.95)return;
-  const faces=['glue','mine','spray','missiles'],jackpot=roll.resolved&&roll.kind==='missiles',enhanced=roll.enhanced,clock=game.time-roll.startedAt,x=u.x-39,y=u.y-129;
+  const faces=enhancedFaces(roll),jackpot=roll.resolved&&['missiles','bossKiller'].includes(roll.kind),enhanced=roll.enhanced,clock=game.time-roll.startedAt,x=u.x-39,y=u.y-129;
   ctx.save();ctx.fillStyle='#22392cef';ctx.strokeStyle=jackpot?'#ffe49a':enhanced?'#d6db96':'#8ba66a';ctx.lineWidth=jackpot?2:1.5;ctx.beginPath();ctx.roundRect(x-7,y-6,92,38,6);ctx.fill();ctx.stroke();ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='italic 900 22px sans-serif';
-  for(let i=0;i<3;i++){const settled=roll.resolved||clock>=.34+i*.13,index=(Math.floor(clock*25)+u.id+i*3)%4,kind=settled?(roll.kind==='blank'?faces[(u.id+i)%4]:roll.kind):faces[index],left=x+i*27;ctx.save();ctx.beginPath();ctx.roundRect(left,y,24,25,3);ctx.clip();ctx.fillStyle=jackpot?'#f9e9a5':'#f0ead3';ctx.fillRect(left,y,24,25);ctx.fillStyle='#c5bfaa';ctx.fillRect(left,y,24,2);ctx.fillRect(left,y+23,24,2);const jitter=settled?0:Math.sin(clock*95+i)*4;
-   if(settled&&kind==='missiles'){ctx.fillStyle='#c84830';ctx.fillText('7',left+12,y+13);}else{this.luckySymbol(ctx,kind,left+12,y+12.5+jitter,23);if(!settled){ctx.globalAlpha=.3;this.luckySymbol(ctx,faces[(index+1)%4],left+12,y-12.5+jitter,23);}}ctx.restore();}
+  for(let i=0;i<3;i++){const settled=roll.resolved||clock>=.34+i*.13,index=(Math.floor(clock*25)+u.id+i*3)%faces.length,kind=settled?(roll.kind==='blank'?faces[(u.id+i)%faces.length]:roll.kind):faces[index],left=x+i*27;ctx.save();ctx.beginPath();ctx.roundRect(left,y,24,25,3);ctx.clip();ctx.fillStyle=jackpot?'#f9e9a5':'#f0ead3';ctx.fillRect(left,y,24,25);ctx.fillStyle='#c5bfaa';ctx.fillRect(left,y,24,2);ctx.fillRect(left,y+23,24,2);const jitter=settled?0:Math.sin(clock*95+i)*4;
+   if(settled&&kind==='missiles'){ctx.fillStyle='#c84830';ctx.fillText('7',left+12,y+13);}else{this.luckySymbol(ctx,kind,left+12,y+12.5+jitter,23);if(!settled){ctx.globalAlpha=.3;this.luckySymbol(ctx,faces[(index+1)%faces.length],left+12,y-12.5+jitter,23);}}ctx.restore();}
   ctx.fillStyle=jackpot?'#fff0ac':clock<.6&&Math.sin(clock*35)>.1?'#cde986':'#8caa63';ctx.fillRect(x-5,y+7,2,10);ctx.fillRect(x+80,y+7,2,10);ctx.fillStyle='#14261b';ctx.fillRect(x-1,y+28,79,2);ctx.fillStyle=jackpot?'#ffe49a':'#a4ca70';ctx.fillRect(x-1,y+28,79*clamp(clock/.6,0,1),2);
   ctx.restore();
  }

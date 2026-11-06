@@ -164,7 +164,7 @@ class FrontGame{
   this.mageShieldQuest=null;this.laserExposureQuest=null;this.roomGuardianVersion=0;this.roomFortificationVersion=0;this.roadCaptainVersion=0;this.guardianSiege=null;this.phase='ready';this.time=0;this.runGold=0;this.salvaged=0;this.nextRecoveryAt=0;this.stageSupplied=[];this.lastEnemyGrowth=-1;this.level=1;this.xp=0;this.kills=0;this.losses=[0,0];this.scouts=0;this.turnChoice=null;this.pendingChoice=null;this.navigationCache=new Map();this.cash=[135,135];this.trucks=[2,2];this.tech=[0,1].map(()=>Object.fromEntries(ROSTER.map(t=>[t,t==='rifle'?1:0])));
   this.cardShownCounts={};this.choiceKind='level';this.abilities=Object.fromEntries(Object.keys(ABILITIES).map(k=>[k,0]));this.evolved=Object.fromEntries(ROSTER.map(k=>[k,false]));this.bossState={nextAt:this.waveRules().boss.firstAt,warned:false,spawned:0,killed:0,rewards:0,claimed:0};
   this.aiHQTarget=null;this.ultimate={readyAt:0,activeUntil:0,startedAt:0,nextShotAt:0,shots:0,angle:-Math.PI/2};this.moveOrder=null;this.focusTarget=null;this.focusAutomatic=false;this.formationFacing=-Math.PI/2;this.formationEnemy=null;this.lastPressure=0;this.barrages=[];this.crisis={phase:this.mode==='duel'?'disabled':'idle',warnAt:this.mode==='crisis'?0:450,startAt:this.mode==='crisis'?15:480,nextSalvo:0,nextEscort:0,salvos:0,hits:0,dodges:0,canceled:0,battery:[]};
-  this.units=[];this.shots=[];this.butterflyGusts=[];this.mortarShells=[];this.luckyMines=[];this.luckyGlues=[];this.luckyGlueHistory=[];this.luckySprays=[];this.luckySalvos=[];this.effects=[];this.serial=0;this.scoutUntil=0;this.report=null;this.enemyNext=15;this.enemyTechNext=40;this.enemyAdvanceAt=65;this.enemyPlan=['tank','sniper','guntruck','rocket','machinegun','mortar'][Math.floor(this.random()*6)];this.rallyUntil=0;this.rallyReady=0;this.camera={x:800,y:2170};this.input={x:0,y:0};
+  this.units=[];this.shots=[];this.evolutionAttacks=[];this.evolutionBlasts=[];this.butterflyGusts=[];this.mortarShells=[];this.luckyMines=[];this.luckyGlues=[];this.luckyGlueHistory=[];this.luckySprays=[];this.luckySalvos=[];this.effects=[];this.serial=0;this.scoutUntil=0;this.report=null;this.enemyNext=15;this.enemyTechNext=40;this.enemyAdvanceAt=65;this.enemyPlan=['tank','sniper','guntruck','rocket','machinegun','mortar'][Math.floor(this.random()*6)];this.rallyUntil=0;this.rallyReady=0;this.camera={x:800,y:2170};this.input={x:0,y:0};
   this.bases=[{x:800,y:2600,hp:900,maxHp:900,team:0,base:true,r:85},{x:800,y:200,hp:900,maxHp:900,team:1,base:true,r:85}];
   this.swarm={nextAt:this.waveRules().swarm.firstAt,spawned:0};this.flyingSwarm=this.flyingStart();
   this.mission={stage:1,wave:1,totalWaves:this.waveRules().hunt.enabled?this.waveRules().hunt.total:1,nextWave:this.waveRules().hunt.enabled?this.waveRules().hunt.firstAt:Infinity,nextAssault:Infinity,stageStarted:0};this.structures=[];this.defenses=[];this.retreated=0;this.lastCommanderLoss=null;
@@ -356,7 +356,7 @@ class FrontGame{
    const patients=[...this.alive(0),...this.buildings.filter(b=>b.kind==='repairBot'&&b.hp>0&&b.buildUntil<=this.time)].filter(u=>this.hasCleansableStatus(u)).sort((a,b)=>Number(this.time<(b.rootedUntil||0))-Number(this.time<(a.rootedUntil||0))||a.hp/a.maxHp-b.hp/b.maxHp||a.id-b.id).slice(0,MEDIC_CLEANSE.targets);
    if(!patients.length)continue;
    medic.nextCleanseAt=this.time+MEDIC_CLEANSE.cooldown;medic.lastCleanseAt=this.time;
-   for(const patient of patients){patient.rootedUntil=0;patient.healingReductionUntil=0;patient.luckySlowUntil=0;patient.slowUntil=0;patient.poisonUntil=0;patient.poisonDps=0;patient.poisonSource=null;patient.poisonNextAt=0;this.effects.push({kind:'cleanse',x:patient.x,y:patient.y,target:patient,sourceId:medic.id,t:.85,max:.85,team:0});}
+   for(const patient of patients){patient.rootedUntil=0;patient.healingReductionUntil=0;patient.luckySlowUntil=0;patient.slowUntil=0;patient.poisonUntil=0;patient.poisonDps=0;patient.poisonSource=null;patient.poisonNextAt=0;this.effects.push({kind:'cleanse',x:patient.x,y:patient.y,target:patient,sourceId:medic.id,source:medic,wave:patient===patients[0],t:.85,max:.85,team:0});}
   }
  }
  butterflyTargets(source){return [...this.alive(0),...this.buildings.filter(b=>b.kind==='repairBot'&&b.hp>0&&b.buildUntil<=this.time)].filter(u=>u.hp>0&&dist(source,u)<=BUTTERFLY.range&&this.lineClear(source,u,0,{fireTeam:source.team}));}
@@ -1081,6 +1081,7 @@ class FrontGame{
     const amount=p.damage*affinity*(1-(1-edge)*d/p.radius);if(p.enemyJackpot)this.damageEnemyJackpot(u,amount,p);else this.damage(u,amount,p.source);
    }
    this.effects.push({kind:'explosion',x:p.x,y:p.y,radius:p.radius,t:.7,max:.7,team:p.team});
+   if(p.evoStyle)this.effects.push({kind:'evoBlast',x:p.x,y:p.y,radius:p.radius,style:p.evoStyle,index:p.evoIndex,t:.7,max:.7,team:p.team});
    if(p.critical)this.effects.push({kind:'critical',x:p.x,y:p.y-25,t:.7,max:.7,team:p.team});
    this.notify('explosion',{x:p.x,y:p.y,kind:p.kind==='missile'?'rocket':'mortar',team:p.team});
   }
@@ -1301,7 +1302,7 @@ class FrontGame{
   if(roll&&!roll.resolved&&this.time+1e-8>=roll.endsAt){roll.resolved=true;roll.resultAt=this.time;this.castLucky(u,roll.kind);}
   if(this.time+1e-8<u.nextLuckyAt)return;
   u.nextLuckyAt=Math.max(u.nextLuckyAt+LUCKY.interval,this.time+LUCKY.interval);
-  u.luckyRoll={kind:this.luckyOutcome(this.random(),this.luckyOdds(u)),startedAt:this.time,endsAt:this.time+LUCKY.spin,resolved:false,enhanced:!!this.evolved.lucky};
+  u.luckyRoll={kind:this.luckyOutcome(this.random(),this.luckyOdds(u)),startedAt:this.time,endsAt:this.time+LUCKY.spin,resolved:false,enhanced:!!this.evolved.lucky,bossKillerAvailable:(this.luckyOdds(u).bossKiller||0)>0};
   this.notify('fire',{...u,luckySound:'slotSpin'});
  }
  luckyScale(u){return this.stats(u).damage/TYPES.lucky.damage;}
@@ -1662,6 +1663,7 @@ class FrontGame{
   if(this.input.x||this.input.y)this.moveOrder=null;
   const player=this.commander(0),enemy=this.commander(1);this.updateFormationFacing(dt);this.updateUltimate();if(this.phase!=='playing')return;
   const pressure=this.pressure().tier;if(pressure>this.lastPressure){this.lastPressure=pressure;this.notify('toast',`위협 Lv.${pressure+1} · 증원 증가 / 강한 적 출현 / 새 적의 체력·공격력 상승`);}
+  this.updateEvolutionCombat();
   const combatThreats=this.attackingEnemies(),combatCandidates=this.combatCandidates();
   for(const u of this.units){
    this.coopSelectOwner?.(u.team===0?u.coopOwner:0);
@@ -1728,5 +1730,6 @@ class FrontGame{
  finish(result,reason){if(this.phase==='ended')return;this.phase='ended';this.result=result;if(result==='win')this.awardGold(80);this.notify('end',{result,reason});}
 }
 Object.assign(FrontGame.prototype,ROOM_CAMPAIGN.methods);
+if(typeof module!=='undefined'&&module.exports)require('./evolution-combat.js')({FrontGame,TYPES,LUCKY,multiplier,EVOLUTIONS});
 root.FrontRoomCampaign=ROOM_CAMPAIGN;root.FrontButterfly=BUTTERFLY;root.FrontMedicCleanse=MEDIC_CLEANSE;root.FrontMedicHealing=MEDIC_HEALING;root.FrontGuardians=GUARDIANS;root.FrontBike=BIKE;root.FrontLucky=LUCKY;root.FrontDesktopItems={art:DESKTOP_ITEM_ART,sprite:desktopItemSprite,bodies:desktopItemBodies,floor:desktopItemFloor};root.FrontUnitTypeCap=UNIT_TYPE_CAP;root.FrontFlame=FLAME;root.FrontSword=SWORD;root.FrontWaveConfigs=WAVE_CONFIGS;root.FrontDesktopNotebook={art:DESKTOP_NOTEBOOK_ART,rect:desktopNotebookRect,bodies:desktopNotebookBodies};root.FrontDesktopProps={art:DESKTOP_PROP_ART,sprite:desktopPropSprite,bodies:desktopPropBodies};root.FrontDesktopCover={art:DESKTOP_COVER_ART,style:desktopCoverStyle,rect:desktopCoverRect};root.FrontRemoteShape=ROOM_REMOTE_SHAPE;root.FrontDesktopRules=DESKTOP_RULES;root.FrontFlyingWaves=FLYING_WAVES;root.FrontUltimate=ULTIMATE;root.FrontBuildings=BUILDINGS;root.FrontRoomRules=ROOM_RULES;root.FrontAbilities=ABILITIES;root.FrontEvolutions=EVOLUTIONS;root.FrontFieldCards=FIELD_CARDS;root.FrontProfile=FrontProfile;root.FrontPermanent=PERMANENT;root.FrontGame=FrontGame;root.FrontTypes=TYPES;root.FrontMultiplier=multiplier;root.FrontRoster=ROSTER;if(typeof module!=='undefined')module.exports={SWORD,BUTTERFLY,MEDIC_CLEANSE,MEDIC_HEALING,GUARDIANS,BIKE,LUCKY,DESKTOP_ITEM_ART,desktopItemSprite,desktopItemBodies,desktopItemFloor,UNIT_TYPE_CAP,FLAME,DESKTOP_NOTEBOOK_ART,desktopNotebookRect,desktopNotebookBodies,DESKTOP_PROP_ART,desktopPropSprite,desktopPropBodies,WAVE_CONFIGS,DESKTOP_COVER_ART,desktopCoverStyle,desktopCoverRect,ROOM_REMOTE_SHAPE,DESKTOP_RULES,FLYING_WAVES,ULTIMATE,BUILDINGS,ROOM_RULES,FrontGame,FrontProfile,PERMANENT,ABILITIES,EVOLUTIONS,FIELD_CARDS,TYPES,multiplier,ROSTER};
 })(typeof window==='undefined'?globalThis:window);

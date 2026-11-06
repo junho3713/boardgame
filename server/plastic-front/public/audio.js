@@ -50,8 +50,8 @@ class FrontAudio{
  sync(phase){if(this.phase!==phase){this.phase=phase;if(phase!=='playing')this.stop();}}
  stop(){for(const v of [...this.voices]){try{v.source.stop();}catch{}this.release(v);}this.lastKind.clear();}
  release(v){if(!this.voices.delete(v))return;v.source.disconnect();v.gain.disconnect();if(v.pan)v.pan.disconnect();}
- fire(unit,listener){if(unit.luckySound)return this.play(unit.luckySound,unit,listener);return this.play(unit.sword||unit.type==='leader'&&unit.appearance==='shion'?'bladeGuard':unit.flame||unit.type==='leader'&&unit.appearance==='blaze'?'flame':unit.type==='leader'||unit.type==='lucky'?'rifle':unit.type,unit,listener,unit.ultimate?{channel:'ultimate',priorityBoost:2,exactRate:true}:{});}
- explosion(event,listener){const key=event.kind==='artillery'?'artillery':'impact';return this.play(key,event,listener,{rate:event.kind==='mortar'?.85:event.kind==='rocket'?1.12:1});}
+ fire(unit,listener){if(unit.luckySound==='bossKiller')return this.play('rocket',unit,listener,{rate:.68,priorityBoost:2,channel:'bossKiller'});if(unit.luckySound)return this.play(unit.luckySound,unit,listener);return this.play(unit.sword||unit.type==='leader'&&unit.appearance==='shion'?'bladeGuard':unit.flame||unit.type==='leader'&&unit.appearance==='blaze'?'flame':unit.type==='leader'||unit.type==='lucky'?'rifle':unit.type,unit,listener,unit.ultimate?{channel:'ultimate',priorityBoost:2,exactRate:true}:{});}
+ explosion(event,listener){const key=['artillery','bossKiller','evolution'].includes(event.kind)?'artillery':'impact';return this.play(key,event,listener,{rate:event.kind==='bossKiller'?.68:event.kind==='evolution'?1.3:event.kind==='tank'?.8:event.kind==='mortar'?.85:event.kind==='rocket'?1.12:1});}
  play(key,position={x:0,y:0},listener={x:0,y:0},options={}){
   const c=this.context,s=SOUNDS[key],preview=!!options.preview;
   if(!s||!c||c.state!=='running'||this.muted||!this.volume||(!preview&&this.phase!=='playing')||!this.buffers.has(key))return false;

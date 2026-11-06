@@ -49,7 +49,7 @@ p.updateLuckyUnit=function(u){
  u.luckyRoll=u.luckyChannels[0].roll;u.nextLuckyAt=u.luckyChannels[0].next;
 };
 // Three full roulette draws are the lucky jeep's star bonus; do not multiply payloads again.
-p.luckyOdds=function(u){return this.isThreeStarExperiment()&&u?.team===0&&u.star===3?RULES.three.lucky[this.evolved.lucky?'evolved':'normal']:odds.call(this);};
+p.luckyOdds=function(u){return this.isThreeStarExperiment()&&u?.team===0&&u.star===3?this.evolutionLuckyOdds(u,RULES.three.lucky[this.evolutionEnabled(u)?'evolved':'normal']):odds.call(this,u);};
 p.luckyScale=function(u){return scale.call(this,u)/(this.starExperiment&&u.team===0&&u.star>=2?(u.star===3&&this.isThreeStarExperiment()?RULES.three.damage:RULES.damage):1);};
 // One attack budget split into two bullets. Direct focus orders still concentrate fire.
 p.fireUnitProjectiles=function(u,target,attack,s=this.stats(u)){

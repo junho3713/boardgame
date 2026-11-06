@@ -468,6 +468,7 @@ function drawUnitRaw(u){
  if(u.type==='blizzardMage')window.FrontGuardianFX.shield(ctx,u,game.time);
  if(u.flash){ctx.globalAlpha=u.flash/.13*.65;circle(ctx,0,0,types[u.type].r+2,null,'#fff4c8');ctx.globalAlpha=1;}
  ctx.restore();
+ if(evolved)battleFx.drawEvolutionUnit(ctx,u,game.time);
  if(u.type==='blizzardMage')text(ctx,(u.iceShield&&game.time<=u.iceShield.until?'아이스 실드 · 박격포 차단':(u.mobileMage?'이동형 얼음 마녀':'얼음 마녀')+' · 사거리 '+window.FrontGuardians.range),u.x,u.y-103,11,'#c4edff');
  if(u.boss&&['bayonetCaptain','bladeGuard','bikeRaider'].includes(u.type))text(ctx,'BOSS / '+u.bossName,u.x,u.y-176,13,'#ffe294');
  if(u.type==='lucky'){ctx.save();ctx.translate(0,-16);battleFx.luckyReels(ctx,u,game);ctx.restore();}
