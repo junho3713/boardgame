@@ -28,6 +28,7 @@ test('two clients authenticate, grow independently without pausing, reconnect an
   assert.equal((await call('/command',{action:'medkit'},b.token)).status,200);assert.equal(blueLeader.hp,blueLeader.maxHp);assert.equal(greenLeader.hp,greenHp);
   assert.equal((await call('/command',{action:'artillery',x:-100,y:10},b.token)).status,409);
   assert.equal((await call('/command',{action:'artillery',x:blueLeader.x+100,y:blueLeader.y},b.token)).status,200);assert.equal(g.supplyStrikes[0].coopOwner,1);
+  g.withOwner(1,()=>{g.supplyState().artillery=1;g.addUnit(2,'ant',blueLeader.x+160,blueLeader.y);});assert.equal((await call('/command',{action:'artillery'},b.token)).status,200);assert.equal(g.supplyStrikes.at(-1).coopOwner,1);assert.equal(g.withOwner(1,()=>g.supplyState().artillery),0);
   g.withOwner(1,()=>{g.supplyState().pendingSupport=1;});g.levelCheck();assert.equal(g.coopChoosing[1],true);
   assert.equal((await call('/command',{action:'cancelRecovery'},b.token)).status,200);assert.equal(g.coopChoosing[1],false);assert.equal(g.phase,'playing');
   const t=g.time;clock+=4000;handler.step();assert.equal(g.time,t);assert.equal(r.paused,true);

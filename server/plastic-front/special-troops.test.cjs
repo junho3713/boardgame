@@ -1,0 +1,27 @@
+'use strict';
+const {test}=require('node:test'),a=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const {FrontGame}=require('./public/engine.js'),{CoopGame}=require('./public/coop-engine.js'),{pack,unpack}=require('./public/autoplay.js');require('./public/two-star.js');
+function scene(){const g=new FrontGame({},undefined,{map:'livingroom-star'});g.start();g.units=g.units.filter(u=>u.team===0&&u.type==='leader');g.obstacles=[];g.structures=[];g.defenses=[];g.buildings=[];g.visible=g.lineClear=()=>true;g.commander(0).x=1500;g.commander(0).y=7000;g.gainXP=()=>{};return g;}
+function reward(g,kind){const c=g.commander(0);g.collectFieldSupply({x:c.x,y:c.y,active:true,rareSupply:true,supplyKind:kind});return g.units.at(-1);}
+function enemy(g,x,y=7000,type='ant'){const u=g.addUnit(2,type,x,y);u.hp=u.maxHp=1e6;return u;}
+const near=(x,y)=>a.ok(Math.abs(x-y)<1e-6,x+' != '+y);
+test('three special rewards have separate slots and the five-percent Titan has the highest HP and direct DPS',()=>{
+ const g=scene(),cap=g.capacity(),units=['special','spectre','titan'].map(k=>reward(g,k));a.deepEqual(units.map(u=>u.type),['commando','spectre','titan']);a.equal(g.capacity(),cap+3);for(const u of units){a.equal(u.hp,u.maxHp);a.equal(g.fusionCandidates(u.type).length,0);a.equal(g.tech[0][u.type],undefined);}const stats=units.map(u=>g.stats(u));a.ok(stats[2].hp>stats[0].hp&&stats[2].hp>stats[1].hp);a.ok(stats[2].damage/stats[2].rate>stats[0].damage/stats[0].rate&&stats[2].damage/stats[2].rate>stats[1].damage/stats[1].rate);near(stats[2].defense,44);
+});
+test('Ghost prioritizes reachable bosses then support enemies and ignores thirty-five percent of armor',()=>{
+ const g=scene(),u=reward(g,'spectre'),weak=enemy(g,1650),boss=enemy(g,1800,7000,'tank');boss.boss=true;a.equal(g.selectCombatTarget(u,[weak,boss],new Set()),boss);const armor=g.stats(boss).defense,hp=boss.hp;g.damage(boss,100,u);near(hp-boss.hp,100*100/(100+armor*.65));boss.boss=false;const mage=enemy(g,1900,7000,'blizzardMage');a.equal(g.selectCombatTarget(u,[weak,boss,mage],new Set()),mage);mage.x=3000;a.notEqual(g.selectCombatTarget(u,[weak,boss,mage],new Set()),mage);
+});
+test('Ghost pierces three aligned targets and Titan shells damage a group without friendly fire',()=>{
+ const g=scene(),ghost=reward(g,'spectre');ghost.x=1500;ghost.y=7000;const targets=[1700,1730,1760,1790].map(x=>enemy(g,x));const b=g.fireUnitProjectiles(ghost,targets[0],{damage:100},g.stats(ghost))[0];g.impact(b);a.ok(targets.slice(0,3).every(t=>t.hp<1e6));a.equal(targets[3].hp,1e6);
+ const titan=reward(g,'titan'),friend=g.addUnit(0,'rifle',1700,7000),hp=friend.hp,shots=g.fireUnitProjectiles(titan,targets[0],{damage:100},g.stats(titan));a.equal(shots[0].kind,'rocket');a.equal(shots[0].splash,100);g.impact(shots[0]);a.equal(friend.hp,hp);a.ok(targets[3].hp<1e6);
+});
+test('automatic artillery picks the largest visible in-range enemy cluster and preserves a charge without a target',()=>{
+ const g=scene();g.supplyState().artillery=1;a.equal(g.useArtilleryTicket(),false);a.equal(g.supplyState().artillery,1);enemy(g,1600);const cluster=[enemy(g,2050),enemy(g,2090,7040),enemy(g,2110,6980)];for(let i=0;i<6;i++){const u=enemy(g,4000+i*20);u.hidden=true;}a.ok(cluster.includes(g.artilleryTarget()));a.equal(g.useArtilleryTicket(),true);a.equal(g.supplyState().artillery,0);a.ok(cluster.some(t=>t.x===g.supplyStrikes[0].points[0].x));a.equal(g.supplyStrikes[0].points.length,5);
+});
+test('special troop growth and automatic artillery retain cooperative ownership through save and restore',()=>{
+ const g=new CoopGame();g.start();g.obstacles=[];g.visible=g.lineClear=()=>true;g.withOwner(1,()=>{for(const k of ['spectre','titan'])reward(g,k);g.supplyState().artillery=1;const c=g.commander(0);enemy(g,c.x+150,c.y);a.equal(g.useArtilleryTicket(),true);});const copy=unpack(new CoopGame(),JSON.parse(JSON.stringify(pack(g))));a.ok(copy.units.some(u=>u.type==='titan'&&u.coopOwner===1));a.equal(copy.supplyStrikes[0].coopOwner,1);a.equal(copy.withOwner(0,()=>copy.supplyState().artillery),0);copy.withOwner(1,()=>{for(const u of copy.supplySquad().filter(u=>copy.isSupplyTroop(u))){const before=u.maxHp;copy.tech[0].rifle=5;copy.refreshCommanderHealth();a.ok(u.maxHp>=before);near(u.maxHp,copy.stats(u).hp);}});
+});
+test('all three special troops draw their own finite weapon atlas instead of an unrelated commander skin',()=>{
+ const window={},context=vm.createContext({window,Math,WeakMap,Map});vm.runInContext(fs.readFileSync(__dirname+'/public/models.js','utf8'),context);const manifest=JSON.parse(fs.readFileSync(__dirname+'/public/assets/models/manifest.json','utf8'));
+ for(const [type,visual]of [['commando','machinegun'],['spectre','sniper'],['titan','rocket']])for(let direction=0;direction<8;direction++){const m=Object.create(window.FrontModels.prototype),calls=[],ctx={};m.manifest=manifest;m.motion=new WeakMap();m.ensure=(key,team)=>{a.equal(key,visual);return{ready:true,layers:{body:{...manifest.models[key+'-'+team].body,image:{}}}};};for(const key of ['save','restore','translate','rotate','scale','transform','beginPath','arc','ellipse','fill'])ctx[key]=(...args)=>args.forEach(n=>{if(typeof n==='number')a.ok(Number.isFinite(n));});ctx.drawImage=(img,...args)=>{a.ok(img);args.forEach(n=>a.ok(Number.isFinite(n)));calls.push(args);};a.equal(m.draw(ctx,{type,team:0,x:1500,y:7000,face:direction*Math.PI/4,walk:0,hp:100},0),true);a.ok(calls.length);}
+});

@@ -599,7 +599,15 @@ class FrontGame{
   if(team===0){Object.assign(u,this.formationPoint(u,leader));this.resolvePosition(u);}
   this.effects.push({kind:'drop',x:u.x,y:u.y,t:.8,max:.8,team});if(!team)this.notify('toast',`${TYPES[type].name} 합류 · −${TYPES[type].cost} 자원`);this.notify('change');return true;
  }
+ completedEvolutions(){return ROSTER.filter(type=>this.evolved[type]).length;}
  options(){
+  if(this.completedEvolutions()>=5){
+   const boss=this.choiceKind==='boss',owned=new Set(this.units.filter(u=>u.team===0&&u.hp>0&&(!this.coop||u.coopOwner===this.coopOwner)).map(u=>u.type));
+   const pool=[...ROSTER.filter(t=>this.eligibleCard(t)&&(!boss||owned.has(t))),...Object.keys(ABILITIES).filter(k=>!boss||this.abilities[k]>0).map(k=>'ability_'+k).filter(t=>this.eligibleCard(t))];
+   const result=[...(pool.length?[pool[Math.floor(this.random()*pool.length)]]:[]),'fieldGold','fieldRepair'];
+   if(!boss)for(const t of result)this.cardShownCounts[t]=(this.cardShownCounts[t]||0)+1;
+   return result;
+  }
   if(this.choiceKind==='boss'){const owned=new Set(this.alive(0).map(u=>u.type)),pool=[...ROSTER.filter(t=>owned.has(t)&&this.eligibleCard(t)),...Object.keys(ABILITIES).filter(k=>this.abilities[k]>0).map(k=>'ability_'+k).filter(t=>this.eligibleCard(t))];for(let i=pool.length-1;i>0;i--){const j=Math.floor(this.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}return pool.length?pool.slice(0,3):['fieldGold','fieldRepair'];}
   const shuffle=list=>{for(let i=list.length-1;i>0;i--){const j=Math.floor(this.random()*(i+1));[list[i],list[j]]=[list[j],list[i]];}return list;};
   // Owning or fielding a card does not increase its chance: locked units and
@@ -794,7 +802,7 @@ class FrontGame{
    if(this.isSwordCommander(target)||this.isFlameCommander(target)&&target.flameSkin==='hwarin'){target.hurtUntil=this.time+.18;target.hurtAngle=angle;}
   }
   target.flash=.13;
-  if(dealt>0&&this.time>=(target.nextHitEffectAt||0)){target.nextHitEffectAt=this.time+.065;this.effects.push({kind:'hit',x:target.x,y:target.y-(target.visualFlightHeight??TYPES[target.type]?.flightHeight??0),at:this.time,angle,power,damage:dealt,lift:target.team===2?8:24,t:.16,max:.16,team:target.team,armor:ARMORED.has(target.type)||target.type==='commando'});}
+  if(dealt>0&&this.time>=(target.nextHitEffectAt||0)){target.nextHitEffectAt=this.time+.065;this.effects.push({kind:'hit',x:target.x,y:target.y-(target.visualFlightHeight??TYPES[target.type]?.flightHeight??0),at:this.time,angle,power,damage:dealt,lift:target.team===2?8:24,t:.16,max:.16,team:target.team,armor:ARMORED.has(target.type)||['commando','titan'].includes(target.type)});}
   if(target.hp<=0){
    if(this.isSwordCommander(target)){target.swordAttack=null;target.swordPose=null;}
    target.diedAt=this.time;if(target.type==='blizzardMage')target.iceShield=null;
@@ -1199,7 +1207,7 @@ class FrontGame{
   if(rearCombat){anchor=commander;facing=Math.atan2(this.formationEnemy.y-commander.y,this.formationEnemy.x-commander.x);}
   const projection=p=>(p.x-commander.x)*Math.cos(facing)+(p.y-commander.y)*Math.sin(facing),behind=p=>(!flameFront||projection(p)<=12)&&(!rearCombat||projection(p)<=-24);
   const group=this.units.filter(a=>a.team===u.team&&a.hp>0&&!a.patrol&&a.type!=='leader'&&(!this.coop||u.team!==0||a.coopOwner===u.coopOwner)).sort((a,b)=>a.id-b.id),hasArmor=group.some(a=>a.type==='tank'||a.type==='guntruck');
-  const bands=[{types:['tank','guntruck'],depth:120,spacing:72,row:65,cols:4},{types:['rifle'],depth:hasArmor?55:100,spacing:39,row:45,cols:6},{types:['machinegun','commando'],depth:hasArmor?25:50,spacing:44,row:46,cols:5},{types:['rocket'],depth:10,spacing:42,row:48,cols:5},{types:['lucky'],depth:10,spacing:64,row:65,cols:4},{types:['sniper'],depth:-78,spacing:42,row:46,cols:5},{types:['mortar'],depth:-102,spacing:46,row:48,cols:5},{types:['medic'],depth:u.team===0?-108:-124,spacing:u.team===0?40:42,row:u.team===0?36:46,cols:u.team===0?6:5}],slots=[];
+  const bands=[{types:['tank','guntruck'],depth:120,spacing:72,row:65,cols:4},{types:['rifle'],depth:hasArmor?55:100,spacing:39,row:45,cols:6},{types:['machinegun','commando','titan'],depth:hasArmor?25:50,spacing:44,row:46,cols:5},{types:['rocket'],depth:10,spacing:42,row:48,cols:5},{types:['lucky'],depth:10,spacing:64,row:65,cols:4},{types:['sniper','spectre'],depth:-78,spacing:42,row:46,cols:5},{types:['mortar'],depth:-102,spacing:46,row:48,cols:5},{types:['medic'],depth:u.team===0?-108:-124,spacing:u.team===0?40:42,row:u.team===0?36:46,cols:u.team===0?6:5}],slots=[];
   let cursor=flameFront?0:120;
   for(const band of bands){
    const members=group.filter(a=>band.types.includes(a.type));if(!members.length)continue;const depth=band.types[0]==='medic'&&u.team===0?Math.max(-136,Math.min(cursor,band.depth)):Math.min(cursor,band.depth),rows=Math.ceil(members.length/band.cols);

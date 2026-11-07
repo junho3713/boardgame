@@ -289,6 +289,7 @@ function showUpgrade(options){
  $('promotionLevel').textContent=recovery?'EMERGENCY SUPPORT · 유료 충원':boss?'BOSS REWARD · 추가 강화':`LEVEL ${pad(game.level)}`;
  $('promotionTitle').textContent=recovery?'분대를 다시 편성하세요.':boss?'보스 격파 보상을 선택하세요.':'레벨업 선택';
  $('promotionDescription').textContent=recovery?'보유 자원으로 해금한 병과를 충원합니다. XP·레벨·강화 기회 소비 없음 · 확정 후 90초 대기.':boss?'레벨업과 별개의 무료 강화입니다. 작전 능력은 같은 5종 선택 한도를 따릅니다.':'병과를 키우거나 능력 5종을 구성하세요. Lv.5 + 지정 능력 Lv.5면 자동 진화합니다.';
+ if(!recovery&&game.completedEvolutions()>=5)$('promotionDescription').textContent='진화 5종 완성 · 남은 강화 최대 1개 + 골드 상자 + 긴급 치료. 더 올릴 강화가 없으면 골드·회복 중 선택하세요.';
  document.querySelector('.support-panel').hidden=boss;document.querySelector('.upgrade-layout').classList.toggle('boss-reward',boss);
  $('continueBattle').disabled=true;$('continueBattle').innerHTML='선택 후 확정하고 진격 <span>→</span>';
  $('choiceStatus').textContent=recovery?'지원 편성을 선택하거나 취소하고 계속 진격하세요.':boss?'강화 보상 1개를 선택하세요. 확정 전에는 변경할 수 있습니다.':'강화 · 지원 중 하나를 선택하세요. 확정 전에는 변경할 수 있습니다.';
@@ -421,7 +422,7 @@ function drawUnitRaw(u){
  if(u.type==='leader'&&t===0){circle(ctx,0,0,25,null,'#edf6cb99');ctx.setLineDash([3,7]);circle(ctx,0,0,30,null,'#edf6cb55');ctx.setLineDash([]);if(game.commanderReviveProtected(u)){circle(ctx,0,-26,43,'#83e8ff20','#9eefff');text(ctx,`부활 보호 ${Math.ceil(u.reviveProtectionUntil-game.time)}초`,0,-82,11,'#b8f4ff');}}
  if(evolved){circle(ctx,0,0,types[u.type].r+9,null,'#e9c76b');}
  if(u.boss){circle(ctx,0,0,48,null,'#e5a251');ctx.setLineDash([5,5]);circle(ctx,0,0,54,null,'#e5a25188');ctx.setLineDash([]);}
- if(u.type==='commando'){ctx.filter='grayscale(.8) brightness('+(0.7+(window.FrontHitFeedback.pose(u,game.time)?.flash||0)*.7)+') contrast(1.2)';}
+ if(game.isSupplyTroop(u)){if(u.type==='titan')ctx.scale(1.2,1.2);ctx.filter=u.type==='spectre'?'saturate(.35) brightness(1.4)':u.type==='titan'?'sepia(.5) hue-rotate(150deg) saturate(1.6) brightness(1.05)':'grayscale(.8) brightness('+(0.7+(window.FrontHitFeedback.pose(u,game.time)?.flash||0)*.7)+') contrast(1.2)';}
  if(!unitModels.draw(ctx,u,game.time)){ctx.save();
  const vehicle=['tank','crimsonAce','guntruck','lucky'].includes(u.type),bodyFace=Number.isFinite(u.moveFace)?u.moveFace:u.face,aimFace=Number.isFinite(u.turretFace)?u.turretFace:Number.isFinite(u.aimFace)?u.aimFace:u.face;
  ctx.rotate((vehicle?bodyFace:u.face)+Math.PI/2);ctx.translate(0,vehicle?0:(u.recoil||0)*22);if(u.boss)ctx.scale(1.35,1.35);
@@ -468,11 +469,11 @@ function drawUnitRaw(u){
  }
  if(evolved){rr(ctx,-10,-6,20,4,1,'#f1d582');}
  ctx.restore();}
- ctx.filter='none';if(u.type==='commando'){circle(ctx,0,-46,5,'#f2d88f','#33291a');text(ctx,'✦',0,-42,9,'#201e19');}
+ ctx.filter='none';if(game.isSupplyTroop(u)){circle(ctx,0,-46,5,'#f2d88f','#33291a');text(ctx,'✦',0,-42,9,'#201e19');}
  if(u.type==='blizzardMage')window.FrontGuardianFX.shield(ctx,u,game.time);
  if(u.flash){ctx.globalAlpha=u.flash/.13*.65;circle(ctx,0,0,types[u.type].r+2,null,'#fff4c8');ctx.globalAlpha=1;}
  ctx.restore();
- if(u.type==='commando')text(ctx,'블랙베어 · 특수부대',u.x,u.y-108,12,'#e7c4ff');
+ if(game.isSupplyTroop(u))text(ctx,({commando:'블랙베어',spectre:'고스트',titan:'타이탄 · 최상위'})[u.type]+' · 특수부대',u.x,u.y-108,12,u.type==='titan'?'#ffe49a':'#e7c4ff');
  if(evolved)battleFx.drawEvolutionUnit(ctx,u,game.time);
  if(u.type==='blizzardMage')text(ctx,(u.iceShield&&game.time<=u.iceShield.until?'아이스 실드 · 박격포 차단':(u.mobileMage?'이동형 얼음 마녀':'얼음 마녀')+' · 사거리 '+window.FrontGuardians.range),u.x,u.y-103,11,'#c4edff');
  if(u.boss&&['bayonetCaptain','bladeGuard','bikeRaider'].includes(u.type))text(ctx,'BOSS / '+u.bossName,u.x,u.y-176,13,'#ffe294');
@@ -533,7 +534,7 @@ function draw(dt){
   ctx.save();ctx.scale(1,.72);circle(ctx,0,0,34+pulse*3,'#ddbd6320','#e8d28a80');circle(ctx,0,0,26,null,'#f4df9c50');ctx.restore();
   const beacon=ctx.createLinearGradient(0,-90,0,0);beacon.addColorStop(0,'#f8df8c00');beacon.addColorStop(1,'#f8df8c25');ctx.fillStyle=beacon;ctx.fillRect(-14,-90,28,82);
   if(!worldModels.draw(ctx,'supply',0,-5+bob)){rr(ctx,-23,-31,46,31,4,'#678448');rr(ctx,-25,-34,50,7,2,'#90a467');text(ctx,'+',0,-13,18,'#eedc8c');}
-  if(p.rareSupply){circle(ctx,0,0,44+pulse*6,null,'#cf9eff');const g=ctx.createLinearGradient(0,-200,0,0);g.addColorStop(0,'#ba72ff00');g.addColorStop(1,'#ba72ff65');ctx.fillStyle=g;ctx.fillRect(-22,-200,44,185);text(ctx,'✦',0,-66+bob,24,'#e9ceff');text(ctx,'희귀 보급 · '+Math.max(0,Math.ceil((p.expires-game.time)))+'초',0,43,13,'#eddbff');}else{text(ctx,'◆',0,-53+bob,14,'#f6dc89');text(ctx,'보급',0,35,11,'#f5e5ab');}ctx.restore();
+  if(p.rareSupply){circle(ctx,0,0,44+pulse*6,null,'#cf9eff');const g=ctx.createLinearGradient(0,-200,0,0);g.addColorStop(0,'#ba72ff00');g.addColorStop(1,'#ba72ff65');ctx.fillStyle=g;ctx.fillRect(-22,-200,44,185);text(ctx,'✦',0,-66+bob,24,'#e9ceff');text(ctx,'희귀 보급 · '+Math.max(0,Math.ceil((p.expires-game.time)))+'초',0,43,13,'#eddbff');const guards=game.rareSupplyGuards(p).length;text(ctx,guards?'호위 '+guards+'기 처치 필요':'확보 가능',0,61,12,guards?'#ffb0af':'#c6ffd4');}else{text(ctx,'◆',0,-53+bob,14,'#f6dc89');text(ctx,'보급',0,35,11,'#f5e5ab');}ctx.restore();
  }
  if(game.moveOrder){const p=game.moveOrder;circle(ctx,p.x,p.y,25,null,'#f7efb7');circle(ctx,p.x,p.y,5,'#f7efb7');text(ctx,'집결 지점',p.x,p.y+44,13,'#fff3bc');}
  if(game.focusTarget){const u=game.focusTarget;circle(ctx,u.x,u.y,(u.r||types[u.type]?.r||20)+14,null,'#fff1a5');text(ctx,'집중 공격',u.x,u.y-52,13,'#fff1a5');}

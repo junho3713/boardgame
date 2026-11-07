@@ -7,9 +7,9 @@ function scope(g,owner,fn){return g.coop?g.withOwner(owner,fn):fn();}
 function reward(g,kind){const c=g.commander(0),p={x:c.x,y:c.y,active:true,supplyKind:kind,rareSupply:true};a.equal(g.collectFieldSupply(p),true);return p;}
 function near(x,y){a.ok(Math.abs(x-y)<1e-7,x+' != '+y);}
 
-test('all five supply rewards use the intended 30/25/25/15/5 distribution',()=>{
+test('supplies use 25/20/15/15 utility odds and 10/10/5 special troop odds',()=>{
  const g=scene(),counts={};for(let i=0;i<10000;i++){g.random=()=>(i+.5)/10000;const kind=g.rollSupply();counts[kind]=(counts[kind]||0)+1;}
- a.deepEqual(counts,{support:3000,medkit:2500,boost:2500,artillery:1500,special:500});
+ a.deepEqual(counts,{support:2500,medkit:2000,boost:1500,artillery:1500,special:1000,spectre:1000,titan:500});
 });
 test('the actual solo and cooperative collection loops award a nearby crate exactly once to its collector',()=>{
  for(const coop of [false,true]){const g=scene(coop),owner=coop?1:0,c=scope(g,owner,()=>g.commander(0));g.pickups=[{x:c.x,y:c.y,active:true,supplyKind:'artillery',rareSupply:true}];g.update(.05);a.equal(scope(g,owner,()=>g.supplyState().artillery),1);g.update(.05);a.equal(scope(g,owner,()=>g.supplyState().artillery),1);if(coop)a.equal(scope(g,0,()=>g.supplyState().artillery),0);}
@@ -63,3 +63,14 @@ test('rare crates start at two minutes, repeat every two minutes and share one w
 test('rare supply expiry and saved schedule prevent retroactive stockpiles and retain 400-resource support',()=>{const g=scene();g.time=120;g.updateRareSupplies();const crate=g.pickups[0],restored=unpack(scene(),pack(g));a.equal(restored.nextRareSupply,240);a.equal(restored.pickups[0].rareSupply,true);const c=g.commander(0);Object.assign(crate,{x:c.x,y:c.y});g.time=240;a.equal(g.collectFieldSupply(crate),false);a.equal(g.supplyState().collected,0);const old=pack(scene());old.fields.time=601;delete old.fields.nextRareSupply;unpack(restored,old);a.equal(restored.nextRareSupply,720);});
 
 test('wave test clock jumps rebuild rare supply timing and discard stale strikes and link marks',()=>{const g=scene(),lab=require('./public/wave-test.js');g.waveTest=true;g.time=120;g.nextRareSupply=240;g.supplyStrikes=[{index:0}];g.evolutionLinkState={owners:[{ready:{breach:126}}]};g.commander(0).evolutionLinkMarks={0:{snipe:124}};lab.seek(g,601);a.equal(g.nextRareSupply,720);a.deepEqual(g.supplyStrikes,[]);a.deepEqual(g.evolutionLinkState,{owners:[]});a.equal(g.commander(0).evolutionLinkMarks,undefined);lab.seek(g,0);a.equal(g.nextRareSupply,120);});
+
+test('rare supplies land at least 55 meters away and require all three guards to be defeated',()=>{
+ const g=scene();g.time=120;g.updateRareSupplies();const p=g.pickups[0],c=g.commander(0),cash=g.cash[0];a.ok(Math.hypot(p.x-c.x,p.y-c.y)>=550);a.equal(g.rareSupplyGuards(p).length,3);Object.assign(c,{x:p.x,y:p.y});a.equal(g.collectFieldSupply(p),false);a.equal(p.active,true);a.equal(g.cash[0],cash);
+ const guards=g.rareSupplyGuards(p);for(const t of guards.slice(0,2))g.damage(t,1e6,c);a.equal(g.collectFieldSupply(p),false);g.damage(guards[2],1e6,c);p.supplyKind='support';const afterCombat=g.cash[0];a.equal(g.collectFieldSupply(p),true);a.equal(g.cash[0],afterCombat+400);a.equal(g.collectFieldSupply(p),false);
+});
+test('guard composition grows with time and expiration withdraws living guards without kill rewards',()=>{
+ for(const [time,types]of [[120,['bayonet','bayonet','rifle']],[360,['bladeGuard','bayonet','machinegun']],[780,['stagBeetle','bladeGuard','machinegun']]]){const g=scene();g.time=time;g.updateRareSupplies();const p=g.pickups[0],guards=g.rareSupplyGuards(p);a.deepEqual(guards.map(u=>u.type),types);a.ok(guards.every(u=>u.rareSupplyGuard&&!u.boss));const before={kills:g.kills,cash:g.cash[0],gold:g.profile.gold};g.time=p.expires;g.expireRareSupplies();a.equal(p.active,false);a.equal(g.rareSupplyGuards(p).length,0);a.ok(guards.every(u=>u.rareSupplyWithdrawn));a.deepEqual({kills:g.kills,cash:g.cash[0],gold:g.profile.gold},before);}
+});
+test('saved cooperative guard locks stay shared until all guards die, then reward only the collector',()=>{
+ const g=scene(true);g.time=120;g.updateRareSupplies();const restored=unpack(scene(true),JSON.parse(JSON.stringify(pack(g)))),p=restored.pickups[0];a.equal(restored.rareSupplyGuards(p).length,3);restored.withOwner(1,()=>{const c=restored.commander(0);Object.assign(c,{x:p.x,y:p.y});a.equal(restored.collectFieldSupply(p),false);for(const t of restored.rareSupplyGuards(p))restored.damage(t,1e6,c);p.supplyKind='artillery';a.equal(restored.collectFieldSupply(p),true);a.equal(restored.supplyState().artillery,1);});a.equal(restored.withOwner(0,()=>restored.supplyState().artillery),0);
+});
