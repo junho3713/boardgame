@@ -5,7 +5,7 @@ const SWORD={damage:90,rate:.75,range:90,arc:110*Math.PI/180,windup:.14,recovery
 const FLAME={damage:14.4,rate:.12,range:250,arc:50*Math.PI/180,armor:.65,ultimateRange:420,ultimateArc:70*Math.PI/180,ultimateDamage:2};
 const BALANCE_VERSION=70;
 const UNIT_TYPE_CAP=8;
-const COMMANDER_CASUALTY_FRACTION=1/3;
+const COMMANDER_REVIVAL={delay:5,protection:3};
 const GUARDIANS={range:460,mageHp:560,mageRate:6,mageDamage:18,windup:.45,radius:145,root:2,laserHp:1500,laserDamage:40,laserTick:.2,respawnDelay:60,shieldNotice:.8,shieldRaise:.18,shieldHold:.35,lessonRange:650,lessonBannerTime:5,laserWindup:0,laserRate:0};
 const BUTTERFLY={range:330,arc:80*Math.PI/180,windup:.65,flight:.8,reduction:.5,duration:6};
 const MEDIC_CLEANSE={cooldown:10,targets:5};
@@ -90,7 +90,7 @@ const TYPES={swordEmpress:{name:'사검의 군주',hp:64000,damage:0,rate:100,ra
  guntruck:{name:'전투트럭',icon:'▱',hp:280,damage:12,rate:.22,range:265,speed:150,r:22,cost:150,role:'기동 연사 · 경장갑 ×1 / 장갑 ×0.8'},
  tank:{name:'전차',icon:'▰',hp:600,damage:100,rate:2.3,range:310,speed:95,r:26,cost:260,splash:60,role:'장갑 ×1 · 경장갑 ×0.5 · 범위 포격'},
  artillery:{name:'적 포병',icon:'⊕',hp:520,damage:0,rate:99,range:0,speed:0,r:27,cost:0,role:'포격을 지휘하는 장갑 목표'},
- medic:{name:'의무병',icon:'✚',hp:110,damage:0,rate:MEDIC_HEALING.interval,range:280,speed:145,r:11,cost:70,role:'기본 10 회복 · 치료 간격 1초 고정 · 중첩 치료 100%/60%/40%'},
+ medic:{name:'의무병',icon:'✚',hp:110,damage:0,rate:MEDIC_HEALING.interval,range:280,speed:145,r:11,cost:70,role:'부상 대장 우선 · 기본 10 회복 · 1초 간격 · 중첩 치료 100%/60%/40%'},
  bayonetCaptain:{name:'장난감 병정 대장',icon:'♛',hp:640,damage:32,rate:1.6,range:64,speed:90,r:16,cost:0,windup:.38,stab:true,role:'적 전용 경장갑 · 강화 총검병 · 일반 정예 5분 / 대장 보스 2분부터'},
  bayonet:{name:'너트크래커 총검병',icon:'⚔',hp:320,damage:24,rate:1.6,range:58,speed:96,r:14,cost:0,windup:.38,stab:true,role:'적 전용 경장갑 · 총검 준비 후 찌르기 · 3분부터 웨이브 합류'},
  ant:{name:'개미',icon:'•',hp:110,damage:12,rate:1.15,range:25,speed:91.2,r:10,cost:0,role:'접근하면 추격하는 근접 몬스터'},
@@ -376,7 +376,7 @@ class FrontGame{
   const active=[];for(const gust of this.butterflyGusts||[]){
    const progress=clamp((this.time-gust.started)/BUTTERFLY.flight,0,1),reach=BUTTERFLY.range*progress;
    for(const u of this.butterflyTargets(gust)){if(gust.hitIds.includes(u.id))continue;const dx=u.x-gust.x,dy=u.y-gust.y,along=dx*Math.cos(gust.angle)+dy*Math.sin(gust.angle),side=Math.abs(-dx*Math.sin(gust.angle)+dy*Math.cos(gust.angle));
-    if(along<0||along>reach+(TYPES[u.type]?.r||12)||side>Math.tan(BUTTERFLY.arc/2)*along+12)continue;
+    if(this.commanderReviveProtected(u)||along<0||along>reach+(TYPES[u.type]?.r||12)||side>Math.tan(BUTTERFLY.arc/2)*along+12)continue;
     u.healingReductionUntil=Math.max(u.healingReductionUntil||0,this.time+BUTTERFLY.duration);gust.hitIds.push(u.id);this.effects.push({kind:'healingWeaken',x:u.x,y:u.y,t:.9,max:.9,team:0});
    }if(this.time+1e-8<gust.ends)active.push(gust);
   }this.butterflyGusts=active;
@@ -388,7 +388,7 @@ class FrontGame{
   const cast=u.blizzardCast;
   if(cast){if(this.time<cast.hitAt)return;u.blizzardCast=null;
    if(u.hp<=0)return;
-   for(const a of this.alive(0))if(valid(a)&&dist(a,cast)<=GUARDIANS.radius){a.rootedUntil=Math.max(a.rootedUntil||0,this.time+GUARDIANS.root);this.damage(a,s.damage,u);}
+   for(const a of this.alive(0))if(!this.commanderReviveProtected(a)&&valid(a)&&dist(a,cast)<=GUARDIANS.radius){a.rootedUntil=Math.max(a.rootedUntil||0,this.time+GUARDIANS.root);this.damage(a,s.damage,u);}
    this.effects.push({kind:'blizzard',x:cast.x,y:cast.y,radius:GUARDIANS.radius,t:1.1,max:1.1,team:1});return;
   }
   if(u.cooldown>0)return;
@@ -759,14 +759,16 @@ class FrontGame{
   else if(this.freePosition(u.x,ny,r)){u.y=ny;}
   this.resolvePosition(u);const traveled=Math.hypot(u.x-oldX,u.y-oldY);u.walk+=traveled*.12;if(traveled>.01&&n>3){u.face=Math.atan2(dy,dx);if(u.type==='tank'||u.type==='crimsonAce'||u.type==='guntruck'||u.type==='lucky')u.moveFace=u.face;}
  }
- applyCommanderLosses(){
-  const troops=this.alive(0).filter(u=>u.type!=='leader'),count=Math.ceil(troops.length*COMMANDER_CASUALTY_FRACTION),victims=[];
-  // Partial Fisher–Yates: uniform casualties without replacement or type bias.
-  for(let i=0;i<count;i++){const j=i+Math.min(troops.length-i-1,Math.floor(this.random()*(troops.length-i)));[troops[i],troops[j]]=[troops[j],troops[i]];victims.push(troops[i]);}
-  this.lastCommanderLoss={at:this.time,total:troops.length,count,unitIds:victims.map(u=>u.id)};
-  const source={team:1,type:'commandLoss'};
-  for(const u of victims){u.commanderLossAt=this.time;this.damage(u,(u.hp+1)/this.defenseFactor(u,source),source);}
-  return count;
+ commanderReviveProtected(u){return u?.team===0&&u.type==='leader'&&u.hp>0&&this.time<(u.reviveProtectionUntil||0);}
+ reviveCommander(u){
+  if(u.team===0){const p=u.revivePoint||u;u.x=p.x;u.y=p.y;}
+  else{const base=this.bases[u.team];u.x=base.x+(this.random()-.5)*90;u.y=base.y+70;}
+  this.resolvePosition(u);u.route=null;u.routeGoal=null;u.regroup=null;u.aiEvade=null;u.hp=u.maxHp=this.stats(u).hp;u.deadUntil=0;u.diedAt=undefined;u.revivePoint=null;
+  for(const key of ['poisonUntil','poisonDps','poisonNextAt','rootedUntil','slowUntil','windUntil','luckyRootUntil','luckySlowUntil','healingReductionUntil','hurtUntil'])u[key]=0;
+  u.poisonSource=null;u.swordAttack=null;u.swordPose=null;u.ultimatePose=null;
+  if(u.team===0)u.reviveProtectionUntil=this.time+COMMANDER_REVIVAL.protection;
+  this.effects.push({kind:'drop',x:u.x,y:u.y,t:1,max:1,team:u.team});
+  if(u.team===0)this.notify('toast',`대장 제자리 부활 · ${COMMANDER_REVIVAL.protection}초 보호`);
  }
  damage(target,amount,source){
   if(target===this.bases[0]&&this.hasInvulnerableHQ())return;
@@ -776,7 +778,7 @@ class FrontGame{
    if((target.base&&this.baseShielded())||(target.structure&&this.mission.stage<(target.activeStage||2)))return;
    if((target.base||target.structure)&&target.defenseKind!=='laserTower'&&!target.fencePost)amount*=this.isFlameCommander(source)?.8:source.type==='mortar'?1:source.type==='machinegun'?.2:source.type==='sniper'?.2:source.type==='guntruck'?.3:source.type==='rifle'||source.type==='leader'?.3:.9;
   }
-  if(target.hp<=0||this.bossInvulnerable(target))return;
+  if(target.hp<=0||this.commanderReviveProtected(target)||this.bossInvulnerable(target))return;
   if(this.time<(target.groggyUntil||0))amount*=this.bossPatternRules(target)?.vulnerable||1;
   if(target===this.bases[0]&&amount>0&&source&&source.team!==0){target.recentAttackers=[...(target.recentAttackers||[]).filter(h=>h.source!==source&&this.time-h.at<8),{source,at:this.time}].slice(-64);}
   if(this.isRoomCampaign()&&target===this.bases[1]&&amount>0&&source?.team===0)this.roomHQAlarm={until:this.time+8,x:source.x,y:source.y};
@@ -803,9 +805,9 @@ class FrontGame{
    if(target.finalBoss){this.finalBattle.killed=true;if(this.isRoomCampaign()){this.finish('win','finalBoss');return;}}
    if(target.boss||this.isRoomCampaign()&&target.roadCaptain){this.roomBossKilled(target);if(!target.roadCaptain){this.bossState.killed++;this.bossState.nextAt=Math.max(this.bossState.nextAt,this.time+this.waveRules().boss.minAfterKill);}this.bossState.rewards++;this.notify('toast',`${target.bossName} 격파 · 추가 강화 보상 확보`);}
    if(target.type==='artillery')this.checkCrisisClear();
-   const squadLoss=target.type==='leader'&&target.team===0?this.applyCommanderLosses():0,lossNotice=squadLoss?` · 병력 ${squadLoss}기 손실`:'';
-   if(target.type==='leader'&&target.team===0&&this.hasInvulnerableHQ()){this.retreated++;target.deadUntil=this.retreated<3?this.time+5:0;if(this.retreated>=3)this.finish('lose','commander');else this.notify('toast',`지휘관 후퇴${lossNotice} · 남은 기회 ${3-this.retreated}회 / 5초 후 복귀`);return;}
-   if(target.type==='leader'){const penalty=this.mode==='duel'?70:300;if(target.team===0)this.retreated++;this.bases[target.team].hp=Math.max(0,this.bases[target.team].hp-penalty);target.deadUntil=this.time+5;if(!target.team)this.notify('toast',this.mode!=='duel'?`지휘관 후퇴${lossNotice} · 남은 기회 ${Math.max(0,3-this.retreated)}회 / 5초 후 복귀`:`지휘관 후퇴${lossNotice} · 5초 후 본진 복귀 / 본진 −70`);if(this.bases[target.team].hp<=0)this.finish(target.team===0?'lose':'win','base');}
+   if(target.type==='leader'&&target.team===0){target.revivePoint={x:target.x,y:target.y};this.lastCommanderLoss=null;}
+   if(target.type==='leader'&&target.team===0&&this.hasInvulnerableHQ()){this.retreated++;target.deadUntil=this.retreated<3?this.time+COMMANDER_REVIVAL.delay:0;if(this.retreated>=3)this.finish('lose','commander');else this.notify('toast',`대장 쓰러짐 · 남은 기회 ${3-this.retreated}회 / ${COMMANDER_REVIVAL.delay}초 후 제자리 부활`);return;}
+   if(target.type==='leader'){const penalty=this.mode==='duel'?70:300;if(target.team===0)this.retreated++;this.bases[target.team].hp=Math.max(0,this.bases[target.team].hp-penalty);target.deadUntil=this.time+COMMANDER_REVIVAL.delay;if(!target.team)this.notify('toast',`대장 쓰러짐 · ${COMMANDER_REVIVAL.delay}초 후 제자리 부활${this.mode==='duel'?' / 본진 −70':` · 남은 기회 ${Math.max(0,3-this.retreated)}회`}`);if(this.bases[target.team].hp<=0)this.finish(target.team===0?'lose':'win','base');}
    else{target.deadUntil=0;if(target.team<2){this.losses[target.team]++;if(target.team===0){const survivor=this.recoverTwoStarLoss?.(target);if(survivor){this.notify('toast',`${TYPES[target.type].name} 2성 전사 · 같은 병과 1성 1기 복귀`);this.notify('change');return;}const recovered=this.mode==='pve'?Math.floor(TYPES[target.type].cost*.25):0;this.cash[0]+=recovered;this.salvaged+=recovered;this.notify('toast',`${TYPES[target.type].name} 전사 · 자동 복귀 없음${recovered?` · 장비 회수 +${recovered} 자원`:''}`);}}}
   }
  }
@@ -1393,7 +1395,7 @@ class FrontGame{
   }
  }
  updateLuckyObjects(dt){
-  const glues=[];for(const z of this.luckyGlues){if(this.time>=z.expires)continue;if(this.time+1e-8>=z.landAt){if(!z.landed){z.landed=true;this.effects.push({kind:'luckyGlue',x:z.x,y:z.y,radius:z.radius,t:.35,max:.35,team:0});}for(const t of this.units){if(z.team!==0&&t.team!==0||t.team===z.team||t.hp<=0||z.hitIds.includes(t.id)||(t.x-z.x)**2+(t.y-z.y)**2>z.radius**2||!this.lineClear(z,t,0,{fireTeam:z.team}))continue;t.luckySlowUntil=Math.max(t.luckySlowUntil||0,this.time+LUCKY.slowDuration);z.hitIds.push(t.id);}}glues.push(z);}this.luckyGlues=glues;
+  const glues=[];for(const z of this.luckyGlues){if(this.time>=z.expires)continue;if(this.time+1e-8>=z.landAt){if(!z.landed){z.landed=true;this.effects.push({kind:'luckyGlue',x:z.x,y:z.y,radius:z.radius,t:.35,max:.35,team:0});}for(const t of this.units){if(z.team!==0&&t.team!==0||t.team===z.team||t.hp<=0||this.commanderReviveProtected(t)||z.hitIds.includes(t.id)||(t.x-z.x)**2+(t.y-z.y)**2>z.radius**2||!this.lineClear(z,t,0,{fireTeam:z.team}))continue;t.luckySlowUntil=Math.max(t.luckySlowUntil||0,this.time+LUCKY.slowDuration);z.hitIds.push(t.id);}}glues.push(z);}this.luckyGlues=glues;
   const mines=[];for(const m of this.luckyMines){if(this.time>=m.expires)continue;const trigger=this.time>=m.armAt&&this.units.some(t=>(m.team===0||t.team===0)&&t.team!==m.team&&t.hp>0&&!this.isFlying(t)&&(t.x-m.x)**2+(t.y-m.y)**2<(30+(TYPES[t.type]?.r||0))**2);if(!trigger){mines.push(m);continue;}for(const t of this.units){if(m.team!==0&&t.team!==0||t.team===m.team||t.hp<=0)continue;const d=dist(t,m);if(d<=LUCKY.mineRadius)this.damage(t,m.damage*multiplier('rocket',t.type)*(1-.45*d/LUCKY.mineRadius),m.source);}this.effects.push({kind:'explosion',x:m.x,y:m.y,radius:LUCKY.mineRadius,t:.65,max:.65,team:0});this.notify('explosion',{x:m.x,y:m.y,kind:'rocket',team:0});}this.luckyMines=mines;
   const sprays=[];for(const s of this.luckySprays){if(s.source.hp<=0||this.time>=s.expires)continue;s.x=s.source.x;s.y=s.source.y;
    if(this.time>=(s.nextAimAt||0)||!s.target||s.target.hp<=0||dist(s,s.target)>LUCKY.sprayRange+(TYPES[s.target.type]?.r||0)){const aim=this.luckySprayTarget(s.source,s.target);s.target=aim?.target||null;s.aimOffset=aim?.offset||0;s.nextAimAt=this.time+.15;}
@@ -1677,7 +1679,7 @@ class FrontGame{
   for(const u of this.units){
    this.coopSelectOwner?.(u.team===0?u.coopOwner:0);
    const player=this.commander(0);
-   if(u.hp<=0){if(u.type==='leader'&&u.deadUntil&&this.time>=u.deadUntil){const c=u.type==='leader'?this.bases[u.team]:this.commander(u.team);u.x=c.x+(this.random()-.5)*90;u.y=c.y+(u.team?70:-70);this.resolvePosition(u);u.route=null;u.hp=u.maxHp=this.stats(u).hp;u.deadUntil=0;this.effects.push({kind:'drop',x:u.x,y:u.y,t:1,max:1,team:u.team});}continue;}
+   if(u.hp<=0){if(u.type==='leader'&&u.deadUntil&&this.time>=u.deadUntil)this.reviveCommander(u);continue;}
    if((u.roadCaptain||u.roomGarrison)&&!this.updateRoadCaptain(u,dt))continue;
    if(u.type==='lucky'){if(u.team===0)this.updateLuckyUnit(u);else if(this.isRoomCampaign())this.updateEnemyLucky(u);}
    u.flash=Math.max(0,u.flash-dt);u.recoil=Math.max(0,(u.recoil||0)-dt);const s=this.stats(u);u.cooldown-=dt;
@@ -1689,7 +1691,7 @@ class FrontGame{
    const channeling=u===player&&this.ultimateStatus().active;if(this.isSwordCommander(u))this.updateSwordAttack(u);if(u.type!=='tank'&&u.type!=='crimsonAce'&&u.type!=='guntruck'&&!channeling)u.aimFace=null;
    let target=null,nearest=Infinity;
    if(u.type==='medic'){
-    const patients=[...new Set([...this.units,...this.buildings.filter(b=>b.kind==='repairBot'&&b.buildUntil<=this.time)])].filter(a=>a.team===u.team&&a.hp>0&&a.hp<a.maxHp&&dist(u,a)<s.range).sort((a,b)=>dist(u,a)-dist(u,b)).slice(0,this.evolutionEnabled(u)?3:1);
+    const patients=[...new Set([...this.units,...this.buildings.filter(b=>b.kind==='repairBot'&&b.buildUntil<=this.time)])].filter(a=>a.team===u.team&&a.hp>0&&a.hp<a.maxHp&&dist(u,a)<s.range).sort((a,b)=>(u.team===0?Number(b.type==='leader')-Number(a.type==='leader'):0)||dist(u,a)-dist(u,b)).slice(0,this.evolutionEnabled(u)?3:1);
     target=patients[0]||null;if(target)nearest=dist(u,target);
     if(target&&u.cooldown<=1e-8){for(const patient of patients){this.heal(patient,s.heal,u);this.effects.push({kind:'heal',x:patient.x,y:patient.y,t:.5,max:.5,team:u.team});}u.healStartedAt=this.time;u.healUntil=this.time+.7;u.healAngle=Math.atan2(target.y-u.y,target.x-u.x);u.cooldown=s.rate;}
    }else{

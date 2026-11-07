@@ -291,7 +291,7 @@ const methods={
   }else if(a.phase==='low'&&this.time>=a.until){u.bossAction=null;u.visualFlightHeight=48;u.nextBossSkillAt=this.time+p.cooldown;}
   u.visualFlightHeight=this.bossFlightHeight(u);return true;
  },
- applyPoison(target,source,dps,p=config.patterns.venomDive){target.poisonUntil=Math.max(target.poisonUntil||0,this.time+p.poisonDuration);target.poisonDps=Math.max(target.poisonDps||0,dps);target.poisonSource=source;target.poisonNextAt=Math.max(this.time+p.poisonRate,target.poisonNextAt||0);},
+ applyPoison(target,source,dps,p=config.patterns.venomDive){if(this.commanderReviveProtected(target))return;target.poisonUntil=Math.max(target.poisonUntil||0,this.time+p.poisonDuration);target.poisonDps=Math.max(target.poisonDps||0,dps);target.poisonSource=source;target.poisonNextAt=Math.max(this.time+p.poisonRate,target.poisonNextAt||0);},
  updatePoisons(){for(const u of [...this.alive(0),...this.buildings.filter(b=>b.kind==='repairBot'&&b.hp>0)]){const end=u.poisonUntil||0;if(!end)continue;if(u.hp<=0||this.time>end+1e-8){u.poisonUntil=0;u.poisonDps=0;u.poisonSource=null;continue;}if(this.time+1e-8>=(u.poisonNextAt||0)){u.poisonNextAt=this.time+.25;this.damage(u,u.poisonDps*.25,u.poisonSource||{team:2,type:'hornet'});}}},
  updateBossBarrage(u,p){
   const a=u.bossBarrage;

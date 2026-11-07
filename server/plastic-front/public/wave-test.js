@@ -40,7 +40,7 @@ function applyLoadout(game,loadout){
  const config=validateLoadout(game,loadout),events=game.events;game.events={};
  try{
   game.tech[0]={...config.tech};game.abilities={...config.abilities};game.evolved=Object.fromEntries(roster.map(t=>[t,false]));game.level=config.level;game.xp=0;game.cash[0]=config.cash;
-  game.units=game.units.filter(u=>u.team!==0||u.type==='leader');const leader=game.commander(0);leader.hp=leader.maxHp=game.stats(leader).hp;leader.deadUntil=0;leader.diedAt=undefined;
+  game.units=game.units.filter(u=>u.team!==0||u.type==='leader');const leader=game.commander(0);leader.hp=leader.maxHp=game.stats(leader).hp;leader.deadUntil=0;leader.diedAt=undefined;leader.revivePoint=null;leader.reviveProtectionUntil=0;
   for(const key of ['poisonUntil','rootedUntil','slowUntil','windUntil','luckyRootUntil','luckySlowUntil','healingReductionUntil','hurtUntil'])leader[key]=0;leader.poisonSource=null;leader.poisonDps=0;
   for(const type of roster)for(let i=0;i<config.counts[type];i++)game.addUnit(0,type,leader.x,leader.y);
   game.autoFuseUnits();game.checkEvolutions();game.refreshSquadHealth();game.refreshBuildingStats();

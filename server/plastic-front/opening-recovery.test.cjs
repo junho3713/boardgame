@@ -54,13 +54,13 @@ test('fusion consumes units without creating survivors, and a recovered recruit 
  const three=scene('livingroom-star3');for(let i=0;i<3;i++)elite(three,'rifle');three.autoFuseUnits();a.equal(three.alive(0).length,1);a.equal(three.alive(0)[0].star,3);a.equal(three.losses[0],0);
 });
 
-test('co-op recovery preserves the defeated squad owner, upgrades and skin even during a commander retreat',()=>{
+test('co-op recovery preserves the defeated squad owner, upgrades and skin while commander death spares survivors',()=>{
  const g=new CoopGame();g.start();g.units=g.units.filter(u=>u.team===0&&u.type==='leader');g.obstacles=[];
  for(const owner of [0,1])g.withOwner(owner,()=>{g.medicSkinId=owner?'rina':'classic';g.tech[0].medic=owner?5:1;elite(g,'medic');});
  const blue=g.owned(1).find(u=>u.type==='medic'),greenCash=g.cash[0],blueCash=g.withOwner(1,()=>g.cash[0]);g.damage(blue,1e9,enemy);
  const survivor=g.owned(1).find(u=>u.type==='medic');a.ok(survivor);a.equal(survivor.star,1);a.equal(survivor.appearance,'rina');a.equal(survivor.hp,g.stats(survivor).hp);a.equal(g.owned(0).filter(u=>u.type==='medic').length,1);a.equal(g.cash[0],greenCash);a.equal(g.withOwner(1,()=>g.cash[0]),blueCash);a.equal(g.coopOwner,0);
  const green=g.owned(0).find(u=>u.type==='medic');g.damage(g.withOwner(0,()=>g.commander(0)),1e9,enemy);
- a.equal(green.hp,0);a.equal(g.owned(0).filter(u=>u.type==='medic'&&u.star===1).length,1);a.ok(survivor.hp>0);
+ a.equal(green.hp,green.maxHp);a.equal(green.star,2);a.equal(g.owned(0).filter(u=>u.type==='medic'&&u.star===1).length,0);a.ok(survivor.hp>0);
 });
 
 test('saved operations and cooperative snapshots retain exactly one returned recruit',()=>{

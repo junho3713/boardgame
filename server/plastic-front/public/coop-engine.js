@@ -32,7 +32,6 @@ class CoopGame extends Game{
  addUnit(team,...args){const u=super.addUnit(team,...args);if(this.coop&&team===0)u.coopOwner=this.coopOwner;return u;}
  formationPoint(u,anchor,facing){if(!this.coop||u.team!==0)return super.formationPoint(u,anchor,facing);return this.withOwner(u.coopOwner,()=>this.scoped(()=>super.formationPoint(u,anchor,facing)));}
  commanderMoveSpeed(...args){return this.scoped(()=>super.commanderMoveSpeed(...args));}
- applyCommanderLosses(){return this.scoped(()=>super.applyCommanderLosses());}
  damage(target,amount,source){
   if(this.coop&&target.team===0&&this.time<this.coopInvulnerable[target.coopOwner])return;
   const owner=source?.team===0?source.coopOwner:target.team===0?target.coopOwner:this.coopOwner;
