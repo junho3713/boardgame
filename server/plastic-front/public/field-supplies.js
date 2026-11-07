@@ -24,6 +24,7 @@ function install({FrontGame:Game,TYPES}){
  p.rollSupply=function(){const value=this.random();let sum=0;for(const [kind,chance]of Object.entries(config.odds)){sum+=chance;if(value<sum)return kind;}return'titan';};
  p.collectFieldSupply=function(pickup){
   if(!pickup?.active)return false;if(pickup.rareSupply&&this.time>=(pickup.expires||Infinity)){pickup.active=false;return false;}const c=this.commander(0);if(c.hp<=0||Math.hypot(c.x-pickup.x,c.y-pickup.y)>=60)return false;
+  this.updateRareSupplySecurity();
   const guards=pickup.rareSupply?this.rareSupplyGuards(pickup):[];if(guards.length){if(this.time>=(pickup.nextHintAt||0)){pickup.nextHintAt=this.time+2;this.notify('toast','희귀 보급 잠김 · 호위 '+guards.length+'기를 먼저 처치하세요');}return false;}
   if(!pickup.rareSupply){pickup.active=false;this.gainXP(18);this.cash[0]+=25;this.awardGold(5);this.notify('toast','보급품 확보 · +25 자원 / +18 XP');this.effects.push({kind:'drop',x:pickup.x,y:pickup.y,t:.6,max:.6,team:0});return true;}
   const state=this.supplyState(),kind=config.odds[pickup.supplyKind]===undefined?this.rollSupply():pickup.supplyKind;
@@ -70,6 +71,17 @@ function install({FrontGame:Game,TYPES}){
  };
  p.rareSupplyGuards=function(pickup){return this.units.filter(u=>u.hp>0&&pickup.guardIds?.includes(u.id));};
  p.expireRareSupplies=function(){for(const pickup of this.pickups)if(pickup.rareSupply&&this.time>=(pickup.expires||Infinity)){pickup.active=false;for(const u of this.rareSupplyGuards(pickup)){u.hp=0;u.diedAt=this.time;u.rareSupplyWithdrawn=true;}}};
+ p.updateRareSupplySecurity=function(){
+  if(this.phase!=='playing')return;
+  for(const pickup of this.pickups){if(!pickup.active||!pickup.rareSupply||!pickup.ambushPending)continue;
+   const c=this.units.find(u=>u.team===0&&u.type==='leader'&&u.hp>0&&Math.hypot(u.x-pickup.x,u.y-pickup.y)<360);if(!c)continue;
+   const bounds=this.bounds(),positions=[];
+   for(let i=0;i<24&&positions.length<2;i++){const a=Math.atan2(c.y-pickup.y,c.x-pickup.x)+Math.PI/2+(i%2)*Math.PI+Math.floor(i/2)*.2,r=240+Math.floor(i/8)*35,q={x:pickup.x+Math.cos(a)*r,y:pickup.y+Math.sin(a)*r};if(q.x>50&&q.y>70&&q.x<bounds.width-50&&q.y<bounds.height-70&&this.freePosition(q.x,q.y,26)&&!positions.some(p=>Math.hypot(p.x-q.x,p.y-q.y)<100))positions.push(q);}
+   if(positions.length<2)continue;pickup.ambushPending=false;
+   for(const [i,q]of positions.entries()){const type=this.time<360?(i?'rifle':'bayonet'):(i?'machinegun':'bladeGuard'),u=this.addUnit(2,type,q.x,q.y,true);u.rareSupplyGuard=true;u.homeX=u.x;u.homeY=u.y;this.stampEvolutionWave?.(u);pickup.guardIds.push(u.id);this.effects.push({kind:'drop',x:u.x,y:u.y,t:.8,max:.8,team:2});}
+   this.notify('toast','희귀 보급 경계 발동 · 측면 경계병 2기 합류');
+  }
+ };
  p.updateRareSupplies=function(){
   if(this.phase!=='playing'||this.mode!=='pve')return;if(!Number.isFinite(this.nextRareSupply))this.nextRareSupply=(Math.floor(this.time/120)+1)*120;
   if(this.time+1e-8<this.nextRareSupply)return;this.nextRareSupply=(Math.floor((this.time+1e-8)/120)+1)*120;
@@ -79,14 +91,14 @@ function install({FrontGame:Game,TYPES}){
   const c=leaders[Math.floor(this.time/120-1)%leaders.length],bounds=this.bounds();let point=null;
   for(let i=0;i<36;i++){const a=-Math.PI/2+((i%12)-5.5)*.22,r=700+(i%3)*75,candidate={x:Math.max(65,Math.min(bounds.width-65,c.x+Math.cos(a)*r)),y:Math.max(this.frontline()+100,Math.min(bounds.height-100,c.y+Math.sin(a)*r))};if(Math.hypot(candidate.x-c.x,candidate.y-c.y)>=550&&this.freePosition(candidate.x,candidate.y,26)&&!this.pickups.some(p=>p.active&&Math.hypot(p.x-candidate.x,p.y-candidate.y)<90)){point=candidate;break;}}
   if(!point){this.nextRareSupply=this.time+5;return;}
-  const guardTypes=this.time<360?['bayonet','bayonet','rifle']:this.time<720?['bladeGuard','bayonet','machinegun']:['stagBeetle','bladeGuard','machinegun'],positions=[];
-  for(let i=0;i<18&&positions.length<3;i++){const a=i*Math.PI/3,q={x:point.x+Math.cos(a)*100,y:point.y+Math.sin(a)*100};if(q.x>50&&q.x<bounds.width-50&&q.y>70&&q.y<bounds.height-70&&this.freePosition(q.x,q.y,26)&&!positions.some(p=>Math.hypot(p.x-q.x,p.y-q.y)<65))positions.push(q);}
-  if(positions.length<3){this.nextRareSupply=this.time+5;return;}
-  const pickup={...point,active:true,rareSupply:true,spawnedAt:this.time,expires:this.time+120,guardIds:[]};
+  const guardTypes=this.time<360?['bayonet','bayonet','rifle','machinegun','rifle']:this.time<720?['bladeGuard','bayonet','machinegun','mortar','sniper']:['stagBeetle','bladeGuard','machinegun','mortar','sniper'],positions=[];
+  for(let i=0;i<36&&positions.length<5;i++){const a=i*2.39996,r=155+(i%3)*45,q={x:point.x+Math.cos(a)*r,y:point.y+Math.sin(a)*r};if(q.x>50&&q.x<bounds.width-50&&q.y>70&&q.y<bounds.height-70&&this.freePosition(q.x,q.y,26)&&!positions.some(p=>Math.hypot(p.x-q.x,p.y-q.y)<65))positions.push(q);}
+  if(positions.length<5){this.nextRareSupply=this.time+5;return;}
+  const pickup={...point,active:true,rareSupply:true,spawnedAt:this.time,expires:this.time+120,ambushPending:true,guardIds:[]};
   for(const [i,q]of positions.entries()){const u=this.addUnit(2,guardTypes[i],q.x,q.y,true);u.rareSupplyGuard=true;u.homeX=u.x;u.homeY=u.y;this.stampEvolutionWave?.(u);pickup.guardIds.push(u.id);}
-  this.pickups.push(pickup);this.notify('toast','희귀 보급 도착 · 호위 3기 처치 후 확보 · 보라색 신호를 확인하세요');this.effects.push({kind:'fieldSupply',...point,reward:'airdrop',t:1.2,max:1.2,team:0});
+  this.pickups.push(pickup);this.notify('toast','희귀 보급 도착 · 호위 5기 · 접근 시 추가 경계병 출동 · 보라색 신호를 확인하세요');this.effects.push({kind:'fieldSupply',...point,reward:'airdrop',t:1.2,max:1.2,team:0});
  };
- p.update=function(dt){if(this.phase==='playing'){this.updateSupplyStrikes();this.expireRareSupplies();}const result=update.call(this,dt);this.updateRareSupplies();return result;};
+ p.update=function(dt){if(this.phase==='playing'){this.updateSupplyStrikes();this.expireRareSupplies();this.updateRareSupplySecurity();}const result=update.call(this,dt);this.updateRareSupplies();return result;};
  root.FrontFieldSupplies={config,specialTypes};return {config,specialTypes};
 }
 if(typeof module!=='undefined'&&module.exports)module.exports=install;else install({FrontGame:root.FrontGame,TYPES:root.FrontTypes});

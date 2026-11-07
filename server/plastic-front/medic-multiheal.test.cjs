@@ -56,7 +56,7 @@ test('three-target treatment retains a one-second cooldown and pauses with the s
 
 test('one-, two- and three-star medics keep their full existing per-patient healing amount',()=>{
  for(const star of [1,2,3]){
-  const g=scene(),u=medic(g,{star}),targets=[patient(g,1020),patient(g,1040),patient(g,1060)],calls=observe(g),expected=22.4*({1:1,2:2.4,3:7.2}[star]);
+  const g=scene(),u=medic(g,{star}),targets=[patient(g,1020),patient(g,1040),patient(g,1060)],calls=observe(g),expected=22.4*({1:1,2:2.5,3:7.2}[star]);
   near(g.stats(u).heal,expected);g.update(.05);a.equal(calls.length,3);for(const t of targets)near(t.hp,100+expected);
  }
 });
@@ -66,7 +66,7 @@ test('each cooperative owner uses their own medic evolution and star healing whi
   const g=scene(true),medics=[medic(g,{owner:0,evolved:evolvedOwner===0,star:2,x:1000}),medic(g,{owner:1,evolved:evolvedOwner===1,star:2,x:1800})],groups=medics.map((u,owner)=>[patient(g,u.x+20,6000,{owner:1-owner}),patient(g,u.x+40,6000,{owner}),patient(g,u.x+60,6000,{owner})]),calls=observe(g);
   g.update(.05);
   for(const [owner,u] of medics.entries()){
-   const count=owner===evolvedOwner?3:1,hits=calls.filter(h=>h.source===u),amount=(owner===evolvedOwner?22.4:16)*2.4;
+   const count=owner===evolvedOwner?3:1,hits=calls.filter(h=>h.source===u),amount=(owner===evolvedOwner?22.4:16)*2.5;
    a.equal(hits.length,count);near(g.stats(u).heal,amount);a.deepEqual(hits.map(h=>h.target.id),groups[owner].slice(0,count).map(t=>t.id));
    for(const [i,t] of groups[owner].entries())near(t.hp,100+(i<count?amount:0));
   }

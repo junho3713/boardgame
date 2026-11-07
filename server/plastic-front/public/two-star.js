@@ -1,7 +1,7 @@
 /* Isolated room experiments. The regular room keeps the original unit rules. */
 (function(root){'use strict';
 const api=typeof module!=='undefined'&&module.exports?require('./engine.js'):root,Game=api.FrontGame,roster=api.ROSTER||root.FrontRoster;
-const RULES={copies:3,maxTwoStars:3,capacityGains:[1,1,2,2,3],damage:2.4,hp:2.6,heal:2.4,roulettes:3,
+const RULES={copies:3,maxTwoStars:3,capacityGains:[1,1,2,2,3],damage:2.4,hp:2.6,heal:2.5,roulettes:3,
  three:{damage:7.2,hp:7.8,heal:7.2,roulettes:3,sniperShots:2,lucky:{normal:{glue:.44,mine:.20,spray:.24,missiles:.06,blank:.06},evolved:{glue:.29,mine:.13,spray:.41,missiles:.14,blank:.03}}}};
 const p=Game.prototype,stats=p.stats,update=p.update,buy=p.buy,bonus=p.abilityBonus,remaining=p.recruitmentRemaining,lucky=p.updateLuckyUnit,scale=p.luckyScale,odds=p.luckyOdds,projectiles=p.fireUnitProjectiles;
 p.isThreeStarExperiment=function(){return this.starExperiment&&this.starMax===3&&this.mode==='pve';};

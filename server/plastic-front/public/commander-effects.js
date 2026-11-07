@@ -89,14 +89,16 @@ function install(Effects){
  p.drawCommanderFlame=function(c,e){
   const latest=this.flameJets.get(this.flameKey(e));if(latest&&latest!==e)return true;
   const m=this.prepareImpactMaterials?.();if(!m)return baseDraw.call(this,c,e);
-  const origin=this.muzzlePoint(e),a=e.angle||0,source=e.source||e,dx=source.x+Math.cos(a)*e.range-origin.x,dy=source.y+Math.sin(a)*e.range-16-origin.y,clock=this.time,fade=clamp(e.t/.045),phase=((clock*2.8)%1+1)%1,steps=this.budget<=240?18:22;
+  const origin=this.muzzlePoint(e),a=e.angle||0,source=e.source||e,dx=source.x+Math.cos(a)*e.range-origin.x,dy=source.y+Math.sin(a)*e.range-16-origin.y,clock=this.time,fade=clamp(e.t/.045),phase=((clock*12)%1+1)%1,steps=this.budget<=240?14:18;
   c.save();
+  // Clip the moving plume to the actual nozzle cone; the renderer never fills it.
+  const heading=Math.atan2(dy,dx),reach=Math.hypot(dx,dy);c.beginPath();c.moveTo(origin.x,origin.y);c.arc(origin.x,origin.y,reach,heading-e.arc/2,heading+e.arc/2);c.closePath();c.clip();
   // A few low-opacity ash curls behind the fire keep the flame volumetric.
-  for(let i=0;i<5;i++){const t=.5+i*.1,w=28+t*39,off=Math.sin(clock*5+i*2.1)*e.range*t*.12;stamp(c,m.smoke[i%3],origin.x+dx*t-Math.sin(a)*off,origin.y+dy*t+Math.cos(a)*off-12*t,w*1.5,w,clock*.15+i,.13*fade);}
+  for(let i=0;i<3;i++){const t=.6+i*.12,w=24+t*28,off=Math.sin(clock*5+i*2.1)*e.range*t*.12;stamp(c,m.smoke[i%3],origin.x+dx*t-Math.sin(a)*off,origin.y+dy*t+Math.cos(a)*off-12*t,w*1.5,w,clock*.15+i,.08*fade);}
   // Independent tongues advect from the real nozzle to the existing cone edge.
   for(let i=steps-1;i>=0;i--){const t=(i+phase)/steps,spread=Math.sin(e.arc/2)*e.range*t,heat=(1-t*.5)*fade,ax=origin.x+dx*t,ay=origin.y+dy*t-5*t;
-   for(let lane=-1;lane<=1;lane++){const off=lane*spread*.63+Math.sin(t*18-clock*14+lane)*spread*.17,px=ax-Math.sin(a)*off,py=ay+Math.cos(a)*off,w=40+t*115,h=(20+t*72)*(lane===0?1:.84),turn=a+Math.sin(i*2.3+clock*7+lane)*.38;
-    stamp(c,m.fire[(i+lane+3)%3],px,py,w,h,turn,heat*(lane===0?.80:.65));
+   for(let lane=-1;lane<=1;lane++){const off=lane*spread*.63+Math.sin(t*18-clock*14+lane)*spread*.17,px=ax-Math.sin(a)*off,py=ay+Math.cos(a)*off,w=48+t*84,h=(16+t*48)*(lane===0?1:.84),turn=a+Math.sin(i*2.3+clock*7+lane)*.38;
+    stamp(c,m.fire[(i+lane+3)%3],px,py,w,h,turn,heat*(lane===0?.78:.50));
     if(lane===0&&i%2===0)stamp(c,m.fire[(i+1)%3],px,py,w*.72,h*.45,turn,heat*.25,'lighter');
    }
   }

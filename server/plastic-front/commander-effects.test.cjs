@@ -14,7 +14,7 @@ function renderer({materials=true,budget=240}={}){
 function canvas(){
  const calls=[],stack=[],ctx={calls,globalAlpha:1,globalCompositeOperation:'source-over'};
  const record=(name,args)=>{for(const n of args)if(typeof n==='number')a.ok(Number.isFinite(n),name+' received '+n);calls.push([name,...args]);};
- for(const name of ['translate','rotate','scale','beginPath','closePath','moveTo','lineTo','quadraticCurveTo','bezierCurveTo','ellipse','arc','fill','stroke','fillRect','roundRect','fillText','strokeText','setLineDash'])ctx[name]=(...args)=>record(name,args);
+ for(const name of ['clip','translate','rotate','scale','beginPath','closePath','moveTo','lineTo','quadraticCurveTo','bezierCurveTo','ellipse','arc','fill','stroke','fillRect','roundRect','fillText','strokeText','setLineDash'])ctx[name]=(...args)=>record(name,args);
  ctx.save=()=>{stack.push({globalAlpha:ctx.globalAlpha,globalCompositeOperation:ctx.globalCompositeOperation});record('save',[]);};
  ctx.restore=()=>{a.ok(stack.length,'unbalanced canvas restore');Object.assign(ctx,stack.pop());record('restore',[]);};
  ctx.drawImage=(image,...args)=>{a.ok(image,'missing material');record('drawImage',args);};

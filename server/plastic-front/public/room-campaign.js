@@ -2,7 +2,7 @@
 (function(root){'use strict';
 const config={version:116,duration:1200,enemyLuckyInterval:5,recoverySeconds:16,
  combat:{healthVersion:136,hpScale:1.2,bossHpScale:1.35,bossHpExtra:{rhinoBeetle:1.3,hornet:1.3,crimsonAce:1.3},damageScale:1.25,bossDamageScale:1.3,bossArmorPenetration:{hornet:.3,crimsonAce:.4},bikeDamageScale:1.05},
- evolutionPacing:{enabled:true,expectedAt:600,reliefSeconds:60,rampSeconds:120,reliefDensity:.65,spawnIncrease:.30,capExtra:6,eliteWeight:.50,eliteHp:.18,eliteTypes:['bayonet','bladeGuard','soldierAnt','bruteBeetle','stagBeetle','rhinoBeetle','tank','guntruck']},
+ evolutionPacing:{enabled:true,expectedAt:600,reliefSeconds:60,rampSeconds:120,reliefDensity:.65,spawnIncrease:.80,capExtra:14,eliteWeight:1,eliteHp:.50,eliteTypes:['bayonet','bladeGuard','soldierAnt','bruteBeetle','stagBeetle','rhinoBeetle','tank','guntruck']},
  fences:{version:129,hp:12000,y:4550,postWidth:56,postDepth:32,threadDepth:22,lanes:[{id:'left',xs:[70,490,905,1360],colors:['blue','teal','coral','blue'],guns:[{id:'mg',kind:'bunker',x:960,y:4440},{id:'missile',kind:'missileTower',x:150,y:4410},{id:'inner-missile',kind:'missileTower',x:750,y:4370}]},{id:'right',xs:[1640,2095,2510,2930],colors:['coral','blue','teal','coral'],guns:[{id:'mg',kind:'bunker',x:2040,y:4440},{id:'missile',kind:'missileTower',x:2900,y:4440},{id:'inner-missile',kind:'missileTower',x:2250,y:4370}]}]},
  start:{x:1500,y:7560},
  finalBoss:{x:1500,offset:580,positionVersion:168,introSeconds:2.5},

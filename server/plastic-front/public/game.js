@@ -220,7 +220,7 @@ function updateIntel(){
  if($('intelContent').innerHTML!==html){$('intelContent').innerHTML=html;$('intelContent').classList.toggle('revealed',!!seen.length);$('mobileIntelContent').innerHTML=`<div class="intel-content ${seen.length?'revealed':''}">${html}</div>`;}
 }
 let fusionReturn='playing';
-function renderFusion(){const three=game.isThreeStarExperiment();$('fusionTitle').textContent=three?'정예병 3명이 모이면 3성으로.':'3명이 모이면 자동으로 정예병.';$('fusionRules').innerHTML=three?'1성 3기 → 2성 1기 · 2성 3기 → 3성 1기 자동 합성<br>3성: 1성 기준 공격 ×7.2 · 체력 ×7.8 · 의무병 치료 ×7.2<br>병과별 3성 최대 1기 · 완성된 병과는 추가 생산 불가<br>저격병: 총 피해량을 절반씩 나눈 2발 동시 발사<br>레토나: 룰렛 3개 유지 · 4초 주기 · 당첨 한 번의 위력 유지<br>룰렛별 일반 / 진화 확률: 777 6% / 14% · 스프레이 24% / 41%<br>끈끈이 44% / 29% · 지뢰 20% / 13% · 꽝 6% / 3%<br>공속·이속·방어·사거리 동일 · 합성 전 체력 비율 유지<br>일반·AI 모드 모두 자동 합성합니다.':'살아 있는 같은 병과 1성 3기 → 자동으로 2성 1기<br>공격 ×2.4 · 체력 ×2.6 · 의무병 치료 ×2.4<br>럭키 레토나: 독립 룰렛 3개 · 룰렛 피해 배율 추가 없음<br>공속·이속·방어·사거리 동일 · 합성 전 체력 비율 유지<br>일반·AI 모드 모두 자동 합성합니다.<br>병과별 2성 최대 3기 · 3기 완성 시 해당 병과 추가 생산 불가.';$('fusionRules').innerHTML+='<br>2성 전사 시 같은 병과 1성 1기 복귀 · 체력 100% · 장비 회수 자원 없음.';$('fusionGrid').innerHTML=roster.map(type=>{const complete=three?game.threeStarCount(type)>0:game.twoStarCount(type)>=3;return `<div class="fusion-status"><b>${types[type].name}</b><span>${game.starRosterLabel(type)}</span><small>${complete?'최대 편성 · 추가 생산 불가':three?'1성 3기 → 2성 · 2성 3기 → 3성':'1성 3기 → 자동 2성 합성'}</small></div>`;}).join('');}
+function renderFusion(){const three=game.isThreeStarExperiment();$('fusionTitle').textContent=three?'정예병 3명이 모이면 3성으로.':'3명이 모이면 자동으로 정예병.';$('fusionRules').innerHTML=three?'1성 3기 → 2성 1기 · 2성 3기 → 3성 1기 자동 합성<br>3성: 1성 기준 공격 ×7.2 · 체력 ×7.8 · 의무병 치료 ×7.2<br>병과별 3성 최대 1기 · 완성된 병과는 추가 생산 불가<br>저격병: 총 피해량을 절반씩 나눈 2발 동시 발사<br>레토나: 룰렛 3개 유지 · 4초 주기 · 당첨 한 번의 위력 유지<br>룰렛별 일반 / 진화 확률: 777 6% / 14% · 스프레이 24% / 41%<br>끈끈이 44% / 29% · 지뢰 20% / 13% · 꽝 6% / 3%<br>공속·이속·방어·사거리 동일 · 합성 전 체력 비율 유지<br>일반·AI 모드 모두 자동 합성합니다.':'살아 있는 같은 병과 1성 3기 → 자동으로 2성 1기<br>공격 ×2.4 · 체력 ×2.6 · 의무병 치료 ×2.5<br>럭키 레토나: 독립 룰렛 3개 · 룰렛 피해 배율 추가 없음<br>공속·이속·방어·사거리 동일 · 합성 전 체력 비율 유지<br>일반·AI 모드 모두 자동 합성합니다.<br>병과별 2성 최대 3기 · 3기 완성 시 해당 병과 추가 생산 불가.';$('fusionRules').innerHTML+='<br>2성 전사 시 같은 병과 1성 1기 복귀 · 체력 100% · 장비 회수 자원 없음.';$('fusionGrid').innerHTML=roster.map(type=>{const complete=three?game.threeStarCount(type)>0:game.twoStarCount(type)>=3;return `<div class="fusion-status"><b>${types[type].name}</b><span>${game.starRosterLabel(type)}</span><small>${complete?'최대 편성 · 추가 생산 불가':three?'1성 3기 → 2성 · 2성 3기 → 3성':'1성 3기 → 자동 2성 합성'}</small></div>`;}).join('');}
 $('fusionBtn').onclick=()=>{if(!game.starExperiment||!['playing','paused'].includes(game.phase))return;fusionReturn=game.phase;game.phase='paused';clearInput();renderFusion();$('fusionOverlay').hidden=false;};
 $('closeFusion').onclick=()=>{$('fusionOverlay').hidden=true;game.phase=fusionReturn;updateUI();};
 
@@ -389,6 +389,7 @@ function drawDefense(p){
  if(p.fencePost){window.FrontRoomFenceArt.post(ctx,p,game);return;}
  if(p.defenseKind==='laserTower'){if(!game.visible(p))return;ctx.save();ctx.translate(p.x,p.y);if(p.hp>0)unitModels.draw(ctx,p,game.time);else{window.FrontGuardianFX.wreck(ctx,p,game.time);text(ctx,'레이저 포탑 잔해'+(Number.isFinite(p.respawnAt)?' · 재조립 '+Math.max(0,Math.ceil(p.respawnAt-game.time))+'초':''),0,55,10,'#b8a59d');}ctx.restore();if(p.hp>0){text(ctx,p.name+' · 사거리 '+game.defenseStats(p).range,p.x,p.y+24,11,'#ffc2b7');rr(ctx,p.x-38,p.y+34,76,5,2,'#3c2929');rr(ctx,p.x-38,p.y+34,76*p.hp/p.maxHp,5,2,'#fa887d');}return;}
 
+ if(p.defenseKind==='missileTower'&&p.hp<=0){window.FrontLivingRoom.missileWreck(ctx,p);return;}
  if(p.defenseKind==='missileTower'&&p.hp>0&&window.FrontLivingRoom.field(ctx,'missileTower',p.x,p.y,p.face||0)){text(ctx,p.name,p.x,p.y+64,11,'#f0c9a3');rr(ctx,p.x-38,p.y+73,76,5,2,'#363d2d');rr(ctx,p.x-38,p.y+73,76*p.hp/p.maxHp,5,2,'#e5a279');return;}
  if(worldModels.draw(ctx,p.defenseKind+(p.hp>0?'':'-ruin'),p.x,p.y)){text(ctx,p.hp>0?p.name:'수비 건물 잔해',p.x,p.y+64,11,p.hp>0?'#f0d9ac':'#adb58c');if(p.hp>0){rr(ctx,p.x-38,p.y+73,76,5,2,'#363d2d');rr(ctx,p.x-38,p.y+73,76*p.hp/p.maxHp,5,2,'#dfad74');}return;}
  ctx.save();ctx.translate(p.x,p.y);const alive=p.hp>0,mortar=p.defenseKind==='mortarPit',missile=p.defenseKind==='missileTower',col=alive?'#b58260':'#77785f';
@@ -570,7 +571,7 @@ function draw(dt){
   ctx.restore();
  }
 
- battleFx.drawHealingStatuses(ctx,game,fxVisible);battleFx.drawParticles(ctx,fxVisible);drawFog();ctx.setTransform(DPR,0,0,DPR,0,0);
+ battleFx.drawHealingStatuses(ctx,game,fxVisible);battleFx.drawParticles(ctx,fxVisible);if(game.isRoomCampaign())window.FrontPortal.health(ctx,game.bases[1]);drawFog();ctx.setTransform(DPR,0,0,DPR,0,0);
  if(game.time<game.scoutUntil){ctx.strokeStyle='#f0db98';ctx.lineWidth=2;ctx.strokeRect(4,4,W-8,H-8);}
  if(game.bossIntro?.remaining>0){rr(ctx,W/2-156,24,312,64,10,'#211a2ee8','#b795d5');text(ctx,'최종 보스 등장',W/2,48,13,'#d8bde9');text(ctx,game.bossIntro.name,W/2,73,20,'#fff0d3');}
  drawMini();

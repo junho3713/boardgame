@@ -16,6 +16,12 @@ class Portal{
   for(let ring=0;ring<5;ring++){const q=(ring/5+t*.16)%1;c.globalAlpha=(1-q)*.075*power;c.strokeStyle='#e1a4ff';c.lineWidth=1;c.beginPath();c.ellipse(x,y,rx*(1-q),ry*(1-q),0,0,TAU);c.stroke();}
   c.globalAlpha=.75*power;c.strokeStyle='#efb8ff';c.lineWidth=1.5;c.beginPath();for(let i=0;i<=96;i++){const a=i/96*TAU,r=1+Math.sin(a*7+t*5)*.023+Math.sin(a*13-t*7)*.012,px=x+Math.cos(a)*rx*r,py=y+Math.sin(a)*ry*r;if(!i)c.moveTo(px,py);else c.lineTo(px,py);}c.stroke();
   for(let i=0;i<14;i++){const a=i*2.399+t*.24,r=.75+Math.sin(i*11+t)*.2;c.globalAlpha=(.25+Math.sin(t*3+i)*.15)*power;glow(c,x+Math.cos(a)*rx*r,y+Math.sin(a)*ry*r,2,2,'#fbd4ff');}c.restore();}
+ health(c,b){
+  if(!Number.isFinite(b.maxHp)||b.maxHp<=0)return;
+  const ratio=clamp(b.hp/b.maxHp,0,1),x=b.x-96,y=b.y-254;
+  c.save();c.fillStyle='#171323ed';c.fillRect(x-3,y-3,198,20);c.fillStyle='#453750';c.fillRect(x,y,192,14);c.fillStyle=b.hp>0?'#c47df2':'#686271';c.fillRect(x,y,192*ratio,14);
+  c.textAlign='center';c.textBaseline='middle';c.font='700 11px system-ui';c.lineWidth=3;c.strokeStyle='#191222';const label='최전방 포탈 '+Math.ceil(Math.max(0,b.hp)).toLocaleString()+' / '+Math.ceil(b.maxHp).toLocaleString();c.strokeText(label,b.x,y+7);c.fillStyle='#fff7ff';c.fillText(label,b.x,y+7);c.restore();
+ }
  body(c,b,t){const power=this.state(b,t);for(let i=0;i<5;i++)this.shard(c,b,t,i,false,power);this.energy(c,b,t,power);c.save();if(power>0&&this.image.naturalWidth){c.globalAlpha=power;c.translate(b.x,b.y+29);c.drawImage(this.image,-130,-260,260,260);}c.restore();if(power<1){c.save();c.globalAlpha=1-power;if(this.wreckImage.naturalWidth){const w=300,h=w*464/717;c.drawImage(this.wreckImage,25,233,717,464,b.x-w/2,b.y+25-h,w,h);}else if(this.image.naturalWidth){c.filter='brightness(.7)';c.drawImage(this.image,b.x-130,b.y-231,260,260);}c.restore();}
   if(power){c.save();c.globalCompositeOperation='screen';for(const [x,y,phase]of [[-95,-113,0],[85,-89,2],[-10,-24,4]]){const r=7+Math.sin(t*3+phase)*1.3;glow(c,b.x+x,b.y+y,r*1.8,r*1.8,'#e05bff88');}c.restore();for(let i=0;i<5;i++)this.shard(c,b,t,i,true,power);}
   c.save();c.textAlign='center';c.font='600 12px system-ui';c.fillStyle=power?'#ead0f7':'#a7a695';c.fillText(power?'최전방 포탈':'최전방 포탈 · 폐쇄',b.x,b.y+51);c.restore();}

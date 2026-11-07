@@ -112,7 +112,14 @@ function repairRobot(c,b,time){
  }
  c.font='9px sans-serif';c.textAlign='center';c.fillStyle=b.repairing?'#dff2b1':'#c7d9c0';c.fillText(b.repairing?'수리 중':b.repairEvadeGoal?'위험 회피':walking?'수리 지점 이동':b.repairAnchor?'건물 옆 대기':'건물 대기',0,29);
 }
-function building(c,b,time){const assembling=b.buildUntil>time,progress=Math.max(0,Math.min(1,(time-b.buildAt)/(b.buildUntil-b.buildAt))),x=b.x,y=b.y;c.save();c.translate(x,y);c.shadowColor='#172e2555';c.shadowBlur=9;c.shadowOffsetY=8;if(b.kind!=='repairBot'&&(!fieldAssets.has(b.kind)||b.hp<=0))rr(c,-b.w/2,-b.h/2,b.w,b.h,6,b.hp>0?'#465d43':'#656352');c.shadowColor='transparent';if(b.hp<=0){if(b.kind==='repairBot')rr(c,-11,-7,22,14,4,'#59665a');c.restore();return;}
+function missileWreck(c,b){
+ c.save();c.translate(b.x,b.y);ellipse(c,3,7,60,23,'#302d2580');ellipse(c,0,4,44,16,'#3a3a2a');
+ for(const [x,y,w,h,a]of [[-27,0,43,15,-.17],[17,7,38,13,.24],[-2,-7,32,12,-.05]]){c.save();c.translate(x,y);c.rotate(a);rr(c,-w/2,-h/2,w,h,3,'#555947','#777962');c.restore();}
+ for(const [x,y,a]of [[-19,-9,-.7],[21,-5,.95]]){c.save();c.translate(x,y);c.rotate(a);rr(c,-11,-22,22,40,3,b.team===0?'#53634e':'#83574b','#b08c6b');rr(c,-8,-17,16,29,2,'#32352d');c.fillStyle='#a28666';c.fillRect(-11,9,22,4);ellipse(c,0,-19,9,5,'#191e1c');c.strokeStyle='#b79578';c.lineWidth=2;c.beginPath();c.moveTo(-10,-21);c.lineTo(-4,-16);c.lineTo(1,-23);c.lineTo(8,-18);c.stroke();c.restore();}
+ for(let i=0;i<9;i++){const a=i*2.39996,r=35+i%3*9;rr(c,Math.cos(a)*r,Math.sin(a)*r*.38,5+i%3*2,4,1,i%2?'#4a4b3b':'#8a785b');}
+ c.strokeStyle='#363a31';c.lineWidth=3;c.beginPath();c.moveTo(-32,-5);c.lineTo(-44,-17);c.lineTo(-52,-12);c.stroke();c.restore();return true;
+}
+function building(c,b,time){if(b.hp<=0&&b.kind==='missileBase')return missileWreck(c,b);const assembling=b.buildUntil>time,progress=Math.max(0,Math.min(1,(time-b.buildAt)/(b.buildUntil-b.buildAt))),x=b.x,y=b.y;c.save();c.translate(x,y);c.shadowColor='#172e2555';c.shadowBlur=9;c.shadowOffsetY=8;if(b.kind!=='repairBot'&&(!fieldAssets.has(b.kind)||b.hp<=0))rr(c,-b.w/2,-b.h/2,b.w,b.h,6,b.hp>0?'#465d43':'#656352');c.shadowColor='transparent';if(b.hp<=0){if(b.kind==='repairBot')rr(c,-11,-7,22,14,4,'#59665a');c.restore();return;}
  c.globalAlpha=assembling?.35+.55*progress:1;
  if(b.kind==='repairBot')repairRobot(c,b,time);
  else if(field(c,b.kind,0,0,b.face||0)){}
@@ -121,5 +128,5 @@ function building(c,b,time){const assembling=b.buildUntil>time,progress=Math.max
  else if(b.kind==='missileBase'){ellipse(c,0,0,30,22,'#334b3b');c.save();c.rotate(b.face+Math.PI/2);rr(c,-25,-42,50,55,4,'#769060','#bec7a2');for(const x of [-13,13]){rr(c,x-8,-46,16,43,3,'#304638');ellipse(c,x,-44,7,5,'#c9d0b3');}c.restore();}
  else{rr(c,-27,-25,54,48,6,'#78935e','#afbe91');ellipse(c,0,-4,19,15,'#405d42');c.save();c.rotate(b.face+Math.PI/2);for(const x of [-9,9])rr(c,x-3,-46,6,46,2,'#344c38');rr(c,-11,-13,22,20,4,'#92aa70');c.restore();}
  c.globalAlpha=1;c.fillStyle='#23372a';c.fillRect(-b.w/2,-b.h/2-48,b.w,5);c.fillStyle=assembling?'#8fe39c':'#a4dfa3';c.fillRect(-b.w/2,-b.h/2-48,b.w*(assembling?progress:b.hp/b.maxHp),5);if(assembling){c.font='11px sans-serif';c.textAlign='center';c.fillStyle='#c5f3ba';c.fillText('조립 중',0,b.h/2+17);}c.restore();}
-window.FrontLivingRoom={terrain,gardenTerrain,furniture,building,field,projectile,depth,furnitureOpacity,furnitureVisible,ready:Promise.all([ready,fieldReady,floorPencilReady,floorWoodReady]),diagnostics:()=>({loaded:assets.size,field:fieldAssets.size,floor:floorWoodLoaded,failures})};
+window.FrontLivingRoom={terrain,gardenTerrain,furniture,building,missileWreck,field,projectile,depth,furnitureOpacity,furnitureVisible,ready:Promise.all([ready,fieldReady,floorPencilReady,floorWoodReady]),diagnostics:()=>({loaded:assets.size,field:fieldAssets.size,floor:floorWoodLoaded,failures})};
 })();

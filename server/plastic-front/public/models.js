@@ -45,17 +45,17 @@ class FrontModels{
   // Retain the current sector near a boundary instead of flipping two views.
   let aim=state.bodyAngle;if(!Number.isFinite(aim)||Math.abs(angleDelta(wanted,aim))>step/2+.10)aim=Math.round(wanted/step)*step;
   const validFrame=f=>Number.isInteger(f)&&f>=0&&f<spec.frames?f:0;
-  const direction=((Math.round(aim/step)%8)+8)%8,phase=state.walkPhase*TAU,legFrame=validFrame(walking?spec.walkFrames[Math.floor(state.walkPhase*spec.walkFrames.length)]:0),upperFrame=validFrame(firing?(spec.stableFireFrame??6):0);
+  const direction=((Math.round(aim/step)%8)+8)%8,phase=state.walkPhase*TAU,legFrame=validFrame(walking?spec.walkFrames[Math.floor(state.walkPhase*spec.walkFrames.length)]:0),upperFrame=validFrame(spec.stableFireFrame??6);
   const hurt=Math.max(0,Math.min(1,((u.hurtUntil||0)-time)/.18)),recoil=firing?Math.sin(time*24)*.15:0,bob=walking?-Math.abs(Math.sin(phase))*.2:Math.sin(time*2.2+(u.id||0))*.12;
   ctx.save();this.ground(ctx,spec,aim,firing?upperFrame:walking?legFrame:0,false);if(hurt)ctx.translate(Math.cos(u.hurtAngle||0)*hurt*2,Math.sin(u.hurtAngle||0)*hurt*2);ctx.translate(-Math.cos(face)*recoil,-Math.sin(face)*recoil);
   const sway=time*2+phase*.65;
-  if(walking&&firing&&spec.aimFrame!==undefined){
+  if(walking&&spec.aimFrame!==undefined){
    const cut=spec.legSplit??-18,offset=spec.gaitOffsets?.[legFrame]?.[direction]||[0,0];
    ctx.save();ctx.beginPath();ctx.rect(-150,cut,300,180);ctx.clip();this.sprite(ctx,spec,aim,legFrame,offset[0],offset[1]+bob,sway);ctx.restore();
    ctx.save();ctx.beginPath();ctx.rect(-150,-180,300,180+cut+.5);const overhang=spec.aimOverhang?.[direction];if(overhang)ctx.rect(...overhang);ctx.clip();this.sprite(ctx,spec,aim,upperFrame,0,bob,sway);ctx.restore();
   }else this.sprite(ctx,spec,aim,walking?legFrame:upperFrame,0,bob,sway);
   ctx.restore();
-  if(elapsed>0||fresh){Object.assign(state,{x:u.x,y:u.y,time,walk:u.walk||0,frame:walking?legFrame:upperFrame,upperFrame:firing?upperFrame:walking?legFrame:upperFrame,walking,face,bodyAngle:aim,direction});this.motion.set(u,state);}return true;
+  if(elapsed>0||fresh){Object.assign(state,{x:u.x,y:u.y,time,walk:u.walk||0,frame:walking?legFrame:upperFrame,upperFrame,walking,face,bodyAngle:aim,direction});this.motion.set(u,state);}return true;
  }
  drawMage(ctx,u,time,item){
   const state=this.motion.get(u)||{x:u.x,y:u.y,time,walkPhase:0},fresh=!this.motion.has(u),dt=Math.max(0,time-state.time),dx=u.x-state.x,dy=u.y-state.y,travel=Math.hypot(dx,dy),casting=!!(u.blizzardCast||time<(u.castUntil||0)),moved=dt>0&&travel>.035&&travel/dt>3;

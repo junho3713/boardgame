@@ -8,3 +8,9 @@ test('Hwarin remains visible when a late-loaded skin replaces generic motion wit
 test('Hwarin recovers invalid motion and facing during walking, firing and ultimate in all eight directions',()=>{
  for(const action of ['walk','fire','ultimate'])for(let d=0;d<8;d++){const m=models(),spec={...m.manifest.models['commanderHwarin-0'].body,image:{}},c=canvas(),u={id:1,x:1010,y:6000,walk:1,face:d*Math.PI/4,flameUntil:action==='fire'?10:0,ultimatePose:action==='ultimate'?{active:true,angle:NaN}:null};m.motion.set(u,{x:1000,y:6000,time:0,walk:0,walkPhase:NaN,walking:true,bodyAngle:NaN});m.drawHwarin(c,u,.1,{layers:{body:spec}});a.ok(c.calls.length);for(const crop of c.calls){a.ok(crop[0]>=0&&crop[1]>=0);a.ok(crop[1]<spec.cell*spec.frames);}}
 });
+
+test('walking keeps the registered upper-body frame and does not animate while paused',()=>{
+ const m=models(),spec={...m.manifest.models['commanderHwarin-0'].body,image:{}},c=canvas(),u={id:1,x:100,y:100,walk:0,face:0};m.drawHwarin(c,u,0,{layers:{body:spec}});
+ for(let i=1;i<=16;i++){u.x+=7;u.walk++;m.drawHwarin(c,u,i*.1,{layers:{body:spec}});a.equal(m.motion.get(u).upperFrame,spec.stableFireFrame);}
+ const before=JSON.stringify(m.motion.get(u));m.drawHwarin(c,u,1.6,{layers:{body:spec}});a.equal(JSON.stringify(m.motion.get(u)),before);
+});
