@@ -36,5 +36,5 @@ test('saved link marks, cooldowns and marked delayed mortar shots preserve owner
  const old=pack(scene());delete old.fields.evolutionLinkState;unpack(restored,old);a.deepEqual(restored.evolutionLinkState,{owners:[]});
 });
 test('obtaining evolution links keeps the same time-based enemy wave plan',()=>{
- const g=scene(),before=[];for(const time of [120,300,600,900]){g.time=time;before.push(g.roomWavePlan());}for(const type of ['sniper','mortar','tank','rocket','machinegun','lucky'])actor(g,type);for(const [i,time]of [120,300,600,900].entries()){g.time=time;a.deepEqual(g.roomWavePlan(),before[i]);}a.equal(g.evolutionLinks().filter(l=>l.active).length,5);
+ const g=scene(),before=[];for(const time of [120,300,600,900]){g.time=time;before.push(g.roomWavePlan());}for(const type of ['sniper','mortar','tank','rocket','machinegun','lucky'])actor(g,type);for(const [i,time]of [120,300,600,900].entries()){g.time=time;a.deepEqual(g.roomWavePlan(),before[i]);}a.equal(g.evolutionLinks().filter(l=>l.active).length,6);
 });
