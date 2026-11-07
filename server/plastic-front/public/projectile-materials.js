@@ -20,7 +20,7 @@ function install(Effects){
   this.combatAssets=a;return a.ready.then(()=>{if(a.fire?.naturalWidth)this.impactFireImage=a.fire;});
  };
  p.missileGeometry=function(kind,size=1,anchor='tip'){
-  const scale=kind==='boss'&&anchor==='tip'?1.2:1,width=(kind==='boss'?76:58)*size*MISSILE_LENGTH_SCALE*scale,offset=anchor==='tip'?-width*.47:0;
+  const scale=kind==='boss'&&anchor==='tip'?1.5:1,width=(kind==='boss'?76:58)*size*MISSILE_LENGTH_SCALE*scale,offset=anchor==='tip'?-width*.47:0;
   return{width,scale,offset,nozzle:offset-width*.462};
  };
  p.drawMaterialMissile=function(c,x,y,angle,time,kind='boss',size=1,{exhaust=true,anchor='center'}={}){
