@@ -41,21 +41,29 @@ test('777 progresses toward its impact in every direction and distance without a
  }
 });
 
-test('777 retains its scheduled one-second landing and a fixed launch point after the vehicle moves',()=>{
+test('777 accelerates into a shorter landing while keeping a fixed launch point after the vehicle moves',()=>{
  const {g,source,target}=scene(240),fx=renderer();g.launchMissile(source,target,{damage:700,lane:75});const shell=g.mortarShells[0];
- near(shell.delay,1);near(shell.landAt-g.time,1);
- const first=fx.mortarPose(shell,.4);source.x-=300;source.y+=200;const moved=fx.mortarPose(shell,.4);
+ near(shell.delay,.35);near(shell.landAt-g.time,.35);
+ const first=fx.mortarPose(shell,.15);source.x-=300;source.y+=200;const moved=fx.mortarPose(shell,.15);
  near(first.x,moved.x);near(first.y,moved.y);near(first.angle,moved.angle);
  const hp=target.hp;g.time=shell.landAt-.001;g.updateMortars();a.equal(target.hp,hp);a.equal(g.mortarShells.length,1);
  g.time=shell.landAt;g.updateMortars();a.equal(g.mortarShells.length,0);a.ok(target.hp<hp);
 });
 
-test('a close boss-killer stays in flight for 0.6 seconds and the engine applies its existing damage exactly once',()=>{
+test('allied 777 speed scales with distance while enemy jackpots and missile buildings retain their timing',()=>{
+ for(const distance of [10,240,480]){
+  const {g,source,target}=scene(distance);g.launchMissile(source,target);const shell=g.mortarShells[0];
+  near(shell.delay,Math.max(.35,Math.min(.6,distance/850)));
+  for(const actor of [{...source,team:2},{...source,type:'missileBase'}]){g.launchMissile(actor,target);near(g.mortarShells.at(-1).delay,g.buildingStats('missileBase',actor.team).flightTime);}
+ }
+});
+
+test('a close boss-killer stays in flight for 0.28 seconds and applies its existing damage exactly once',()=>{
  const {g,source,target}=scene(10);g.castLucky(source,'bossKiller');const shot=g.shots[0],hp=target.hp;
- near(shot.guidedFlight.duration,.6);near(shot.damage,4444*g.luckyScale(source));
+ near(shot.guidedFlight.duration,.28);near(shot.damage,4444*g.luckyScale(source));
  const expected=shot.damage*100/(100+g.stats(target).defense*.56),impact=g.impact;let calls=0;
  g.impact=function(p){if(p===shot)calls++;return impact.call(this,p);};
- for(let frame=0;frame<11;frame++){g.update(.05);a.ok(g.shots.includes(shot),'close projectile vanished before the minimum flight');a.equal(target.hp,hp);}
+ for(let frame=0;frame<5;frame++){g.update(.05);a.ok(g.shots.includes(shot),'close projectile vanished before the minimum flight');a.equal(target.hp,hp);}
  for(let frame=0;frame<20;frame++)g.update(.05);
  a.equal(g.shots.includes(shot),false);a.equal(calls,1);near(hp-target.hp,expected,1e-6);
 });
@@ -72,8 +80,8 @@ test('guided boss-killers follow the visible path to a moving flying boss indepe
  const {g,source,target}=scene(300,'hornet'),fx=renderer();target.visualFlightHeight=80;g.castLucky(source,'bossKiller');const shot=g.shots[0],flight=shot.guidedFlight;
  near(flight.launchHeight,30);near(flight.targetHeight,96);
  let previous=fx.materialShotPose(shot);finitePose(previous);near(previous.y,source.y-30);
- for(let frame=1;frame<=8;frame++){
-  g.time=frame*.05;target.x+=3;target.y-=2;g.updateBossKillerFlight(shot,.05);
+ for(let frame=1;frame<=5;frame++){
+  g.time=frame*.04;target.x+=3;target.y-=2;g.updateBossKillerFlight(shot,.04);
   const current=fx.materialShotPose(shot);finitePose(current);directionMatches(current.angle,current.x-previous.x,current.y-previous.y);
   const before={x:current.x,y:current.y,angle:current.angle};source.x-=50;source.y+=35;
   const moved=fx.materialShotPose(shot);near(moved.x,before.x);near(moved.y,before.y);near(moved.angle,before.angle);previous=current;
@@ -86,7 +94,7 @@ test('save and restore preserve guided-flight metadata, actor references and the
  const {g,source,target}=scene(400);g.castLucky(source,'bossKiller');const shot=g.shots[0];g.time=.2;g.updateBossKillerFlight(shot,.2);
  const restored=unpack(scene().g,JSON.parse(JSON.stringify(pack(g)))),copy=restored.shots[0];
  a.deepEqual(copy.guidedFlight,shot.guidedFlight);a.equal(copy.source,restored.units.find(u=>u.id===source.id));a.equal(copy.target,restored.units.find(u=>u.id===target.id));
- for(const time of [.35,.6,shot.guidedFlight.startedAt+shot.guidedFlight.duration]){
+ for(const time of [.25,.35,shot.guidedFlight.startedAt+shot.guidedFlight.duration]){
   g.time=restored.time=time;g.updateBossKillerFlight(shot,.05);restored.updateBossKillerFlight(copy,.05);
   near(copy.x,shot.x);near(copy.y,shot.y);near(copy.guidedFlight.heading,shot.guidedFlight.heading);near(copy.target.hp,target.hp);a.equal(copy.life,shot.life);
  }

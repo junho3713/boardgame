@@ -11,7 +11,7 @@ const BUTTERFLY={range:330,arc:80*Math.PI/180,windup:.65,flight:.8,reduction:.5,
 const MEDIC_CLEANSE={cooldown:10,targets:5};
 const MEDIC_HEALING={base:10,interval:1,perLevel:.15,evolvedMultiplier:1.4,window:1,efficiencies:[1,.6,.4]};
 const BIKE={windup:1.25,distance:450,speed:600,halfWidth:24,recovery:.9,cooldown:6};
-const LUCKY={interval:4,spin:.6,range:350,normal:{glue:.33,mine:.15,spray:.10,missiles:.02,blank:.40},evolved:{glue:.33,mine:.15,spray:.17,missiles:.05,blank:.30},slowDuration:2,groundSlow:.30,flyingSlow:.15,glueRadius:100,glueFlight:.55,glueLife:10,mineDamage:100,mineRadius:80,mineLife:60,sprayDamage:150,sprayDuration:6,sprayRange:310,missileDamage:700,missileEdge:.3,alliedMissileEdge:.75,alliedMissileLight:.75,missiles:7,missileInterval:.12,missileRange:480};
+const LUCKY={interval:4,spin:.6,range:350,normal:{glue:.33,mine:.15,spray:.10,missiles:.02,blank:.40},evolved:{glue:.33,mine:.15,spray:.17,missiles:.05,blank:.30},slowDuration:2,groundSlow:.30,flyingSlow:.15,glueRadius:100,glueFlight:.55,glueLife:10,mineDamage:100,mineRadius:80,mineLife:60,sprayDamage:150,sprayDuration:6,sprayRange:310,missileDamage:700,missileEdge:.3,alliedMissileEdge:.75,alliedMissileLight:.75,missiles:7,missileInterval:.12,alliedMissileInterval:.08,missileRange:480};
 const ROOM_PROP_SHAPES={"sofa":{"file":"sofa-user-v093.webp","width":1533,"height":1026,"anchorX":653.0,"anchorY":552.7142857142858,"footprintW":1272,"footprintH":590.5714285714286,"bodyBounds":[17,128,1289,848],"collisionSlicesNormalized":[[0.022013,0.0,0.955189,0.0625],[0.014151,0.0625,0.970912,0.0625],[0.01022,0.125,0.978774,0.0625],[0.007862,0.1875,0.984277,0.0625],[0.005503,0.25,0.988208,0.0625],[0.003931,0.3125,0.992138,0.0625],[0.001572,0.375,0.996855,0.0625],[0,0.4375,1,0.0625],[0,0.5,1,0.0625],[0,0.5625,1,0.0625],[0.002358,0.625,0.996069,0.0625],[0.004717,0.6875,0.990566,0.0625],[0.008648,0.75,0.983491,0.0625],[0.014151,0.8125,0.97327,0.0625],[0.022799,0.875,0.955975,0.0625],[0.025157,0.9375,0.952044,0.0625]],"source":"uploaded","sha256":"635a08e85ce8a54753d7fa43fb4df7327d05fe5d5445e61d158690e7fe1c2545","uniformFit":true},"slipper":{"file":"slipper-user-v093.webp","width":1010,"height":1557,"anchorX":475.5,"anchorY":787.0,"footprintW":771,"footprintH":1516,"bodyBounds":[90,29,861,1545],"collisionSlicesNormalized":[[0.184176,0.0,0.616083,0.0625],[0.092088,0.0625,0.793774,0.0625],[0.042802,0.125,0.894942,0.0625],[0.015564,0.1875,0.955901,0.0625],[0.002594,0.25,0.988327,0.0625],[0,0.3125,0.998703,0.0625],[0,0.375,1,0.0625],[0.007782,0.4375,0.989624,0.0625],[0.032425,0.5,0.950713,0.0625],[0.070039,0.5625,0.885863,0.0625],[0.101167,0.625,0.830091,0.0625],[0.119326,0.6875,0.800259,0.0625],[0.127108,0.75,0.787289,0.0625],[0.137484,0.8125,0.763943,0.0625],[0.167315,0.875,0.706874,0.0625],[0.238651,0.9375,0.571984,0.0625]],"source":"uploaded","sha256":"b38f3189c8a95f944325cc0dd06386dd16cd222113fdf0a4600c6f3f08d36985","uniformFit":true}};
 function roomPropKey(o){return o.kind==='slipper'?'slipper':o.kind==='sofa'&&o.label!=='암체어'?'sofa':null;}
 function roomPropFloor(o){const s=ROOM_PROP_SHAPES[roomPropKey(o)],k=Math.min(o.w/s.footprintW,o.h/s.footprintH),w=s.footprintW*k,h=s.footprintH*k;return{x:o.x+o.w/2-w/2,y:o.y+o.h/2-h/2,w,h};}
@@ -984,7 +984,7 @@ class FrontGame{
  }
  activeDefenses(){return this.defenses.filter(p=>p.hp>0&&this.mission.stage>=p.activeStage);}
  launchMissile(source,target,attack={}){
-  const spec=source.defenseKind==='missileTower'?ENEMY_MISSILE:this.buildingStats('missileBase',source.team);source.recoil=.3;this.mortarShells.push({kind:'missile',damageType:'rocket',x:target.x,y:target.y,fromX:source.x-(source.type==='lucky'?Math.sin(source.face)*(attack.side||1)*10:0),fromY:source.y+(source.type==='lucky'?Math.cos(source.face)*(attack.side||1)*8-24:0),radius:spec.splash,landAt:this.time+spec.flightTime,delay:spec.flightTime,source,team:source.team,damage:attack.damage??spec.damage,luckyLane:source.type==='lucky'?(attack.lane||0):0,...(source.type==='lucky'?{luckyRulesVersion:130}:{}),critical:false});this.effects.push({kind:'muzzle',x:source.x,y:source.y,t:.18,max:.18,team:source.team,weapon:'rocket',angle:source.face,origin:true});this.notify('fire',{...source,type:'rocket'});
+  const spec=source.defenseKind==='missileTower'?ENEMY_MISSILE:this.buildingStats('missileBase',source.team),flightTime=source.type==='lucky'&&source.team===0?clamp(dist(source,target)/850,.35,.6):spec.flightTime;source.recoil=.3;this.mortarShells.push({kind:'missile',damageType:'rocket',x:target.x,y:target.y,fromX:source.x-(source.type==='lucky'?Math.sin(source.face)*(attack.side||1)*10:0),fromY:source.y+(source.type==='lucky'?Math.cos(source.face)*(attack.side||1)*8-24:0),radius:spec.splash,landAt:this.time+flightTime,delay:flightTime,source,team:source.team,damage:attack.damage??spec.damage,luckyLane:source.type==='lucky'?(attack.lane||0):0,...(source.type==='lucky'?{luckyRulesVersion:130}:{}),critical:false});this.effects.push({kind:'muzzle',x:source.x,y:source.y,t:.18,max:.18,team:source.team,weapon:'rocket',angle:source.face,origin:true});this.notify('fire',{...source,type:'rocket'});
  }
  launchMortar(source,target,attack){
   const s=source.structure?{splash:source.built?70:60}:this.stats(source);source.recoil=.25;this.effects.push({kind:'muzzle',x:source.x,y:source.y,t:.14,max:.14,team:source.team,weapon:'mortar',angle:Math.atan2(target.y-source.y,target.x-source.x),origin:true});
@@ -1370,10 +1370,19 @@ class FrontGame{
    this.effects.push({kind:'luckyGlueThrow',x:u.x,y:u.y,tx:target.x,ty:target.y,radius:LUCKY.glueRadius,t:LUCKY.glueFlight,max:LUCKY.glueFlight,team:0});return;
   }
   if(kind==='mine'){
-   // At most one placement per four seconds: this limit never removes a live mine early.
+   // Each winning reel places its own mine; keep their visible footprints apart.
    const owned=this.luckyMines.filter(m=>m.ownerId===u.id);if(owned.length>=(Math.ceil(LUCKY.mineLife/LUCKY.interval)+1)*(u.star>=2?3:1)){const oldest=owned[0];this.luckyMines=this.luckyMines.filter(m=>m!==oldest);}
    const angle=Number.isFinite(u.moveFace)?u.moveFace:u.face||0;let point={x:u.x,y:u.y};for(const d of [38,24,0]){const near={x:u.x+Math.cos(angle)*d,y:u.y+Math.sin(angle)*d};if(this.freePosition(near.x,near.y,10)&&this.lineClear(u,near,10)){point=near;break;}}
-   this.luckyMines.push({x:point.x,y:point.y,ownerId:u.id,source:u,team:0,damage:LUCKY.mineDamage*scale,armAt:this.time+.35,placedAt:this.time,expires:this.time+LUCKY.mineLife,rulesVersion:85});return;
+   if(this.starExperiment&&u.star>=2){
+    const channel=u.activeLuckyChannel??0,lane=channel===1?-32:channel===2?32:0,existing=this.luckyMines.filter(m=>m.ownerId===u.id&&m.expires>this.time);let best=-1,found=false;
+    for(const d of [38,62,86,24,0]){for(const side of [lane,lane-32,lane+32,lane-64,lane+64]){
+     const near={x:u.x+Math.cos(angle)*d-Math.sin(angle)*side,y:u.y+Math.sin(angle)*d+Math.cos(angle)*side};
+     if(!this.freePosition(near.x,near.y,10)||!this.lineClear(u,near,10))continue;
+     const gap=existing.length?Math.min(...existing.map(m=>dist(m,near))):Infinity;
+     if(gap>best){best=gap;point=near;}if(gap>=26){found=true;break;}
+    }if(found)break;}
+   }
+   this.luckyMines.push({x:point.x,y:point.y,ownerId:u.id,source:u,rouletteChannel:u.activeLuckyChannel??0,team:0,damage:LUCKY.mineDamage*scale,armAt:this.time+.35,placedAt:this.time,expires:this.time+LUCKY.mineLife,rulesVersion:85});return;
   }
   if(kind==='spray'){
    const aim=this.luckySprayTarget(u);
@@ -1395,7 +1404,7 @@ class FrontGame{
    const firingKey=this.starExperiment&&v.source.star>=2?v.source.id+':'+(v.rouletteChannel||0):v.source.id;if(firing.has(firingKey)){salvos.push(v);continue;}firing.add(firingKey);
    const pick=()=>this.luckyMissileTarget(v.source,v);let target=pick();
    if(!target){v.waiting=true;v.nextAt=this.time;salvos.push(v);continue;}if(v.waiting){v.nextAt=this.time;v.waiting=false;}
-   while(v.remaining>0&&v.nextAt<=this.time+1e-8){target=pick();if(!target){v.waiting=true;v.nextAt=this.time;break;}v.nextAt+=LUCKY.missileInterval;v.remaining--;this.recordLuckyMissile(v,target.target);v.source.face=Math.atan2(target.y-v.source.y,target.x-v.source.x);this.launchMissile(v.source,target,{damage:v.damage,side:v.remaining%2?1:-1,lane:[-50,50,-25,25,-75,75,0][(v.total||LUCKY.missiles)-v.remaining-1]||0});}
+   while(v.remaining>0&&v.nextAt<=this.time+1e-8){target=pick();if(!target){v.waiting=true;v.nextAt=this.time;break;}v.nextAt+=v.source.team===0?LUCKY.alliedMissileInterval:LUCKY.missileInterval;v.remaining--;this.recordLuckyMissile(v,target.target);v.source.face=Math.atan2(target.y-v.source.y,target.x-v.source.x);this.launchMissile(v.source,target,{damage:v.damage,side:v.remaining%2?1:-1,lane:[-50,50,-25,25,-75,75,0][(v.total||LUCKY.missiles)-v.remaining-1]||0});}
    if(v.remaining>0)salvos.push(v);}this.luckySalvos=salvos;
  }
  swordTargets(c,angle,range,arc=Math.PI*2){

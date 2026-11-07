@@ -93,18 +93,19 @@ function install(api){
   const target=this.bossKillerTarget(u);
   if(!target){const base=this.luckyOdds(u),fallback=this.luckyOutcome(this.random(),base);if(u.luckyRoll?.kind==='bossKiller'){u.luckyRoll.kind=fallback;u.luckyRoll.bossKillerAvailable=false;}return cast.call(this,u,fallback);}
   const scale=this.coop?this.withOwner(u.coopOwner,()=>this.luckyScale(u)):this.luckyScale(u);
-  const duration=Math.max(.6,Math.min(1.1,distance(u,target)/440)),launchHeight=30,targetHeight=16+(target.visualFlightHeight??TYPES[target.type]?.flightHeight??0);
+  const duration=Math.max(.28,Math.min(.55,distance(u,target)/900)),launchHeight=30,targetHeight=16+(target.visualFlightHeight??TYPES[target.type]?.flightHeight??0);
   const heading=Math.atan2(target.y-targetHeight-u.y+launchHeight,target.x-u.x);
-  const guidedFlight={startedAt:this.time,duration,fromX:u.x,fromY:u.y,launchHeight,targetHeight,distance:distance(u,target),progress:0,heading,previousX:u.x,previousY:u.y-launchHeight};
-  this.shots.push({x:u.x,y:u.y,target,source:u,damage:4444*scale,speed:440,kind:'bossKiller',team:0,life:3,splash:0,evoStyle:'bossKiller',guidedFlight});
+  const guidedFlight={motionVersion:2,startedAt:this.time,duration,fromX:u.x,fromY:u.y,launchHeight,targetHeight,height:launchHeight,distance:distance(u,target),progress:0,heading,previousX:u.x,previousY:u.y-launchHeight};
+  this.shots.push({x:u.x,y:u.y,target,source:u,damage:4444*scale,speed:900,kind:'bossKiller',team:0,life:3,splash:0,evoStyle:'bossKiller',guidedFlight});
   this.effects.push({kind:'evoBossLaunch',x:u.x,y:u.y,launchY:u.y-launchHeight,angle:heading,targetHeight,target,t:duration+.15,max:duration+.15,team:0});this.notify('fire',{...u,luckySound:'bossKiller'});this.notify('toast','보스킬러 당첨! 검은 미사일 발사');
  };
  p.updateBossKillerFlight=function(b,dt){
   const f=b.guidedFlight;if(!f||b.life<=0)return;
-  const k=Math.max(0,Math.min(1,(this.time-f.startedAt)/f.duration)),q=.6*k+.4*k*k;
-  b.x=f.fromX+(b.target.x-f.fromX)*q;b.y=f.fromY+(b.target.y-f.fromY)*q;
+  const k=Math.max(0,Math.min(1,(this.time-f.startedAt)/f.duration)),dynamic=f.motionVersion===2,q=dynamic?.25*k+.75*k*k:.6*k+.4*k*k;
+  const dxTarget=b.target.x-f.fromX,dyTarget=b.target.y-f.fromY,d=Math.max(1,Math.hypot(dxTarget,dyTarget)),sway=dynamic?Math.sin(Math.PI*q)*Math.min(32,f.distance*.08)*(b.source.id%2?1:-1):0;
+  b.x=f.fromX+dxTarget*q-dyTarget/d*sway;b.y=f.fromY+dyTarget*q+dxTarget/d*sway;
   f.targetHeight=16+(b.target.visualFlightHeight??TYPES[b.target.type]?.flightHeight??0);
-  const height=f.launchHeight*(1-q)+f.targetHeight*q+Math.sin(Math.PI*k)*Math.min(18,f.distance*.055),screenY=b.y-height;
+  const height=f.launchHeight*(1-q)+f.targetHeight*q+Math.sin(Math.PI*(dynamic?q:k))*Math.min(dynamic?44:18,f.distance*(dynamic?.11:.055)),screenY=b.y-height;f.height=height;
   const dx=b.x-f.previousX,dy=screenY-f.previousY;
   if(Math.hypot(dx,dy)>.001)f.heading=Math.atan2(dy,dx);
   f.previousX=b.x;f.previousY=screenY;f.progress=k;

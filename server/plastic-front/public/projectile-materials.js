@@ -28,6 +28,10 @@ function install(Effects){
   const {width,scale,offset,nozzle}=this.missileGeometry(kind,size,anchor),height=width/MISSILE_LENGTH_SCALE*image.naturalHeight/image.naturalWidth;
   c.save();c.translate(x,y);c.rotate(angle);
   if(exhaust)this.drawPropulsion(c,nozzle,0,time,(kind==='boss'?1.12:.83)*size*scale);
+  if(anchor==='tip'&&exhaust){
+   c.globalCompositeOperation='lighter';c.strokeStyle=kind==='boss'?'#ffe69a':'#c6ecff';c.lineWidth=1.2*size;c.globalAlpha=.28+.12*Math.sin(time*61);
+   for(const side of [-1,1]){const y=side*height*.38;c.beginPath();c.moveTo(nozzle-width*.65,y*1.5);c.lineTo(nozzle+width*.25,y);c.stroke();}
+  }
   c.globalCompositeOperation='source-over';c.globalAlpha=1;c.drawImage(image,offset-width/2,-height/2,width,height);c.restore();return true;
  };
  p.drawPropulsion=function(c,x,y,time,size=1){
@@ -44,15 +48,15 @@ function install(Effects){
  // fromY already includes the launcher's height; do not subtract it a second time.
  p.mortarPose=function(b,time){
   if(b.kind!=='missile'||b.source?.type!=='lucky')return oldMortarPose.call(this,b,time);
-  const k=clamp(1-(b.landAt-time)/b.delay),q=.6*k+.4*k*k,dq=.6+.8*k;
-  const dx=b.x-b.fromX,dy=b.y-b.fromY,d=Math.max(1,Math.hypot(dx,dy)),rise=Math.min(48,d*.13),lane=(b.luckyLane||0)*Math.min(.36,d*.001);
+  const k=clamp(1-(b.landAt-time)/b.delay),q=.25*k+.75*k*k,dq=.25+1.5*k;
+  const dx=b.x-b.fromX,dy=b.y-b.fromY,d=Math.max(1,Math.hypot(dx,dy)),rise=Math.min(72,d*.20),lane=(b.luckyLane||0)*Math.min(.52,d*.0016);
   const wave=Math.sin(Math.PI*q),slope=Math.PI*Math.cos(Math.PI*q),sway=wave*lane;
   const x=b.fromX+dx*q-dy/d*sway,groundY=b.fromY+dy*q+dx/d*sway,height=wave*rise;
   return{x,y:groundY-height,groundY:groundY+24*(1-q),height,k,team:b.team,angle:Math.atan2((dy+dx/d*lane*slope-rise*slope)*dq,(dx-dy/d*lane*slope)*dq)};
  };
  p.materialShotPose=function(b){
   if(b.kind==='bossKiller'&&b.guidedFlight){
-   const f=b.guidedFlight,k=clamp(f.progress),q=.6*k+.4*k*k,height=f.launchHeight*(1-q)+f.targetHeight*q+Math.sin(Math.PI*k)*Math.min(18,f.distance*.055);
+   const f=b.guidedFlight,k=clamp(f.progress),q=.6*k+.4*k*k,height=f.motionVersion===2?f.height:f.launchHeight*(1-q)+f.targetHeight*q+Math.sin(Math.PI*k)*Math.min(18,f.distance*.055);
    return{x:b.x,y:b.y-height,angle:f.heading,height,team:b.team};
   }
   const flight=b.target?.visualFlightHeight??root.FrontTypes?.[b.target?.type]?.flightHeight??0,from=root.FrontTypes?.[b.source?.type]?.flightHeight||0,total=b.source?Math.hypot(b.target.x-b.source.x,b.target.y-b.source.y):1,progress=clamp(1-Math.hypot(b.target.x-b.x,b.target.y-b.y)/Math.max(1,total));
