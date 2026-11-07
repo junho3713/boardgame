@@ -15,7 +15,7 @@ test('the fixed ten-minute power window and two-minute ramp do not depend on pla
  }
  for(const map of ['backyard','desktop']){const g=scene(map);g.time=900;if(map==='desktop')g.mode='duel';a.equal(g.evolutionPace().progress,0);a.equal(g.evolutionPace().relief,false);}
 });
-test('room waves ease for sixty seconds, then add at most eighty percent spawn rate and fourteen live slots',()=>{
+test('room waves ease for sixty seconds, then add at most fifty percent spawn rate and eight live slots',()=>{
  const g=scene();g.roomBeat=()=>({density:1,name:'test'});
  for(const time of [120,599,660,690,720,750,780,900,970,1140]){g.time=time;const old=baseline(()=>({plan:g.roomWavePlan(),cap:g.roomWaveCap()})),now=g.roomWavePlan(),pace=g.evolutionPace();near(now.interval,old.plan.interval/pace.spawnScale);a.equal(now.count,old.plan.count);a.equal(g.roomWaveCap(),old.cap+pace.capExtra);}
  delete g.roomBeat;g.time=610;const old=baseline(()=>g.roomWavePlan()),now=g.roomWavePlan();a.ok(now.interval>old.interval);a.equal(g.roomBeat().name,'전력 전환 · 돌파');
@@ -27,11 +27,11 @@ test('quiet windows and active bosses retain their recovery and reinforcement rh
 });
 test('new elite waves gain bounded HP without extra damage or changing existing wounded units',()=>{
  const g=scene();g.time=780;g.northernSpawn=()=>({x:1500,y:6200});
- const old=baseline(()=>g.spawnRoomEnemy('stagBeetle')),now=g.spawnRoomEnemy('stagBeetle');near(now.hp,old.hp*1.50);near(now.maxHp,g.stats(now).hp);near(g.stats(now).damage,g.stats(old).damage);
+ const old=baseline(()=>g.spawnRoomEnemy('stagBeetle')),now=g.spawnRoomEnemy('stagBeetle');near(now.hp,old.hp*1.30);near(now.maxHp,g.stats(now).hp);near(g.stats(now).damage,g.stats(old).damage);
  const ant=g.spawnRoomEnemy('ant');a.equal(ant.evolutionWaveHp,undefined);near(ant.maxHp,baseline(()=>g.stats(ant).hp));
  old.hp*=.4;const hp=old.hp;g.time=900;near(old.hp,hp);a.equal(old.evolutionWaveHp,undefined);
  now.hp*=.4;const ratio=now.hp/now.maxHp;g.time=960;g.syncEnemyGrowth();near(now.hp/now.maxHp,ratio);near(now.maxHp,g.stats(now).hp);
- const restored=unpack(scene(),JSON.parse(JSON.stringify(pack(g)))),copy=restored.units.find(u=>u.id===now.id);near(copy.evolutionWaveHp,1.50);near(copy.hp,now.hp);near(copy.maxHp,now.maxHp);
+ const restored=unpack(scene(),JSON.parse(JSON.stringify(pack(g)))),copy=restored.units.find(u=>u.id===now.id);near(copy.evolutionWaveHp,1.30);near(copy.hp,now.hp);near(copy.maxHp,now.maxHp);
 });
 test('the actual weighted spawner increases melee elite share without multiplying mage escort groups',()=>{
  function run(enabled){const before=pacing.enabled;pacing.enabled=enabled;try{const g=scene();g.time=780;g.roomBeat=()=>({density:1,name:'test'});g.northernSpawn=()=>({x:1500,y:6200});g.roomCanSpawnMageGroup=()=>false;g.roomCampaign.tankScheduleVersion=170;g.roomCampaign.tanksDone=config.tanks.map(()=>true);let seed=12345,elite=0,total=0;
@@ -42,8 +42,8 @@ test('the actual weighted spawner increases melee elite share without multiplyin
 });
 test('desktop spawns gain a gradual ground wave cadence while boss pressure and type limits remain bounded',()=>{
  const g=scene('desktop');g.activeBoss=()=>null;
- for(const time of [60,119,599,610,660,720,780,1140]){g.time=time;const old=baseline(()=>g.pressure()),now=g.pressure(),pace=g.evolutionPace(),density=pace.relief?pacing.reliefDensity:pace.spawnScale;near(now.swarmInterval,old.swarmInterval/density);a.ok(now.combatCap<=Math.ceil(old.combatCap*1.80)+14);}
- g.time=780;g.desktopEntry=()=>({x:1200,y:400});g.swarm.spawned=7;g.swarm.nextAt=0;g.updateSwarm();const elites=g.units.filter(u=>u.team!==0&&pacing.eliteTypes.includes(u.type));a.ok(elites.length>0);for(const u of elites){near(u.evolutionWaveHp,1.50);near(u.maxHp,g.stats(u).hp);}
+ for(const time of [60,119,599,610,660,720,780,1140]){g.time=time;const old=baseline(()=>g.pressure()),now=g.pressure(),pace=g.evolutionPace(),density=pace.relief?pacing.reliefDensity:pace.spawnScale;near(now.swarmInterval,old.swarmInterval/density);a.ok(now.combatCap<=Math.ceil(old.combatCap*1.50)+8);}
+ g.time=780;g.desktopEntry=()=>({x:1200,y:400});g.swarm.spawned=7;g.swarm.nextAt=0;g.updateSwarm();const elites=g.units.filter(u=>u.team!==0&&pacing.eliteTypes.includes(u.type));a.ok(elites.length>0);for(const u of elites){near(u.evolutionWaveHp,1.30);near(u.maxHp,g.stats(u).hp);}
  const boss=g.addUnit(2,'rhinoBeetle',1200,400,true);boss.boss=true;g.activeBoss=()=>boss;const old=baseline(()=>g.pressure());a.deepEqual(g.pressure(),old);
 });
 test('cooperative pacing keeps the existing shared one-point-eight spawn accounting',()=>{
@@ -59,5 +59,5 @@ test('a full minute of actual regular reinforcements adds bounded pressure versu
   for(let i=0;i<1200;i++){g.time=780+i*.05;g.units=g.units.filter(u=>u.team===0);g.updateRoomWaves();spawned+=g.units.filter(u=>u.team!==0&&u.roomWave).length;}
   return spawned;
  }finally{Object.assign(pacing,saved);}}
- const old=run(true),now=run(false);a.ok(now>=old*1.30&&now<=old*1.45,JSON.stringify({old,now}));
+ const old=run(true),now=run(false);a.ok(now>=old*1.10&&now<=old*1.22,JSON.stringify({old,now}));
 });

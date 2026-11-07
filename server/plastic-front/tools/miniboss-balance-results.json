@@ -1,0 +1,209 @@
+{
+  "scenario": "60-second open-field AI battle, livingroom-star; fixed northern spawn relative to commander; no map defenders/artillery; 660+ uses three evolved classes and two active links at start",
+  "selected": {
+    "spawnIncrease": 0.5,
+    "eliteHp": 0.3,
+    "eliteWeight": 0.65,
+    "capExtra": 8,
+    "miniHp": 0.5,
+    "miniDamage": 0.5
+  },
+  "reproduce": [
+    "node tools/miniboss-balance-check.cjs 177 660,780",
+    "node tools/miniboss-balance-check.cjs 3713 60,300,780"
+  ],
+  "trials": [
+    {
+      "seed": 177,
+      "start": 660,
+      "case": "mini-35",
+      "linksBefore": [
+        "교차 탄막",
+        "전선 유지"
+      ],
+      "seconds": 60,
+      "spawned": 112,
+      "losses": 0,
+      "replacementValue": 0,
+      "bought": 3,
+      "spent": 510,
+      "cash": 966,
+      "aliveBefore": 15,
+      "aliveAfter": 18,
+      "commanderRetreats": 0,
+      "phase": "playing",
+      "minis": [],
+      "activeLinks": [
+        "교차 탄막",
+        "전선 유지"
+      ]
+    },
+    {
+      "seed": 177,
+      "start": 660,
+      "case": "mini-50",
+      "linksBefore": [
+        "교차 탄막",
+        "전선 유지"
+      ],
+      "seconds": 60,
+      "spawned": 110,
+      "losses": 0,
+      "replacementValue": 0,
+      "bought": 3,
+      "spent": 510,
+      "cash": 1095,
+      "aliveBefore": 15,
+      "aliveAfter": 18,
+      "commanderRetreats": 0,
+      "phase": "playing",
+      "minis": [],
+      "activeLinks": [
+        "교차 탄막",
+        "전선 유지"
+      ]
+    },
+    {
+      "seed": 177,
+      "start": 780,
+      "case": "mini-35",
+      "linksBefore": [
+        "교차 탄막",
+        "전선 유지"
+      ],
+      "seconds": 60,
+      "spawned": 117,
+      "losses": 0,
+      "replacementValue": 0,
+      "bought": 4,
+      "spent": 580,
+      "cash": 1030,
+      "aliveBefore": 15,
+      "aliveAfter": 19,
+      "commanderRetreats": 0,
+      "phase": "playing",
+      "minis": [
+        {
+          "type": "hornet",
+          "hp": 5309,
+          "max": 53914,
+          "withdrawn": false
+        }
+      ],
+      "activeLinks": [
+        "교차 탄막",
+        "전선 유지"
+      ]
+    },
+    {
+      "seed": 177,
+      "start": 780,
+      "case": "mini-50",
+      "linksBefore": [
+        "교차 탄막",
+        "전선 유지"
+      ],
+      "seconds": 60,
+      "spawned": 135,
+      "losses": 3,
+      "replacementValue": 395,
+      "bought": 4,
+      "spent": 580,
+      "cash": 1152,
+      "aliveBefore": 15,
+      "aliveAfter": 17,
+      "commanderRetreats": 0,
+      "phase": "playing",
+      "minis": [
+        {
+          "type": "hornet",
+          "hp": 25754,
+          "max": 53914,
+          "withdrawn": false
+        }
+      ],
+      "activeLinks": [
+        "교차 탄막",
+        "전선 유지",
+        "야전 수리"
+      ]
+    },
+    {
+      "seed": 3713,
+      "start": 60,
+      "case": "mini-50",
+      "linksBefore": [],
+      "seconds": 60,
+      "spawned": 22,
+      "losses": 5,
+      "replacementValue": 225,
+      "bought": 9,
+      "spent": 405,
+      "cash": 92,
+      "aliveBefore": 5,
+      "aliveAfter": 7,
+      "commanderRetreats": 0,
+      "phase": "playing",
+      "minis": [
+        {
+          "type": "stagBeetle",
+          "hp": 629,
+          "max": 8316,
+          "withdrawn": false
+        }
+      ],
+      "activeLinks": []
+    },
+    {
+      "seed": 3713,
+      "start": 300,
+      "case": "mini-50",
+      "linksBefore": [],
+      "seconds": 60,
+      "spawned": 50,
+      "losses": 6,
+      "replacementValue": 1055,
+      "bought": 6,
+      "spent": 730,
+      "cash": 80,
+      "aliveBefore": 9,
+      "aliveAfter": 11,
+      "commanderRetreats": 0,
+      "phase": "playing",
+      "minis": [],
+      "activeLinks": []
+    },
+    {
+      "seed": 3713,
+      "start": 780,
+      "case": "mini-50",
+      "linksBefore": [
+        "교차 탄막",
+        "전선 유지"
+      ],
+      "seconds": 60,
+      "spawned": 94,
+      "losses": 2,
+      "replacementValue": 370,
+      "bought": 5,
+      "spent": 650,
+      "cash": 618,
+      "aliveBefore": 15,
+      "aliveAfter": 18,
+      "commanderRetreats": 0,
+      "phase": "playing",
+      "minis": [
+        {
+          "type": "hornet",
+          "hp": 53914,
+          "max": 53914,
+          "withdrawn": false
+        }
+      ],
+      "activeLinks": [
+        "교차 탄막",
+        "전선 유지"
+      ]
+    }
+  ]
+}
