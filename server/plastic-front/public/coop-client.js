@@ -36,7 +36,7 @@ function bindGame(game){
  if(game.coopClientBound)return;game.coopClientBound=true;
  game.levelCheck=()=>{};
  call('setMoveOrder','move');call('setFocus','focus',target=>({target:target.base?'enemy-base':target.id}));call('followCommander','follow',()=>({}));call('useUltimate','ultimate',()=>({}));
- call('stageChoice','stage',(type,queue)=>({type,queue}));call('confirmChoice','confirm',()=>({}));call('beginRecovery','recovery',()=>({}));call('cancelRecovery','cancelRecovery',()=>({}));call('build','build',kind=>({kind}));
+ call('stageChoice','stage',(type,queue)=>({type,queue}));call('confirmChoice','confirm',()=>({}));call('beginRecovery','recovery',()=>({}));call('useMedkit','medkit',()=>({}));call('useArtilleryTicket','artillery',(x,y)=>({x,y}));call('cancelRecovery','cancelRecovery',()=>({}));call('build','build',kind=>({kind}));
 }
 function apply(data){
  if(leaving||!bridge)return;connected=true;const previousRound=state?.round;state=data;

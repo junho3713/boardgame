@@ -22,6 +22,14 @@ test('two clients authenticate, grow independently without pausing, reconnect an
   assert.equal((await call('/command',{action:'confirm',round:green.round},b.token)).status,409);
   assert.equal((await call('/command',{action:'confirm',round:green.round},a.token)).status,200);
   assert.equal(g.coopChoosing[0],false);assert.equal(g.phase,'playing');
+  const blueLeader=g.withOwner(1,()=>g.commander(0)),greenLeader=g.withOwner(0,()=>g.commander(0));blueLeader.hp=1;const greenHp=greenLeader.hp;
+  g.withOwner(1,()=>{g.supplyState().medkits=1;g.supplyState().artillery=1;});
+  assert.equal((await call('/command',{action:'medkit'},a.token)).status,409);
+  assert.equal((await call('/command',{action:'medkit'},b.token)).status,200);assert.equal(blueLeader.hp,blueLeader.maxHp);assert.equal(greenLeader.hp,greenHp);
+  assert.equal((await call('/command',{action:'artillery',x:-100,y:10},b.token)).status,409);
+  assert.equal((await call('/command',{action:'artillery',x:blueLeader.x+100,y:blueLeader.y},b.token)).status,200);assert.equal(g.supplyStrikes[0].coopOwner,1);
+  g.withOwner(1,()=>{g.supplyState().pendingSupport=1;});g.levelCheck();assert.equal(g.coopChoosing[1],true);
+  assert.equal((await call('/command',{action:'cancelRecovery'},b.token)).status,200);assert.equal(g.coopChoosing[1],false);assert.equal(g.phase,'playing');
   const t=g.time;clock+=4000;handler.step();assert.equal(g.time,t);assert.equal(r.paused,true);
   await call('/state',null,a.token);await call('/state',null,b.token);
   assert.equal((await call('/command',{action:'resume'},b.token)).status,200);handler.step();assert.ok(g.time>t);

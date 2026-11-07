@@ -50,7 +50,8 @@ class FrontAudio{
  sync(phase){if(this.phase!==phase){this.phase=phase;if(phase!=='playing')this.stop();}}
  stop(){for(const v of [...this.voices]){try{v.source.stop();}catch{}this.release(v);}this.lastKind.clear();}
  release(v){if(!this.voices.delete(v))return;v.source.disconnect();v.gain.disconnect();if(v.pan)v.pan.disconnect();}
- fire(unit,listener){if(unit.luckySound==='bossKiller')return this.play('rocket',unit,listener,{rate:.68,priorityBoost:2,channel:'bossKiller'});if(unit.luckySound)return this.play(unit.luckySound,unit,listener);return this.play(unit.sword||unit.type==='leader'&&unit.appearance==='shion'?'bladeGuard':unit.flame||unit.type==='leader'&&unit.appearance==='blaze'?'flame':unit.type==='leader'||unit.type==='lucky'?'rifle':unit.type,unit,listener,unit.ultimate?{channel:'ultimate',priorityBoost:2,exactRate:true}:{});}
+ fire(unit,listener){if(unit.luckySound==='bossKiller')return this.play('rocket',unit,listener,{rate:.68,priorityBoost:2,channel:'bossKiller'});if(unit.luckySound)return this.play(unit.luckySound,unit,listener);return this.play(unit.sword||unit.type==='leader'&&unit.appearance==='shion'?'bladeGuard':unit.flame||unit.type==='leader'&&unit.appearance==='blaze'?'flame':unit.type==='leader'||unit.type==='lucky'?'rifle':unit.type==='commando'?'machinegun':unit.type,unit,listener,unit.ultimate?{channel:'ultimate',priorityBoost:2,exactRate:true}:{});}
+ impact(event,listener){return this.play('impact',event,listener,{rate:event.armor?1.9:1.6,gain:.15,priorityBoost:-2,channel:'hitFeedback'});}
  explosion(event,listener){const key=['artillery','bossKiller','evolution'].includes(event.kind)?'artillery':'impact';return this.play(key,event,listener,{rate:event.kind==='bossKiller'?.68:event.kind==='evolution'?1.3:event.kind==='tank'?.8:event.kind==='mortar'?.85:event.kind==='rocket'?1.12:1});}
  play(key,position={x:0,y:0},listener={x:0,y:0},options={}){
   const c=this.context,s=SOUNDS[key],preview=!!options.preview;
@@ -68,7 +69,7 @@ class FrontAudio{
   const source=c.createBufferSource(),gain=c.createGain(),pan=c.createStereoPanner?c.createStereoPanner():null;
   source.buffer=this.buffers.get(key);source.playbackRate.value=(options.rate||1)*(options.exactRate?1:1+(Math.random()-.5)*.07);
   const attenuation=Math.pow(Math.max(0,1-distance/1000),1.45),teamScale=position.team===1?.72:1;
-  gain.gain.value=s.gain*attenuation*teamScale;source.connect(gain);
+  gain.gain.value=s.gain*attenuation*teamScale*(options.gain??1);source.connect(gain);
   if(pan){pan.pan.value=preview?0:Math.max(-.85,Math.min(.85,(position.x-listener.x)/550));gain.connect(pan);pan.connect(this.compressor);}else gain.connect(this.compressor);
   const voice={source,gain,pan,priority,started:now};this.voices.add(voice);source.onended=()=>this.release(voice);this.lastKind.set(channel,now);source.start(now);this.played++;return true;
  }

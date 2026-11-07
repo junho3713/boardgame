@@ -1,0 +1,18 @@
+/* Short visual impacts. Unit positions, movement speed and simulation timing never change. */
+(function(root){'use strict';
+const clamp=(n,a,b)=>Math.max(a,Math.min(b,n)),TAU=Math.PI*2;
+function pose(u,time){const h=u.hitReaction;if(!h)return null;const age=time-h.at;if(age<0||age>=.22)return null;const k=1-age/.22,pulse=Math.sin(Math.min(1,age/.065)*Math.PI)*k,rigid=u.boss||['tank','crimsonAce','guntruck','lucky'].includes(u.type),distance=(rigid?1.8:5)*h.power*pulse;return{x:Math.cos(h.angle)*distance,y:Math.sin(h.angle)*distance*.65,angle:Math.sin(age*65)*k*(rigid?.012:.045)*h.power,scaleX:1+.045*pulse,scaleY:1-.045*pulse,flash:age<.065?1-age/.065:0};}
+function transform(c,u,time){const p=pose(u,time);if(!p)return;c.translate(p.x,p.y);c.rotate(p.angle);c.scale(p.scaleX,p.scaleY);if(p.flash>0)c.filter='brightness('+(1+p.flash*.7)+') saturate('+(1-p.flash*.35)+')';}
+function shake(game){const h=game.impactPulse;if(!h)return{x:0,y:0};const age=game.time-h.at;if(age<0||age>=.18||Math.hypot(h.x-game.camera.x,h.y-game.camera.y)>650)return{x:0,y:0};const k=(1-age/.18)*Math.min(3,h.power*1.6);return{x:Math.sin(age*103)*k,y:Math.cos(age*87)*k*.65};}
+function install(Effects){const p=Effects.prototype,draw=p.drawEvent,emit=p.emit;p.emit=function(e){emit.call(this,e);if(e.kind==='hit')this.impactSound?.(e);};
+ p.drawEvent=function(c,e){
+  if(e.kind==='hit'&&e.power){const age=e.max-e.t,k=clamp(e.t/e.max,0,1),r=(e.armor?13:10)*e.power,x=e.x-Math.cos(e.angle)*8,y=e.y-(e.lift||20)-Math.sin(e.angle)*5;
+   c.save();c.translate(x,y);c.rotate(e.angle+age*3);c.globalCompositeOperation='lighter';c.globalAlpha=k;c.fillStyle=e.armor?'#fff7c8':'#e8ffe1';c.beginPath();for(let i=0;i<8;i++){const a=i*Math.PI/4,d=i%2?r*.18:r*(i%4?1:.75);if(i)c.lineTo(Math.cos(a)*d,Math.sin(a)*d);else c.moveTo(Math.cos(a)*d,Math.sin(a)*d);}c.closePath();c.fill();c.globalAlpha=k*.6;c.lineWidth=1.4;c.strokeStyle=e.armor?'#ffd58c':'#b9e3bc';c.beginPath();c.arc(0,0,r*(1.1+(1-k)*1.7),-.7,.7);c.stroke();c.restore();return true;
+  }
+  if(e.kind==='supplyStrikeWarning'){const k=e.t/e.max;c.save();c.translate(e.x,e.y);c.strokeStyle='#ffca73';c.fillStyle='#ffb94818';c.lineWidth=2;c.setLineDash([10,7]);c.beginPath();c.arc(0,0,e.radius,0,TAU);c.fill();c.stroke();c.setLineDash([]);c.beginPath();c.arc(0,0,e.radius*k,0,TAU);c.stroke();c.font='bold 16px system-ui';c.textAlign='center';c.fillStyle='#ffe6ad';c.fillText('지원 포격',0,-e.radius-14);c.restore();return true;}
+  if(e.kind==='fieldSupply'){const k=e.t/e.max,special=e.reward==='special',color=special?'#e5c0ff':e.reward==='medkit'?'#b4ffd9':e.reward==='artillery'?'#ffce8e':'#ffe6a7';c.save();c.translate(e.x,e.y);c.globalAlpha=k;c.strokeStyle=color;c.lineWidth=special?3:2;c.beginPath();c.ellipse(0,0,35+(1-k)*110,15+(1-k)*42,0,0,TAU);c.stroke();for(let i=0;i<8;i++){const a=i*TAU/8;c.fillStyle=color;c.fillRect(Math.cos(a)*(24+(1-k)*65),Math.sin(a)*(15+(1-k)*35)-25-(1-k)*60,3,special?14:7);}c.fillStyle=color;c.font='bold '+(special?22:15)+'px system-ui';c.textAlign='center';c.fillText(({support:'+600 지원 보급',medkit:'힐팩 저장',boost:'전투 강화 60초',artillery:'포격 지원권',special:'RARE · 블랙베어 특전병'})[e.reward]||'보급',0,-75-(1-k)*30);c.restore();return true;}
+  return draw.call(this,c,e);
+ };
+}
+root.FrontHitFeedback={pose,transform,shake,install};if(root.FrontEffects)install(root.FrontEffects);if(typeof module!=='undefined'&&module.exports)module.exports={pose,transform,shake,install};
+})(typeof window==='undefined'?globalThis:window);

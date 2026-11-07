@@ -784,8 +784,11 @@ class FrontGame{
   if(this.isRoomCampaign()&&target===this.bases[1]&&amount>0&&source?.team===0)this.roomHQAlarm={until:this.time+8,x:source.x,y:source.y};
   const previousHp=target.hp;target.hp=Math.max(0,target.hp-amount*this.defenseFactor(target,source));
   if(this.isSwordCommander(source)&&source.hp>0&&target.team!==source.team&&target!==source)this.heal(source,Math.max(0,previousHp-target.hp)*.1);
+  const dealt=previousHp-target.hp,heavy=['tank','crimsonAce','rocket','mortar','artillery','rhinoBeetle'].includes(source?.type)||dealt>target.maxHp*.16;
+  const angle=Number.isFinite(source?.x)&&Number.isFinite(source?.y)?Math.atan2(target.y-source.y,target.x-source.x):0,power=clamp(.45+Math.sqrt(dealt/Math.max(1,target.maxHp))*2,.5,1.5);
+  if(dealt>0){target.hitReaction={at:this.time,angle,power,heavy};if(heavy)this.impactPulse={at:this.time,x:target.x,y:target.y,power};}
   target.flash=.13;if(target.team===0&&target.type==='medic'&&target.appearance==='rina'){target.hurtStartedAt=this.time;target.hurtUntil=this.time+.32;target.hurtAngle=Math.atan2(target.y-(source?.y??target.y),target.x-(source?.x??target.x));}if(this.isSwordCommander(target)||this.isFlameCommander(target)&&target.flameSkin==='hwarin'){target.hurtUntil=this.time+.18;target.hurtAngle=Math.atan2(target.y-(source?.y??target.y),target.x-(source?.x??target.x));}
-  this.effects.push({kind:'hit',x:target.x,y:target.y-(target.visualFlightHeight??TYPES[target.type]?.flightHeight??0),t:.16,max:.16,team:target.team,armor:ARMORED.has(target.type)});
+  if(dealt>0&&this.time>=(target.nextHitEffectAt||0)){target.nextHitEffectAt=this.time+.065;this.effects.push({kind:'hit',x:target.x,y:target.y-(target.visualFlightHeight??TYPES[target.type]?.flightHeight??0),at:this.time,angle,power,damage:dealt,lift:target.team===2?8:24,t:.16,max:.16,team:target.team,armor:ARMORED.has(target.type)||target.type==='commando'});}
   if(target.hp<=0){
    if(this.isSwordCommander(target)){target.swordAttack=null;target.swordPose=null;}
    target.diedAt=this.time;if(target.type==='blizzardMage')target.iceShield=null;
@@ -1190,7 +1193,7 @@ class FrontGame{
   if(rearCombat){anchor=commander;facing=Math.atan2(this.formationEnemy.y-commander.y,this.formationEnemy.x-commander.x);}
   const projection=p=>(p.x-commander.x)*Math.cos(facing)+(p.y-commander.y)*Math.sin(facing),behind=p=>(!flameFront||projection(p)<=12)&&(!rearCombat||projection(p)<=-24);
   const group=this.units.filter(a=>a.team===u.team&&a.hp>0&&!a.patrol&&a.type!=='leader'&&(!this.coop||u.team!==0||a.coopOwner===u.coopOwner)).sort((a,b)=>a.id-b.id),hasArmor=group.some(a=>a.type==='tank'||a.type==='guntruck');
-  const bands=[{types:['tank','guntruck'],depth:120,spacing:72,row:65,cols:4},{types:['rifle'],depth:hasArmor?55:100,spacing:39,row:45,cols:6},{types:['machinegun'],depth:hasArmor?25:50,spacing:44,row:46,cols:5},{types:['rocket'],depth:10,spacing:42,row:48,cols:5},{types:['lucky'],depth:10,spacing:64,row:65,cols:4},{types:['sniper'],depth:-78,spacing:42,row:46,cols:5},{types:['mortar'],depth:-102,spacing:46,row:48,cols:5},{types:['medic'],depth:u.team===0?-108:-124,spacing:u.team===0?40:42,row:u.team===0?36:46,cols:u.team===0?6:5}],slots=[];
+  const bands=[{types:['tank','guntruck'],depth:120,spacing:72,row:65,cols:4},{types:['rifle'],depth:hasArmor?55:100,spacing:39,row:45,cols:6},{types:['machinegun','commando'],depth:hasArmor?25:50,spacing:44,row:46,cols:5},{types:['rocket'],depth:10,spacing:42,row:48,cols:5},{types:['lucky'],depth:10,spacing:64,row:65,cols:4},{types:['sniper'],depth:-78,spacing:42,row:46,cols:5},{types:['mortar'],depth:-102,spacing:46,row:48,cols:5},{types:['medic'],depth:u.team===0?-108:-124,spacing:u.team===0?40:42,row:u.team===0?36:46,cols:u.team===0?6:5}],slots=[];
   let cursor=flameFront?0:120;
   for(const band of bands){
    const members=group.filter(a=>band.types.includes(a.type));if(!members.length)continue;const depth=band.types[0]==='medic'&&u.team===0?Math.max(-136,Math.min(cursor,band.depth)):Math.min(cursor,band.depth),rows=Math.ceil(members.length/band.cols);
@@ -1731,7 +1734,7 @@ class FrontGame{
   this.separateCrowd(live);
   live.forEach(u=>this.resolvePosition(u));
   if(this.coop)this.coopCollectPickups();
-  for(const p of this.pickups){if(!this.coop&&p.active&&player.hp>0&&dist(p,player)<60){p.active=false;this.gainXP(18);this.cash[0]+=25;this.awardGold(5);this.notify('toast','보급품 확보 · +25 자원 / +18 XP');this.effects.push({kind:'drop',x:p.x,y:p.y,t:.6,max:.6,team:0});}}
+  for(const p of this.pickups){if(!this.coop&&p.active&&player.hp>0&&dist(p,player)<60){this.collectFieldSupply(p);}}
   for(const p of this.shots){p.life-=dt;if(p.target.hp<=0){p.life=0;continue;}if(p.kind==='bossKiller'&&p.guidedFlight&&this.updateBossKillerFlight){this.updateBossKillerFlight(p,dt);continue;}const d=dist(p,p.target),step=p.speed*dt;if(d<step+10){this.impact(p);p.life=0;}else{p.x+=(p.target.x-p.x)/d*step;p.y+=(p.target.y-p.y)/d*step;}}
   this.updateMortars();this.updateButterflyGusts();this.updateMedicCleanses();this.updatePoisons();
   this.units=this.units.filter(u=>u.type==='leader'||u.guardianRespawn||u.hp>0||u.diedAt===undefined||this.time-u.diedAt<(u.type==='medic'&&u.team===0&&u.appearance==='rina'?1.2:.8));
@@ -1742,6 +1745,6 @@ class FrontGame{
  finish(result,reason){if(this.phase==='ended')return;this.phase='ended';this.result=result;if(result==='win')this.awardGold(80);this.notify('end',{result,reason});}
 }
 Object.assign(FrontGame.prototype,ROOM_CAMPAIGN.methods);
-if(typeof module!=='undefined'&&module.exports)require('./evolution-combat.js')({FrontGame,TYPES,LUCKY,multiplier,EVOLUTIONS});
+if(typeof module!=='undefined'&&module.exports){require('./evolution-combat.js')({FrontGame,TYPES,LUCKY,multiplier,EVOLUTIONS});require('./field-supplies.js')({FrontGame,TYPES});}
 root.FrontRoomCampaign=ROOM_CAMPAIGN;root.FrontButterfly=BUTTERFLY;root.FrontMedicCleanse=MEDIC_CLEANSE;root.FrontMedicHealing=MEDIC_HEALING;root.FrontGuardians=GUARDIANS;root.FrontBike=BIKE;root.FrontLucky=LUCKY;root.FrontDesktopItems={art:DESKTOP_ITEM_ART,sprite:desktopItemSprite,bodies:desktopItemBodies,floor:desktopItemFloor};root.FrontUnitTypeCap=UNIT_TYPE_CAP;root.FrontFlame=FLAME;root.FrontSword=SWORD;root.FrontWaveConfigs=WAVE_CONFIGS;root.FrontDesktopNotebook={art:DESKTOP_NOTEBOOK_ART,rect:desktopNotebookRect,bodies:desktopNotebookBodies};root.FrontDesktopProps={art:DESKTOP_PROP_ART,sprite:desktopPropSprite,bodies:desktopPropBodies};root.FrontDesktopCover={art:DESKTOP_COVER_ART,style:desktopCoverStyle,rect:desktopCoverRect};root.FrontRemoteShape=ROOM_REMOTE_SHAPE;root.FrontDesktopRules=DESKTOP_RULES;root.FrontFlyingWaves=FLYING_WAVES;root.FrontUltimate=ULTIMATE;root.FrontBuildings=BUILDINGS;root.FrontRoomRules=ROOM_RULES;root.FrontAbilities=ABILITIES;root.FrontEvolutions=EVOLUTIONS;root.FrontFieldCards=FIELD_CARDS;root.FrontProfile=FrontProfile;root.FrontPermanent=PERMANENT;root.FrontGame=FrontGame;root.FrontTypes=TYPES;root.FrontMultiplier=multiplier;root.FrontRoster=ROSTER;if(typeof module!=='undefined')module.exports={SWORD,BUTTERFLY,MEDIC_CLEANSE,MEDIC_HEALING,GUARDIANS,BIKE,LUCKY,DESKTOP_ITEM_ART,desktopItemSprite,desktopItemBodies,desktopItemFloor,UNIT_TYPE_CAP,FLAME,DESKTOP_NOTEBOOK_ART,desktopNotebookRect,desktopNotebookBodies,DESKTOP_PROP_ART,desktopPropSprite,desktopPropBodies,WAVE_CONFIGS,DESKTOP_COVER_ART,desktopCoverStyle,desktopCoverRect,ROOM_REMOTE_SHAPE,DESKTOP_RULES,FLYING_WAVES,ULTIMATE,BUILDINGS,ROOM_RULES,FrontGame,FrontProfile,PERMANENT,ABILITIES,EVOLUTIONS,FIELD_CARDS,TYPES,multiplier,ROSTER};
 })(typeof window==='undefined'?globalThis:window);

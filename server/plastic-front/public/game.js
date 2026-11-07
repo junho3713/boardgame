@@ -21,6 +21,7 @@ let selectedFlameSkin='classic';try{selectedFlameSkin=localStorage.getItem('plas
 let selectedMode='pve',autoPilot=null,waveTestBackup=null,waveTestReturn='ready',waveTestFocus=null;const directProfile=profile;
 const gameEvents={level:showUpgrade,change:updateUI,toast:toast,end:data=>{if(autoPilot)autoPilot.lastEnd=data;showResult(data);},fire:weaponSound,explosion:explosionSound,profile:persistProfile};
 let game=COOP?.active?new window.FrontCoopGame(gameEvents):new window.FrontGame(gameEvents,profile,{map:battlefield,commander:selectedCommander,sniperSkin:selectedSniperSkin,medicSkin:selectedMedicSkin,flameSkin:selectedFlameSkin});
+const fieldSupplyUI=window.FrontSupplyUI.create({getGame:()=>game,toast,clearInput});
 const autoSessionOptions={events:gameEvents,apply:applyAuto,message:toast,busy:(value,progress)=>{$('autoBusy').hidden=!value;if(value&&progress){const total=Math.max(0,progress.total),done=Math.min(total,progress.processed||0);$('autoBusyProgress').max=Math.max(1,total);$('autoBusyProgress').value=done;$('autoBusyStatus').textContent=`${Math.floor(done)}초 / ${Math.ceil(total)}초 반영${progress.fallback?' · 응답을 복구하며 계산 중':''}`;}}};let autoSession=new window.FrontAutoSession(autoSessionOptions);const normalAutoSession=autoSession;
 let idlePlan=window.FrontAutoCleanPlan(window.FrontAutoPresets[battlefield.startsWith('livingroom')?'roomBalanced':'balanced']);
 let runSave=new window.FrontRunSave({getItem:k=>localStorage.getItem(k),setItem:(k,v)=>localStorage.setItem(k,v),removeItem:k=>localStorage.removeItem(k)});
@@ -185,7 +186,7 @@ const groundTexture=new Image();groundTexture.onload=()=>buildTerrain();groundTe
 const combatAudio=new window.FrontAudio({onStatus:status=>{
  const messages={loading:'효과음 불러오는 중…',ready:'전투 효과음 9종 준비됨',partial:'일부 효과음을 불러오지 못했습니다. 새로 접속해 주세요.',unsupported:'이 브라우저에서 소리를 사용할 수 없습니다.',unavailable:'소리를 시작하지 못했습니다. 소리 버튼을 다시 눌러주세요.'};
  $('audioStatus').textContent=messages[status]||'';
-}});let muted=false;
+}});let muted=false,lastImpactAudioAt=-1;battleFx.impactSound=e=>{if(game.time<lastImpactAudioAt-1)lastImpactAudioAt=-1;if(e.at>lastImpactAudioAt&&game.phase==='playing'){lastImpactAudioAt=e.at;combatAudio.impact(e,game.camera);}};
 try{muted=localStorage.getItem('plastic-front-muted')==='true';const saved=localStorage.getItem('plastic-front-volume');if(saved!==null)combatAudio.setVolume(Number(saved));}catch{}
 combatAudio.setMuted(muted);
 function soundUI(){$('soundBtn').textContent=muted?'음소거':'소리 켬';$('soundBtn').setAttribute('aria-pressed',String(!muted));$('pauseSoundBtn').textContent=muted?'음소거 해제':'음소거';$('pauseSoundBtn').setAttribute('aria-pressed',String(muted));$('sfxVolume').value=Math.round(combatAudio.volume*100);$('sfxVolumeValue').textContent=`${Math.round(combatAudio.volume*100)}%`;$('sfxMuteStatus').textContent=muted?'음소거 중 · 해제하면 설정한 음량으로 재생됩니다.':combatAudio.volume?'현재 음량이 모든 전투 효과음에 적용됩니다.':'0% · 무음 상태입니다.';$('sfxVolume').setAttribute('aria-valuetext',`${Math.round(combatAudio.volume*100)}퍼센트${muted?' · 음소거 중':''}`);}
@@ -206,7 +207,7 @@ function makeProduction(){
  $('productionButtons').addEventListener('click',e=>{const b=e.target.closest('[data-buy]'),minus=e.target.closest('[data-minus]');if(minus){queue[minus.dataset.minus]=Math.max(0,queue[minus.dataset.minus]-1);updateQueue();return;}if(b){const t=b.dataset.buy,proposed={...queue,[t]:queue[t]+1};const troops=Object.entries(proposed).filter(([k])=>k!=='truck').reduce((n,[k,q])=>n+q,0);const count=game.units.filter(u=>u.team===0&&u.hp>0&&!u.patrol&&u.type!=='leader'&&(!COOP?.active||u.coopOwner===game.coopOwner)).length;if((proposed[t]||0)>game.recruitmentRemaining(t)){$('queueNote').textContent=game.starExperiment?`${types[t].name}은 ${game.isThreeStarExperiment()?'3성 최대 1기':'2성 최대 3기'}까지 편성할 수 있습니다. 남은 충원 ${game.recruitmentRemaining(t)}기.`:`${types[t].name}은 살아 있는 유닛 최대 ${game.unitTypeCap()}기까지 편성할 수 있습니다.`;return;}if(game.queueCost(proposed)>game.cash[0]){$('queueNote').textContent='보유 자원을 초과했습니다. 선택 수량을 조정하세요.';return;}if(count+troops>game.capacity()){$('queueNote').textContent=`지휘관을 제외하고 병력 최대 ${game.capacity()}기까지 편성할 수 있습니다.`;return;}queue=proposed;updateQueue();}});
 }
 function updateQueue(){const cost=game.queueCost(queue),total=Object.values(queue).reduce((a,b)=>a+b,0);$('budgetCash').textContent=Math.floor(game.cash[0]);$('budgetCost').textContent=cost;$('budgetAfter').textContent=Math.floor(game.cash[0]-cost);Object.keys(queue).forEach(t=>{$('quantity-'+t).textContent=queue[t];const add=document.querySelector(`[data-buy="${t}"]`),alive=game.alive(0).filter(u=>u.type!=='leader').length;add.disabled=!game.tech[0][t]||game.phase!=='choice'||!!game.turnChoice||queue[t]>=game.recruitmentRemaining(t)||alive+total>=game.capacity()||cost+types[t].cost>game.cash[0];document.querySelector(`[data-minus="${t}"]`).disabled=queue[t]===0;document.querySelector(`[data-buy="${t}"]`).closest('.queue-slot').classList.toggle('has-quantity',queue[t]>0);});$('requestSupport').disabled=total===0||cost>game.cash[0]||!game.supportValid(queue);$('requestSupport').innerHTML=total?`이 편성 선택 · ${total}기 / ◆ ${cost} <span>→</span>`:'지원할 병력을 선택하세요 <span>→</span>';$('queueNote').textContent=total?'이 편성을 선택한 뒤 ‘확정하고 진격’을 누르면 자원 차감 후 합류합니다.':'병력 슬롯을 누르면 수량이 늘어납니다. − 버튼으로 줄일 수 있습니다.';}
-$('supportMenuBtn').onclick=()=>{if(game.phase!=='choice'||game.turnChoice)return;document.querySelector('.support-disclaimer').textContent=game.choiceKind==='recovery'?'취소하면 자원과 대기시간을 소비하지 않습니다. 확정 시 생산 자원만 차감되며 90초 뒤 다시 긴급 지원을 요청할 수 있습니다. XP·레벨·강화 기회는 소비하지 않습니다.':'취소하면 자원과 강화 기회가 유지됩니다. 확정하고 진격할 때 자원과 강화 기회가 소비됩니다. 채집 트럭은 2대로 고정이며 전투트럭은 전장에 합류하는 전투 병력입니다.';queue=game.pendingChoice?.type==='support'?{...game.pendingChoice.queue}:emptyQueue();updateUI();updateQueue();$('supportOverlay').hidden=false;};$('cancelSupport').onclick=()=>{$('supportOverlay').hidden=true;};$('requestSupport').onclick=()=>{const total=Object.values(queue).reduce((a,b)=>a+b,0);if(game.stageChoice('support',queue)){toast(`${total}기 지원 편성 선택 · 진격 전까지 변경할 수 있습니다.`);$('supportOverlay').hidden=true;choiceDone('support');}else $('queueNote').textContent='자원과 병력 한도를 확인하고 수량을 조정하세요.';};
+$('supportMenuBtn').onclick=()=>{if(game.phase!=='choice'||game.turnChoice)return;document.querySelector('.support-disclaimer').textContent=game.choiceKind==='supply'?'지원 보급 +600 자원 · 강화 기회 소모 없음 · 남은 자원은 계속 보유합니다.':game.choiceKind==='recovery'?'취소하면 자원과 대기시간을 소비하지 않습니다. 확정 시 생산 자원만 차감되며 90초 뒤 다시 긴급 지원을 요청할 수 있습니다. XP·레벨·강화 기회는 소비하지 않습니다.':'취소하면 자원과 강화 기회가 유지됩니다. 확정하고 진격할 때 자원과 강화 기회가 소비됩니다. 채집 트럭은 2대로 고정이며 전투트럭은 전장에 합류하는 전투 병력입니다.';queue=game.pendingChoice?.type==='support'?{...game.pendingChoice.queue}:emptyQueue();updateUI();updateQueue();$('supportOverlay').hidden=false;};$('cancelSupport').onclick=()=>{$('supportOverlay').hidden=true;};$('requestSupport').onclick=()=>{const total=Object.values(queue).reduce((a,b)=>a+b,0);if(game.stageChoice('support',queue)){toast(`${total}기 지원 편성 선택 · 진격 전까지 변경할 수 있습니다.`);$('supportOverlay').hidden=true;choiceDone('support');}else $('queueNote').textContent='자원과 병력 한도를 확인하고 수량을 조정하세요.';};
 function updateIntel(){
  const seen=game.units.filter(u=>u.team!==0&&u.hp>0&&game.visible(u)),counts=new Map();for(const u of seen)counts.set(u.type,(counts.get(u.type)||0)+1);
  $('intelBadge').textContent=seen.length?`${seen.length}기 확인`:'시야 내 적 없음';
@@ -219,6 +220,7 @@ $('fusionBtn').onclick=()=>{if(!game.starExperiment||!['playing','paused'].inclu
 $('closeFusion').onclick=()=>{$('fusionOverlay').hidden=true;game.phase=fusionReturn;updateUI();};
 
 function updateUI(){
+ fieldSupplyUI.update();
  $('fusionBtn').hidden=!game.starExperiment||game.mode!=='pve';$('fusionBtn').disabled=!['playing','paused'].includes(game.phase);if(game.starExperiment)$('fusionBtn').textContent=(game.isThreeStarExperiment()?'★★★':'★★')+' 자동 합성';
  const room=game.bounds().id==='livingroom',desk=game.isDesktopDefense();$('mapName').textContent=desk?'DESK DEFENSE 03':room?(game.isThreeStarExperiment()?'LIVING ROOM ★★★':game.starExperiment?'LIVING ROOM ★★':'LIVING ROOM 02'):'BACKYARD 01';$('mapSubtitle').textContent=desk?'책상 위 방어선 · 북쪽 공세 / 20분 생존':room?'확장 거실 · 20분 혼합 공세':'작전 구역 · 뒷마당';$('constructionCount').textContent=game.buildings.filter(b=>b.hp>0).length;$('constructionBtn').disabled=game.mode!=='pve'||!['playing','paused'].includes(game.phase);renderBattlefieldChoice();
  renderBuild();updateIntel();
@@ -281,7 +283,7 @@ function updateUI(){
 }
 function showUpgrade(options){
  if(selectedMode==='idle'&&autoPilot?.active)return;
- clearInput();const boss=game.choiceKind==='boss',recovery=game.choiceKind==='recovery';
+ clearInput();const supply=game.choiceKind==='supply',boss=game.choiceKind==='boss',recovery=game.choiceKind==='recovery'||supply;
  $('cancelRecovery').hidden=!recovery;$('runChoiceSummary').hidden=recovery;$('upgradeCards').hidden=recovery;document.querySelector('.upgrade-layout').classList.toggle('recovery-choice',recovery);
  $('promotionLevel').textContent=recovery?'EMERGENCY SUPPORT · 유료 충원':boss?'BOSS REWARD · 추가 강화':`LEVEL ${pad(game.level)}`;
  $('promotionTitle').textContent=recovery?'분대를 다시 편성하세요.':boss?'보스 격파 보상을 선택하세요.':'레벨업 선택';
@@ -298,7 +300,7 @@ function showUpgrade(options){
   if(fieldCards[t]){const b=fieldCards[t];return `<button class="upgrade-card" aria-pressed="false" data-upgrade="${t}"><span class="card-num">즉시 보급</span><span class="card-icon">${upgradeArt.icon(t,b.icon)}</span><span class="card-badge">능력 슬롯을 사용하지 않음</span><h3>${b.name}</h3><p><strong class="card-effect">${b.detail}</strong></p><span class="card-bottom">즉시 보상<span class="card-select-label">선택</span></span></button>`;}
   const lv=game.tech[0][t],b=types[t],hint=evolutionHint(t);return `<button class="upgrade-card" aria-pressed="false" data-upgrade="${t}"><span class="card-num">0${i+1} / ${lv?'UPGRADE':'UNLOCK'}</span><span class="card-icon unit-card-icon">${unitArt.icon(t,b.icon)}</span><span class="card-badge">${lv?'병과 전체 강화':'새로운 생산 선택'}</span><h3>${b.name} ${lv?'강화':'해금'}</h3><p>${lv?(t==='medic'?'기본 치료량의 15%p 증가 · 치료 간격 1초 고정.':'공격력 +18%p · 체력·공격속도가 증가합니다.'):`${b.role}.<br>다음 지원에서 ◆ ${b.cost}로 충원.`}${game.isFlameCommander(game.commander(0))?(['machinegun','rocket'].includes(t)?'<br>화염방사 대장도 이 병과 강화 효과의 50% 적용':''):'<br>기본 대장·시노·시온도 이 병과 레벨 강화의 30% 적용'}${t==='medic'?'<br>공격속도 강화는 치료 간격에 영향 없음<br>수리로봇도 의무병 레벨·진화 효과 공유<br>동일 대상 중첩 치료 100% → 60% → 40%':''}${t==='lucky'?'<br>장비 추첨은 공속과 무관하게 4초마다 · 레토나 Lv.5 + 이동속도 Lv.5 진화: 꽝을 줄여 희귀 확률 증가':''}<small class="evolution-hint">${hint}</small></p><span class="card-bottom">${lv?`Lv.${lv} → Lv.${lv+1} / 5`:'Lv.1 해금'}<span class="card-select-label">선택</span></span></button>`;
  }).join('');
- $('supportMenuBtn').setAttribute('aria-pressed','false');$('upgradeOverlay').hidden=false;updateUI();
+ $('supportMenuBtn').setAttribute('aria-pressed','false');$('upgradeOverlay').hidden=false;updateUI();if(supply){$('promotionTitle').textContent='지원 보급 · 600 자원 확보';$('promotionLevel').textContent='FIELD SUPPLY · 즉시 충원';$('promotionDescription').textContent='지급받은 600 자원으로 지원을 편성하세요. 남은 자원은 보유하며 레벨·강화 기회를 소모하지 않습니다.';document.querySelector('.support-menu>small').textContent='지급 자원으로 충원 · 강화 기회 소모 없음 ↗';$('supportMenuBtn').onclick();}
 }
 function choiceDone(selected){
  document.querySelectorAll('[data-upgrade]').forEach(b=>{b.disabled=false;b.classList.toggle('selected',b.dataset.upgrade===selected);b.setAttribute('aria-pressed',String(b.dataset.upgrade===selected));const label=b.querySelector('.card-select-label');if(label)label.textContent=b.dataset.upgrade===selected?'선택 중':'선택';});
@@ -331,7 +333,7 @@ $('moveOrderBtn').onclick=()=>setOrderMode('move');$('focusOrderBtn').onclick=()
  function worldPosition(e){const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left-W/2)/scale+game.camera.x,y:(e.clientY-r.top-H/2)/scale+game.camera.y};}
  function orderAt(e,announce=true){
   if(selectedMode==='idle')return;
-  const p=worldPosition(e);
+  const p=worldPosition(e);if(fieldSupplyUI.armed){fieldSupplyUI.target(p);return;}
   if(orderMode==='move'){game.setMoveOrder(p.x,p.y,announce);return;}
   const targets=[...game.units.filter(u=>u.team!==0&&u.hp>0&&game.visible(u)),...[...game.structures,...game.activeDefenses()].filter(u=>game.mission.stage>=2&&u.hp>0&&game.visible(u)),...game.bases.filter(u=>!u.hidden&&u.hp>0&&u.team===1&&game.mode!=='crisis'&&(game.mode==='duel'||game.mission.stage===3)&&game.visible(u))];
   const hit=targets.map(u=>({u,d:Math.hypot(u.x-p.x,u.y-p.y)})).filter(a=>a.d<Math.max(a.u.r||types[a.u.type]?.r||20,26/scale)).sort((a,b)=>a.d-b.d)[0];
@@ -413,11 +415,12 @@ function drawUnit(u){
 function drawUnitRaw(u){
  const t=u.team,alive=u.hp>0,evolved=window.FrontUnitLabels.isEvolved(game,u);if(!alive){if(u.type==='medic'&&t===0&&u.appearance==='rina'&&Number.isFinite(u.diedAt)){ctx.save();ctx.translate(u.x,u.y);unitModels.draw(ctx,u,game.time);ctx.restore();}if(u.guardianRespawn&&Number.isFinite(u.respawnAt)&&game.mission.stage>=3&&game.visible(u))text(ctx,'얼음 마녀 귀환 · '+Math.max(0,Math.ceil(u.respawnAt-game.time))+'초',u.x,u.y+28,11,'#acdfff');if(u.type==='leader'&&t===0){const p=point(u);text(ctx,u.deadUntil>game.time?'제자리 부활 '+Math.ceil(u.deadUntil-game.time)+'초':'부활 기회 소진',u.x,u.y-25,13,'#f5edc6');}return;}
  if(t&&!game.visible(u))return;
- const col=t===2?'#77543a':t?'#bd6e55':'#5f863e',light=t===2?'#a17b4d':t?'#d88c71':'#84a953',dark=t===2?'#493c2b':t?'#82472f':'#36592b';ctx.save();ctx.translate(u.x,u.y);
+ const col=t===2?'#77543a':t?'#bd6e55':'#5f863e',light=t===2?'#a17b4d':t?'#d88c71':'#84a953',dark=t===2?'#493c2b':t?'#82472f':'#36592b';ctx.save();ctx.translate(u.x,u.y);window.FrontHitFeedback.transform(ctx,u,game.time);
 
  if(u.type==='leader'&&t===0){circle(ctx,0,0,25,null,'#edf6cb99');ctx.setLineDash([3,7]);circle(ctx,0,0,30,null,'#edf6cb55');ctx.setLineDash([]);if(game.commanderReviveProtected(u)){circle(ctx,0,-26,43,'#83e8ff20','#9eefff');text(ctx,`부활 보호 ${Math.ceil(u.reviveProtectionUntil-game.time)}초`,0,-82,11,'#b8f4ff');}}
  if(evolved){circle(ctx,0,0,types[u.type].r+9,null,'#e9c76b');}
  if(u.boss){circle(ctx,0,0,48,null,'#e5a251');ctx.setLineDash([5,5]);circle(ctx,0,0,54,null,'#e5a25188');ctx.setLineDash([]);}
+ if(u.type==='commando'){ctx.filter='grayscale(.8) brightness('+(0.7+(window.FrontHitFeedback.pose(u,game.time)?.flash||0)*.7)+') contrast(1.2)';}
  if(!unitModels.draw(ctx,u,game.time)){ctx.save();
  const vehicle=['tank','crimsonAce','guntruck','lucky'].includes(u.type),bodyFace=Number.isFinite(u.moveFace)?u.moveFace:u.face,aimFace=Number.isFinite(u.turretFace)?u.turretFace:Number.isFinite(u.aimFace)?u.aimFace:u.face;
  ctx.rotate((vehicle?bodyFace:u.face)+Math.PI/2);ctx.translate(0,vehicle?0:(u.recoil||0)*22);if(u.boss)ctx.scale(1.35,1.35);
@@ -464,9 +467,11 @@ function drawUnitRaw(u){
  }
  if(evolved){rr(ctx,-10,-6,20,4,1,'#f1d582');}
  ctx.restore();}
+ ctx.filter='none';if(u.type==='commando'){circle(ctx,0,-46,5,'#f2d88f','#33291a');text(ctx,'✦',0,-42,9,'#201e19');}
  if(u.type==='blizzardMage')window.FrontGuardianFX.shield(ctx,u,game.time);
  if(u.flash){ctx.globalAlpha=u.flash/.13*.65;circle(ctx,0,0,types[u.type].r+2,null,'#fff4c8');ctx.globalAlpha=1;}
  ctx.restore();
+ if(u.type==='commando')text(ctx,'블랙베어 · 특수부대',u.x,u.y-108,12,'#e7c4ff');
  if(evolved)battleFx.drawEvolutionUnit(ctx,u,game.time);
  if(u.type==='blizzardMage')text(ctx,(u.iceShield&&game.time<=u.iceShield.until?'아이스 실드 · 박격포 차단':(u.mobileMage?'이동형 얼음 마녀':'얼음 마녀')+' · 사거리 '+window.FrontGuardians.range),u.x,u.y-103,11,'#c4edff');
  if(u.boss&&['bayonetCaptain','bladeGuard','bikeRaider'].includes(u.type))text(ctx,'BOSS / '+u.bossName,u.x,u.y-176,13,'#ffe294');
@@ -508,7 +513,7 @@ function draw(dt){
  const fxAllies=game.alive(0),fxVisible=e=>!e.team||game.time<game.scoutUntil||fxAllies.some(u=>Math.hypot(e.x-u.x,e.y-u.y)<=game.visionRadius(u));battleFx.update(game,fxVisible);
  const player=game.commander(0),halfW=W/scale/2,halfH=H/scale/2;const tx=clamp(player.x,Math.min(game.bounds().width/2,halfW),Math.max(game.bounds().width/2,game.bounds().width-halfW)),ty=clamp(player.y-H/scale*.16,Math.min(game.bounds().height/2,halfH),Math.max(game.bounds().height/2,game.bounds().height-halfH));
  const intro=game.bossIntro;if(intro?.remaining>0){const q=1-intro.remaining/intro.total,smooth=v=>{v=clamp(v,0,1);return v*v*(3-2*v);},bx=clamp(intro.x,Math.min(game.bounds().width/2,halfW),Math.max(game.bounds().width/2,game.bounds().width-halfW)),by=clamp(intro.y-40,Math.min(game.bounds().height/2,halfH),Math.max(game.bounds().height/2,game.bounds().height-halfH)),k=q<.24?smooth(q/.24):q>.72?smooth((q-.72)/.28):0;game.camera.x=q<.24?intro.from.x+(bx-intro.from.x)*k:q>.72?bx+(tx-bx)*k:bx;game.camera.y=q<.24?intro.from.y+(by-intro.from.y)*k:q>.72?by+(ty-by)*k:by;}else{game.camera.x+=(tx-game.camera.x)*Math.min(1,dt*6);game.camera.y+=(ty-game.camera.y)*Math.min(1,dt*6);}
- ctx.setTransform(DPR,0,0,DPR,0,0);ctx.fillStyle='#809669';ctx.fillRect(0,0,W,H);ctx.translate(W/2,H/2);ctx.scale(scale,scale);ctx.translate(-game.camera.x,-game.camera.y);if(terrain)ctx.drawImage(terrain,0,0,game.bounds().width,game.bounds().height);
+ ctx.setTransform(DPR,0,0,DPR,0,0);ctx.fillStyle='#809669';ctx.fillRect(0,0,W,H);ctx.translate(W/2,H/2);ctx.scale(scale,scale);ctx.translate(-game.camera.x,-game.camera.y);const impactShake=window.FrontHitFeedback.shake(game);ctx.translate(impactShake.x,impactShake.y);if(terrain)ctx.drawImage(terrain,0,0,game.bounds().width,game.bounds().height);
  window.FrontGuardianFX.ground(ctx,game);battleFx.ground(ctx,fxVisible);battleFx.luckyGround(ctx,game,fxVisible);
  for(const u of game.units)if(u.type==='bikeRaider'||u.bossPattern==='rhinoCharge')battleFx.drawBikeWarning(ctx,u,game.time);
  if(game.isRoomCampaign())window.FrontPortal.ground(ctx,game.bases[1],game.time);

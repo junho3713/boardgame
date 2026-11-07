@@ -59,7 +59,7 @@ function draw(){
   if(p.kind==='portal'){FrontPortal.body(ctx,game.bases[1],game.time);continue;}
   if(p.kind==='prop'){FrontLivingRoom.furniture(ctx,p.o,FrontLivingRoom.furnitureOpacity(p.o,allies));continue;}
   if(p.kind!=='unit'){view.drawPart(ctx,p,game);continue;}
-  const u=p.u;ctx.save();ctx.translate(u.x,u.y);models.draw(ctx,u,game.time);if(u.hp<=0){ctx.restore();continue;}
+  const u=p.u;ctx.save();ctx.translate(u.x,u.y);FrontHitFeedback.transform(ctx,u,game.time);models.draw(ctx,u,game.time);if(u.hp<=0){ctx.restore();continue;}
   if(u.type==='leader'){ctx.strokeStyle='#edffd3aa';ctx.lineWidth=1;ctx.beginPath();ctx.ellipse(0,0,24,14,0,0,Math.PI*2);ctx.stroke();}
   const bar=u.type==='medic'&&u.appearance==='rina'?-78:-69;ctx.fillStyle='#213b2b';ctx.fillRect(-17,bar,34,4);ctx.fillStyle='#b9e7a5';ctx.fillRect(-17,bar,34*u.hp/u.maxHp,4);ctx.restore();
  }
