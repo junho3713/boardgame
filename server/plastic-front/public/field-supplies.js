@@ -2,11 +2,11 @@
 (function(root){'use strict';
 function install({FrontGame:Game,TYPES}){
  const p=Game.prototype;if(p.fieldSupplyVersion)return;p.fieldSupplyVersion=1;
- const config={odds:{support:.30,medkit:.25,boost:.25,artillery:.15,special:.05},cash:600,boostDuration:60,damage:1.3,haste:1.2,strikeRange:900,strikeDamage:320,strikeRadius:120};
+ const config={odds:{support:.30,medkit:.25,boost:.25,artillery:.15,special:.05},cash:400,boostDuration:60,damage:1.3,haste:1.2,strikeRange:900,strikeDamage:320,strikeRadius:120};
  const fresh=()=>({medkits:0,artillery:0,boostUntil:0,pendingSupport:0,collected:0});
  const reset=p.reset,stats=p.stats,capacity=p.capacity,levelCheck=p.levelCheck,cancel=p.cancelRecovery,shot=p.fireUnitProjectiles,update=p.update,refresh=p.refreshCommanderHealth;
  TYPES.commando={...TYPES.machinegun,name:'블랙베어 특전병',icon:'✦',hp:480,damage:22,rate:.13,range:360,speed:138,r:14,cost:0,role:'희귀 보급 전용 · 중장갑 조끼 · 미니건 3명 관통 · 별도 병력 슬롯'};
- p.reset=function(){reset.call(this);this.fieldSupplyState=fresh();this.supplyStrikes=[];};
+ p.reset=function(){reset.call(this);this.fieldSupplyState=fresh();this.supplyStrikes=[];this.nextRareSupply=120;};
  p.supplyState=function(){return this.fieldSupplyState??=fresh();};
  p.supplySquad=function(){return this.units.filter(u=>u.team===0&&u.hp>0&&(!this.coop||u.coopOwner===this.coopOwner));};
  p.stats=function(u){const s=stats.call(this,u);if(u.type==='commando'){
@@ -17,10 +17,11 @@ function install({FrontGame:Game,TYPES}){
  p.refreshCommanderHealth=function(){refresh.call(this);for(const u of this.supplySquad())if(u.type==='commando'){const hp=this.stats(u).hp;u.hp=Math.min(hp,Math.max(0,u.hp+hp-u.maxHp));u.maxHp=hp;}};
  p.rollSupply=function(){const value=this.random();let sum=0;for(const [kind,chance]of Object.entries(config.odds)){sum+=chance;if(value<sum)return kind;}return'special';};
  p.collectFieldSupply=function(pickup){
-  if(!pickup?.active)return false;const c=this.commander(0);if(c.hp<=0||Math.hypot(c.x-pickup.x,c.y-pickup.y)>=60)return false;
+  if(!pickup?.active)return false;if(pickup.rareSupply&&this.time>=(pickup.expires||Infinity)){pickup.active=false;return false;}const c=this.commander(0);if(c.hp<=0||Math.hypot(c.x-pickup.x,c.y-pickup.y)>=60)return false;
+  if(!pickup.rareSupply){pickup.active=false;this.gainXP(18);this.cash[0]+=25;this.awardGold(5);this.notify('toast','보급품 확보 · +25 자원 / +18 XP');this.effects.push({kind:'drop',x:pickup.x,y:pickup.y,t:.6,max:.6,team:0});return true;}
   const state=this.supplyState(),kind=config.odds[pickup.supplyKind]===undefined?this.rollSupply():pickup.supplyKind;
   pickup.active=false;pickup.supplyKind=kind;state.collected++;this.gainXP(18);this.awardGold(5);
-  if(kind==='support'){this.cash[0]+=config.cash;state.pendingSupport++;this.notify('toast','지원 보급 · 전투자원 +600 · 지원창에서 즉시 충원');}
+  if(kind==='support'){this.cash[0]+=config.cash;state.pendingSupport++;this.notify('toast','희귀 지원 보급 · 전투자원 +400 · 지원창에서 즉시 충원');}
   else if(kind==='medkit'){state.medkits++;this.notify('toast','힐팩 확보 · 전체 회복·상태이상 제거 1회 저장');}
   else if(kind==='boost'){state.boostUntil=this.time+config.boostDuration;this.notify('toast','전투 강화 60초 · 공격력 +30% / 공격속도 +20%');}
   else if(kind==='artillery'){state.artillery++;this.notify('toast','포격 지원권 확보 · 버튼을 누른 뒤 전장에 목표 지정');}
@@ -58,7 +59,17 @@ function install({FrontGame:Game,TYPES}){
   if(u.type!=='commando')return shot.call(this,u,target,attack,s);
   return this.evolutionBullet(u,target,attack,s,'heatPierce');
  };
- p.update=function(dt){if(this.phase==='playing')this.updateSupplyStrikes();return update.call(this,dt);};
+ p.updateRareSupplies=function(){
+  if(this.phase!=='playing'||this.mode!=='pve')return;if(!Number.isFinite(this.nextRareSupply))this.nextRareSupply=(Math.floor(this.time/120)+1)*120;
+  if(this.time+1e-8<this.nextRareSupply)return;this.nextRareSupply=(Math.floor((this.time+1e-8)/120)+1)*120;
+  this.pickups=this.pickups.filter(p=>!p.rareSupply||p.active&&this.time<(p.expires||Infinity));
+  const leaders=this.units.filter(u=>u.team===0&&u.type==='leader'&&u.hp>0);if(!leaders.length)return;
+  const c=leaders[Math.floor(this.time/120-1)%leaders.length],bounds=this.bounds();let point=null;
+  for(let i=0;i<24;i++){const a=i*Math.PI*2/24+Math.PI/4,candidate={x:Math.max(65,Math.min(bounds.width-65,c.x+Math.cos(a)*280)),y:Math.max(this.frontline()+100,Math.min(bounds.height-100,c.y+Math.sin(a)*280))};if(this.freePosition(candidate.x,candidate.y,26)&&!this.pickups.some(p=>p.active&&Math.hypot(p.x-candidate.x,p.y-candidate.y)<90)){point=candidate;break;}}
+  if(!point){this.nextRareSupply=this.time+5;return;}
+  this.pickups.push({...point,active:true,rareSupply:true,spawnedAt:this.time,expires:this.time+120});this.notify('toast','희귀 보급 도착 · 보라색 신호를 확인하세요');this.effects.push({kind:'fieldSupply',...point,reward:'airdrop',t:1.2,max:1.2,team:0});
+ };
+ p.update=function(dt){if(this.phase==='playing'){this.updateSupplyStrikes();for(const p of this.pickups)if(p.rareSupply&&this.time>=(p.expires||Infinity))p.active=false;}const result=update.call(this,dt);this.updateRareSupplies();return result;};
  root.FrontFieldSupplies={config};return {config};
 }
 if(typeof module!=='undefined'&&module.exports)module.exports=install;else install({FrontGame:root.FrontGame,TYPES:root.FrontTypes});

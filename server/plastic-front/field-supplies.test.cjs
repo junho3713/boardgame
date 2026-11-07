@@ -4,7 +4,7 @@ const {FrontGame,TYPES}=require('./public/engine.js');require('./public/two-star
 const {CoopGame}=require('./public/coop-engine.js'),{pack,unpack}=require('./public/autoplay.js');
 function scene(coop=false){const g=coop?new CoopGame():new FrontGame({},undefined,{map:'livingroom-star'});g.start();g.units=g.units.filter(u=>u.team===0&&u.type==='leader');g.obstacles=[];g.structures=[];g.defenses=[];g.buildings=[];g.pickups=[];g.visible=g.lineClear=()=>true;for(const u of g.units){u.x=1500+(u.coopOwner||0)*200;u.y=7000;u.cooldown=1e6;}for(const method of ['updateMission','updateSwarm','updateBosses','updateArtillery','updateDefenses','updateBuildings','gainXP','levelCheck','syncEnemyGrowth','move','navigate','separateCrowd'])if(method!=='gainXP'&&method!=='levelCheck')g[method]=()=>{};return g;}
 function scope(g,owner,fn){return g.coop?g.withOwner(owner,fn):fn();}
-function reward(g,kind){const c=g.commander(0),p={x:c.x,y:c.y,active:true,supplyKind:kind};a.equal(g.collectFieldSupply(p),true);return p;}
+function reward(g,kind){const c=g.commander(0),p={x:c.x,y:c.y,active:true,supplyKind:kind,rareSupply:true};a.equal(g.collectFieldSupply(p),true);return p;}
 function near(x,y){a.ok(Math.abs(x-y)<1e-7,x+' != '+y);}
 
 test('all five supply rewards use the intended 30/25/25/15/5 distribution',()=>{
@@ -12,11 +12,11 @@ test('all five supply rewards use the intended 30/25/25/15/5 distribution',()=>{
  a.deepEqual(counts,{support:3000,medkit:2500,boost:2500,artillery:1500,special:500});
 });
 test('the actual solo and cooperative collection loops award a nearby crate exactly once to its collector',()=>{
- for(const coop of [false,true]){const g=scene(coop),owner=coop?1:0,c=scope(g,owner,()=>g.commander(0));g.pickups=[{x:c.x,y:c.y,active:true,supplyKind:'artillery'}];g.update(.05);a.equal(scope(g,owner,()=>g.supplyState().artillery),1);g.update(.05);a.equal(scope(g,owner,()=>g.supplyState().artillery),1);if(coop)a.equal(scope(g,0,()=>g.supplyState().artillery),0);}
+ for(const coop of [false,true]){const g=scene(coop),owner=coop?1:0,c=scope(g,owner,()=>g.commander(0));g.pickups=[{x:c.x,y:c.y,active:true,supplyKind:'artillery',rareSupply:true}];g.update(.05);a.equal(scope(g,owner,()=>g.supplyState().artillery),1);g.update(.05);a.equal(scope(g,owner,()=>g.supplyState().artillery),1);if(coop)a.equal(scope(g,0,()=>g.supplyState().artillery),0);}
 });
-test('600 production resources open a separate support choice without consuming a level or upgrade',()=>{
- const g=scene(),cash=g.cash[0],level=g.level,xp=g.xp,p=reward(g,'support');a.equal(g.cash[0],cash+600);a.equal(g.xp,xp+18);a.equal(g.level,level);a.equal(g.collectFieldSupply(p),false);
- g.levelCheck();a.equal(g.phase,'choice');a.equal(g.choiceKind,'supply');a.equal(g.stageChoice('rifle'),false);a.equal(g.stageChoice('support',{rifle:1}),true);a.equal(g.confirmChoice(),true);a.equal(g.cash[0],cash+600-TYPES.rifle.cost);a.equal(g.level,level);a.equal(g.xp,xp+18);a.equal(g.nextRecoveryAt,0);
+test('400 production resources open a separate support choice without consuming a level or upgrade',()=>{
+ const g=scene(),cash=g.cash[0],level=g.level,xp=g.xp,p=reward(g,'support');a.equal(g.cash[0],cash+400);a.equal(g.xp,xp+18);a.equal(g.level,level);a.equal(g.collectFieldSupply(p),false);
+ g.levelCheck();a.equal(g.phase,'choice');a.equal(g.choiceKind,'supply');a.equal(g.stageChoice('rifle'),false);a.equal(g.stageChoice('support',{rifle:1}),true);a.equal(g.confirmChoice(),true);a.equal(g.cash[0],cash+400-TYPES.rifle.cost);a.equal(g.level,level);a.equal(g.xp,xp+18);a.equal(g.nextRecoveryAt,0);
  g.phase='playing';reward(g,'support');g.levelCheck();const after=g.cash[0];a.equal(g.cancelRecovery(),true);a.equal(g.phase,'playing');a.equal(g.cash[0],after);
 });
 test('support rewards wait behind an existing choice and survive a full roster or a cancelled purchase',()=>{
@@ -57,3 +57,9 @@ test('saved consumables, temporary buffs, special troops and pending artillery r
  const state=restored.withOwner(1,()=>restored.supplyState());a.equal(state.medkits,1);a.equal(state.boostUntil,60);a.equal(restored.withOwner(0,()=>restored.supplyState().medkits),0);a.ok(restored.units.some(u=>u.type==='commando'&&u.coopOwner===1));a.equal(restored.supplyStrikes[0].source,restored.withOwner(1,()=>restored.commander(0)));
  const old=pack(scene());delete old.fields.fieldSupplyState;delete old.fields.supplyStrikes;const legacy=unpack(scene(),old);a.equal(legacy.supplyState().medkits,0);a.doesNotThrow(()=>legacy.updateSupplyStrikes());
 });
+
+test('ordinary map crates keep their original small rewards and never roll rare items',()=>{for(const coop of [false,true]){const g=scene(coop),owner=coop?1:0;scope(g,owner,()=>{const c=g.commander(0),cash=g.cash[0],xp=g.xp;g.random=()=>0;g.collectFieldSupply({x:c.x,y:c.y,active:true});a.equal(g.cash[0],cash+25);a.equal(g.xp,xp+18);a.equal(g.supplyState().collected,0);a.equal(g.supplyState().pendingSupport,0);});}});
+test('rare crates start at two minutes, repeat every two minutes and share one world schedule in cooperative play',()=>{for(const coop of [false,true]){const g=scene(coop);g.time=119.99;g.updateRareSupplies();a.equal(g.pickups.length,0);g.time=120;g.updateRareSupplies();a.equal(g.pickups.filter(p=>p.active&&p.rareSupply).length,1);a.equal(g.nextRareSupply,240);a.equal(g.pickups[0].expires,240);a.ok(Math.hypot(g.pickups[0].x-g.commander(0).x,g.pickups[0].y-g.commander(0).y)>60);g.updateRareSupplies();a.equal(g.pickups.length,1);g.time=240;g.updateRareSupplies();a.equal(g.pickups.filter(p=>p.active&&p.rareSupply).length,1);a.equal(g.nextRareSupply,360);g.phase='paused';g.time=360;g.updateRareSupplies();a.equal(g.nextRareSupply,360);}});
+test('rare supply expiry and saved schedule prevent retroactive stockpiles and retain 400-resource support',()=>{const g=scene();g.time=120;g.updateRareSupplies();const crate=g.pickups[0],restored=unpack(scene(),pack(g));a.equal(restored.nextRareSupply,240);a.equal(restored.pickups[0].rareSupply,true);const c=g.commander(0);Object.assign(crate,{x:c.x,y:c.y});g.time=240;a.equal(g.collectFieldSupply(crate),false);a.equal(g.supplyState().collected,0);const old=pack(scene());old.fields.time=601;delete old.fields.nextRareSupply;unpack(restored,old);a.equal(restored.nextRareSupply,720);});
+
+test('wave test clock jumps rebuild rare supply timing and discard stale strikes and link marks',()=>{const g=scene(),lab=require('./public/wave-test.js');g.waveTest=true;g.time=120;g.nextRareSupply=240;g.supplyStrikes=[{index:0}];g.evolutionLinkState={owners:[{ready:{breach:126}}]};g.commander(0).evolutionLinkMarks={0:{snipe:124}};lab.seek(g,601);a.equal(g.nextRareSupply,720);a.deepEqual(g.supplyStrikes,[]);a.deepEqual(g.evolutionLinkState,{owners:[]});a.equal(g.commander(0).evolutionLinkMarks,undefined);lab.seek(g,0);a.equal(g.nextRareSupply,120);});

@@ -38,11 +38,14 @@ class FrontModels{
  }
  drawHwarin(ctx,u,time,item){
   const spec=item.layers.body,old=this.motion.get(u),fresh=!old,state=old||{x:u.x,y:u.y,time,walk:u.walk||0,walkPhase:0},elapsed=Math.max(0,time-state.time),dx=u.x-state.x,dy=u.y-state.y,travel=Math.hypot(dx,dy),moved=travel>.12&&Math.abs((u.walk||0)-state.walk)>.01,walking=elapsed===0?!!state.walking:moved;
+  // A generic fallback can have created this motion state before the skin loaded.
+  if(!Number.isFinite(state.walkPhase))state.walkPhase=0;
   if(elapsed>0&&walking)state.walkPhase=(state.walkPhase+(travel||Math.abs((u.walk||0)-state.walk)/.12)/(spec.walkStride||70))%1;
-  const firing=!!(time<(u.flameUntil||0)||u.ultimatePose?.active),face=firing?(u.ultimatePose?.active?u.ultimatePose.angle:(u.flameAngle??u.aimFace??u.face)):walking?(elapsed===0?state.face:Math.atan2(dy,dx)):(u.aimFace??u.face),step=TAU/8,wanted=face+Math.PI/2;
+  const firing=!!(time<(u.flameUntil||0)||u.ultimatePose?.active),poseFace=firing?(u.ultimatePose?.active?u.ultimatePose.angle:(u.flameAngle??u.aimFace??u.face)):walking?(elapsed===0?state.face:Math.atan2(dy,dx)):(u.aimFace??u.face),face=Number.isFinite(poseFace)?poseFace:Number.isFinite(u.face)?u.face:0,step=TAU/8,wanted=face+Math.PI/2;
   // Retain the current sector near a boundary instead of flipping two views.
   let aim=state.bodyAngle;if(!Number.isFinite(aim)||Math.abs(angleDelta(wanted,aim))>step/2+.10)aim=Math.round(wanted/step)*step;
-  const direction=((Math.round(aim/step)%8)+8)%8,phase=state.walkPhase*TAU,legFrame=walking?spec.walkFrames[Math.floor(state.walkPhase*spec.walkFrames.length)]:0,upperFrame=firing?(spec.stableFireFrame??6):0;
+  const validFrame=f=>Number.isInteger(f)&&f>=0&&f<spec.frames?f:0;
+  const direction=((Math.round(aim/step)%8)+8)%8,phase=state.walkPhase*TAU,legFrame=validFrame(walking?spec.walkFrames[Math.floor(state.walkPhase*spec.walkFrames.length)]:0),upperFrame=validFrame(firing?(spec.stableFireFrame??6):0);
   const hurt=Math.max(0,Math.min(1,((u.hurtUntil||0)-time)/.18)),recoil=firing?Math.sin(time*24)*.15:0,bob=walking?-Math.abs(Math.sin(phase))*.2:Math.sin(time*2.2+(u.id||0))*.12;
   ctx.save();this.ground(ctx,spec,aim,firing?upperFrame:walking?legFrame:0,false);if(hurt)ctx.translate(Math.cos(u.hurtAngle||0)*hurt*2,Math.sin(u.hurtAngle||0)*hurt*2);ctx.translate(-Math.cos(face)*recoil,-Math.sin(face)*recoil);
   const sway=time*2+phase*.65;
