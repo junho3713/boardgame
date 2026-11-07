@@ -786,8 +786,14 @@ class FrontGame{
   if(this.isSwordCommander(source)&&source.hp>0&&target.team!==source.team&&target!==source)this.heal(source,Math.max(0,previousHp-target.hp)*.1);
   const dealt=previousHp-target.hp,heavy=['tank','crimsonAce','rocket','mortar','artillery','rhinoBeetle'].includes(source?.type)||dealt>target.maxHp*.16;
   const angle=Number.isFinite(source?.x)&&Number.isFinite(source?.y)?Math.atan2(target.y-source.y,target.x-source.x):0,power=clamp(.45+Math.sqrt(dealt/Math.max(1,target.maxHp))*2,.5,1.5);
-  if(dealt>0){target.hitReaction={at:this.time,angle,power,heavy};if(heavy)this.impactPulse={at:this.time,x:target.x,y:target.y,power};}
-  target.flash=.13;if(target.team===0&&target.type==='medic'&&target.appearance==='rina'){target.hurtStartedAt=this.time;target.hurtUntil=this.time+.32;target.hurtAngle=Math.atan2(target.y-(source?.y??target.y),target.x-(source?.x??target.x));}if(this.isSwordCommander(target)||this.isFlameCommander(target)&&target.flameSkin==='hwarin'){target.hurtUntil=this.time+.18;target.hurtAngle=Math.atan2(target.y-(source?.y??target.y),target.x-(source?.x??target.x));}
+  const react=dealt>0&&(!target.hitReaction||this.time<target.hitReaction.at||this.time+1e-8>=target.hitReaction.at+.5);
+  if(react){
+   target.hitReaction={at:this.time,angle,power,heavy};
+   if(heavy&&(!this.impactPulse||this.time<this.impactPulse.at||this.time+1e-8>=this.impactPulse.at+.5))this.impactPulse={at:this.time,x:target.x,y:target.y,power};
+   if(target.team===0&&target.type==='medic'&&target.appearance==='rina'){target.hurtStartedAt=this.time;target.hurtUntil=this.time+.32;target.hurtAngle=angle;}
+   if(this.isSwordCommander(target)||this.isFlameCommander(target)&&target.flameSkin==='hwarin'){target.hurtUntil=this.time+.18;target.hurtAngle=angle;}
+  }
+  target.flash=.13;
   if(dealt>0&&this.time>=(target.nextHitEffectAt||0)){target.nextHitEffectAt=this.time+.065;this.effects.push({kind:'hit',x:target.x,y:target.y-(target.visualFlightHeight??TYPES[target.type]?.flightHeight??0),at:this.time,angle,power,damage:dealt,lift:target.team===2?8:24,t:.16,max:.16,team:target.team,armor:ARMORED.has(target.type)||target.type==='commando'});}
   if(target.hp<=0){
    if(this.isSwordCommander(target)){target.swordAttack=null;target.swordPose=null;}
