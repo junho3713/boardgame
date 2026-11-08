@@ -12,7 +12,7 @@ const BUTTERFLY={range:330,arc:80*Math.PI/180,windup:.65,flight:.8,reduction:.5,
 const MEDIC_CLEANSE={cooldown:10,targets:5};
 const MEDIC_HEALING={base:10,interval:1,perLevel:.15,evolvedMultiplier:1.4,window:1,efficiencies:[1,.6,.4]};
 const BIKE={windup:1.25,distance:450,speed:600,halfWidth:24,recovery:.9,cooldown:6};
-const LUCKY={interval:4,spin:.6,range:350,normal:{glue:.33,mine:.15,spray:.10,missiles:.02,blank:.40},evolved:{glue:.33,mine:.15,spray:.17,missiles:.05,blank:.30},slowDuration:2,groundSlow:.30,flyingSlow:.15,glueRadius:100,glueFlight:.55,glueLife:10,mineDamage:100,mineRadius:80,mineLife:60,sprayDamage:150,sprayDuration:6,sprayRange:310,missileDamage:700,missileEdge:.3,alliedMissileEdge:.75,alliedMissileLight:.75,missiles:7,missileInterval:.12,alliedMissileInterval:.08,missileRange:480};
+const LUCKY={interval:4,spin:.6,range:350,normal:{glue:.33,mine:.15,spray:.10,missiles:.02,blank:.40},evolved:{glue:.33,mine:.15,spray:.17,missiles:.05,blank:.30},slowDuration:2,groundSlow:.30,flyingSlow:.15,glueRadius:100,glueFlight:.55,glueLife:10,mineDamage:100,mineRadius:80,mineLife:60,sprayDamage:150,sprayDuration:6,sprayRange:310,missileDamage:700,missileEdge:.3,alliedMissileEdge:.75,alliedMissileLight:.75,alliedMissileArmorIgnore:.35,bossKillerArmorIgnore:.65,bossKillerDamage:6000,missiles:7,missileInterval:.12,alliedMissileInterval:.08,missileRange:480};
 const ROOM_PROP_SHAPES={"sofa":{"file":"sofa-user-v093.webp","width":1533,"height":1026,"anchorX":653.0,"anchorY":552.7142857142858,"footprintW":1272,"footprintH":590.5714285714286,"bodyBounds":[17,128,1289,848],"collisionSlicesNormalized":[[0.022013,0.0,0.955189,0.0625],[0.014151,0.0625,0.970912,0.0625],[0.01022,0.125,0.978774,0.0625],[0.007862,0.1875,0.984277,0.0625],[0.005503,0.25,0.988208,0.0625],[0.003931,0.3125,0.992138,0.0625],[0.001572,0.375,0.996855,0.0625],[0,0.4375,1,0.0625],[0,0.5,1,0.0625],[0,0.5625,1,0.0625],[0.002358,0.625,0.996069,0.0625],[0.004717,0.6875,0.990566,0.0625],[0.008648,0.75,0.983491,0.0625],[0.014151,0.8125,0.97327,0.0625],[0.022799,0.875,0.955975,0.0625],[0.025157,0.9375,0.952044,0.0625]],"source":"uploaded","sha256":"635a08e85ce8a54753d7fa43fb4df7327d05fe5d5445e61d158690e7fe1c2545","uniformFit":true},"slipper":{"file":"slipper-user-v093.webp","width":1010,"height":1557,"anchorX":475.5,"anchorY":787.0,"footprintW":771,"footprintH":1516,"bodyBounds":[90,29,861,1545],"collisionSlicesNormalized":[[0.184176,0.0,0.616083,0.0625],[0.092088,0.0625,0.793774,0.0625],[0.042802,0.125,0.894942,0.0625],[0.015564,0.1875,0.955901,0.0625],[0.002594,0.25,0.988327,0.0625],[0,0.3125,0.998703,0.0625],[0,0.375,1,0.0625],[0.007782,0.4375,0.989624,0.0625],[0.032425,0.5,0.950713,0.0625],[0.070039,0.5625,0.885863,0.0625],[0.101167,0.625,0.830091,0.0625],[0.119326,0.6875,0.800259,0.0625],[0.127108,0.75,0.787289,0.0625],[0.137484,0.8125,0.763943,0.0625],[0.167315,0.875,0.706874,0.0625],[0.238651,0.9375,0.571984,0.0625]],"source":"uploaded","sha256":"b38f3189c8a95f944325cc0dd06386dd16cd222113fdf0a4600c6f3f08d36985","uniformFit":true}};
 function roomPropKey(o){return o.kind==='slipper'?'slipper':o.kind==='sofa'&&o.label!=='암체어'?'sofa':null;}
 function roomPropFloor(o){const s=ROOM_PROP_SHAPES[roomPropKey(o)],k=Math.min(o.w/s.footprintW,o.h/s.footprintH),w=s.footprintW*k,h=s.footprintH*k;return{x:o.x+o.w/2-w/2,y:o.y+o.h/2-h/2,w,h};}
@@ -82,7 +82,7 @@ const TYPES={swordEmpress:{name:'사검의 군주',hp:128000,damage:0,rate:100,r
  honeybee:{name:'꿀벌',icon:'✥',hp:360,damage:16,rate:1.15,range:40,speed:112,r:14,cost:0,flying:true,flightHeight:36,role:'4분부터 6마리씩 · 비행 근접 · 경장갑'},
  hornet:{name:'말벌',icon:'⟡',hp:1500,damage:38,rate:1.5,range:48,speed:98,r:22,cost:0,flying:true,flightHeight:48,role:'6분부터 2마리씩 · 공격 자세 비행 · 중장갑'},
  leader:{name:'지휘관',icon:'★',hp:400,damage:16.8,rate:.65,range:235,speed:130,r:14,cost:0},
- lucky:{name:'럭키 레토나',icon:'🍀',hp:135,damage:8,rate:.95,range:285,speed:140,r:20,cost:160,role:'네잎클로버 군용 지프 · 4초마다 슬롯 추첨 / 꽝 40% · 끈끈이 폭탄/지뢰/퇴치 스프레이/777 미사일 · 레토나 Lv.5 + 이동속도 Lv.5 진화 시 꽝 감소·희귀 확률 증가'},
+ lucky:{name:'럭키 레토나',icon:'🍀',hp:135,damage:8,rate:.95,range:285,speed:140,r:20,cost:160,role:'네잎클로버 군용 지프 · 4초마다 슬롯 추첨 / 꽝 40% · 끈끈이 폭탄/지뢰/퇴치 스프레이/777 미사일(방어력 35% 무시) · 레토나 Lv.5 + 이동속도 Lv.5 진화 시 꽝 감소·희귀 확률 증가'},
  rifle:{name:'소총병',icon:'▥',hp:140,damage:12,rate:.63,range:245,speed:144,r:11,cost:45,role:'범용 소총 · 경장갑 ×1 / 장갑 ×0.8'},
  machinegun:{name:'기관총병',icon:'≋',hp:160,damage:9,rate:.2,range:280,speed:126,r:12,cost:95,role:'빠른 연사 · 경장갑 ×1 / 장갑 ×0.8'},
  mortar:{name:'박격포병',icon:'◉',hp:90,damage:64,rate:3.6,range:700,minRange:135,speed:116,r:12,cost:140,splash:70,role:'레이저 포탑 우선 · 고정 낙탄 2초 · 건물 ×1.2 · 사거리 135~700'},
@@ -1152,7 +1152,7 @@ class FrontGame{
     const jackpot=p.kind==='missile'&&p.source?.type==='lucky',alliedJackpot=jackpot&&p.team===0;
     const edge=alliedJackpot?LUCKY.alliedMissileEdge:jackpot?LUCKY.missileEdge:.45;
     const affinity=alliedJackpot&&!ARMORED.has(kind)?LUCKY.alliedMissileLight:multiplier(p.damageType||'mortar',kind);
-    const amount=p.damage*affinity*(1-(1-edge)*d/p.radius);if(p.enemyJackpot)this.damageEnemyJackpot(u,amount,p);else this.damage(u,amount,p.source);
+    let amount=p.damage*affinity*(1-(1-edge)*d/p.radius);if(alliedJackpot){const defense=this.defenseFactor(u,p.source),pierced=1/(1+(1/defense-1)*(1-LUCKY.alliedMissileArmorIgnore));amount*=pierced/defense;}if(p.enemyJackpot)this.damageEnemyJackpot(u,amount,p);else this.damage(u,amount,p.source);
    }
    this.effects.push({kind:'explosion',x:p.x,y:p.y,radius:p.radius,t:.7,max:.7,team:p.team,visualKind:p.kind==='missile'&&p.source?.type==='lucky'?'jackpot':p.evoStyle||p.kind});
    if(p.evoStyle)this.effects.push({kind:'evoBlast',x:p.x,y:p.y,radius:p.radius,style:p.evoStyle,index:p.evoIndex,t:.7,max:.7,team:p.team});
@@ -1282,6 +1282,21 @@ class FrontGame{
    placed.push({...point,radius:r});if(slot.unit===u){result=point;break;}
   }
   return{x:result.x,y:result.y};
+ }
+ medicPatients(u,range=this.stats(u).range){
+  return [...new Set([...this.units,...this.buildings.filter(b=>b.kind==='repairBot'&&b.buildUntil<=this.time)])].filter(a=>a.team===u.team&&a.hp>0&&a.hp<a.maxHp&&dist(u,a)<range).sort((a,b)=>(u.team===0?Number(b.type==='leader')-Number(a.type==='leader'):0)||dist(u,a)-dist(u,b));
+ }
+ updateMedicHealing(u,s=this.stats(u)){
+  if(u.hp<=0||u.cooldown>1e-8)return;
+  const patients=this.medicPatients(u,s.range).slice(0,this.evolutionEnabled(u)?3:1),target=patients[0];if(!target)return;
+  for(const patient of patients){this.heal(patient,s.heal,u);this.effects.push({kind:'heal',x:patient.x,y:patient.y,target:patient,source:u,t:.5,max:.5,team:u.team});}
+  u.healStartedAt=this.time;u.healUntil=this.time+.7;u.healAngle=Math.atan2(target.y-u.y,target.x-u.x);u.cooldown=s.rate;
+ }
+ medicTreatmentPoint(u,goal,s){
+  if(u.team!==0||u.type!=='medic')return goal;
+  const c=this.commander(0),target=this.medicPatients(u,s.range+160).find(a=>dist(a,c)<=360);if(!target||dist(u,target)<=s.range*.9)return goal;
+  const d=dist(u,target),r=s.range*.8,point={x:target.x+(u.x-target.x)*r/d,y:target.y+(u.y-target.y)*r/d};
+  return dist(point,c)<=260&&this.freePosition(point.x,point.y,this.collisionRadius(u))?point:goal;
  }
  medicFollowSpeed(u,goal,speed){
   if(u.team!==0||u.type!=='medic'||dist(u,goal)<=90)return speed;
@@ -1765,9 +1780,9 @@ class FrontGame{
    const channeling=u===player&&this.ultimateStatus().active;if(this.isSwordCommander(u))this.updateSwordAttack(u);if(u.type!=='tank'&&u.type!=='crimsonAce'&&u.type!=='guntruck'&&!channeling)u.aimFace=null;
    let target=null,nearest=Infinity;
    if(u.type==='medic'){
-    const patients=[...new Set([...this.units,...this.buildings.filter(b=>b.kind==='repairBot'&&b.buildUntil<=this.time)])].filter(a=>a.team===u.team&&a.hp>0&&a.hp<a.maxHp&&dist(u,a)<s.range).sort((a,b)=>(u.team===0?Number(b.type==='leader')-Number(a.type==='leader'):0)||dist(u,a)-dist(u,b)).slice(0,this.evolutionEnabled(u)?3:1);
+    const patients=this.medicPatients(u,s.range).slice(0,this.evolutionEnabled(u)?3:1);
     target=patients[0]||null;if(target)nearest=dist(u,target);
-    if(target&&u.cooldown<=1e-8){for(const patient of patients){this.heal(patient,s.heal,u);this.effects.push({kind:'heal',x:patient.x,y:patient.y,t:.5,max:.5,team:u.team});}u.healStartedAt=this.time;u.healUntil=this.time+.7;u.healAngle=Math.atan2(target.y-u.y,target.x-u.x);u.cooldown=s.rate;}
+    if(u.team!==0)this.updateMedicHealing(u,s);
    }else{
     if(u.team===0)target=this.selectCombatTarget(u,combatCandidates,combatThreats,s);else for(const a of [...this.units,...this.buildings.filter(b=>b.hp>0)]){if(!this.canTarget(u,a))continue;const d=this.targetDistance(u,a),score=d/Math.max(.25,multiplier(u.type,a.type));if(d<s.range&&d>=(s.minRange||0)&&score<nearest){target=a;nearest=score;}}
     // Finish the turret's aim before reconsidering almost equidistant moving targets.
@@ -1786,7 +1801,7 @@ class FrontGame{
    }
    if(TYPES[u.type]?.stab&&(u.bayonetAttack||this.time<(u.bayonetRecoverUntil||0)))continue;
    if(u.team===0&&u.aiEvade&&u.aiEvade.until>this.time){const goal=u.aiEvade;if(dist(u,goal)>3)this.move(u,goal.x-u.x,goal.y-u.y,dt,s.speed);}
-   else if(u.team===0&&this.moveOrder){const goal=this.squadMovePoint(u,this.formationPoint(u,this.squadMoveAnchor(u)));if(dist(u,goal)>8)this.navigate(u,goal.x,goal.y,dt,u.type==='leader'?this.commanderMoveSpeed(goal.x-u.x,goal.y-u.y):this.squadFollowSpeed(u,u.regroup?.goal||goal,s.speed));}
+   else if(u.team===0&&this.moveOrder){const goal=this.squadMovePoint(u,this.medicTreatmentPoint(u,this.formationPoint(u,this.squadMoveAnchor(u)),s));if(dist(u,goal)>8)this.navigate(u,goal.x,goal.y,dt,u.type==='leader'?this.commanderMoveSpeed(goal.x-u.x,goal.y-u.y):this.squadFollowSpeed(u,u.regroup?.goal||goal,s.speed));}
    else if(u.type==='leader'&&u.team===0){if(this.input.x||this.input.y)this.move(u,this.input.x*1000,this.input.y*1000,dt,this.commanderMoveSpeed(this.input.x,this.input.y));}
    else if(u.type==='leader'){
     let dest=this.time<this.enemyAdvanceAt?{x:800,y:450}:{x:800+Math.sin(this.time*.022)*330,y:2280};const seen=this.alive(0).filter(a=>this.canTarget(u,a)&&dist(u,a)<450);if(seen.length){dest=seen[0];if(u.hp<u.maxHp*.3)dest={x:800,y:360};}
@@ -1794,7 +1809,7 @@ class FrontGame{
    }else if(u.team!==0&&this.followRoomEscort(u,dt,s)){}
    else if(u.patrol){const chase=this.pursuitTarget(u),c=this.pursuitPoint(u,chase);if(!target&&dist(u,c)>(chase.built?1:8))this.navigate(u,c.x,c.y,dt,s.speed);}
    else{
-    const c=u.team?enemy:player,facing=u.team?Math.atan2(player.y-c.y,player.x-c.x):this.formationFacing,goal=this.squadMovePoint(u,this.formationPoint(u,c,facing));
+    const c=u.team?enemy:player,facing=u.team?Math.atan2(player.y-c.y,player.x-c.x):this.formationFacing,goal=this.squadMovePoint(u,this.medicTreatmentPoint(u,this.formationPoint(u,c,facing),s));
     if(dist(u,goal)>12)this.navigate(u,goal.x,goal.y,dt,this.squadFollowSpeed(u,u.regroup?.goal||goal,s.speed*(dist(u,c)>280?1.3:1)));
    }
   }
@@ -1804,6 +1819,10 @@ class FrontGame{
   this.updateLuckyObjects(dt);
   this.separateCrowd(live);
   live.forEach(u=>this.resolvePosition(u));
+  // Heal against the final positions after every squad has moved, independent of unit ordering.
+  for(const u of live)if(u.team===0&&u.type==='medic'){
+   const pulse=()=>this.updateMedicHealing(u);if(this.coop)this.withOwner(u.coopOwner,pulse);else pulse();
+  }
   if(this.coop)this.coopCollectPickups();
   for(const p of this.pickups){if(!this.coop&&p.active&&player.hp>0&&dist(p,player)<60){this.collectFieldSupply(p);}}
   for(const p of this.shots){p.life-=dt;if(p.target.hp<=0){p.life=0;continue;}if(p.kind==='bossKiller'&&p.guidedFlight&&this.updateBossKillerFlight){this.updateBossKillerFlight(p,dt);continue;}const d=dist(p,p.target),step=p.speed*dt;if(d<step+10){this.impact(p);p.life=0;}else{p.x+=(p.target.x-p.x)/d*step;p.y+=(p.target.y-p.y)/d*step;}}

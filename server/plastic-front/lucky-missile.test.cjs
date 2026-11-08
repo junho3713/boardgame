@@ -4,7 +4,7 @@ const {FrontGame,LUCKY,multiplier}=require('./public/engine.js');
 const {CoopGame}=require('./public/coop-engine.js');
 function scene(coop=false){const g=coop?new CoopGame():new FrontGame();g.start();for(const k of ['units','structures','defenses','buildings','bases','obstacles'])g[k]=[];return g;}
 function hits(g,source,damage=700){
- const result=[];g.damage=(u,amount)=>result.push({u,amount});g.launchMissile(source,{x:1000,y:1000},{damage});
+ const result=[];g.damage=(u,amount)=>{const d=g.defenseFactor(u,source),pierced=source.team===0&&source.type==='lucky'?1/(1+(1/d-1)*.65):d;result.push({u,amount:amount*d/pierced});};g.launchMissile(source,{x:1000,y:1000},{damage});
  const shell=g.mortarShells.at(-1),r=shell.radius;
  g.units=[];for(const type of ['rifle','tank'])for(const fraction of [0,.5,1,1.01])g.units.push({id:g.units.length+1,type,team:source.team===0?2:0,x:1000+r*fraction,y:1000,hp:1e6,maxHp:1e6,fraction});
  g.time=shell.landAt;g.updateMortars();a.equal(result.length,6);return result;

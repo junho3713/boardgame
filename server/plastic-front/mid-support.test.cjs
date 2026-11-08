@@ -6,9 +6,9 @@ const near=(x,y)=>a.ok(Math.abs(x-y)<1e-7,`${x} != ${y}`);
 function scene(coop=false){const g=coop?new CoopGame():new FrontGame({},undefined,{map:'livingroom-star'});g.start();g.units=g.units.filter(u=>u.team===0&&u.type==='leader');g.obstacles=[];g.structures=[];g.buildings=[];g.defenses=[];g.pickups=[];g.cash[0]=1000;g.xp=0;g.roomEntry=()=>({x:1500,y:6000});return g;}
 function resume(g){g.phase='playing';g.turnChoice=null;g.pendingChoice=null;}
 function fill(g){const types=['rifle','rocket','machinegun'];for(const t of types)g.tech[0][t]=1;for(let i=0;i<g.capacity();i++)g.addUnit(0,types[i%3],1500,6000);}
-test('early room enemies have 25 percent less HP with a smooth spawn-time return by five minutes; bosses and allies stay unchanged',()=>{
+test('early room enemies have 25 percent less HP with a smooth spawn-time return from eight to twelve minutes; bosses and allies stay unchanged',()=>{
  const g=scene(),spawn=(at,team=2)=>{g.time=at;return g.addUnit(team,'ant',1500,6000);};
- const early=spawn(0),edge=spawn(180),middle=spawn(240),late=spawn(300),later=spawn(900),base=g.stats(late).hp/(1+.12*late.threat);
+ const early=spawn(0),edge=spawn(480),middle=spawn(600),late=spawn(720),later=spawn(900),base=g.stats(late).hp/(1+.12*late.threat);
  const normalized=u=>g.stats(u).hp/(1+.12*u.threat);near(normalized(early),base*.75);near(normalized(edge),base*.75);near(normalized(middle),base*.875);near(normalized(later),base);
  const persisted=unpack(scene(),JSON.parse(JSON.stringify(pack(g))));near(persisted.stats(persisted.units.find(u=>u.id===early.id)).hp,g.stats(early).hp);
  const ally=spawn(0,0),allyLate=spawn(300,0);near(g.stats(ally).hp,g.stats(allyLate).hp);
