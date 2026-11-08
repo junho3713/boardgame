@@ -183,6 +183,7 @@ class FrontModels{
   if((elapsed>0||fresh)&&!walking&&item.layers.body.recoilFrame!==undefined&&(u.recoil||0)>.04)frame=item.layers.body.recoilFrame;
   if(ultimate&&u.appearance!=='blaze'){const pose=u.ultimatePose;frame=time-pose.shotAt<.17?(pose.hand==='right'?item.layers.body.ultimateRightFrame:pose.hand==='left'?item.layers.body.ultimateLeftFrame:0):0;}
   if(visual==='bayonet'||visual==='bladeGuard'){const spec=item.layers.body;if(u.bayonetAttack)frame=spec.bayonetWindupFrame;else if(time<(u.bayonetThrustUntil||0))frame=spec.bayonetThrustFrame;else if(time<(u.bayonetRecoverUntil||0))frame=spec.bayonetRecoverFrame;}
+  if(visual==='acidBeetle'){const spec=item.layers.body,pose=u.acidWindup?spec.throwReadyFrame:time<(u.toyThrowUntil||0)?spec.throwFrame:null;if(Number.isInteger(pose))frame=pose;}
   if(visual==='blizzardMage')frame=u.blizzardCast||time<(u.castUntil||0)?1:0;
   if(visual==='bikeRaider')frame=u.bikeAttack?.phase==='windup'?1:u.bikeAttack?.phase==='charge'?2:0;
   if(visual==='bikeRaider'&&u.bikeAttack)state.body=aim;

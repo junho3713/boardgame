@@ -1,7 +1,7 @@
 /* Matching lightweight fallback while the baked toy meshes load. */
 (()=>{'use strict';
-const colors={bombBug:'#b84529',acidBeetle:'#344e5b',ant:'#cf5e2d',soldierAnt:'#ad3f24',beetle:'#84954c',bruteBeetle:'#567158',stagBeetle:'#3a6f86',rhinoBeetle:'#914d35'},scales={bombBug:1.12,acidBeetle:.96,ant:.72,soldierAnt:.95,beetle:1.05,bruteBeetle:1.35,stagBeetle:1.2,rhinoBeetle:1.4};
-function draw(ctx,u){
+const colors={bombBug:'#b84529',acidBeetle:'#457d73',ant:'#cf5e2d',soldierAnt:'#ad3f24',beetle:'#84954c',bruteBeetle:'#567158',stagBeetle:'#3a6f86',rhinoBeetle:'#914d35'},scales={bombBug:1.12,acidBeetle:.96,ant:.72,soldierAnt:.95,beetle:1.05,bruteBeetle:1.35,stagBeetle:1.2,rhinoBeetle:1.4};
+function draw(ctx,u,time=0){
  const color=colors[u.type];if(!color)return false;
  const ant=['bombBug','ant','soldierAnt'].includes(u.type);ctx.save();ctx.scale(scales[u.type],scales[u.type]);
  const oval=(x,y,rx,ry,c)=>{ctx.fillStyle=c;ctx.beginPath();ctx.ellipse(x,y,rx,ry,0,0,Math.PI*2);ctx.fill();},piece=(points,width,c)=>{ctx.strokeStyle=c;ctx.lineWidth=width;ctx.lineCap=ctx.lineJoin='round';ctx.beginPath();points.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.stroke();};
@@ -15,7 +15,7 @@ function draw(ctx,u){
  if(u.type==='rhinoBeetle'){piece([[0,-30],[0,-38],[0,-48]],7,color);for(const side of [-1,1])piece([[0,-47],[side*5.5,-55]],4,color);}
  for(const side of [-1,1]){oval(side*9,-31,3,3,'#182323');oval(side*9-.5,-32,.8,.8,'#e7eed9');}
  if(u.type==='bombBug'){body(0,21,18,23);oval(0,23,3.8,5.5,'#e9ad45');}
- if(u.type==='acidBeetle'){oval(0,-25,11,10,'#c88439');piece([[0,29],[0,39]],5,'#d2a04d');}
+ if(u.type==='acidBeetle'){oval(0,-14,13,11,'#b8a35d');const y=u.acidWindup?-40:-35;for(const side of [-1,1])piece([[side*9,-13],[side*17,-25],[side*6,y]],4,color);if(!(time<(u.toyThrowUntil||0))){oval(0,y,7.5,7.5,'#a56f3d');piece([[-2,y-6],[-3,y],[-2,y+6]],.8,'#754c29');}}
  ctx.restore();return true;
 }
 function warning(c,u,time){
@@ -23,7 +23,7 @@ function warning(c,u,time){
  const bomb=u.type==='bombBug',f=u.bombFuse,a=u.acidWindup,col=bomb?'#ffb36b':'#ebd980';c.save();
  if(f){const k=Math.max(0,Math.min(1,(f.explodeAt-time)/.9));c.fillStyle='#e94d3428';c.strokeStyle='#ff7959';c.lineWidth=2;c.beginPath();c.arc(u.x,u.y,125,0,Math.PI*2);c.fill();c.stroke();c.strokeStyle='#ffe0a5';c.lineWidth=3;c.beginPath();c.arc(u.x,u.y,125,-Math.PI/2,-Math.PI/2+Math.PI*2*(1-k));c.stroke();c.globalAlpha=.3+.2*Math.sin(time*34);c.fillStyle='#ff653c';c.beginPath();c.ellipse(u.x,u.y-14,27,32,0,0,Math.PI*2);c.fill();c.globalAlpha=1;}
  if(a){c.strokeStyle='#f3da83';c.lineWidth=2;c.setLineDash([4,5]);c.beginPath();c.moveTo(u.x,u.y);c.lineTo(a.x,a.y);c.stroke();c.setLineDash([]);}
- c.shadowColor='#14241f';c.shadowBlur=3;c.shadowOffsetY=1;c.font='bold 12px sans-serif';c.textAlign='center';c.fillStyle=col;c.fillText(bomb?(f?'폭발 '+Math.max(0,f.explodeAt-time).toFixed(1)+'초':'폭탄개미'):'폭탄먼지벌레',u.x,u.y-49);
+ c.shadowColor='#14241f';c.shadowBlur=3;c.shadowOffsetY=1;c.font='bold 12px sans-serif';c.textAlign='center';c.fillStyle=col;c.fillText(bomb?(f?'폭발 '+Math.max(0,f.explodeAt-time).toFixed(1)+'초':'폭탄개미'):'투석 딱정벌레',u.x,u.y-49);
  c.shadowBlur=0;c.shadowOffsetY=0;c.fillStyle='#25352b';c.fillRect(u.x-21,u.y-44,42,4);c.fillStyle=bomb?'#df8c51':'#dfcb6f';c.fillRect(u.x-21,u.y-44,42*Math.max(0,u.hp/u.maxHp),4);c.restore();
 }
 window.FrontToyInsects={draw,warning};

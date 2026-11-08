@@ -397,7 +397,7 @@ function drawMortarShell(p){
  circle(ctx,p.x,p.y,p.radius,friendly?'#57bf6c28':'#d6523330',color);ctx.lineWidth=2;circle(ctx,p.x,p.y,p.radius*k,null,color);
  ctx.setLineDash([6,5]);circle(ctx,p.x,p.y,p.radius+4,null,color);ctx.setLineDash([]);
  ctx.strokeStyle=color;ctx.beginPath();ctx.moveTo(p.x-12,p.y);ctx.lineTo(p.x+12,p.y);ctx.moveTo(p.x,p.y-12);ctx.lineTo(p.x,p.y+12);ctx.stroke();
- text(ctx,`${friendly?'아군':'적'} ${p.kind==='acid'?'고온 분사액':p.kind==='missile'?'미사일':'박격포'} · ${Math.max(0,p.landAt-game.time).toFixed(1)}초`,p.x,p.y+p.radius+20,12,color);
+ text(ctx,`${friendly?'아군':'적'} ${['toyBall','acid'].includes(p.kind)?'나무 구슬':p.kind==='missile'?'미사일':'박격포'} · ${Math.max(0,p.landAt-game.time).toFixed(1)}초`,p.x,p.y+p.radius+20,12,color);
 }
 // Presentation-only interpolation leaves combat, saves and AI on the fixed simulation clock.
 const aiVisualPositions=new WeakMap();
@@ -421,7 +421,7 @@ function drawUnitRaw(u){
  if(!unitModels.draw(ctx,u,game.time)){ctx.save();
  const vehicle=['tank','crimsonAce','guntruck','lucky'].includes(u.type),bodyFace=Number.isFinite(u.moveFace)?u.moveFace:u.face,aimFace=Number.isFinite(u.turretFace)?u.turretFace:Number.isFinite(u.aimFace)?u.aimFace:u.face;
  ctx.rotate((vehicle?bodyFace:u.face)+Math.PI/2);ctx.translate(0,vehicle?0:(u.recoil||0)*22);if(u.boss)ctx.scale(1.35,1.35);
- if(unitModels.manifest?.insectDesign!=='classic'&&window.FrontToyInsects?.draw(ctx,u)){
+ if(unitModels.manifest?.insectDesign!=='classic'&&window.FrontToyInsects?.draw(ctx,u,game.time)){
   // Rounded toy fallback uses the same six species as the baked mesh set.
  }else if(types[u.type].flying){
   ctx.translate(0,-types[u.type].flightHeight);const hornet=u.type==='hornet';ctx.save();ctx.globalAlpha=.4;ctx.fillStyle='#ecdfb1';for(const side of [-1,1]){ctx.beginPath();ctx.ellipse(side*20,3,22,6+Math.sin(game.time*30)*3,side*.5,0,Math.PI*2);ctx.fill();}ctx.restore();circle(ctx,0,4,hornet?12:10,hornet?'#e0a53c':'#aa792b');rr(ctx,-10,-1,20,4,2,'#403025');rr(ctx,-8,9,16,4,2,'#403025');circle(ctx,0,-13,hornet?9:7,hornet?'#e48a2d':'#634521');circle(ctx,-5,-16,3,'#29251d');circle(ctx,5,-16,3,'#29251d');

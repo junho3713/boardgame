@@ -75,7 +75,7 @@ def bezier(points, count=17):
             for t in np.linspace(0, 1, count)]
 
 
-def toy_insect(kind, frame=0):
+def toy_insect(kind, frame=0, front_pose=0):
     m = Mesh()
     c = COLORS[kind]
     ant = kind in ['ant', 'soldierAnt']
@@ -89,6 +89,11 @@ def toy_insect(kind, frame=0):
             a = (side * (6 if ant else 10), y, 13)
             b = (side * (17 if ant else 21), y + [-7, 0, 6][i] + stride, 11)
             foot = (side * (24 if ant else 29), b[1] + 4, 3)
+            if front_pose and i == 0:
+                lift = 34 if front_pose == 2 else 25
+                reach = -43 if front_pose == 3 else -24 if front_pose == 2 else -33
+                b = (side*17, -20, lift)
+                foot = (side*8, reach, lift)
             m.tube(dark, a, b, 3.2, 2.8, n=14, gloss=.65)
             ball(m, c, b, (3.4, 3.4, 3.4), n=16, rings=8)
             m.tube(c, b, foot, 2.8, 2.4, n=14, gloss=.6)

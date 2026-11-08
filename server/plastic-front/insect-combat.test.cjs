@@ -39,15 +39,15 @@ test('a saved armed bomb preserves its remaining fuse and paused updates cannot 
  const g=scene(),u=bug(g),c=g.commander(0);c.x=u.x+50;g.updateBombBug(u,.05);g.time+=.4;const restored=unpack(new FrontGame(),pack(g)),b=restored.units.find(v=>v.id===u.id);
  a.equal(b.bombFuse.explodeAt,u.bombFuse.explodeAt);restored.phase='paused';restored.update(.05);a.equal(b.bombDetonated,undefined);restored.time=b.bombFuse.explodeAt;restored.updateBombBug(b,.05);a.equal(b.bombDetonated,true);
 });
-test('midrange beetles wind up, aim at a fixed location and leave a dodgeable flight',()=>{
+test('midrange toy beetles lift a wooden ball, face forward and leave a dodgeable throw',()=>{
  const g=scene(),u=bug(g,'acidBeetle'),c=g.commander(0);c.x=u.x+190;g.updateAcidBeetle(u,.05);a.ok(u.acidWindup);a.ok(TYPES.acidBeetle.range<TYPES.rifle.range);a.ok(TYPES.acidBeetle.range>TYPES.bayonet.range*3);
- g.time+=.3;g.updateAcidBeetle(u,.05);a.equal(g.mortarShells.length,1);const p=g.mortarShells[0];a.equal(p.kind,'acid');a.equal(p.x,c.x);a.ok(Math.abs(p.landAt-g.time-.4)<1e-7);
+ g.time+=.3;g.updateAcidBeetle(u,.05);a.equal(g.mortarShells.length,1);const p=g.mortarShells[0];a.equal(p.kind,'toyBall');a.equal(p.x,c.x);a.ok(Math.abs(p.landAt-g.time-.4)<1e-7);
  const hp=c.hp;c.x+=100;g.time=p.landAt;g.updateMortars();a.equal(c.hp,hp);a.equal(g.mortarShells.length,0);
 });
-test('a launched spray still lands after its caster dies and obeys normal armor damage',()=>{
- const g=scene(),u=bug(g,'acidBeetle'),c=g.commander(0);c.x=u.x+180;g.updateAcidBeetle(u,.05);g.time+=.3;g.updateAcidBeetle(u,.05);const hp=c.hp,p=g.mortarShells[0];g.damage(u,1e6,c);g.time=p.landAt;g.updateMortars();a.ok(c.hp<hp);a.ok(g.effects.some(e=>e.visualKind==='acid'));
+test('a launched wooden ball still lands after its thrower dies and obeys normal armor damage',()=>{
+ const g=scene(),u=bug(g,'acidBeetle'),c=g.commander(0);c.x=u.x+180;g.updateAcidBeetle(u,.05);g.time+=.3;g.updateAcidBeetle(u,.05);const hp=c.hp,p=g.mortarShells[0];g.damage(u,1e6,c);g.time=p.landAt;g.updateMortars();a.ok(c.hp<hp);a.ok(g.effects.some(e=>e.visualKind==='toyBall'));
 });
-test('killing a beetle during preparation cancels its unlaunched spray',()=>{
+test('killing a beetle during preparation cancels its unthrown ball',()=>{
  const g=scene(),u=bug(g,'acidBeetle'),c=g.commander(0);c.x=u.x+180;g.updateAcidBeetle(u,.05);a.ok(u.acidWindup);g.damage(u,1e6,c);g.time+=1;g.updateAcidBeetle(u,.05);a.equal(g.mortarShells.length,0);a.equal(u.acidWindup,null);
 });
 test('both original toy atlases render finite frames in all sixteen directions for either hostile team',async()=>{
