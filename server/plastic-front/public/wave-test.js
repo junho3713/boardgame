@@ -40,7 +40,7 @@ function applyLoadout(game,loadout){
  const config=validateLoadout(game,loadout),events=game.events;game.events={};
  try{
   game.tech[0]={...config.tech};game.abilities={...config.abilities};game.evolved=Object.fromEntries(roster.map(t=>[t,false]));game.level=config.level;game.xp=0;game.cash[0]=config.cash;
-  game.units=game.units.filter(u=>u.team!==0||u.type==='leader');const leader=game.commander(0);leader.hp=leader.maxHp=game.stats(leader).hp;leader.deadUntil=0;leader.diedAt=undefined;leader.revivePoint=null;leader.reviveProtectionUntil=0;
+  game.units=game.units.filter(u=>u.team!==0||u.type==='leader'||game.isSupportToy?.(u));const leader=game.commander(0);leader.hp=leader.maxHp=game.stats(leader).hp;leader.deadUntil=0;leader.diedAt=undefined;leader.revivePoint=null;leader.reviveProtectionUntil=0;
   for(const key of ['poisonUntil','rootedUntil','slowUntil','windUntil','luckyRootUntil','luckySlowUntil','healingReductionUntil','hurtUntil'])leader[key]=0;leader.poisonSource=null;leader.poisonDps=0;
   for(const type of roster)for(let i=0;i<config.counts[type];i++)game.addUnit(0,type,leader.x,leader.y);
   game.autoFuseUnits();game.checkEvolutions();game.refreshSquadHealth();game.refreshBuildingStats();
@@ -65,7 +65,7 @@ function seek(game,seconds,{heal=false}={}){
  if(!Number.isFinite(seconds)||seconds<0||seconds>1200)throw Error('0분부터 20분 사이를 선택하세요.');
  const target=Math.round(seconds),delta=target-game.time,seen=new Set();
  // Keep local defenders and scenery. Scheduled bosses and roaming waves are discarded, without kills/rewards.
- game.units=game.units.filter(u=>u.team===0||!u.boss&&(u.fixedGuard||u.roomGarrison||u.roadCaptain));
+ game.units=game.units.filter(u=>u.type!=='toyDecoy'&&(u.team===0||!u.boss&&(u.fixedGuard||u.roomGarrison||u.roadCaptain)));
  for(const u of [...game.units,...game.buildings,...game.bases,...game.structures,...game.defenses]){shiftTimers(u,delta,seen);u.target=null;u.aiEvade=null;u.evolutionHeat=0;u.evolutionLastShot=undefined;u.overheatUntil=0;u.bikeAttack=null;u.bossAction=null;u.bossBarrage=null;u.bayonetAttack=null;u.sniperAim=null;u.blizzardCast=null;u.ultimatePose=null;if(heal&&u.team===0&&u.hp>0)u.hp=u.maxHp;}
  shiftTimers(game.ultimate,delta,seen);game.ultimate.activeUntil=target;game.ultimate.nextShotAt=target;game.nextRecoveryAt+=delta;game.mission.stageStarted+=delta;
  game.evolutionLinkState={owners:[]};for(const u of game.units)delete u.evolutionLinkMarks;game.nextRareSupply=(Math.floor(target/120)+1)*120;game.supplyStrikes=[];if(game.fieldSupplyState?.boostUntil)game.fieldSupplyState.boostUntil+=delta;

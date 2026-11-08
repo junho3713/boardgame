@@ -21,7 +21,7 @@ function install(Effects){
  };
  p.paintLuckySymbol=function(c,kind){if(kind!=='bossKiller')return symbol.call(this,c,kind);c.save();c.translate(16,16);c.rotate(-Math.PI/4);if(!this.drawMaterialMissile?.(c,0,0,0,0,'boss',.42,{exhaust:false})){c.scale(.62,.62);this.drawBossKiller(c,0,0,0,0,1,{anchor:'center'});}c.restore();};
  p.drawShot=function(c,b,evolved=false){
-  if(b.kind==='bossKiller'){const q=this.materialShotPose?.(b)||{x:b.x,y:b.y-22,angle:Math.atan2(b.target.y-b.y,b.target.x-b.x)};this.drawBossKiller(c,q.x,q.y,q.angle,this.time,1);return;}
+  if(b.kind==='bossKiller'){const q=this.materialShotPose?.(b)||{x:b.x,y:b.y-22,angle:Math.atan2(b.target.y-b.y,b.target.x-b.x)};if(b.guidedFlight?.hovering){c.save();c.globalAlpha=.65;c.strokeStyle='#ffe196';c.lineWidth=1.5;c.beginPath();c.ellipse(q.x,q.y+22,28+Math.sin(this.time*9)*3,8,0,0,TAU);c.stroke();bossCaption(c,'보스킬러',q.x,q.y-45);c.restore();}this.drawBossKiller(c,q.x,q.y,q.angle,this.time,1);return;}
   if(!b.evoStyle)return shot.call(this,c,b,evolved);
   if(this.drawMaterialTracer&&!['cluster','siege'].includes(b.evoStyle)){this.drawMaterialTracer(c,b);return;}
   if(this.drawPropulsion&&b.evoStyle==='cluster'){shot.call(this,c,b,true);const q=this.materialShotPose(b);c.save();c.translate(q.x,q.y);c.rotate(q.angle);this.drawPropulsion(c,-9,0,this.time,.45);c.restore();return;}

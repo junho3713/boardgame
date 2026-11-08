@@ -7,9 +7,9 @@ function scope(g,owner,fn){return g.coop?g.withOwner(owner,fn):fn();}
 function reward(g,kind){const c=g.commander(0),p={x:c.x,y:c.y,active:true,supplyKind:kind,rareSupply:true};a.equal(g.collectFieldSupply(p),true);return p;}
 function near(x,y){a.ok(Math.abs(x-y)<1e-7,x+' != '+y);}
 
-test('supplies use 25/20/15/15 utility odds and 10/10/5 special troop odds',()=>{
+test('fresh rare supplies use four equal support-toy odds',()=>{
  const g=scene(),counts={};for(let i=0;i<10000;i++){g.random=()=>(i+.5)/10000;const kind=g.rollSupply();counts[kind]=(counts[kind]||0)+1;}
- a.deepEqual(counts,{support:2500,medkit:2000,boost:1500,artillery:1500,special:1000,spectre:1000,titan:500});
+ a.deepEqual(counts,{toyDrum:2500,toyDecoyMaker:2500,toyTurtle:2500,toyStunner:2500});
 });
 test('the actual solo and cooperative collection loops award a nearby crate exactly once to its collector',()=>{
  for(const coop of [false,true]){const g=scene(coop),owner=coop?1:0,c=scope(g,owner,()=>g.commander(0));g.pickups=[{x:c.x,y:c.y,active:true,supplyKind:'artillery',rareSupply:true}];g.update(.05);a.equal(scope(g,owner,()=>g.supplyState().artillery),1);g.update(.05);a.equal(scope(g,owner,()=>g.supplyState().artillery),1);if(coop)a.equal(scope(g,0,()=>g.supplyState().artillery),0);}

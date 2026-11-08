@@ -31,6 +31,11 @@ test('two clients authenticate, grow independently without pausing, reconnect an
   g.withOwner(1,()=>{g.supplyState().artillery=1;g.addUnit(2,'ant',blueLeader.x+160,blueLeader.y);});assert.equal((await call('/command',{action:'artillery'},b.token)).status,200);assert.equal(g.supplyStrikes.at(-1).coopOwner,1);assert.equal(g.withOwner(1,()=>g.supplyState().artillery),0);
   g.withOwner(1,()=>{g.supplyState().pendingSupport=1;});g.levelCheck();assert.equal(g.coopChoosing[1],true);
   assert.equal((await call('/command',{action:'cancelRecovery'},b.token)).status,200);assert.equal(g.coopChoosing[1],false);assert.equal(g.phase,'playing');
+  g.withOwner(0,()=>{g.addSupportToy('toyDrum');g.addSupportToy('toyTurtle');g.supplyState().toyOffer={type:'toyStunner',at:g.time};});
+  const greenToy=g.withOwner(0,()=>g.supportToys()[0]);
+  assert.equal((await call('/command',{action:'supportToy',id:greenToy.id},b.token)).status,409);
+  assert.equal((await call('/command',{action:'supportToy',id:greenToy.id},a.token)).status,200);
+  assert.equal(g.withOwner(0,()=>g.supportToys()[0].type),'toyStunner');
   const t=g.time;clock+=4000;handler.step();assert.equal(g.time,t);assert.equal(r.paused,true);
   await call('/state',null,a.token);await call('/state',null,b.token);
   assert.equal((await call('/command',{action:'resume'},b.token)).status,200);handler.step();assert.ok(g.time>t);

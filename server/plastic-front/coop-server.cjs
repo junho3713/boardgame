@@ -73,8 +73,9 @@ function createCoopHandler({now=Date.now,automatic=true}={}){
       else if(action==='ultimate')ok=g.useUltimate();
       else if(action==='medkit')ok=g.useMedkit();
       else if(action==='artillery')ok=g.useArtilleryTicket(body.x,body.y);
+      else if(action==='supportToy')ok=g.resolveSupportToyOffer(body.id);
       else if(action==='recovery')ok=g.beginRecovery();
-      else if(action==='cancelRecovery'){if(g.coopChoosing[p.owner]&&['recovery','supply'].includes(g.choiceKind)){g.phase='choice';ok=g.cancelRecovery();if(ok)g.coopChoosing[p.owner]=false;}}
+      else if(action==='cancelRecovery'){if(g.coopChoosing[p.owner]&&['recovery','supply','periodic'].includes(g.choiceKind)){g.phase='choice';ok=g.cancelRecovery();if(ok)g.coopChoosing[p.owner]=false;}}
       else if(action==='build')ok=g.build(body.kind);
       else if(action==='stage'){
        if(body.round!==g.coopRounds[p.owner]||!g.coopChoosing[p.owner])fail(409,'강화 선택이 갱신되었습니다.');g.phase='choice';

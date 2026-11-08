@@ -56,7 +56,7 @@ function install(Effects){
  };
  p.materialShotPose=function(b){
   if(b.kind==='bossKiller'&&b.guidedFlight){
-   const f=b.guidedFlight,k=clamp(f.progress),q=.6*k+.4*k*k,height=f.motionVersion===2?f.height:f.launchHeight*(1-q)+f.targetHeight*q+Math.sin(Math.PI*k)*Math.min(18,f.distance*.055);
+   const f=b.guidedFlight,k=clamp(f.progress),q=.6*k+.4*k*k,height=f.motionVersion>=2?f.height:f.launchHeight*(1-q)+f.targetHeight*q+Math.sin(Math.PI*k)*Math.min(18,f.distance*.055);
    return{x:b.x,y:b.y-height,angle:f.heading,height,team:b.team};
   }
   const flight=b.target?.visualFlightHeight??root.FrontTypes?.[b.target?.type]?.flightHeight??0,from=root.FrontTypes?.[b.source?.type]?.flightHeight||0,total=b.source?Math.hypot(b.target.x-b.source.x,b.target.y-b.source.y):1,progress=clamp(1-Math.hypot(b.target.x-b.x,b.target.y-b.y)/Math.max(1,total));

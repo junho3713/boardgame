@@ -95,13 +95,18 @@ function install(api){
   const scale=this.coop?this.withOwner(u.coopOwner,()=>this.luckyScale(u)):this.luckyScale(u);
   const duration=Math.max(.28,Math.min(.55,distance(u,target)/900)),launchHeight=30,targetHeight=16+(target.visualFlightHeight??TYPES[target.type]?.flightHeight??0);
   const heading=Math.atan2(target.y-targetHeight-u.y+launchHeight,target.x-u.x);
-  const guidedFlight={motionVersion:2,startedAt:this.time,duration,fromX:u.x,fromY:u.y,launchHeight,targetHeight,height:launchHeight,distance:distance(u,target),progress:0,heading,previousX:u.x,previousY:u.y-launchHeight};
+  const guidedFlight={motionVersion:3,hoverDuration:1,hovering:true,startedAt:this.time,duration,fromX:u.x,fromY:u.y,launchHeight:205,targetHeight,height:205,distance:distance(u,target),progress:0,heading:-Math.PI/2,previousX:u.x,previousY:u.y-205};
   this.shots.push({x:u.x,y:u.y,target,source:u,damage:LUCKY.bossKillerDamage*scale,speed:900,kind:'bossKiller',team:0,life:3,splash:0,evoStyle:'bossKiller',guidedFlight});
-  this.effects.push({kind:'evoBossLaunch',x:u.x,y:u.y,launchY:u.y-launchHeight,angle:heading,targetHeight,target,t:duration+.15,max:duration+.15,team:0});this.notify('fire',{...u,luckySound:'bossKiller'});this.notify('toast','보스킬러 당첨! 검은 미사일 발사');
+  this.effects.push({kind:'evoBossLaunch',x:u.x,y:u.y,launchY:u.y-launchHeight,angle:heading,targetHeight,target,t:1+duration+.15,max:1+duration+.15,team:0});this.notify('fire',{...u,luckySound:'bossKiller'});this.notify('toast','보스킬러 당첨! 레토나 위 1초 대기 후 발사');
  };
  p.updateBossKillerFlight=function(b,dt){
   const f=b.guidedFlight;if(!f||b.life<=0)return;
-  const k=Math.max(0,Math.min(1,(this.time-f.startedAt)/f.duration)),dynamic=f.motionVersion===2,q=dynamic?.25*k+.75*k*k:.6*k+.4*k*k;
+  const hover=f.motionVersion===3?(f.hoverDuration??1):0,flightAt=f.startedAt+hover;
+  if(f.motionVersion===3&&!f.launched){
+   f.fromX=b.source.x;f.fromY=b.source.y;f.launchHeight=205;f.distance=distance(b.source,b.target);b.x=f.fromX;b.y=f.fromY;f.height=205+Math.sin((this.time-f.startedAt)*Math.PI*4)*3;f.heading=-Math.PI/2;f.previousX=b.x;f.previousY=b.y-f.height;f.progress=0;
+   if(this.time+1e-8<flightAt)return;f.launched=true;f.hovering=false;f.launchHeight=f.height;
+  }
+  const k=Math.max(0,Math.min(1,this.time+1e-8>=flightAt+f.duration?1:(this.time-flightAt)/f.duration)),dynamic=f.motionVersion>=2,q=dynamic?.25*k+.75*k*k:.6*k+.4*k*k;
   const dxTarget=b.target.x-f.fromX,dyTarget=b.target.y-f.fromY,d=Math.max(1,Math.hypot(dxTarget,dyTarget)),sway=dynamic?Math.sin(Math.PI*q)*Math.min(32,f.distance*.08)*(b.source.id%2?1:-1):0;
   b.x=f.fromX+dxTarget*q-dyTarget/d*sway;b.y=f.fromY+dyTarget*q+dxTarget/d*sway;
   f.targetHeight=16+(b.target.visualFlightHeight??TYPES[b.target.type]?.flightHeight??0);

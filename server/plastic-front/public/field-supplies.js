@@ -2,7 +2,7 @@
 (function(root){'use strict';
 function install({FrontGame:Game,TYPES}){
  const p=Game.prototype;if(p.fieldSupplyVersion)return;p.fieldSupplyVersion=1;
- const config={odds:{support:.25,medkit:.20,boost:.15,artillery:.15,special:.10,spectre:.10,titan:.05},cash:400,boostDuration:60,damage:1.3,haste:1.2,strikeRange:900,strikeDamage:320,strikeRadius:120};
+ const config={odds:{toyDrum:.25,toyDecoyMaker:.25,toyTurtle:.25,toyStunner:.25},legacyOdds:{support:.25,medkit:.20,boost:.15,artillery:.15,special:.10,spectre:.10,titan:.05},cash:400,boostDuration:60,damage:1.3,haste:1.2,strikeRange:900,strikeDamage:320,strikeRadius:120};
  const specialTypes=['commando','spectre','titan'],specialRewards={special:'commando',spectre:'spectre',titan:'titan'},armor={commando:24,spectre:12,titan:44};
  const fresh=()=>({medkits:0,artillery:0,boostUntil:0,pendingSupport:0,collected:0,supportMinute:9,pendingMinute:null});
  const reset=p.reset,stats=p.stats,capacity=p.capacity,levelCheck=p.levelCheck,cancel=p.cancelRecovery,shot=p.fireUnitProjectiles,update=p.update,refresh=p.refreshCommanderHealth,defense=p.defenseFactor,select=p.selectCombatTarget;
@@ -21,12 +21,13 @@ function install({FrontGame:Game,TYPES}){
  p.refreshCommanderHealth=function(){refresh.call(this);for(const u of this.supplySquad())if(this.isSupplyTroop(u)){const hp=this.stats(u).hp;u.hp=Math.min(hp,Math.max(0,u.hp+hp-u.maxHp));u.maxHp=hp;}};
  p.defenseFactor=function(target,source){const factor=defense.call(this,target,source);return source?.team===0&&source.type==='spectre'?1/(1+(1/factor-1)*.65):factor;};
  p.selectCombatTarget=function(u,candidates,threats,s=this.stats(u)){if(u.team===0&&u.type==='spectre'){const targets=(candidates||this.combatCandidates()).filter(t=>this.canTarget(u,t)&&this.visible(t)&&this.targetDistance(u,t)<s.range&&this.lineClear(u,t,0,{fireTeam:0}));const rank=t=>t.boss?0:t.type==='blizzardMage'?1:t.type==='mortar'?2:(TYPES[t.type]?this.stats(t).defense:18)>=15?3:4;return targets.sort((a,b)=>rank(a)-rank(b)||this.targetDistance(u,a)-this.targetDistance(u,b))[0]||null;}return select.call(this,u,candidates,threats,s);};
- p.rollSupply=function(){const value=this.random();let sum=0;for(const [kind,chance]of Object.entries(config.odds)){sum+=chance;if(value<sum)return kind;}return'titan';};
+ p.rollSupply=function(){const value=this.random();let sum=0;for(const [kind,chance]of Object.entries(config.odds)){sum+=chance;if(value<sum)return kind;}return'toyStunner';};
  p.collectFieldSupply=function(pickup){
   if(!pickup?.active)return false;if(pickup.rareSupply&&this.time>=(pickup.expires||Infinity)){pickup.active=false;return false;}const c=this.commander(0);if(c.hp<=0||Math.hypot(c.x-pickup.x,c.y-pickup.y)>=60)return false;
   this.updateRareSupplySecurity();
     if(!pickup.rareSupply){pickup.active=false;this.gainXP(18);this.cash[0]+=25;this.awardGold(5);this.notify('toast','보급품 확보 · +25 자원 / +18 XP');this.effects.push({kind:'drop',x:pickup.x,y:pickup.y,t:.6,max:.6,team:0});return true;}
-  const state=this.supplyState(),kind=config.odds[pickup.supplyKind]===undefined?this.rollSupply():pickup.supplyKind;
+  const kind=this.isSupportToy?.(pickup.supplyKind)||config.legacyOdds[pickup.supplyKind]!==undefined?pickup.supplyKind:this.rollSupply();pickup.supplyKind=kind;if(this.isSupportToy?.(kind))return this.collectSupportToy(pickup,kind);
+  const state=this.supplyState();
   pickup.active=false;pickup.supplyKind=kind;state.collected++;this.gainXP(18);this.awardGold(5);
   if(kind==='support'){this.cash[0]+=config.cash;state.pendingSupport++;this.notify('toast','희귀 지원 보급 · 전투자원 +400 · 지원창에서 즉시 충원');}
   else if(kind==='medkit'){state.medkits++;this.notify('toast','힐팩 확보 · 전체 회복·상태이상 제거 1회 저장');}
