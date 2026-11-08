@@ -17,7 +17,8 @@ const config={version:116,duration:1200,enemyLuckyInterval:5,recoverySeconds:16,
  opening:[{type:'ant',x:760,y:2240},{type:'ant',x:860,y:2240},{type:'ant',x:855,y:2110},{type:'bayonet',x:740,y:2050},{type:'bladeGuard',x:950,y:2020}],
  roadCaptains:[['road-soldier','bayonet','길목 장난감 병정',5600,1],['road-blade','bladeGuard','블랙 실드 검병 대장',3600,2],['road-bike','bikeRaider','바이크 돌격대장',2160,2]],
  mageEscort:{from:360,mortars:4,spacing:60,depth:80,interval:60},
- caps:{blizzardMage:2,mortar:4,butterfly:2,sniper:3,machinegun:4,hornet:3,honeybee:8,bikeRaider:3,rhinoBeetle:4,stagBeetle:5,crimsonAce:3,lucky:4},
+ insects:{from:180,intervals:{bombBug:24,acidBeetle:14}},
+ caps:{bombBug:2,acidBeetle:2,blizzardMage:2,mortar:4,butterfly:2,sniper:3,machinegun:4,hornet:3,honeybee:8,bikeRaider:3,rhinoBeetle:4,stagBeetle:5,crimsonAce:3,lucky:4},
  guardians:{version:142,midLaser:{id:'room-threequarter-laser',x:1500,fraction:.5},midMage:{id:'room-half-mage',x:1500,fraction:.75},finalMage:{id:'room-final-mage',x:1340,offset:280},finalMages:[{id:'room-final-mage',x:1340,offset:280},{id:'room-final-mage-right',x:1660,offset:280}],rearLasers:[{id:'room-final-rear-laser-left',x:950,offset:-400},{id:'room-final-rear-laser-right',x:2050,offset:-400}],finalLasers:[{id:'room-final-laser',x:1225,offset:260},{id:'room-final-laser-right',x:1775,offset:260}]},
  fortifications:{version:121,missiles:[{id:'room-hq-missile-left',x:980,y:1040},{id:'room-hq-missile-right',x:2020,y:1040},{id:'room-hq-missile-rear-left',x:1050,y:300},{id:'room-hq-missile-rear-right',x:1950,y:300}],guardian:{midLaser:{hp:2.6,defense:20},finalLaser:{hp:3.2,defense:30},midMage:{hp:3.2,damage:1.25,rate:.9,defense:18},finalMage:{hp:4,damage:1.35,rate:.9,defense:24},post:{hp:1.8,damage:1.25,defense:15},hq:{hp:1.75,damage:1.3,defense:20},garrison:{hp:1.5,damage:1,defense:8}},
   lines:[{id:'first-patrol',y:6200,roster:['ant','ant','bayonet']},{id:'laser-approach',y:4800,roster:['ant','ant','bladeGuard']},{id:'laser-left',x:450,y:4300,roster:['bladeGuard','machinegun']},{id:'laser-right',x:2550,y:4300,roster:['bladeGuard','machinegun']},{id:'approach',y:5600,roster:['bladeGuard','bayonet','machinegun']},{id:'laser',y:4200,roster:['bayonet','bladeGuard','machinegun','machinegun','sniper']},{id:'witch',y:2400,roster:['stagBeetle','bladeGuard','machinegun','sniper']},{id:'final',y:1600,roster:['stagBeetle','bladeGuard','bladeGuard','machinegun','machinegun','sniper']}],leash:600,engage:650},
@@ -26,13 +27,14 @@ const config={version:116,duration:1200,enemyLuckyInterval:5,recoverySeconds:16,
  {at:0,name:'초반 적응',interval:6,batch:1,cap:10,mix:{ant:8,bayonet:2,bladeGuard:1}},
  {at:60,name:'분대 성장',interval:5.5,batch:2,cap:16,mix:{ant:8,bayonet:2,bladeGuard:1}},
  {at:120,name:'첫 특수 위기',interval:4,batch:4,cap:34,mix:{ant:3,bayonet:3,bladeGuard:2,honeybee:3,machinegun:2,butterfly:.8}},
- {at:240,name:'장갑·저격 혼합',interval:3.84,batch:5,cap:38,mix:{ant:3,bayonet:3,stagBeetle:2,sniper:1.5,honeybee:2,bladeGuard:2,machinegun:1.5,butterfly:.6}},
- {at:360,name:'기동·원거리 위기',interval:4,batch:5,cap:41,mix:{blizzardMage:.7,ant:3,bayonet:2,bladeGuard:3,hornet:1,bikeRaider:1,machinegun:2,sniper:1,honeybee:2}},
- {at:480,name:'돌진·치유 약화',interval:4.16,batch:5,cap:41,mix:{blizzardMage:.7,ant:5,bayonet:2,rhinoBeetle:1,butterfly:.8,bikeRaider:1,bladeGuard:1,honeybee:2}},
- {at:600,name:'재편성·혼합 공세',interval:3.9,batch:6,cap:46,mix:{blizzardMage:1.4,ant:4,bayonet:3,bladeGuard:2,honeybee:2,machinegun:1.5,stagBeetle:1,sniper:1,butterfly:.6}},
- {at:720,name:'중장갑 방어선',interval:3.6,batch:6,cap:50,mix:{blizzardMage:1.4,ant:4,bayonet:2,stagBeetle:2,hornet:1,sniper:1,machinegun:2,honeybee:2,bikeRaider:.6,lucky:.5}},
- {at:900,name:'맹독·장갑 혼합',interval:3.6,batch:6,cap:50,mix:{blizzardMage:1.4,ant:4,bayonet:2,stagBeetle:2,rhinoBeetle:1,butterfly:.8,hornet:1,machinegun:1,sniper:1,lucky:.5}},
- {at:1080,name:'최종 공세',interval:3.4,batch:6,cap:52,mix:{blizzardMage:1.4,ant:3,bayonet:3,bladeGuard:2,rhinoBeetle:1,stagBeetle:2,butterfly:.8,hornet:1,machinegun:2,sniper:1,bikeRaider:1,lucky:.5}}
+ {at:180,name:'폭탄개미·폭탄먼지벌레 합류',interval:4,batch:4,cap:34,mix:{ant:2,bombBug:.45,acidBeetle:.55,bayonet:3,bladeGuard:2,honeybee:3,machinegun:2,butterfly:.8}},
+ {at:240,name:'장갑·저격 혼합',interval:3.84,batch:5,cap:38,mix:{ant:2,bombBug:.45,acidBeetle:.55,bayonet:3,stagBeetle:2,sniper:1.5,honeybee:2,bladeGuard:2,machinegun:1.5,butterfly:.6}},
+ {at:360,name:'기동·원거리 위기',interval:4,batch:5,cap:41,mix:{blizzardMage:.7,ant:2,bombBug:.45,acidBeetle:.55,bayonet:2,bladeGuard:3,hornet:1,bikeRaider:1,machinegun:2,sniper:1,honeybee:2}},
+ {at:480,name:'돌진·치유 약화',interval:4.16,batch:5,cap:41,mix:{blizzardMage:.7,ant:4,bombBug:.45,acidBeetle:.55,bayonet:2,rhinoBeetle:1,butterfly:.8,bikeRaider:1,bladeGuard:1,honeybee:2}},
+ {at:600,name:'재편성·혼합 공세',interval:3.9,batch:6,cap:46,mix:{blizzardMage:1.4,ant:3,bombBug:.45,acidBeetle:.55,bayonet:3,bladeGuard:2,honeybee:2,machinegun:1.5,stagBeetle:1,sniper:1,butterfly:.6}},
+ {at:720,name:'중장갑 방어선',interval:3.6,batch:6,cap:50,mix:{blizzardMage:1.4,ant:3,bombBug:.45,acidBeetle:.55,bayonet:2,stagBeetle:2,hornet:1,sniper:1,machinegun:2,honeybee:2,bikeRaider:.6,lucky:.5}},
+ {at:900,name:'맹독·장갑 혼합',interval:3.6,batch:6,cap:50,mix:{blizzardMage:1.4,ant:3,bombBug:.45,acidBeetle:.55,bayonet:2,stagBeetle:2,rhinoBeetle:1,butterfly:.8,hornet:1,machinegun:1,sniper:1,lucky:.5}},
+ {at:1080,name:'최종 공세',interval:3.4,batch:6,cap:52,mix:{blizzardMage:1.4,ant:2,bombBug:.45,acidBeetle:.55,bayonet:3,bladeGuard:2,rhinoBeetle:1,stagBeetle:2,butterfly:.8,hornet:1,machinegun:2,sniper:1,bikeRaider:1,lucky:.5}}
  ],
  tanks:[780,930,1020],
  encirclement:{from:180,intervalScale:2.25},
@@ -178,12 +180,12 @@ const methods={
  },
  roomEnemyCount(type=null){return this.units.filter(u=>u.hp>0&&u.team!==0&&!u.boss&&!u.fixedGuard&&!u.roomGarrison&&u.type!=='artillery'&&(!type||u.type===type)).length;},
  roomWaveCap(){const boss=this.units.some(u=>u.boss&&!u.miniBoss&&!u.roadCaptain&&u.hp>0),base=this.time>=config.bossRush.from?config.bossRush.troops[boss?'boss':'between'].cap:this.roomPhase().cap;return base+(boss?0:this.evolutionPace().capExtra);},
- roomCanSpawn(type){return this.roomEnemyCount()<this.roomWaveCap()&&this.roomEnemyCount(type)<(config.caps[type]??Infinity);},
+ roomCanSpawn(type){if(config.insects.intervals[type]&&(this.time<config.insects.from||this.time<(this.roomCampaign?.insectNext?.[type]||0)))return false;return this.roomEnemyCount()<this.roomWaveCap()&&this.roomEnemyCount(type)<(config.caps[type]??Infinity);},
  roomWavePlan(){
   const p=this.roomPhase(),beat=this.roomBeat(),r=config.surges,surge=r.enabled&&this.time>=r.from&&beat.density>1;
   const portal=this.roomPortalAlive(),late=portal&&this.time>=900;const plan={surge,count:beat.density<.6?1:surge?Math.min(r.maxBatch,p.batch+r.extra):Math.min(6,p.batch+(beat.density>1&&this.time>=240?1:0)),interval:p.interval/beat.density*(surge?r.intervalScale:1),forced:surge?(r.rosters.filter(row=>row.at<=this.time).at(-1)?.types||[]):[],window:p.at+':'+Math.floor((this.time-p.at)/config.rhythm.cycle)};if(!portal){const late=this.time>=config.lateWaves.from;plan.count=Math.max(1,Math.ceil(plan.count*(late?config.lateWaves.closedCount:.65)));plan.interval*=late?config.lateWaves.closedInterval:1.4;}else if(late&&beat.density>=.6){plan.count=Math.min(10,plan.count+config.lateWaves.openExtra);plan.interval*=config.lateWaves.openInterval;plan.surge=true;plan.forced=['machinegun','sniper','butterfly','bikeRaider'];}if(this.time>=config.bossRush.from&&this.time>=(this.roomCampaign?.recoveryUntil||0)){const row=config.bossRush.troops[this.units.some(u=>u.boss&&!u.miniBoss&&!u.roadCaptain&&u.hp>0)?'boss':'between'];plan.count=portal?row.openCount:row.closedCount;plan.interval=portal?row.openInterval:row.closedInterval;plan.surge=false;plan.forced=[];}if(!this.units.some(u=>u.boss&&!u.miniBoss&&!u.roadCaptain&&u.hp>0)){if(this.time>=config.encirclement.from)plan.interval*=config.encirclement.intervalScale;if(beat.density>=1)plan.interval/=this.evolutionPace().spawnScale;}return plan;
  },
- spawnRoomEnemy(type,lane=null){if(!this.roomCanSpawn(type))return null;const cursor=this.roomCampaign.entryCursor||0,p=this.roomEntry(this.serial+1+(lane||0)*3,55,cursor%4);if(!p)return null;this.roomCampaign.entryCursor=Number.isInteger(p.entrySide)?p.entrySide+1:cursor+1;const team=['machinegun','sniper','crimsonAce','lucky'].includes(type)?1:2,u=this.addUnit(team,type,p.x,p.y,true);u.roomEntrySide=p.entrySide;u.assault=true;u.roomWave=true;this.stampEvolutionWave(u);if(type==='blizzardMage')Object.assign(u,{mobileMage:true,activeStage:1,cooldown:1.2});return u;},
+ spawnRoomEnemy(type,lane=null){if(!this.roomCanSpawn(type))return null;const cursor=this.roomCampaign.entryCursor||0,p=this.roomEntry(this.serial+1+(lane||0)*3,55,cursor%4);if(!p)return null;this.roomCampaign.entryCursor=Number.isInteger(p.entrySide)?p.entrySide+1:cursor+1;const team=['machinegun','sniper','crimsonAce','lucky'].includes(type)?1:2,u=this.addUnit(team,type,p.x,p.y,true);if(config.insects.intervals[type]){const next=this.roomCampaign.insectNext??={};next[type]=this.time+config.insects.intervals[type];}u.roomEntrySide=p.entrySide;u.assault=true;u.roomWave=true;this.stampEvolutionWave(u);if(type==='blizzardMage')Object.assign(u,{mobileMage:true,activeStage:1,cooldown:1.2});return u;},
  roomCanSpawnMageGroup(){
   const r=config.mageEscort,scale=this.coop?this.coopSpawnScale:1;
   return this.time>=r.from&&this.time>=(this.roomCampaign?.nextMageEscortAt||0)&&this.roomCanSpawn('blizzardMage')&&this.roomEnemyCount()+1+r.mortars<=this.roomWaveCap()&&this.roomEnemyCount('mortar')+r.mortars<=Math.ceil(config.caps.mortar*scale);
@@ -216,7 +218,7 @@ const methods={
   if(this.time<s.nextSpawnAt)return;s.nextSpawnAt=this.time+plan.interval;
   const debt=s.waveSpawnDebt||0,count=Math.max(0,plan.count-debt);s.waveSpawnDebt=Math.max(0,debt-plan.count);
   const mix=this.evolutionWaveMix(p.mix),eligible=type=>type==='blizzardMage'?this.roomCanSpawnMageGroup():this.roomCanSpawn(type);
-  const melee=['ant','bayonet','bladeGuard','stagBeetle','rhinoBeetle'];
+  const melee=['bombBug','ant','bayonet','bladeGuard','stagBeetle','rhinoBeetle'];
   for(let i=0;i<count;i++){
    const forced=i===0&&this.roomCanSpawnMageGroup()&&p.mix.blizzardMage>0?'blizzardMage':plan.forced[i];let type=forced&&p.mix[forced]>0&&eligible(forced)?forced:null;
    if(!type){const pool=Object.entries(mix).filter(([t])=>eligible(t)&&(i<4||melee.includes(t))),total=pool.reduce((n,[,w])=>n+w,0);if(!total)break;let roll=this.random()*total;type=pool.at(-1)[0];for(const [t,w]of pool){roll-=w;if(roll<0){type=t;break;}}}
@@ -357,7 +359,7 @@ const methods={
   const v=shell.enemyJackpot,spent=v.spent[target.id]||0,budget=Math.max(0,target.maxHp*.5-spent),damage=Math.max(0,Math.min(raw*this.defenseFactor(target),budget));if(!damage)return;
   const before=target.hp;this.damage(target,damage/this.defenseFactor(target),shell.source);v.spent[target.id]=spent+Math.max(0,before-target.hp);
  },
- bossHazards(){const result=[];for(const u of this.units){if(u.hp<=0||!u.boss&&!u.bossBarrage)continue;if(u.bossBarrage)for(const point of u.bossBarrage.targets||[u.bossBarrage])result.push({x:point.x,y:point.y,radius:config.patterns.rearBarrage.radius,landAt:u.bossBarrage.hitAt+.25});const a=u.bossAction;if(u.bossPattern==='venomDive'&&a&&a.phase!=='low')result.push({x:a.x,y:a.y,radius:55,landAt:a.until});if(u.bossPattern==='wideSlash'&&a)result.push({x:u.x+Math.cos(a.angle)*70,y:u.y+Math.sin(a.angle)*70,radius:85,landAt:a.hitAt});}return result;}
+ bossHazards(){const result=[];for(const u of this.units){if(u.hp<=0)continue;if(u.bombFuse)result.push({x:u.x,y:u.y,radius:125,landAt:u.bombFuse.explodeAt});if(!u.boss&&!u.bossBarrage)continue;if(u.bossBarrage)for(const point of u.bossBarrage.targets||[u.bossBarrage])result.push({x:point.x,y:point.y,radius:config.patterns.rearBarrage.radius,landAt:u.bossBarrage.hitAt+.25});const a=u.bossAction;if(u.bossPattern==='venomDive'&&a&&a.phase!=='low')result.push({x:a.x,y:a.y,radius:55,landAt:a.until});if(u.bossPattern==='wideSlash'&&a)result.push({x:u.x+Math.cos(a.angle)*70,y:u.y+Math.sin(a.angle)*70,radius:85,landAt:a.hitAt});}return result;}
 };
 root.FrontRoomCampaign={config,methods};if(typeof module!=='undefined')module.exports={config,methods};
 })(typeof window!=='undefined'?window:globalThis);

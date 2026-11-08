@@ -30,7 +30,7 @@ class FrontModels{
 
  ensure(type,team){
   // Enemy-only art is shared by both hostile simulation teams, including garrisons.
-  const sharedEnemy=team!==0&&['bladeGuard','bikeRaider','crimsonAce','lucky','ant','soldierAnt','beetle','bruteBeetle','stagBeetle','rhinoBeetle','honeybee','hornet','butterfly'].includes(type);
+  const sharedEnemy=team!==0&&['bombBug','acidBeetle','bladeGuard','bikeRaider','crimsonAce','lucky','ant','soldierAnt','beetle','bruteBeetle','stagBeetle','rhinoBeetle','honeybee','hornet','butterfly'].includes(type);
   // Roaming mages and their escorts share the hostile support atlases across both enemy teams.
   let key=type+'-'+(['mortar','blizzardMage'].includes(type)&&team!==0?1:sharedEnemy?2:team);if(team!==0&&!this.manifest?.models[key]&&this.manifest?.models[type+'-1'])key=type+'-1';if(this.assets.has(key))return this.assets.get(key);
   const data=this.manifest?.models[key];if(!data)return null;
@@ -187,6 +187,7 @@ class FrontModels{
   if(visual==='bikeRaider')frame=u.bikeAttack?.phase==='windup'?1:u.bikeAttack?.phase==='charge'?2:0;
   if(visual==='bikeRaider'&&u.bikeAttack)state.body=aim;
   ctx.save();if(visual==='blizzardMage'&&Number.isFinite(u.guardianReturnedAt)){const enter=Math.max(0,Math.min(1,(time-u.guardianReturnedAt)/1.2));ctx.globalAlpha*=.25+.75*enter;ctx.translate(0,-18*(1-enter));ctx.scale(.78+.22*enter,.78+.22*enter);}if(u.boss)ctx.scale(1.35,1.35);else if(captain)ctx.scale(1.12,1.12);
+  if(visual==='bombBug'&&u.bombFuse)ctx.filter=`brightness(${1.2+.35*Math.sin(time*34)}) saturate(1.45)`;
   const flying=!!item.layers.body.flightHeight,lift=flying?(Number.isFinite(u.visualFlightHeight)?u.visualFlightHeight:item.layers.body.flightHeight)+Math.sin(time*5+(u.id||0)*1.7)*2.4:0;
   if(flying){frame=time<(u.flightStrikeUntil||0)?item.layers.body.attackFrame:Math.floor(time*16+(u.id||0))%(item.layers.body.flightFrames||4);ctx.save();ctx.globalAlpha=.22;ctx.fillStyle='#172b21';ctx.beginPath();ctx.ellipse(5,4,u.type==='hornet'?23:15,u.type==='hornet'?9:6,0,0,TAU);ctx.fill();ctx.restore();ctx.translate(0,-lift);}
   const recoil=ultimate||flying||walking?0:u.recoil||0,bounce=elapsed===0?(state.bounce||0):walking?-Math.abs(Math.sin((state.walkPhase||0)*TAU))*.25:moved?Math.sin((u.walk||0)*2)*.45:0;

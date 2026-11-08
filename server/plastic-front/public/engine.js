@@ -7,6 +7,7 @@ const BALANCE_VERSION=70;
 const UNIT_TYPE_CAP=8;
 const COMMANDER_REVIVAL={delay:5,protection:3};
 const GUARDIANS={range:460,mageHp:560,mageRate:6,mageDamage:18,windup:.45,radius:145,root:2,laserHp:1500,laserDamage:40,laserTick:.2,respawnDelay:60,shieldNotice:.8,shieldRaise:.18,shieldHold:.35,lessonRange:650,lessonBannerTime:5,laserWindup:0,laserRate:0};
+const INSECTS={bomb:{trigger:65,radius:125,windup:.9},spray:{windup:.3,flight:.4,radius:34}};
 const BUTTERFLY={range:330,arc:80*Math.PI/180,windup:.65,flight:.8,reduction:.5,duration:6};
 const MEDIC_CLEANSE={cooldown:10,targets:5};
 const MEDIC_HEALING={base:10,interval:1,perLevel:.15,evolvedMultiplier:1.4,window:1,efficiencies:[1,.6,.4]};
@@ -93,6 +94,8 @@ const TYPES={swordEmpress:{name:'사검의 군주',hp:128000,damage:0,rate:100,r
  medic:{name:'의무병',icon:'✚',hp:110,damage:0,rate:MEDIC_HEALING.interval,range:280,speed:145,r:11,cost:70,role:'부상 대장 우선 · 기본 10 회복 · 1초 간격 · 중첩 치료 100%/60%/40%'},
  bayonetCaptain:{name:'장난감 병정 대장',icon:'♛',hp:640,damage:32,rate:1.6,range:64,speed:90,r:16,cost:0,windup:.38,stab:true,role:'적 전용 경장갑 · 강화 총검병 · 일반 정예 5분 / 대장 보스 2분부터'},
  bayonet:{name:'너트크래커 총검병',icon:'⚔',hp:320,damage:24,rate:1.6,range:58,speed:96,r:14,cost:0,windup:.38,stab:true,role:'적 전용 경장갑 · 총검 준비 후 찌르기 · 3분부터 웨이브 합류'},
+ bombBug:{name:'폭탄개미',icon:'◉',hp:260,damage:95,rate:99,range:65,speed:42,r:18,cost:0,role:'느린 자폭개미를 각색한 토이 적 · 접근 후 0.9초 예고 / 반경 125 · 처치해도 그 자리에서 폭발하여 양쪽 병력에 피해'},
+ acidBeetle:{name:'폭탄먼지벌레',icon:'♨',hp:220,damage:28,rate:2.3,range:210,speed:66,r:15,cost:0,role:'중거리 고온 액체 분사 · 사거리 210 · 0.3초 준비 + 0.4초 비행 · 발사 위치를 피해 회피'},
  ant:{name:'개미',icon:'•',hp:110,damage:12,rate:1.15,range:25,speed:91.2,r:10,cost:0,role:'접근하면 추격하는 근접 몬스터'},
  soldierAnt:{name:'병정개미',icon:'◆',hp:260,damage:20,rate:1.05,range:28,speed:102,r:13,cost:0,role:'1분 이후 출현하는 강화 근접 벌레'},
  bruteBeetle:{name:'거대 갑충',icon:'⬢',hp:1050,damage:40,rate:1.6,range:36,speed:68.4,r:23,cost:0,role:'3분 이후 출현하는 대형 일반 생물'},
@@ -814,8 +817,9 @@ class FrontGame{
   target.flash=.13;
   if(dealt>0&&this.time>=(target.nextHitEffectAt||0)){target.nextHitEffectAt=this.time+.065;this.effects.push({kind:'hit',x:target.x,y:target.y-(target.visualFlightHeight??TYPES[target.type]?.flightHeight??0),at:this.time,angle,power,damage:dealt,lift:target.team===2?8:24,t:.16,max:.16,team:target.team,armor:ARMORED.has(target.type)||['commando','titan'].includes(target.type)});}
   if(target.hp<=0){
+   if(target.type==='bombBug')this.detonateBombBug(target,source);
    if(this.isSwordCommander(target)){target.swordAttack=null;target.swordPose=null;}
-   target.diedAt=this.time;if(target.type==='blizzardMage')target.iceShield=null;
+   target.diedAt=this.time;if(target.type==='acidBeetle')target.acidWindup=null;if(target.type==='blizzardMage')target.iceShield=null;
    if(target.guardianRespawn){target.respawnAt=this.time+GUARDIANS.respawnDelay;target.laserAttack=null;target.blizzardCast=null;}
    this.effects.push({kind:'burst',x:target.x,y:target.y-(target.visualFlightHeight??TYPES[target.type]?.flightHeight??0),t:.5,max:.5,team:target.team});
    if(target.base){if(this.isRoomCampaign()&&target===this.bases[1]){this.roomPortalDestroyed();return;}this.finish(source.team===0?'win':'lose','base');return;}
@@ -824,8 +828,8 @@ class FrontGame{
    if(target.type==='artillery'){this.gainXP(60);this.cash[0]+=70;}
    if(source.team===0&&target.team!==0){
     this.kills++;this.awardGold(target.boss&&!target.miniBoss?30:ARMORED.has(target.type)||target.type==='hornet'?5:2);
-    const originalXP={butterfly:28,crimsonAce:65,bikeRaider:28,bladeGuard:14,bayonetCaptain:35,bayonet:20,honeybee:18,hornet:50,rhinoBeetle:65,stagBeetle:38,bruteBeetle:45,tank:22,beetle:24,soldierAnt:20,ant:13},originalCash={butterfly:22,crimsonAce:60,bikeRaider:24,bladeGuard:12,bayonetCaptain:25,bayonet:16,honeybee:18,hornet:48,rhinoBeetle:65,stagBeetle:38,bruteBeetle:45,soldierAnt:20,ant:14,beetle:28};
-    const pveCash={butterfly:16,crimsonAce:40,bikeRaider:16,bladeGuard:7,bayonetCaptain:16,bayonet:10,honeybee:10,hornet:26,rhinoBeetle:28,stagBeetle:20,bruteBeetle:20,soldierAnt:8,ant:6,beetle:12};
+    const originalXP={bombBug:20,acidBeetle:22,butterfly:28,crimsonAce:65,bikeRaider:28,bladeGuard:14,bayonetCaptain:35,bayonet:20,honeybee:18,hornet:50,rhinoBeetle:65,stagBeetle:38,bruteBeetle:45,tank:22,beetle:24,soldierAnt:20,ant:13},originalCash={bombBug:18,acidBeetle:18,butterfly:22,crimsonAce:60,bikeRaider:24,bladeGuard:12,bayonetCaptain:25,bayonet:16,honeybee:18,hornet:48,rhinoBeetle:65,stagBeetle:38,bruteBeetle:45,soldierAnt:20,ant:14,beetle:28};
+    const pveCash={bombBug:10,acidBeetle:10,butterfly:16,crimsonAce:40,bikeRaider:16,bladeGuard:7,bayonetCaptain:16,bayonet:10,honeybee:10,hornet:26,rhinoBeetle:28,stagBeetle:20,bruteBeetle:20,soldierAnt:8,ant:6,beetle:12};
     const xp=originalXP[target.type]||9,cash=(this.mode==='pve'?pveCash:originalCash)[target.type]||8;
     this.gainXP(Math.ceil(xp*(target.ambient?.22:1)));this.cash[0]+=Math.ceil(cash*(target.ambient?.25:1));
    }
@@ -969,6 +973,38 @@ class FrontGame{
   if(!bot.repairPathGoal||dist(goal,bot.repairPathGoal)>12||this.time>=(bot.repairReplanAt||0)||!bot.repairPath?.length){bot.repairPathGoal={...goal};bot.repairPath=threats.length?this.regroupPath(bot,goal,threats):this.findPath(bot,goal,this.collisionRadius(bot));bot.repairReplanAt=this.time+1.5;}
   while(bot.repairPath.length&&dist(bot,bot.repairPath[0])<10)bot.repairPath.shift();
   const next=bot.repairPath[0]||goal,before={x:bot.x,y:bot.y};bot.face=Math.atan2(next.y-bot.y,next.x-bot.x);this.navigate(bot,next.x,next.y,dt,this.buildingStats('repairBot',bot.team).speed);bot.walk=(bot.walk||0)+dist(bot,before)*.16;
+ }
+ updateBombBug(u,dt){
+  if(u.bombDetonated||u.hp<=0)return;
+  if(u.bombFuse){if(this.time+1e-8>=u.bombFuse.explodeAt)this.detonateBombBug(u);return;}
+  const target=this.pursuitTarget(u),s=this.stats(u);
+  if(target?.hp>0&&this.canTarget(u,target)&&this.targetDistance(u,target)<=INSECTS.bomb.trigger&&this.lineClear(u,target,0,{fireTeam:u.team})){
+   u.bombFuse={startedAt:this.time,explodeAt:this.time+INSECTS.bomb.windup};u.route=null;return;
+  }
+  if(target&&dist(u,target)>8){const point=this.pursuitPoint(u,target);this.navigate(u,point.x,point.y,dt,s.speed);}
+ }
+ detonateBombBug(u,killer=null){
+  if(u.bombDetonated)return;u.bombDetonated=true;u.bombFuse=null;u.hp=0;u.diedAt=this.time;u.deadUntil=0;
+  // Credit a player's chain to its owner. The blast itself still hits both sides.
+  const source={type:'bombBug',team:killer?.team===0?0:u.team,x:u.x,y:u.y,...(killer?.team===0&&Number.isInteger(killer.coopOwner)?{coopOwner:killer.coopOwner}:{})};
+  (this.bombBlastQueue??=[]).push({x:u.x,y:u.y,damage:this.stats(u).damage,source,unit:u});
+  if(this.processingBombBlasts)return;this.processingBombBlasts=true;
+  try{for(let i=0;i<this.bombBlastQueue.length;i++){
+   const blast=this.bombBlastQueue[i],radius=INSECTS.bomb.radius;
+   this.effects.push({kind:'explosion',x:blast.x,y:blast.y,radius,t:.7,max:.7,team:2,visualKind:'bombBug'});
+   this.notify('explosion',{x:blast.x,y:blast.y,kind:'rocket',team:2});
+   for(const target of [...this.units]){if(target===blast.unit||target.hp<=0||dist(target,blast)>radius)continue;this.damage(target,blast.damage,target.team===0?{...blast.source,team:2,coopOwner:undefined}:blast.source);}
+  }}finally{this.bombBlastQueue=[];this.processingBombBlasts=false;}
+ }
+ updateAcidBeetle(u,dt){
+  if(u.hp<=0)return;const s=this.stats(u);
+  if(u.acidWindup){const a=u.acidWindup;if(this.time+1e-8<a.fireAt)return;u.acidWindup=null;u.cooldown=s.rate;u.recoil=.25;
+   this.mortarShells.push({kind:'acid',damageType:'acidBeetle',x:a.x,y:a.y,fromX:u.x+Math.cos(u.face+Math.PI)*30,fromY:u.y+Math.sin(u.face+Math.PI)*24-18,radius:INSECTS.spray.radius,landAt:this.time+INSECTS.spray.flight,delay:INSECTS.spray.flight,source:u,team:u.team,damage:s.damage,critical:false});return;
+  }
+  const target=this.pursuitTarget(u);if(!target)return;
+  const inRange=target.hp>0&&this.canTarget(u,target)&&this.targetDistance(u,target)<=s.range&&this.lineClear(u,target,0,{fireTeam:u.team});
+  if(inRange){u.face=u.aimFace=Math.atan2(target.y-u.y,target.x-u.x)+Math.PI;if(u.cooldown<=0)u.acidWindup={x:target.x,y:target.y,startedAt:this.time,fireAt:this.time+INSECTS.spray.windup};}
+  else if(dist(u,target)>8){const point=this.pursuitPoint(u,target);this.navigate(u,point.x,point.y,dt,s.speed);}
  }
  updateRepairBot(bot,dt){
   const spec=this.buildingStats('repairBot',bot.team),threats=this.repairBotThreats(bot);bot.repairing=false;bot.repairPatient=null;
@@ -1114,7 +1150,7 @@ class FrontGame{
    this.effects.push({kind:'explosion',x:p.x,y:p.y,radius:p.radius,t:.7,max:.7,team:p.team,visualKind:p.kind==='missile'&&p.source?.type==='lucky'?'jackpot':p.evoStyle||p.kind});
    if(p.evoStyle)this.effects.push({kind:'evoBlast',x:p.x,y:p.y,radius:p.radius,style:p.evoStyle,index:p.evoIndex,t:.7,max:.7,team:p.team});
    if(p.critical)this.effects.push({kind:'critical',x:p.x,y:p.y-25,t:.7,max:.7,team:p.team});
-   this.notify('explosion',{x:p.x,y:p.y,kind:p.kind==='missile'?'rocket':'mortar',team:p.team});
+   this.notify('explosion',{x:p.x,y:p.y,kind:p.kind==='acid'?'impact':p.kind==='missile'?'rocket':'mortar',team:p.team});
   }
  }
  defenseStats(p){if(p.fencePost)return{range:0,rate:1,damage:0,minRange:0};if(p.defenseKind==='laserTower')return{range:this.isRoomCampaign()?ROOM_CAMPAIGN.config.laser.range:GUARDIANS.range,rate:GUARDIANS.laserTick,damage:GUARDIANS.laserDamage*(1+.10*this.pressure().tier),minRange:0};const missile=p.defenseKind==='missileTower',mortar=p.defenseKind==='mortarPit';return{range:missile?ENEMY_MISSILE.range:mortar?530:355,rate:missile?ENEMY_MISSILE.rate:mortar?4.8:.5,damage:(missile?ENEMY_MISSILE.damage:mortar?32:5)*(1+.10*this.pressure().tier)*(this.roomDefenseRules(p)?.damage||1)*this.enemyDamageScale(p),minRange:0};}
@@ -1715,6 +1751,8 @@ class FrontGame{
    if(u.type==='blizzardMage'){this.updateBlizzard(u,dt);continue;}
    if(u.type==='butterfly'){this.updateButterfly(u,dt);continue;}
    if(u.type==='artillery')continue;
+   if(u.type==='bombBug'){this.updateBombBug(u,dt);continue;}
+   if(u.type==='acidBeetle'){this.updateAcidBeetle(u,dt);continue;}
    if(this.updateBossPattern(u,dt))continue;
    if(u.type==='bikeRaider'){this.updateBike(u,dt,u.bossPattern==='rapidBike'?{...BIKE,...this.bossPatternRules(u)}:BIKE);continue;}
    const channeling=u===player&&this.ultimateStatus().active;if(this.isSwordCommander(u))this.updateSwordAttack(u);if(u.type!=='tank'&&u.type!=='crimsonAce'&&u.type!=='guntruck'&&!channeling)u.aimFace=null;
