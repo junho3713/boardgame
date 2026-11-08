@@ -18,7 +18,7 @@ let selectedMedicSkin='classic';try{selectedMedicSkin=localStorage.getItem('plas
 let selectedFlameSkin='classic';try{selectedFlameSkin=localStorage.getItem('plastic-front-flame-skin')==='hwarin'?'hwarin':'classic';}catch{}
 const unitModels=new window.FrontModels({commander:selectedCommander,flameSkin:selectedFlameSkin,medicSkin:selectedMedicSkin,sniperSkin:selectedSniperSkin}),battleFx=new window.FrontEffects({budget:window.matchMedia('(pointer:coarse)').matches?240:360,weaponPoint:e=>unitModels.weaponPoint(e)});
 const gameAssetsReady=unitModels.waitFor([unitModels.ready,swordView.ready,window.FrontPortal.ready,upgradeArt.ready,unitArt.ready]);
-gameAssetsReady.then(()=>battleFx.prepareCombatMaterials()).catch(()=>{});
+gameAssetsReady.then(()=>{battleFx.prepareCombatMaterials();return battleFx.prepareCommanderMaterials();}).catch(()=>{});
 async function prepareGameAssets(){const b=$('startBtn'),label=b.textContent;b.disabled=true;b.textContent='선택한 분대 준비 중…';try{await gameAssetsReady;await unitModels.prepare(game);}finally{b.disabled=false;b.textContent=label;}}
 let selectedMode='pve',autoPilot=null,waveTestBackup=null,waveTestReturn='ready',waveTestFocus=null;const directProfile=profile;
 const gameEvents={level:showUpgrade,change:updateUI,toast:toast,end:data=>{if(autoPilot)autoPilot.lastEnd=data;showResult(data);},fire:weaponSound,explosion:explosionSound,profile:persistProfile};

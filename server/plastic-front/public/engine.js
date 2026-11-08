@@ -1509,12 +1509,18 @@ class FrontGame{
   if(!a.hit&&this.time+1e-8>=a.hitAt){a.hit=true;const targets=this.swordTargets(c,a.angle,this.stats(c).range,SWORD.arc).sort((a,b)=>dist(c,a)-dist(c,b)).slice(0,SWORD.targets);for(const t of targets)this.damage(t,a.damage,c);this.effects.push({kind:'shionSlash',source:c,x:c.x,y:c.y,angle:a.angle,range:this.stats(c).range,arc:SWORD.arc,t:.28,max:.28,team:0,critical:a.critical});this.notify('fire',{...c,sword:true});}
   if(this.time>=a.endsAt)c.swordAttack=null;
  }
+ recordUltimateHit(hits,target,previousHp){
+  // Fixed contact samples are presentation metadata, never extra damage. Shielded
+  // or invulnerable targets do not produce a false impact; lethal hits still do.
+  if(hits.length>=8||!(target.hp<previousHp))return;
+  hits.push({x:target.x,y:target.y,height:(target.visualFlightHeight??TYPES[target.type]?.flightHeight??0)+(target.base||target.structure?20:target.team===2?9:28),targetId:target.id??null,armored:ARMORED.has(target.type)});
+ }
  flameTargets(c,angle,range,arc){return [...this.units,...this.activeDefenses(),...this.structures,...this.bases,...this.buildings].filter(t=>t!==c&&t.team!==c.team&&t.hp>0&&!t.hidden&&this.visible(t)&&dist(c,t)<=range+(t.r||TYPES[t.type]?.r||0)&&Math.abs(Math.atan2(Math.sin(Math.atan2(t.y-c.y,t.x-c.x)-angle),Math.cos(Math.atan2(t.y-c.y,t.x-c.x)-angle)))<=arc/2&&this.lineClear(c,t,0,{fireTeam:c.team}));}
  flamePulse(c,angle,boost=false){
   if(!this.isFlameCommander(c)||c.hp<=0||this.phase!=='playing')return 0;
-  const range=boost?FLAME.ultimateRange:FLAME.range,arc=boost?FLAME.ultimateArc:FLAME.arc,targets=this.flameTargets(c,angle,range,arc),attack=this.attackRoll(c);
-  for(const t of targets)this.damage(t,attack.damage*(boost?FLAME.ultimateDamage:1)*(ARMORED.has(t.type)?FLAME.armor:1),c);
-  c.flameAngle=angle;c.flameUntil=this.time+.18;c.recoil=.08;this.effects.push({kind:'flame',source:c,sourceId:c.id,at:this.time,x:c.x,y:c.y,angle,appearance:'blaze',flameSkin:c.flameSkin||'classic',range,arc,boost,team:c.team,t:.18,max:.18});this.notify('fire',{...c,flame:true,ultimate:boost});return targets.length;
+  const range=boost?FLAME.ultimateRange:FLAME.range,arc=boost?FLAME.ultimateArc:FLAME.arc,targets=this.flameTargets(c,angle,range,arc),attack=this.attackRoll(c),hits=[];
+  for(const t of targets){const previousHp=t.hp;this.damage(t,attack.damage*(boost?FLAME.ultimateDamage:1)*(ARMORED.has(t.type)?FLAME.armor:1),c);if(boost)this.recordUltimateHit(hits,t,previousHp);}
+  c.flameAngle=angle;c.flameUntil=this.time+.18;c.recoil=.08;this.effects.push({kind:'flame',source:c,sourceId:c.id,at:this.time,x:c.x,y:c.y,angle,appearance:'blaze',flameSkin:c.flameSkin||'classic',range,arc,boost,...(boost?{hits}:{}),team:c.team,t:.18,max:.18});this.notify('fire',{...c,flame:true,ultimate:boost});return targets.length;
  }
  ultimateStatus(){const u=this.ultimate||{},c=this.commander(0);return{unlocked:this.level>=ULTIMATE.level,active:c.hp>0&&this.time<(u.activeUntil||0),remaining:Math.max(0,(u.activeUntil||0)-this.time),cooldown:Math.max(0,(u.readyAt||0)-this.time),ready:this.phase==='playing'&&c.hp>0&&this.level>=ULTIMATE.level&&this.time>=(u.readyAt||0)&&this.time>=(u.activeUntil||0)};}
  ultimateTargets(){const c=this.commander(0);if(this.isSwordCommander(c))return this.swordTargets(c,0,SWORD.ultimateRange);return [...this.units,...this.activeDefenses(),...this.structures,...this.bases].filter(u=>u.team!==0&&u.hp>0&&this.visible(u)&&dist(c,u)<=(this.isSwordCommander(c)?SWORD.ultimateRange:this.isFlameCommander(c)?FLAME.ultimateRange:ULTIMATE.range)+(u.r||0)&&this.lineClear(c,u,0,{fireTeam:c.team}));}
@@ -1531,15 +1537,15 @@ class FrontGame{
  }
  updateUltimate(){
   const state=this.ultimate,c=this.commander(0);if(!state||!c)return;
-  if(this.isSwordCommander(c)){if(c.hp<=0){state.activeUntil=Math.min(state.activeUntil,this.time);if(c.ultimatePose)c.ultimatePose.active=false;return;}if(!this.ultimateStatus().active){if(c.ultimatePose)c.ultimatePose.active=false;return;}while(state.nextShotAt<=this.time+1e-8&&state.nextShotAt<state.activeUntil-1e-8&&this.phase==='playing'){state.nextShotAt+=SWORD.ultimateInterval;state.shots++;const attack=this.attackRoll(c);for(const t of this.swordTargets(c,0,SWORD.ultimateRange))this.damage(t,attack.damage*SWORD.ultimateDamage,c);this.effects.push({kind:'shionSpin',source:c,sourceId:c.id,at:state.nextShotAt-SWORD.ultimateInterval,x:c.x,y:c.y,angle:state.angle,range:SWORD.ultimateRange,t:SWORD.ultimateInterval,max:SWORD.ultimateInterval,team:0,shot:state.shots});this.notify('fire',{...c,sword:true,ultimate:true});}const angle=state.angle+(this.time-state.startedAt)/SWORD.ultimateInterval*Math.PI*2;c.ultimatePose={active:this.time<state.activeUntil,angle,shotAt:this.time,startedAt:state.startedAt,sword:true};c.face=c.aimFace=angle;return;}
+  if(this.isSwordCommander(c)){if(c.hp<=0){state.activeUntil=Math.min(state.activeUntil,this.time);if(c.ultimatePose)c.ultimatePose.active=false;return;}if(!this.ultimateStatus().active){if(c.ultimatePose)c.ultimatePose.active=false;return;}while(state.nextShotAt<=this.time+1e-8&&state.nextShotAt<state.activeUntil-1e-8&&this.phase==='playing'){state.nextShotAt+=SWORD.ultimateInterval;state.shots++;const attack=this.attackRoll(c),hits=[];for(const t of this.swordTargets(c,0,SWORD.ultimateRange)){const previousHp=t.hp;this.damage(t,attack.damage*SWORD.ultimateDamage,c);this.recordUltimateHit(hits,t,previousHp);}this.effects.push({kind:'shionSpin',source:c,sourceId:c.id,at:state.nextShotAt-SWORD.ultimateInterval,x:c.x,y:c.y,angle:state.angle,range:SWORD.ultimateRange,t:SWORD.ultimateInterval,max:SWORD.ultimateInterval,team:0,shot:state.shots,hits});this.notify('fire',{...c,sword:true,ultimate:true});}const angle=state.angle+(this.time-state.startedAt)/SWORD.ultimateInterval*Math.PI*2;c.ultimatePose={active:this.time<state.activeUntil,angle,shotAt:this.time,startedAt:state.startedAt,sword:true};c.face=c.aimFace=angle;return;}
 
   if(this.isFlameCommander(c)){if(c.hp<=0){state.activeUntil=Math.min(state.activeUntil,this.time);if(c.ultimatePose)c.ultimatePose.active=false;return;}while(state.nextShotAt<=this.time+1e-8&&state.nextShotAt<state.activeUntil-1e-8&&this.phase==='playing'){state.nextShotAt+=FLAME.rate;state.shots++;c.ultimatePose={active:true,hand:null,shotAt:this.time,angle:state.angle};this.flamePulse(c,state.angle,true);}if(c.ultimatePose)c.ultimatePose.active=this.time<state.activeUntil;return;}
   if(c.hp<=0){state.activeUntil=Math.min(state.activeUntil,this.time);if(c.ultimatePose)c.ultimatePose.active=false;return;}
   while(state.nextShotAt<=this.time+1e-8&&state.nextShotAt<state.activeUntil-1e-8&&this.phase==='playing'){
    const hand=state.shots%2===0?'right':'left',shotAt=state.nextShotAt;state.nextShotAt+=ULTIMATE.interval;state.shots++;c.ultimatePose={active:true,hand,shotAt,angle:state.angle};c.recoil=.18;
    const targets=this.ultimateTargets().filter(u=>Math.abs(Math.atan2(Math.sin(Math.atan2(u.y-c.y,u.x-c.x)-state.angle),Math.cos(Math.atan2(u.y-c.y,u.x-c.x)-state.angle)))<=ULTIMATE.arc/2);
-   const attack=this.attackRoll(c);for(const target of targets)this.damage(target,attack.damage*ULTIMATE.damage,c);
-   this.effects.push({kind:'ultimateVolley',source:c,sourceId:c.id,at:shotAt,x:c.x,y:c.y,angle:state.angle,appearance:c.appearance,hand,team:0,t:.20,max:.20,range:ULTIMATE.range,arc:ULTIMATE.arc,shot:state.shots});this.notify('fire',{...c,ultimate:true});
+   const attack=this.attackRoll(c),hits=[];for(const target of targets){const previousHp=target.hp;this.damage(target,attack.damage*ULTIMATE.damage,c);this.recordUltimateHit(hits,target,previousHp);}
+   this.effects.push({kind:'ultimateVolley',source:c,sourceId:c.id,at:shotAt,x:c.x,y:c.y,angle:state.angle,appearance:c.appearance,hand,team:0,t:.20,max:.20,range:ULTIMATE.range,arc:ULTIMATE.arc,shot:state.shots,hits});this.notify('fire',{...c,ultimate:true});
   }
   if(c.ultimatePose)c.ultimatePose.active=this.time<state.activeUntil;
  }

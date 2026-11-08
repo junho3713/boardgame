@@ -2,6 +2,25 @@
  * Presentation only. Uses simulation time and the existing bounded particle pool. */
 (function(root){'use strict';
 const TAU=Math.PI*2,clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
+let sharedAssets=null,sharedReady=null;
+const readyImage=image=>image?.complete&&image.naturalWidth>0&&image.naturalHeight>0;
+function bladeStamp(c,image,r,angle,alpha){
+ if(!readyImage(image))return;c.save();c.rotate(angle);c.globalAlpha*=clamp(alpha);const size=r*2.27;c.drawImage(image,-size*.52,-size*.53,size,size);c.restore();
+}
+function jetSheet(c,image,length,width,time,phase,alpha,steps){
+ // Neighboring strips share exactly the same displaced edge. The flame is a
+ // continuous flow field, not a train of independent sprites or fireballs.
+ const iw=image.naturalWidth,ih=image.naturalHeight,from=iw*.021,span=iw*.967;
+ const edge=t=>({x:t*length,y:Math.sin(t*10-time*12+phase)*t*t*width*.032+Math.sin(t*21-time*19+phase)*t*width*.012,h:width*(1+Math.sin(t*12-time*10+phase)*.07*t)});
+ c.save();c.globalAlpha*=clamp(alpha);
+ for(let i=0;i<steps;i++){
+  const t=i/steps,n=(i+1)/steps,p=edge(t),q=edge(n),w=q.x-p.x;
+  // Affine shear aligns strip centers to avoid visible seams while the stream bends.
+  c.save();c.translate(p.x,p.y);c.transform(1,(q.y-p.y)/w,0,1,0,0);
+  c.drawImage(image,from+span*t,0,span/steps+.6,ih,0,-p.h*.54,w+.6,p.h);c.restore();
+ }
+ c.restore();
+}
 function stamp(c,img,x,y,w,h,angle,alpha,blend='source-over'){
  if(!img||alpha<=0)return;c.save();c.globalAlpha*=clamp(alpha);c.globalCompositeOperation=blend;c.translate(x,y);c.rotate(angle);c.drawImage(img,-w/2,-h/2,w,h);c.restore();
 }
@@ -15,10 +34,19 @@ function ribbon(c,r,start,span,width,color,alpha){
 function install(Effects){
  if(!Effects||Effects.prototype.commanderMaterialVersion)return;
  const p=Effects.prototype,baseDraw=p.drawEvent,baseEmit=p.emit,baseUpdate=p.update,baseReset=p.reset,baseParticles=p.drawParticles;
- p.commanderMaterialVersion=1;
+ p.commanderMaterialVersion=2;
+ p.prepareCommanderMaterials=function(){
+  if(sharedReady){this.commanderAssets=sharedAssets;return sharedReady;}
+  sharedAssets={blade:null,flame:null};this.commanderAssets=sharedAssets;
+  const ImageType=root.Image||(typeof Image!=='undefined'?Image:null);
+  if(!ImageType){sharedReady=Promise.resolve(sharedAssets);return sharedReady;}
+  sharedReady=Promise.all(['blade','flame'].map(kind=>new Promise(resolve=>{
+   const image=new ImageType();sharedAssets[kind]=image;image.onload=()=>resolve(true);image.onerror=()=>{sharedAssets[kind]=null;resolve(false);};image.src=`assets/effects/ultimate-${kind}-v20261106.webp`;
+  }))).then(()=>sharedAssets);return sharedReady;
+ };
  p.reset=function(){baseReset.call(this);this.ultimateActors=new Map();this.ultimateCues=[];this.ultEmissionTimes=new Map();};
  p.update=function(game,visible=()=>true){
-  baseUpdate.call(this,game,visible);this.ultimateActors??=new Map();this.ultimateCues??=[];
+  if(!this.commanderAssets)this.prepareCommanderMaterials();baseUpdate.call(this,game,visible);this.ultimateActors??=new Map();this.ultimateCues??=[];
   const active=new Set();
   for(const u of game.units||[]){
    if(u.type!=='leader'||u.hp<=0||!u.ultimatePose?.active)continue;active.add(u.id);
@@ -55,7 +83,6 @@ function install(Effects){
    return;
   }
   if(e.kind==='flame'&&e.boost){
-   this.flameJets.set(this.flameKey(e),e);if(this.flameJets.size>4)this.flameJets.delete(this.flameJets.keys().next().value);
    const a=e.angle||0;
    for(let i=0;i<9;i++){const d=e.range*(.28+this.random()*.67),off=(this.random()-.5)*Math.sin(e.arc/2)*d*1.35;this.add({kind:'spark',x:e.x+Math.cos(a)*d-Math.sin(a)*off,y:e.y+Math.sin(a)*d+Math.cos(a)*off-18,vx:Math.cos(a)*(50+this.random()*80),vy:Math.sin(a)*60-25-this.random()*35,life:.25+this.random()*.35,size:1+this.random()*1.1,team:e.team,color:i%3?'#ff993b':'#ffe3a4',drag:1.2});}
    return;
@@ -71,53 +98,85 @@ function install(Effects){
   c.strokeStyle=sword?'#ff6e91':'#f7bd70';c.globalAlpha=.25;c.lineWidth=1.6;
   for(let i=0;i<3;i++){const start=time*(sword?2.4:.7)+i*TAU/3;c.beginPath();c.ellipse(0,0,29+i*5,12+i*2,0,start,start+.7);c.stroke();}c.restore();
  };
- p.drawCommanderBlade=function(c,e){
-  const q=clamp(1-e.t/Math.max(.001,e.max)),fade=Math.min(1,(1-q)*5),u=e.source?.hp>0?e.source:e,r=e.range||170,head=(e.angle||0)+q*TAU,m=this.prepareImpactMaterials?.();
-  c.save();c.translate(u.x,u.y-16);c.scale(1,.78);
-  // Dark red back edge makes the luminous blade readable on a bright wooden board.
-  for(let i=2;i>=0;i--){const a=head-i*.72,reach=r*(.96-i*.11),span=2.45-i*.23;
-   ribbon(c,reach+2,a,span,22-i*4,'#5f0e31',fade*(.19-i*.035));
-   ribbon(c,reach,a,span,16-i*3,'#db295b',fade*(.56-i*.10));
-   c.globalCompositeOperation='lighter';ribbon(c,reach-1,a-.025,span*.86,7-i*1.2,'#ff96b5',fade*(.78-i*.18));ribbon(c,reach-1,a-.045,span*.6,2.3,'#fff1e9',fade*(.95-i*.2));c.globalCompositeOperation='source-over';
+ p.drawCommanderContacts=function(c,e){
+  if(!e.hits?.length)return;
+  const age=Math.max(0,(e.max||0)-e.t),sword=e.kind==='shionSpin',flame=e.kind==='flame',m=this.prepareImpactMaterials?.(),origin=this.muzzlePoint(e);
+  c.save();
+  for(const [index,h]of (e.hits||[]).slice(0,8).entries()){
+   const x=h.x,y=h.y-(h.height||0),distance=Math.hypot(x-origin.x,y-origin.y),delay=sword||flame?0:clamp(distance/2600,.035,.12),t=age-delay,life=sword?.22:flame?.14:.10;
+   if(t<0||t>=life)continue;const k=1-t/life,a=Math.atan2(y-origin.y,x-origin.x),color=sword?'#ff829e':h.armored?'#ffe8b4':'#ffbd69';
+   if(flame){if(m){stamp(c,m.fire[index%3],x,y-8-t*28,18+t*45,26+t*55,a,.46*k);stamp(c,m.flash,x,y,20,16,0,.22*k*k,'lighter');}continue;}
+   c.save();c.translate(x,y);c.rotate(sword?a-.8:a);c.lineCap='round';
+   // A darker cut behind a narrow white core reads against the light oak board.
+   c.globalAlpha=k;c.strokeStyle=sword?'#6a1732':'#754226';c.lineWidth=sword?4:2.8;c.beginPath();c.moveTo(-13*k,sword?-8*k:0);c.lineTo(16*k,sword?9*k:0);c.stroke();
+   c.globalCompositeOperation='lighter';c.strokeStyle='#fff4df';c.lineWidth=sword?1.8:1.3;c.stroke();
+   for(let j=0;j<(h.armored?7:5);j++){const ang=j*2.399+index*.7,travel=(10+j*2)*t/life,inner=3+travel,outer=inner+5*k;c.strokeStyle=j%2?color:'#fff4d8';c.lineWidth=j%3?1:1.7;c.beginPath();c.moveTo(Math.cos(ang)*inner,Math.sin(ang)*inner*.8);c.lineTo(Math.cos(ang)*outer,Math.sin(ang)*outer*.8-3*t);c.stroke();}
+   c.restore();if(m)stamp(c,m.flash,x,y,31*k+8,17*k+5,a,.6*k*k,'lighter');
   }
-  // Small crossing cuts travel with the sharp leading tip, leaving the body clear.
-  const tx=Math.cos(head-.12)*r*.93,ty=Math.sin(head-.12)*r*.93;
-  c.save();c.translate(tx,ty);c.rotate(head-.12);c.globalCompositeOperation='lighter';c.globalAlpha=fade;c.strokeStyle='#fff0eb';c.lineWidth=1.5;c.beginPath();c.moveTo(-11,-7);c.lineTo(8,4);c.moveTo(-3,9);c.lineTo(3,-9);c.stroke();c.restore();
-  if(m){stamp(c,m.flash,tx,ty,41,17,head,fade*.4,'lighter');for(let i=0;i<5;i++){const a=head-i*.7;stamp(c,m.dust[i%2],Math.cos(a)*r*.83,Math.sin(a)*r*.83+19,30+q*15,15,a,.12*fade);}}
-  c.restore();return true;
+  c.restore();
+ };
+ p.drawCommanderBlade=function(c,e){
+  const q=clamp(1-e.t/Math.max(.001,e.max)),fade=Math.min(1,(1-q)*6),u=e.source?.hp>0?e.source:e,r=e.range||170,head=(e.angle||0)+q*TAU,m=this.prepareImpactMaterials?.(),blade=this.commanderAssets?.blade;
+  c.save();c.translate(u.x,u.y-16);c.scale(1,.78);
+  if(readyImage(blade)){
+   // One wide cutting wake plus a faint angular echo. Center remains transparent.
+   bladeStamp(c,blade,r*.91,head-.29,.17*fade);
+   bladeStamp(c,blade,r,head+.34,.88*fade);
+   c.globalCompositeOperation='lighter';ribbon(c,r*.94,head-.02,1.46,2.7,'#ffe7d7',fade*.65);c.globalCompositeOperation='source-over';
+  }else{
+   ribbon(c,r*.98,head,2.65,37,'#86183f',fade*.5);ribbon(c,r*.96,head-.025,2.44,26,'#e3426e',fade*.7);c.globalCompositeOperation='lighter';ribbon(c,r*.96,head-.04,1.8,5,'#ffd0d9',fade*.9);c.globalCompositeOperation='source-over';
+  }
+  const tx=Math.cos(head-.1)*r*.94,ty=Math.sin(head-.1)*r*.94;
+  if(m){stamp(c,m.flash,tx,ty,47,13,head,fade*.53,'lighter');for(let i=0;i<5;i++){const a=head-i*.65;stamp(c,m.dust[i%2],Math.cos(a)*r*.86,Math.sin(a)*r*.86+17,30+q*18,13,a,.10*fade);}}
+  // Short, tapered streaks break up the trailing silhouette without another rail.
+  c.globalCompositeOperation='lighter';c.strokeStyle='#ff8da5';c.lineWidth=1.1;c.globalAlpha=fade*.65;
+  for(let i=0;i<7;i++){const a=head-.35-i*.29,rr=r*(.88+(i%3)*.045);c.beginPath();c.moveTo(Math.cos(a)*rr,Math.sin(a)*rr);c.lineTo(Math.cos(a-.08-i*.008)*rr*.97,Math.sin(a-.08-i*.008)*rr*.97);c.stroke();}
+  c.restore();this.drawCommanderContacts(c,e);return true;
  };
  p.drawCommanderFlame=function(c,e){
   const latest=this.flameJets.get(this.flameKey(e));if(latest&&latest!==e)return true;
   const m=this.prepareImpactMaterials?.();if(!m)return baseDraw.call(this,c,e);
-  const origin=this.muzzlePoint(e),a=e.angle||0,source=e.source||e,dx=source.x+Math.cos(a)*e.range-origin.x,dy=source.y+Math.sin(a)*e.range-16-origin.y,clock=this.time,fade=clamp(e.t/.045),phase=((clock*12)%1+1)%1,steps=this.budget<=240?14:18;
+  const origin=this.muzzlePoint(e),a=e.angle||0,source=e.source||e,dx=source.x+Math.cos(a)*e.range-origin.x,dy=source.y+Math.sin(a)*e.range-16-origin.y,length=Math.hypot(dx,dy),angle=Math.atan2(dy,dx),clock=this.time,fade=clamp(e.t/.045),image=this.commanderAssets?.flame,steps=this.budget<=240?20:28;
   c.save();
-  // Clip the moving plume to the actual nozzle cone; the renderer never fills it.
-  const heading=Math.atan2(dy,dx),reach=Math.hypot(dx,dy);c.beginPath();c.moveTo(origin.x,origin.y);c.arc(origin.x,origin.y,reach,heading-e.arc/2,heading+e.arc/2);c.closePath();c.clip();
-  // A few low-opacity ash curls behind the fire keep the flame volumetric.
-  for(let i=0;i<3;i++){const t=.6+i*.12,w=24+t*28,off=Math.sin(clock*5+i*2.1)*e.range*t*.12;stamp(c,m.smoke[i%3],origin.x+dx*t-Math.sin(a)*off,origin.y+dy*t+Math.cos(a)*off-12*t,w*1.5,w,clock*.15+i,.08*fade);}
-  // Independent tongues advect from the real nozzle to the existing cone edge.
-  for(let i=steps-1;i>=0;i--){const t=(i+phase)/steps,spread=Math.sin(e.arc/2)*e.range*t,heat=(1-t*.5)*fade,ax=origin.x+dx*t,ay=origin.y+dy*t-5*t;
-   for(let lane=-1;lane<=1;lane++){const off=lane*spread*.63+Math.sin(t*18-clock*14+lane)*spread*.17,px=ax-Math.sin(a)*off,py=ay+Math.cos(a)*off,w=48+t*84,h=(16+t*48)*(lane===0?1:.84),turn=a+Math.sin(i*2.3+clock*7+lane)*.38;
-    stamp(c,m.fire[(i+lane+3)%3],px,py,w,h,turn,heat*(lane===0?.78:.50));
-    if(lane===0&&i%2===0)stamp(c,m.fire[(i+1)%3],px,py,w*.72,h*.45,turn,heat*.25,'lighter');
-   }
+  // Both the textured plume and its fallback stay within the nozzle cone.
+  c.beginPath();c.moveTo(origin.x,origin.y);c.arc(origin.x,origin.y,length,angle-e.arc/2,angle+e.arc/2);c.closePath();c.clip();
+  // Warm haze and sparse smoke stay behind the coherent pressure jet.
+  for(let i=0;i<3;i++){const t=.6+i*.12,w=24+t*28,off=Math.sin(clock*4+i*2.1)*e.range*t*.09;stamp(c,m.smoke[i%3],origin.x+dx*t-Math.sin(a)*off,origin.y+dy*t+Math.cos(a)*off-18*t,w*1.3,w,clock*.13+i,.08*fade);}
+  c.save();c.translate(origin.x,origin.y);c.rotate(angle);
+  if(readyImage(image)){
+   const width=Math.sin(e.arc/2)*e.range*1.44;
+   jetSheet(c,image,length*.96,width,clock,0,.70*fade,steps);
+   c.save();c.scale(1,-1);jetSheet(c,image,length*(.89+.025*Math.sin(clock*9)),width*.72,clock*1.07,2.8,.29*fade,steps);c.restore();
+   // A much narrower hot channel provides depth, with no solid white beam.
+   c.globalCompositeOperation='lighter';jetSheet(c,image,length*.68,width*.19,clock*1.23,1.4,.20*fade,Math.ceil(steps*.7));
+  }else{
+   // Texture failure still leaves a continuous overlapping plume at the real nozzle.
+   for(let i=17;i>=0;i--){const t=i/18,w=42+t*105,off=Math.sin(t*12-clock*13)*t*14;stamp(c,m.fire[i%3],t*length,off,w,18+t*95,Math.sin(clock*5+i)*.17,(.8-t*.25)*fade);}
   }
-  // Hot pressure core at the nozzle, never a solid triangular cone.
-  stamp(c,m.fire[2],origin.x+Math.cos(a)*19,origin.y+Math.sin(a)*19,58,18,a,.78*fade,'lighter');stamp(c,m.flash,origin.x,origin.y,35,24,a,.65*fade,'lighter');c.restore();return true;
+  stamp(c,m.fire[2],17,0,53,19,0,.76*fade,'lighter');stamp(c,m.flash,0,0,31,22,0,.53*fade,'lighter');c.restore();c.restore();this.drawCommanderContacts(c,e);return true;
  };
  p.drawCommanderVolley=function(c,e){
-  const q=clamp(1-e.t/Math.max(.001,e.max)),m=this.prepareImpactMaterials?.(),origin=this.muzzlePoint(e),a=e.angle||0,shot=e.shot||0,range=e.range||460,arc=e.arc||136*Math.PI/180;
+  const age=Math.max(0,(e.max||0)-e.t),m=this.prepareImpactMaterials?.(),origin=this.muzzlePoint(e),a=e.angle||0,shot=e.shot||0,range=e.range||460,arc=e.arc||136*Math.PI/180,hits=(e.hits||[]).slice(0,8);
+  const tracerCount=Math.max(7,hits.length);
   c.save();
-  // Seven moving streaks follow the firing fan; each dies at its own endpoint.
-  for(let i=0;i<7;i++){const heading=a+(i/6-.5)*arc*.94+Math.sin(shot*2.1+i)*.014,reach=range*(.84+((i+shot)%3)*.07),progress=clamp(q*1.22-i%3*.018),tx=e.x+Math.cos(heading)*reach,ty=e.y+Math.sin(heading)*reach-14,dx=tx-origin.x,dy=ty-origin.y,len=Math.hypot(dx,dy)||1,x=origin.x+dx*progress,y=origin.y+dy*progress,tail=Math.min(44,len*progress),fade=clamp((1-progress)/.16);
-   if(progress<=0||fade<=0)continue;
-   const x0=x-dx/len*tail,y0=y-dy/len*tail,g=c.createLinearGradient(x0,y0,x,y);g.addColorStop(0,'#ffc47700');g.addColorStop(.65,e.appearance==='shino'?'#ffd4be':'#ffce7b');g.addColorStop(1,'#fff8dd');c.strokeStyle=g;c.lineCap='round';c.beginPath();c.moveTo(x0,y0);c.lineTo(x,y);c.globalCompositeOperation='source-over';c.globalAlpha=fade*.22;c.lineWidth=5;c.stroke();c.globalCompositeOperation='lighter';c.globalAlpha=fade*.95;c.lineWidth=1.8;c.stroke();
-   if(m)stamp(c,m.flash,x,y,11,5,Math.atan2(dy,dx),fade*.65,'lighter');
+  for(let i=0;i<tracerCount;i++){
+   const heading=a+(i/(tracerCount-1)-.5)*arc*.94+Math.sin(shot*2.1+i)*.014,reach=range*(.84+((i+shot)%3)*.07),hit=hits[i],tx=hit?hit.x:e.x+Math.cos(heading)*reach,ty=hit?hit.y-(hit.height||0):e.y+Math.sin(heading)*reach-14,dx=tx-origin.x,dy=ty-origin.y,len=Math.hypot(dx,dy)||1,arrival=clamp(len/2600,.035,.12),progress=clamp(age/arrival),fade=progress<1?1:clamp(1-(age-arrival)/.032);
+   if(age<=0||fade<=0)continue;const x=origin.x+dx*progress,y=origin.y+dy*progress,tail=Math.min(hit?56:46,len*progress),x0=x-dx/len*tail,y0=y-dy/len*tail;
+   const g=c.createLinearGradient(x0,y0,x,y);g.addColorStop(0,'#fbc28000');g.addColorStop(.55,e.appearance==='shino'?'#ffd4bd':'#ffd082');g.addColorStop(1,'#fff8df');
+   c.strokeStyle=g;c.lineCap='round';c.beginPath();c.moveTo(x0,y0);c.lineTo(x,y);c.globalCompositeOperation='source-over';c.globalAlpha=fade*.25;c.lineWidth=5.2;c.stroke();c.globalCompositeOperation='lighter';c.globalAlpha=fade;c.lineWidth=1.6;c.stroke();
+   // The pointed tracer nose and low glow retain a physical bullet silhouette.
+   c.save();c.translate(x,y);c.rotate(Math.atan2(dy,dx));c.fillStyle='#fff4c5';c.beginPath();c.moveTo(3,0);c.lineTo(-4,-1.2);c.lineTo(-4,1.2);c.closePath();c.fill();c.restore();if(m)stamp(c,m.flash,x,y,15,6,Math.atan2(dy,dx),fade*.42,'lighter');
   }
   c.globalAlpha=1;
-  if(m){const flash=clamp(1-q/.62);stamp(c,m.fire[shot%3],origin.x+Math.cos(a)*12,origin.y+Math.sin(a)*12,41,19,a,flash*.95,'lighter');stamp(c,m.flash,origin.x,origin.y,42,30,a,flash*.65,'lighter');for(const side of [-1,1])stamp(c,m.fire[1],origin.x-Math.sin(a)*side*5,origin.y+Math.cos(a)*side*5,20,8,a+side*.8,flash*.6,'lighter');}
-  else{c.globalAlpha=1-q;c.strokeStyle='#fff3c8';c.lineWidth=3;c.beginPath();c.moveTo(origin.x,origin.y);c.lineTo(origin.x+Math.cos(a)*24,origin.y+Math.sin(a)*24);c.stroke();}
-  c.restore();return true;
+  if(m){
+   const flash=clamp(1-age/.085),pulse=.86+Math.sin(shot*2.4)*.14,jet=this.commanderAssets?.flame;
+   c.save();c.translate(origin.x,origin.y);c.rotate(a);
+   if(readyImage(jet)&&flash>0){c.globalAlpha=flash*.92;c.drawImage(jet,0,-15,48*pulse,30);c.globalAlpha=1;}
+   else stamp(c,m.fire[shot%3],13,0,42*pulse,20,0,flash*.95,'lighter');
+   for(const side of [-1,1])stamp(c,m.fire[1],4,side*6,21,9,side*.75,flash*.58,'lighter');stamp(c,m.flash,2,0,40,25,0,flash*.7,'lighter');
+   if(age>.035)stamp(c,m.smoke[shot%3],12+age*32,-age*24,21+age*55,15+age*37,.2,clamp(age/.12)*.23);c.restore();
+  }
+  c.restore();this.drawCommanderContacts(c,e);return true;
  };
  p.drawEvent=function(c,e){
   if(e.kind==='shionSpin')return this.drawCommanderBlade(c,e);
