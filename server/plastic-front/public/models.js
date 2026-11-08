@@ -2,7 +2,32 @@
 (()=>{'use strict';
 const TAU=Math.PI*2,angleDelta=(a,b)=>Math.atan2(Math.sin(a-b),Math.cos(a-b));
 class FrontModels{
- constructor(){this.manifest=null;this.assets=new Map();this.motion=new WeakMap();this.loaded=0;this.failures=0;this.ready=fetch('assets/models/manifest.json',{cache:'no-cache'}).then(r=>{if(!r.ok)throw new Error('models');return r.json();}).then(async m=>{this.manifest=m;await Promise.all(Object.keys(m.models).map(key=>{const i=key.lastIndexOf('-');return this.ensure(key.slice(0,i),Number(key.slice(i+1))).loading;}));}).catch(()=>{this.failures++;});if(window.FrontMedicSkin){this.rina=new window.FrontMedicSkin();this.ready=Promise.all([this.ready,this.rina.ready]);}}
+ constructor({commander='sarge',flameSkin='classic',medicSkin='classic',sniperSkin='classic'}={}){
+  this.manifest=null;this.assets=new Map();this.motion=new WeakMap();this.loaded=0;this.failures=0;
+  this.manifestReady=fetch('assets/models/manifest.json',{cache:'no-cache'}).then(r=>{if(!r.ok)throw new Error('models');return r.json();}).then(m=>{this.manifest=m;}).catch(()=>{this.failures++;});
+  const leader={type:'leader',team:0,appearance:commander,flameSkin},initial=[[this.visualFor(leader),0],['rifle',0],['ant',2],['bayonet',1]];
+  if(sniperSkin==='kayla')initial.push(['sniperKayla',0]);
+  const core=this.manifestReady.then(()=>Promise.all(initial.map(([type,team])=>this.ensure(type,team)?.loading).filter(Boolean)));
+  this.ready=this.waitFor([core,...(medicSkin==='rina'?[this.ensureRina()]:[])]);
+ }
+ waitFor(jobs){
+  const all=Promise.all(jobs);if(typeof setTimeout!=='function')return all;
+  return new Promise(resolve=>{let done=false;const finish=value=>{if(done)return;done=true;clearTimeout(timer);resolve(value);},timer=setTimeout(()=>finish([]),8000);all.then(finish,()=>finish([]));});
+ }
+ ensureRina(){if(!this.rina&&window.FrontMedicSkin)this.rina=new window.FrontMedicSkin();return this.rina?.ready||Promise.resolve();}
+ async prepare(game){
+  await this.ready;const jobs=[];
+  for(const u of Array.isArray(game.units)?game.units:[])if(u.team===0&&u.hp>0){jobs.push(this.ensure(this.visualFor(u),u.type==='bayonetCaptain'?1:u.team)?.loading);if(u.type==='medic'&&u.appearance==='rina')jobs.push(this.ensureRina());}
+  if(game.medicSkinId==='rina')jobs.push(this.ensureRina());if(game.sniperSkinId==='kayla')jobs.push(this.ensure('sniperKayla',0)?.loading);
+  const c=game.commander?.(0)||{type:'leader',team:0,appearance:game.commanderId||'sarge',flameSkin:game.flameSkinId||'classic'};jobs.push(this.ensure(this.visualFor(c),0)?.loading);if(c.ultimatePose?.active)jobs.push(this.ensure(this.visualFor({...c,ultimatePose:null}),0)?.loading);if(c&&game.level>=8&&['sarge','shino'].includes(c.appearance||'sarge'))jobs.push(this.ensure(c.appearance==='shino'?'commanderShinoUltimate':'commanderSargeUltimate',0)?.loading);
+  return this.waitFor(jobs.filter(Boolean));
+ }
+ prefetch(game){
+  if(!this.manifest)return;
+  for(const u of Array.isArray(game.units)?game.units:[])if(u.hp>0){this.ensure(this.visualFor(u),u.type==='bayonetCaptain'?1:u.team);if(u.team===0&&u.type==='medic'&&u.appearance==='rina')this.ensureRina();}
+  const c=game.commander?.(0);if(c&&game.level>=8&&['sarge','shino'].includes(c.appearance||'sarge'))this.ensure(c.appearance==='shino'?'commanderShinoUltimate':'commanderSargeUltimate',0);
+ }
+
  ensure(type,team){
   // Enemy-only art is shared by both hostile simulation teams, including garrisons.
   const sharedEnemy=team!==0&&['bladeGuard','bikeRaider','crimsonAce','lucky','ant','soldierAnt','beetle','bruteBeetle','stagBeetle','rhinoBeetle','honeybee','hornet','butterfly'].includes(type);
@@ -139,9 +164,10 @@ class FrontModels{
   }else draw(spec.image);
   ctx.restore();
  }
+ visualFor(u){const ultimate=u.type==='leader'&&u.team===0&&u.ultimatePose?.active,captain=u.type==='bayonetCaptain';let visual=u.type==='leader'&&u.team===0&&u.appearance==='shion'?'commanderShion':captain?'bayonet':u.type==='leader'&&u.team===0&&u.appearance==='blaze'?(u.flameSkin==='hwarin'?'commanderHwarin':'commanderBlaze'):ultimate?(u.appearance==='shino'?'commanderShinoUltimate':'commanderSargeUltimate'):u.type==='leader'&&u.team===0&&u.appearance==='shino'?'commanderShino':u.type==='sniper'&&u.team===0&&['kayla','hayeon'].includes(u.appearance)?'sniperKayla':u.defenseKind==='laserTower'?'laserTower':u.type;visual=({commando:'machinegun',spectre:'sniper',titan:'rocket'})[u.type]||visual;return visual;}
  draw(ctx,u,time){
-  if(u.team===0&&u.type==='medic'&&u.appearance==='rina'){if(this.rina?.loaded)return this.rina.draw(ctx,u,time);if(u.hp<=0)return true;}
-  const ultimate=u.type==='leader'&&u.team===0&&u.ultimatePose?.active,captain=u.type==='bayonetCaptain';let visual=u.type==='leader'&&u.team===0&&u.appearance==='shion'?'commanderShion':captain?'bayonet':u.type==='leader'&&u.team===0&&u.appearance==='blaze'?(u.flameSkin==='hwarin'?'commanderHwarin':'commanderBlaze'):ultimate?(u.appearance==='shino'?'commanderShinoUltimate':'commanderSargeUltimate'):u.type==='leader'&&u.team===0&&u.appearance==='shino'?'commanderShino':u.type==='sniper'&&u.team===0&&['kayla','hayeon'].includes(u.appearance)?'sniperKayla':u.defenseKind==='laserTower'?'laserTower':u.type;visual=({commando:'machinegun',spectre:'sniper',titan:'rocket'})[u.type]||visual;let item=this.ensure(visual,visual==='bayonet'?1:u.team);if(!item?.ready&&visual!==u.type){item=this.ensure(u.type,u.team);visual=u.type;}if(!item?.ready)return false;if(visual==='commanderShion')return this.drawSword(ctx,u,time,item);if(visual==='commanderHwarin')return this.drawHwarin(ctx,u,time,item);if(visual==='blizzardMage')return this.drawMage(ctx,u,time,item);
+  if(u.team===0&&u.type==='medic'&&u.appearance==='rina'){this.ensureRina();if(this.rina?.loaded)return this.rina.draw(ctx,u,time);if(u.hp<=0)return true;}
+  const ultimate=u.type==='leader'&&u.team===0&&u.ultimatePose?.active,captain=u.type==='bayonetCaptain';let visual=this.visualFor(u);let item=this.ensure(visual,visual==='bayonet'?1:u.team);if(!item?.ready&&visual!==u.type){item=this.ensure(u.type,u.team);visual=u.type;}if(!item?.ready)return false;if(visual==='commanderShion')return this.drawSword(ctx,u,time,item);if(visual==='commanderHwarin')return this.drawHwarin(ctx,u,time,item);if(visual==='blizzardMage')return this.drawMage(ctx,u,time,item);
   const vehicle=!!item.layers.turret||!!item.layers.body.vehicle,aimFace=vehicle&&Number.isFinite(u.turretFace)?u.turretFace:Number.isFinite(u.aimFace)?u.aimFace:u.face;
   let state=this.motion.get(u);const aim=aimFace+Math.PI/2,fresh=!state,custom=!!item.layers.body.groundShadow;
   if(!state){state={x:u.x,y:u.y,time,body:(Number.isFinite(u.moveFace)?u.moveFace:u.face)+Math.PI/2,walk:u.walk||0};this.motion.set(u,state);}
