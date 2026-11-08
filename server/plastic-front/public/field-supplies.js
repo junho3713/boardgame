@@ -71,15 +71,23 @@ function install({FrontGame:Game,TYPES}){
  };
  p.rareSupplyGuards=function(pickup){return this.units.filter(u=>u.hp>0&&pickup.guardIds?.includes(u.id));};
  p.expireRareSupplies=function(){for(const pickup of this.pickups)if(pickup.rareSupply&&this.time>=(pickup.expires||Infinity)){pickup.active=false;for(const u of this.rareSupplyGuards(pickup)){u.hp=0;u.diedAt=this.time;u.rareSupplyWithdrawn=true;}}};
+ p.supplyGuardPositions=function(pickup,count){
+  const b=this.bounds(),taken=this.rareSupplyGuards(pickup),points=[];
+  for(let i=0;i<120&&points.length<count;i++){const a=i*2.39996,r=110+i%3*35,q={x:pickup.x+Math.cos(a)*r,y:pickup.y+Math.sin(a)*r};if(q.x>55&&q.x<b.width-55&&q.y>75&&q.y<b.height-75&&this.freePosition(q.x,q.y,26)&&![...taken,...points].some(p=>Math.hypot(p.x-q.x,p.y-q.y)<57))points.push(q);}return points;
+ };
+ p.addSupplyGuards=function(pickup,types,positions){for(const [i,q]of positions.entries()){const u=this.addUnit(2,types[i%types.length],q.x,q.y,true);Object.assign(u,{rareSupplyGuard:true,supplyAnchorX:pickup.x,supplyAnchorY:pickup.y,homeX:u.x,homeY:u.y});this.stampEvolutionWave?.(u);pickup.guardIds.push(u.id);}};
+ p.upgradeRareSupplyGuards=function(){for(const pickup of this.pickups){if(!pickup.active||!pickup.rareSupply||pickup.guardVersion===2||!Array.isArray(pickup.guardIds)||!pickup.guardIds.length)continue;
+  const count=Math.max(0,8-pickup.guardIds.length),points=this.supplyGuardPositions(pickup,count);if(points.length<count)continue;this.addSupplyGuards(pickup,this.time<360?['bayonet','rifle','machinegun']:['bladeGuard','machinegun','mortar','sniper'],points);for(const u of this.rareSupplyGuards(pickup)){u.supplyAnchorX=pickup.x;u.supplyAnchorY=pickup.y;}pickup.guardVersion=2;
+ }};
  p.updateRareSupplySecurity=function(){
-  if(this.phase!=='playing')return;
+  if(this.phase!=='playing')return;this.upgradeRareSupplyGuards();
   for(const pickup of this.pickups){if(!pickup.active||!pickup.rareSupply||!pickup.ambushPending)continue;
    const c=this.units.find(u=>u.team===0&&u.type==='leader'&&u.hp>0&&Math.hypot(u.x-pickup.x,u.y-pickup.y)<360);if(!c)continue;
    const bounds=this.bounds(),positions=[];
-   for(let i=0;i<24&&positions.length<2;i++){const a=Math.atan2(c.y-pickup.y,c.x-pickup.x)+Math.PI/2+(i%2)*Math.PI+Math.floor(i/2)*.2,r=240+Math.floor(i/8)*35,q={x:pickup.x+Math.cos(a)*r,y:pickup.y+Math.sin(a)*r};if(q.x>50&&q.y>70&&q.x<bounds.width-50&&q.y<bounds.height-70&&this.freePosition(q.x,q.y,26)&&!positions.some(p=>Math.hypot(p.x-q.x,p.y-q.y)<100))positions.push(q);}
-   if(positions.length<2)continue;pickup.ambushPending=false;
-   for(const [i,q]of positions.entries()){const type=this.time<360?(i?'rifle':'bayonet'):(i?'machinegun':'bladeGuard'),u=this.addUnit(2,type,q.x,q.y,true);u.rareSupplyGuard=true;u.homeX=u.x;u.homeY=u.y;this.stampEvolutionWave?.(u);pickup.guardIds.push(u.id);this.effects.push({kind:'drop',x:u.x,y:u.y,t:.8,max:.8,team:2});}
-   this.notify('toast','희귀 보급 경계 발동 · 측면 경계병 2기 합류');
+   for(let i=0;i<48&&positions.length<4;i++){const a=Math.atan2(c.y-pickup.y,c.x-pickup.x)+Math.PI/2+(i%4)*Math.PI/2+Math.floor(i/4)*.17,r=205+Math.floor(i/16)*30,q={x:pickup.x+Math.cos(a)*r,y:pickup.y+Math.sin(a)*r};if(q.x>50&&q.y>70&&q.x<bounds.width-50&&q.y<bounds.height-70&&this.freePosition(q.x,q.y,26)&&!positions.some(p=>Math.hypot(p.x-q.x,p.y-q.y)<100))positions.push(q);}
+   if(positions.length<4)continue;pickup.ambushPending=false;
+   for(const [i,q]of positions.entries()){const type=(this.time<360?['bayonet','rifle','bayonet','machinegun']:['bladeGuard','machinegun','bayonet','rifle'])[i],u=this.addUnit(2,type,q.x,q.y,true);u.rareSupplyGuard=true;u.supplyAnchorX=pickup.x;u.supplyAnchorY=pickup.y;u.cooldown=Math.max(.8,u.cooldown);u.homeX=u.x;u.homeY=u.y;this.stampEvolutionWave?.(u);pickup.guardIds.push(u.id);this.effects.push({kind:'drop',x:u.x,y:u.y,t:.8,max:.8,team:2});}
+   this.notify('toast','희귀 보급 경계 발동 · 주변 경계병 4기 합류');
   }
  };
  p.updateRareSupplies=function(){
@@ -91,12 +99,11 @@ function install({FrontGame:Game,TYPES}){
   const c=leaders[Math.floor(this.time/120-1)%leaders.length],bounds=this.bounds();let point=null;
   for(let i=0;i<36;i++){const a=-Math.PI/2+((i%12)-5.5)*.22,r=700+(i%3)*75,candidate={x:Math.max(65,Math.min(bounds.width-65,c.x+Math.cos(a)*r)),y:Math.max(this.frontline()+100,Math.min(bounds.height-100,c.y+Math.sin(a)*r))};if(Math.hypot(candidate.x-c.x,candidate.y-c.y)>=550&&this.freePosition(candidate.x,candidate.y,26)&&!this.pickups.some(p=>p.active&&Math.hypot(p.x-candidate.x,p.y-candidate.y)<90)){point=candidate;break;}}
   if(!point){this.nextRareSupply=this.time+5;return;}
-  const guardTypes=this.time<360?['bayonet','bayonet','rifle','machinegun','rifle']:this.time<720?['bladeGuard','bayonet','machinegun','mortar','sniper']:['stagBeetle','bladeGuard','machinegun','mortar','sniper'],positions=[];
-  for(let i=0;i<36&&positions.length<5;i++){const a=i*2.39996,r=155+(i%3)*45,q={x:point.x+Math.cos(a)*r,y:point.y+Math.sin(a)*r};if(q.x>50&&q.x<bounds.width-50&&q.y>70&&q.y<bounds.height-70&&this.freePosition(q.x,q.y,26)&&!positions.some(p=>Math.hypot(p.x-q.x,p.y-q.y)<65))positions.push(q);}
-  if(positions.length<5){this.nextRareSupply=this.time+5;return;}
-  const pickup={...point,active:true,rareSupply:true,spawnedAt:this.time,expires:this.time+120,ambushPending:true,guardIds:[]};
-  for(const [i,q]of positions.entries()){const u=this.addUnit(2,guardTypes[i],q.x,q.y,true);u.rareSupplyGuard=true;u.homeX=u.x;u.homeY=u.y;this.stampEvolutionWave?.(u);pickup.guardIds.push(u.id);}
-  this.pickups.push(pickup);this.notify('toast','희귀 보급 도착 · 호위 5기 · 접근 시 추가 경계병 출동 · 보라색 신호를 확인하세요');this.effects.push({kind:'fieldSupply',...point,reward:'airdrop',t:1.2,max:1.2,team:0});
+  const guardTypes=this.time<360?['bayonet','bayonet','bayonet','bayonet','bayonet','rifle','rifle','machinegun']:this.time<720?['bladeGuard','bladeGuard','bayonet','bayonet','machinegun','machinegun','mortar','sniper']:['stagBeetle','bladeGuard','bladeGuard','machinegun','machinegun','mortar','mortar','sniper'];
+  const pickup={...point,active:true,rareSupply:true,spawnedAt:this.time,expires:this.time+120,ambushPending:true,guardVersion:2,guardIds:[]},positions=this.supplyGuardPositions(pickup,8);
+  if(positions.length<8){this.nextRareSupply=this.time+5;return;}
+  this.addSupplyGuards(pickup,guardTypes,positions);
+  this.pickups.push(pickup);this.notify('toast','희귀 보급 도착 · 보급 옆 호위 8기 · 접근 시 4기 추가 출동 · 보라색 신호를 확인하세요');this.effects.push({kind:'fieldSupply',...point,reward:'airdrop',t:1.2,max:1.2,team:0});
  };
  p.update=function(dt){if(this.phase==='playing'){this.updateSupplyStrikes();this.expireRareSupplies();this.updateRareSupplySecurity();}const result=update.call(this,dt);this.updateRareSupplies();return result;};
  root.FrontFieldSupplies={config,specialTypes};return {config,specialTypes};

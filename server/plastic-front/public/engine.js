@@ -72,7 +72,7 @@ const ROOM_REMOTE_SHAPE={"width":371,"height":1165,"slices":[[53,0,265,6],[38,6,
 const ENEMY_MISSILE={hp:1400,damage:72,rate:4.8,range:560,splash:80,flightTime:1};
 const ENEMY_MISSILE_SITES=[['east-missile','동부 미사일 포탑',1470,845,2],['final-missile','본진 미사일 포탑',1160,340,3]];
 const FLYING_WAVES=WAVE_CONFIGS.survival.flying;
-const TYPES={swordEmpress:{name:'사검의 군주',hp:64000,damage:0,rate:100,range:0,speed:0,r:28,cost:0,stationary:true},
+const TYPES={swordEmpress:{name:'사검의 군주',hp:128000,damage:0,rate:100,range:0,speed:0,r:28,cost:0,stationary:true},
  butterfly:{name:'치유 약화 나비',icon:'❃',hp:520,damage:0,rate:7,range:BUTTERFLY.range,speed:86,r:17,cost:0,flying:true,flightHeight:42,role:'경장갑 비행 · 바람에 맞으면 6초간 받는 치유량 50% 감소 · 야전 의무관 정화로 해제'},
  crimsonAce:{name:'진홍 전차 에이스',icon:'▰',hp:900,damage:82,rate:2.8,range:365,speed:76,r:31,cost:0,splash:65,vehicle:true,role:'적 전용 중장갑 · 붉은 머리 전차 지휘관 · 독립 포탑 조준과 범위 포격 · 8분 정기 보스'},
  blizzardMage:{name:'얼음 마녀',icon:'❄',hp:GUARDIANS.mageHp,damage:GUARDIANS.mageDamage,rate:GUARDIANS.mageRate,range:GUARDIANS.range,speed:0,r:17,cost:0,stationary:true,role:'고정 수비 · 광역 빙결 속박 2초 · 아이스 실드로 박격포 차단 · 저격병 우선 공략'},
@@ -259,6 +259,15 @@ class FrontGame{
   for(const y of [top,top-90,top-180])for(const px of [x,b.width*.25,b.width*.5,b.width*.75,90,b.width-90])points.push({x:px,y});
   const y=Math.max(90,Math.min(north,view.top+view.height*.25));for(const px of [view.left-margin,view.right+margin])for(const py of [y,y-140,y-280,90])points.push({x:px,y:py});
   return points.find(valid)||null;
+ }
+ roomEntry(index=this.serial+1,radius=50,side=null){
+  const c=this.commander(0),b=this.bounds(),v=this.spawnView(),first=((side??this.roomCampaign?.entryCursor??0)%4+4)%4,margin=radius+85;
+  const valid=p=>p.x>=radius+45&&p.x<=b.width-radius-45&&p.y>=radius+70&&p.y<=b.height-radius-70&&(p.x+radius<v.left||p.x-radius>v.right||p.y+radius<v.top||p.y-radius>v.bottom)&&this.freePosition(p.x,p.y,radius)&&this.units.filter(u=>u.team===0&&u.hp>0).every(u=>dist(u,p)>radius+150);
+  for(let turn=0;turn<4;turn++){const edge=(first+turn)%4;
+   for(const extra of [0,90,180])for(const offset of [((index*173)%360)-180,0,-260,260,-420,420]){const p=edge===0?{x:clamp(c.x+offset,radius+45,b.width-radius-45),y:v.top-margin-extra}:edge===1?{x:v.right+margin+extra,y:clamp(c.y+offset,radius+70,b.height-radius-70)}:edge===2?{x:clamp(c.x+offset,radius+45,b.width-radius-45),y:v.bottom+margin+extra}:{x:v.left-margin-extra,y:clamp(c.y+offset,radius+70,b.height-radius-70)};
+    if(valid(p))return{...p,entrySide:edge};
+   }
+  }return null;
  }
  desktopEntry(index=++this.desktop.entries){
   // Fixed approaches on the far edge, never a spawn on top of the defending squad.
@@ -858,6 +867,7 @@ class FrontGame{
   return Math.max(0,Math.hypot(dx,dy)-growth);
  }
  pursuitTarget(u){
+  if(u.rareSupplyGuard){const anchor={x:u.supplyAnchorX??u.homeX,y:u.supplyAnchorY??u.homeY};if(dist(u,anchor)>330)return{x:u.homeX,y:u.homeY};return this.alive(0).filter(a=>dist(a,anchor)<=360&&this.canTarget(u,a)).sort((a,b)=>dist(u,a)-dist(u,b))[0]||{x:u.homeX,y:u.homeY};}
   if(u.guardArrival){if(dist(u,u.guardArrival)>80)return u.guardArrival;u.guardArrival=null;}
   const roomGuard=this.isRoomCampaign()&&u.roomGarrison,hqDefense=roomGuard&&u.guardianId?.startsWith('room-garrison-final-')&&this.time<(this.roomHQAlarm?.until||0);
   const radius=roomGuard?ROOM_CAMPAIGN.config.fortifications.engage:u.assault?650:265,protect=u.team!==0?this.buildings.filter(b=>b.hp>0&&this.targetDistance(u,b)<radius):[];

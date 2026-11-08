@@ -63,7 +63,7 @@ function draw(){
   if(u.type==='leader'){ctx.strokeStyle='#edffd3aa';ctx.lineWidth=1;ctx.beginPath();ctx.ellipse(0,0,24,14,0,0,Math.PI*2);ctx.stroke();}
   const bar=u.type==='medic'&&u.appearance==='rina'?-78:-69;ctx.fillStyle='#213b2b';ctx.fillRect(-17,bar,34,4);ctx.fillStyle='#b9e7a5';ctx.fillRect(-17,bar,34*u.hp/u.maxHp,4);ctx.restore();
  }
- for(const shot of game.shots)fx.drawShot(ctx,shot,game.evolved[shot.source.type]);for(const shell of game.mortarShells)fx.drawMortar(ctx,shell,game.time);for(const e of game.effects)fx.drawEvent(ctx,e);fx.drawParticles(ctx);
+ for(const shot of game.shots)fx.drawShot(ctx,shot,game.evolved[shot.source.type]);for(const shell of game.mortarShells)fx.drawMortar(ctx,shell,game.time);for(const e of game.effects)fx.drawEvent(ctx,e);fx.drawParticles(ctx);view.health(ctx,game);
 }
 function frame(now){const elapsed=Math.min(.1,(now-last)/1000||0);last=now;if(game?.phase==='playing'){acc+=elapsed;let n=0;while(acc>=.025&&n++<4){const x=joy.x+(keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0),y=joy.y+(keys.s||keys.arrowdown?1:0)-(keys.w||keys.arrowup?1:0),len=Math.max(1,Math.hypot(x,y));game.input={x:x/len,y:y/len};game.update(.025);acc-=.025;}fx.update(game);}else if(game)fx.time=game.time;if(now-renderAt>100){updateHUD();renderAt=now;}if(now>bannerUntil)$('banner').classList.remove('show');draw();requestAnimationFrame(frame);}requestAnimationFrame(frame);
 })();

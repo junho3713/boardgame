@@ -259,7 +259,7 @@ function updateUI(){
  const bannerHTML=announced.map(([,q])=>`<article><small>${q.title==='퀘스트 완료'?'MISSION CLEAR':'NEW QUEST'}</small><b>${q.title}</b><span>${q.progress}</span><strong>${q.reward}</strong><p>${q.hint}</p></article>`).join('');if($('lessonBanner').innerHTML!==bannerHTML)$('lessonBanner').innerHTML=bannerHTML;
  const objective=game.objective();$('objectiveTitle').textContent=objective.title;$('objectiveProgress').textContent=objective.progress;const pressure=game.pressure();$('pressureText').textContent=`위협 Lv.${pressure.tier+1} · 전사 ${game.losses[0]}기 · 상승 ${Math.max(1,Math.ceil(60-game.time%60))}초`;
  $('enemyGrowthText').textContent=`시간 성장 · 체력 +${Math.round((pressure.hp-1)*100)}% / 공격 +${pressure.tier*10}% / 방어 +${pressure.defense}`;
- const boss=game.activeBoss(),bosses=game.isRoomCampaign()?game.units.filter(u=>u.boss&&!u.roadCaptain&&u.hp>0):boss?[boss]:[];$('bossHealthBar').hidden=!boss;if(boss){const percent=Math.max(0,bosses.reduce((n,u)=>n+u.hp,0)/bosses.reduce((n,u)=>n+u.maxHp,0)*100);$('bossHealthFill').style.width=`${percent}%`;$('bossHealthBar').setAttribute('aria-valuenow',String(Math.round(percent)));}$('bossSchedule').hidden=game.mode!=='pve';$('bossSchedule').textContent=boss?(boss.miniBoss?'중간 보스 · 체력·공격력 50% · 처치 시 자원·경험치':bosses.length>1?'보스 2기 · 각각 강화 보상 · 모두 격파 후 16초 회복':'보스 격파 → 추가 강화 1회 보장'):game.isRoomCampaign()&&!Number.isFinite(game.bossState.nextAt)?'보스 공세 종료 · 최종 기지를 파괴하세요':`다음 보스 ${Math.max(0,Math.ceil(game.bossState.nextAt-game.time))}초 · 격파 ${game.bossState.killed}회`;if(game.isRoomCampaign()&&game.time>=780)$('bossSchedule').textContent+=` · 일반 전차 증원 ${game.roomCampaign.tankSpawned||0}/3`;
+ const boss=game.activeBoss(),bosses=game.isRoomCampaign()?game.units.filter(u=>u.boss&&!u.roadCaptain&&u.hp>0):boss?[boss]:[];$('bossHealthBar').hidden=!boss;if(boss){const percent=Math.max(0,bosses.reduce((n,u)=>n+u.hp,0)/bosses.reduce((n,u)=>n+u.maxHp,0)*100);$('bossHealthFill').style.width=`${percent}%`;$('bossHealthBar').setAttribute('aria-valuenow',String(Math.round(percent)));}$('bossSchedule').hidden=game.mode!=='pve';$('bossSchedule').textContent=boss?(boss.miniBoss?'중간 보스 · 체력·공격력 50% · 처치 시 자원·경험치':bosses.length>1?'보스 2기 · 각각 강화 보상 · 모두 격파 후 16초 회복':'보스 격파 → 추가 강화 1회 보장'):game.isRoomCampaign()&&!Number.isFinite(game.bossState.nextAt)?'보스 공세 종료 · 최종 기지를 파괴하세요':`다음 보스 ${Math.max(0,Math.ceil(game.bossState.nextAt-game.time))}초 · 격파 ${game.bossState.killed}회`;if(game.isRoomCampaign()&&!boss){const next=Array.from({length:15},(_,i)=>(i+1)*60).find(at=>at>game.time&&!window.FrontRoomCampaign.config.bosses.some(b=>b.at===at));if(next)$('bossSchedule').textContent+=' · 중간 보스 '+Math.ceil(next-game.time)+'초';}if(game.isRoomCampaign()&&game.time>=780)$('bossSchedule').textContent+=` · 일반 전차 증원 ${game.roomCampaign.tankSpawned||0}/3`;
  document.querySelectorAll('[data-mode]').forEach(b=>b.classList.toggle('selected',b.dataset.mode===selectedMode));
  [0,1].forEach(t=>{const p=game.bases[t].hp/game.bases[t].maxHp*100;$(t?'redHealth':'greenHealth').style.width=`${p}%`;$(t?'redHP':'greenHP').textContent=!duel&&t===1&&game.baseShielded()?'잠김':`${Math.ceil(p)}%`;});
  if(game.hasInvulnerableHQ()){$('greenHealth').style.width='100%';$('greenHP').textContent='보호';$('greenLabel').textContent+= ' · HQ 보호';}
@@ -481,6 +481,7 @@ function drawUnitRaw(u){
  if(game.isSupplyTroop(u))text(ctx,({commando:'블랙베어',spectre:'고스트',titan:'타이탄 · 최상위'})[u.type]+' · 특수부대',u.x,u.y-108,12,u.type==='titan'?'#ffe49a':'#e7c4ff');
  if(evolved)battleFx.drawEvolutionUnit(ctx,u,game.time);
  if(u.type==='blizzardMage')text(ctx,(u.iceShield&&game.time<=u.iceShield.until?'아이스 실드 · 박격포 차단':(u.mobileMage?'이동형 얼음 마녀':'얼음 마녀')+' · 사거리 '+window.FrontGuardians.range),u.x,u.y-103,11,'#c4edff');
+ if(u.rareSupplyGuard)text(ctx,'보급 호위',u.x,u.y-86,10,'#ffc2a6');
  if(u.boss&&['bayonetCaptain','bladeGuard','bikeRaider'].includes(u.type))text(ctx,(u.miniBoss?'MINI / ':'BOSS / ')+u.bossName.replace('중간 보스 · ',''),u.x,u.y-176,13,'#ffe294');
  if(u.type==='lucky'){ctx.save();ctx.translate(0,-16);battleFx.luckyReels(ctx,u,game);ctx.restore();}
  if(!u.boss&&u.type==='bikeRaider'&&(!u.bikeAttack||u.bikeAttack.phase!=='windup'))text(ctx,game.time<(u.bikeRecoverUntil||0)?'제동 · 공격 기회':'바이크 돌격병',u.x,u.y-88,10,'#ffd2be');
@@ -491,7 +492,7 @@ function drawUnitRaw(u){
  if(u.type==='bruteBeetle')text(ctx,'거대 갑충',u.x,u.y-67,11,'#f0d597');
  if(u.type==='stagBeetle'||u.type==='rhinoBeetle')text(ctx,(u.boss?(u.miniBoss?'MINI / ':'BOSS / ')+u.bossName.replace('중간 보스 · ',''):types[u.type].name)+' · 장갑',u.x,u.y-(u.type==='rhinoBeetle'?91:78)*(u.boss?1.35:1),u.boss?13:11,'#f0d597');
  if(types[u.type].flying&&(u.boss||game.units.find(v=>v.type===u.type&&!v.boss&&v.hp>0&&game.visible(v))===u))text(ctx,(u.boss?(u.miniBoss?'MINI / ':'BOSS / ')+u.bossName.replace('중간 보스 · ',''):types[u.type].name)+(u.type==='hornet'?' · 중장갑':' · 경장갑'),u.x,u.y-((u.visualFlightHeight??types[u.type].flightHeight)+49)*(u.boss?1.35:1),u.boss?13:10,u.boss?'#ffc079':'#f2d694');
- if(u.star>=2||u.boss||u.hp<u.maxHp||u.type==='leader'||u.type==='artillery'||u.type==='bayonetCaptain'){
+ if(u.star>=2||u.boss||u.rareSupplyGuard||u.hp<u.maxHp||u.type==='leader'||u.type==='artillery'||u.type==='bayonetCaptain'){
   const vehicle=['tank','crimsonAce','guntruck','artillery','lucky'].includes(u.type),human=roster.includes(u.type)&&!vehicle||u.type==='leader'||types[u.type].stab,w=u.boss?84:vehicle?48:30;
   const rise=(u.type==='medic'&&u.team===0&&u.appearance==='rina'?78+(u.star>=2?8:0):types[u.type].flying?(u.visualFlightHeight??types[u.type].flightHeight)+42:u.type==='crimsonAce'?140:u.type==='rhinoBeetle'?88:u.type==='stagBeetle'?76:vehicle?79:u.type==='bayonetCaptain'?90:types[u.type].stab?75:human?66:u.type==='bruteBeetle'?58:35)*(u.boss?1.35:1)-(u.star>=2?(vehicle?10:8):0),y=u.y-rise;
   rr(ctx,u.x-w/2-1,y-1,w+2,6,2,'#172a20aa');rr(ctx,u.x-w/2,y,w,4,2,'#293d2d88');rr(ctx,u.x-w/2,y,w*u.hp/u.maxHp,4,2,u.boss?'#e6af57':t?'#e0a184':'#dceca2');
@@ -571,7 +572,8 @@ function draw(dt){
   ctx.restore();
  }
 
- battleFx.drawHealingStatuses(ctx,game,fxVisible);battleFx.drawParticles(ctx,fxVisible);if(game.isRoomCampaign())window.FrontPortal.health(ctx,game.bases[1]);drawFog();ctx.setTransform(DPR,0,0,DPR,0,0);
+ battleFx.drawHealingStatuses(ctx,game,fxVisible);battleFx.drawParticles(ctx,fxVisible);swordView.health(ctx,game);if(game.isRoomCampaign())window.FrontPortal.health(ctx,game.bases[1]);drawFog();ctx.setTransform(DPR,0,0,DPR,0,0);
+ swordView.hud(ctx,game,W);
  if(game.time<game.scoutUntil){ctx.strokeStyle='#f0db98';ctx.lineWidth=2;ctx.strokeRect(4,4,W-8,H-8);}
  if(game.bossIntro?.remaining>0){rr(ctx,W/2-156,24,312,64,10,'#211a2ee8','#b795d5');text(ctx,'최종 보스 등장',W/2,48,13,'#d8bde9');text(ctx,game.bossIntro.name,W/2,73,20,'#fff0d3');}
  drawMini();

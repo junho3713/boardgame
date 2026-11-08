@@ -1,0 +1,96 @@
+{
+  "scenario": "60-second open-field AI battle, actual four-side room entry and camera tracking, evolved rifle/machinegun/medic; no map defenders/artillery",
+  "entryIntervalScale": 2.25,
+  "from": 180,
+  "guards": {
+    "initial": 8,
+    "approach": 4,
+    "radius": [
+      110,
+      180
+    ]
+  },
+  "finalBossHP": 128000,
+  "tests": 221,
+  "trials": [
+    {
+      "seed": 3713,
+      "start": 780,
+      "flow": 1,
+      "case": "mini-50",
+      "linksBefore": [
+        "교차 탄막",
+        "전선 유지"
+      ],
+      "seconds": 60,
+      "spawned": 96,
+      "sides": [
+        29,
+        28,
+        28,
+        11
+      ],
+      "losses": 3,
+      "replacementValue": 590,
+      "bought": 7,
+      "spent": 1020,
+      "cash": 580,
+      "aliveBefore": 15,
+      "aliveAfter": 20,
+      "commanderRetreats": 0,
+      "phase": "playing",
+      "minis": [
+        {
+          "type": "hornet",
+          "hp": 31465,
+          "max": 53914,
+          "withdrawn": false
+        }
+      ],
+      "activeLinks": [
+        "교차 탄막",
+        "전선 유지"
+      ]
+    },
+    {
+      "seed": 177,
+      "start": 780,
+      "flow": 1,
+      "case": "mini-50",
+      "linksBefore": [
+        "교차 탄막",
+        "전선 유지"
+      ],
+      "seconds": 60,
+      "spawned": 96,
+      "sides": [
+        29,
+        29,
+        27,
+        11
+      ],
+      "losses": 5,
+      "replacementValue": 645,
+      "bought": 9,
+      "spent": 990,
+      "cash": 692,
+      "aliveBefore": 15,
+      "aliveAfter": 20,
+      "commanderRetreats": 0,
+      "phase": "playing",
+      "minis": [
+        {
+          "type": "hornet",
+          "hp": 12049,
+          "max": 53914,
+          "withdrawn": false
+        }
+      ],
+      "activeLinks": [
+        "교차 탄막",
+        "전선 유지",
+        "야전 수리"
+      ]
+    }
+  ]
+}

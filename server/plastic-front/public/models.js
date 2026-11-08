@@ -7,7 +7,7 @@ class FrontModels{
   // Enemy-only art is shared by both hostile simulation teams, including garrisons.
   const sharedEnemy=team!==0&&['bladeGuard','bikeRaider','crimsonAce','lucky','ant','soldierAnt','beetle','bruteBeetle','stagBeetle','rhinoBeetle','honeybee','hornet','butterfly'].includes(type);
   // Roaming mages and their escorts share the hostile support atlases across both enemy teams.
-  const key=type+'-'+(['mortar','blizzardMage'].includes(type)&&team!==0?1:sharedEnemy?2:team);if(this.assets.has(key))return this.assets.get(key);
+  let key=type+'-'+(['mortar','blizzardMage'].includes(type)&&team!==0?1:sharedEnemy?2:team);if(team!==0&&!this.manifest?.models[key]&&this.manifest?.models[type+'-1'])key=type+'-1';if(this.assets.has(key))return this.assets.get(key);
   const data=this.manifest?.models[key];if(!data)return null;
   const layers=type==='blizzardMage'?{...data,walk:{...data.body,file:'blizzardMage-walk-v20261106.webp',frames:8,anchors:undefined,mirrorFrames:undefined,walkFrames:[0,1,2,3,4,5,6,7],walkStride:72}}:data;
   let complete;const item={layers:{},ready:false,loading:new Promise(resolve=>{complete=resolve;})};this.assets.set(key,item);let count=0,failed=false;const settled=()=>{count++;if(count===Object.keys(layers).length){item.ready=!failed;if(item.ready)this.loaded++;complete();}};

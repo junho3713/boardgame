@@ -6,6 +6,13 @@ function star(c,x,y,r,color){c.fillStyle=color;c.beginPath();c.moveTo(x,y-r);c.q
 function capsule(c,a){const d=Math.atan2(a.end.y-a.start.y,a.end.x-a.start.x),px=-Math.sin(d)*a.radius,py=Math.cos(d)*a.radius;c.beginPath();c.moveTo(a.start.x+px,a.start.y+py);c.lineTo(a.end.x+px,a.end.y+py);c.arc(a.end.x,a.end.y,a.radius,d+Math.PI/2,d-Math.PI/2,true);c.lineTo(a.start.x-px,a.start.y-py);c.arc(a.start.x,a.start.y,a.radius,d-Math.PI/2,d+Math.PI/2,true);c.closePath();}
 class View{
  constructor(){this.body=new Image();this.blade=new Image();this.command=new Image();this.ready=Promise.all([[this.body,'body.webp'],[this.blade,'blade.webp'],[this.command,'command.webp']].map(([im,file])=>new Promise((yes,no)=>{im.onload=yes;im.onerror=no;im.src='assets/sword-boss/'+file+'?v=160';})));}
+ healthBar(c,b,x,y,width){
+  if(!b||b.hp<=0||!Number.isFinite(b.maxHp)||b.maxHp<=0)return;
+  const ratio=clamp(b.hp/b.maxHp,0,1),phase=b.swords?.phase===2;
+  c.save();c.fillStyle='#211725ed';c.fillRect(x-width/2-4,y-20,width+8,43);c.fillStyle='#493247';c.fillRect(x-width/2,y+4,width,14);c.fillStyle=phase?'#f06ca5':'#b480eb';c.fillRect(x-width/2,y+4,width*ratio,14);c.textAlign='center';c.textBaseline='middle';c.font='700 12px system-ui';c.fillStyle='#fff2fa';c.fillText('사검의 군주'+(phase?' · 각성':''),x,y-9);c.font='700 10px system-ui';c.strokeStyle='#29182c';c.lineWidth=3;const label=Math.ceil(b.hp).toLocaleString()+' / '+Math.ceil(b.maxHp).toLocaleString();c.strokeText(label,x,y+11);c.fillText(label,x,y+11);c.restore();
+ }
+ health(c,g){const b=g.trialBoss;if(!b||b.hp<=0||g.visible&&!g.visible(b))return;this.healthBar(c,b,b.x,b.y-221,220);}
+ hud(c,g,width){const b=g.trialBoss;if(!b?.finalBoss||b.hp<=0)return;this.healthBar(c,b,width/2,80,Math.max(120,Math.min(300,width-36)));}
  shieldGeometry(b,s,g){const half=g.trialConfig.shieldHalfAngle,front=Math.sin(s.dir),rx=Math.max(18,Math.tan(Math.min(1.25,half))*(Math.abs(front)>.5?48:27));return{x:b.x+Math.cos(s.dir)*98,y:b.y+front*45-68,rx,ry:Math.abs(front)>.5?83:71,front:front>.5,half};}
  parts(g){const b=g.trialBoss;if(!b||b.hp<=0)return[];const out=[{kind:'body',depth:b.y,b}];for(const s of b.swords.blades){if(s.mode==='defend')out.push({kind:'shield',depth:b.y+Math.sin(s.dir)*60-1,s,b});out.push({kind:'blade',depth:s.y,s,b});}return out;}
  drawPart(c,p,g){if(p.kind==='body')this.bodyPart(c,p.b,g);else if(p.kind==='blade')this.bladePart(c,p.s,p.b,g);else this.shield(c,p.s,p.b,g);}
