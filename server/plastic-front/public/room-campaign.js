@@ -38,7 +38,7 @@ const config={version:116,duration:1200,enemyLuckyInterval:5,recoverySeconds:16,
  ],
  tanks:[780,930,1020],
  encirclement:{from:180,intervalScale:2.25},
- miniBoss:{interval:60,until:960,hp:.5,damage:.5,spawnWindow:50,withdrawBefore:8},
+ miniBoss:{from:180,interval:60,until:960,hp:.5,damage:.5,spawnWindow:50,withdrawBefore:8},
  bosses:[{at:240,type:'stagBeetle',name:'거대 사슴벌레',pattern:null},{at:360,type:'bayonetCaptain',name:'장난감 병정 보스',pattern:'soldierDash'},{at:480,type:'bladeGuard',name:'검병 대장',pattern:'wideSlash'},{at:600,type:'rhinoBeetle',name:'장수풍뎅이 보스',pattern:'rhinoCharge'},{at:720,type:'bikeRaider',name:'오토바이병 대장',pattern:'rapidBike'},{at:900,type:'hornet',name:'장수말벌',pattern:'venomDive'},{at:1200,type:'swordEmpress',name:'사검의 군주',pattern:'fourSwords'}],
  patterns:{soldierDash:{hpScale:1.75,every:2,duration:1,speed:2.2,damageMultiplier:3},wideSlash:{range:220,arc:1.9,windup:.7,damageMultiplier:2},rhinoCharge:{range:420,cooldown:8,windup:1,distance:360,speed:800,halfWidth:30,recovery:3,vulnerable:1.3,damageScale:.6,infantryHpDamage:.5},rapidBike:{cooldown:4.2},venomDive:{cooldown:8,rise:.25,warning:.6,descent:.1,recovery:2,height:145,lowHeight:24,damage:1.6,maxHpDamage:.5,poisonDuration:4,poisonRate:.25,poisonPerSecond:.12},rearBarrage:{cooldown:7,warning:1.5,radius:100,damage:1.35,bossDamageMultiplier:.85,range:650,shots:3,spacing:220}}
 };
@@ -257,7 +257,8 @@ const methods={
   if(!Number.isInteger(s.miniMinute))s.miniMinute=minute-1;
   const next=config.bosses.find(b=>b.at>=this.time);
   if(this.time>=r.until||next&&next.at-this.time<=r.withdrawBefore){this.withdrawRoomMiniBosses();s.miniMinute=minute;return;}
-  if(minute<1||minute<=s.miniMinute)return;
+  if(this.time<r.from){this.withdrawRoomMiniBosses();s.miniMinute=minute;return;}
+  if(minute<=s.miniMinute)return;
   const boss=config.bosses.find(b=>b.at>at);
   if(!boss||this.time-at>r.spawnWindow||config.bosses.some(b=>b.at===at)||this.units.some(u=>u.boss&&!u.roadCaptain&&u.hp>0)||this.time<(s.recoveryUntil||0)){s.miniMinute=minute;return;}
   const point=this.roomEntry(this.serial+1,55,minute%4);if(!point)return;

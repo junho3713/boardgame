@@ -30,5 +30,5 @@ test('cooperative supply upgrades and waves share one world schedule without mul
 });
 
 test('real update ticks spawn a mini offscreen and bring it toward the squad without overriding spawn logic',()=>{
- const g=scene();g.time=59.8;for(const key of ['updateMission','updateSwarm','updateArtillery','levelCheck'])g[key]=()=>{};for(let i=0;i<10;i++)g.update(.05);const mini=g.units.find(u=>u.miniBoss&&u.hp>0);a.ok(mini);const c=g.commander(0),distance=Math.hypot(mini.x-c.x,mini.y-c.y);for(let i=0;i<60;i++)g.update(.05);a.ok(Math.hypot(mini.x-c.x,mini.y-c.y)<distance-50);a.equal(g.units.filter(u=>u.miniBoss&&u.hp>0).length,1);
+ const g=scene();g.time=179.8;for(const key of ['updateMission','updateSwarm','updateArtillery','levelCheck'])g[key]=()=>{};for(let i=0;i<10;i++)g.update(.05);const mini=g.units.find(u=>u.miniBoss&&u.hp>0);a.ok(mini);const c=g.commander(0),distance=Math.hypot(mini.x-c.x,mini.y-c.y);for(let i=0;i<60;i++)g.update(.05);a.ok(Math.hypot(mini.x-c.x,mini.y-c.y)<distance-50);a.equal(g.units.filter(u=>u.miniBoss&&u.hp>0).length,1);
 });
