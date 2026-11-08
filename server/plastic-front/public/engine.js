@@ -465,7 +465,7 @@ class FrontGame{
  isFlameCommander(u){return u?.team===0&&u.type==='leader'&&(u.appearance||this.commanderId)==='blaze';}
  // Balance multipliers apply when attacks are created, never again on impact.
  enemyDamageScale(u){if(!this.isRoomCampaign()||u?.team===0||u?.defenseKind==='laserTower')return 1;const r=ROOM_CAMPAIGN.config.combat,a=ROOM_CAMPAIGN.config.attrition,pressure=this.starExperiment&&this.starMax===2&&!this.coop&&this.time>=a.from&&u.roomWave&&!u.boss&&u.type!=='mortar'?(this.time>=a.lateAt?a.lateWaveDamage:a.soloTwoStarWaveDamage):1,mortar=u.type==='mortar'&&!u.boss?(this.time>=a.lateAt?a.lateMortarDamage:a.mortarDamage):1;return pressure*mortar*(r?.damageScale??1)*(u?.type==='bikeRaider'?(r?.bikeDamageScale??1):1)*(u?.boss?(r?.bossDamageScale??1):1)*(this.bossPatternRules(u)?.damageMultiplier??1)*(u?.miniBoss?ROOM_CAMPAIGN.config.miniBoss.damage:1);}
- enemyHealthScale(u){if(!this.isRoomCampaign()||u.team===0)return 1;const r=ROOM_CAMPAIGN.config.combat;return u.boss?(r.bossHpScale??1)*(r.bossHpExtra?.[u.type]??1)*(u.miniBoss?ROOM_CAMPAIGN.config.miniBoss.hp:1):(r.hpScale??1);}
+ enemyHealthScale(u){if(!this.isRoomCampaign()||u.team===0)return 1;const r=ROOM_CAMPAIGN.config.combat,o=r.openingHp,spawnedAt=u.spawnedAt??this.time,opening=o?o.scale+(1-o.scale)*clamp((spawnedAt-o.until)/(o.restoreAt-o.until),0,1):1;return u.boss?(r.bossHpScale??1)*(r.bossHpExtra?.[u.type]??1)*(u.miniBoss?ROOM_CAMPAIGN.config.miniBoss.hp:1):(r.hpScale??1)*(u.fixedGuard||u.roomGarrison||u.roadCaptain?1:opening);}
  stats(u){
   const b=u.type==='blizzardMage'&&u.mobileMage?{...TYPES.blizzardMage,speed:85,stationary:false,role:'이동형 얼음 마녀 · 광역 빙결 속박 · 아이스 실드 · 저격병 우선 공략'}:this.isFlameCommander(u)?{...TYPES.leader,name:'화염방사 대장',damage:FLAME.damage,rate:FLAME.rate,range:FLAME.range}:this.isSwordCommander(u)?{...TYPES.leader,name:'시온',damage:SWORD.damage,rate:SWORD.rate,range:SWORD.range}:TYPES[u.type],level=u.team===0&&u.type==='leader'?this.commanderLevel(u):ROSTER.includes(u.type)?Math.max(1,this.tech[u.team]?.[u.type]||1):1,p=this.profile.upgrades,ally=u.team===0,r=this.abilities,tier=u.threat||0,e=ally&&this.evolved[u.type]?u.type:null,fort=this.roomDefenseRules(u);
   const enemyPower=(this.mode==='pve'&&u.team===1&&ROSTER.includes(u.type)?(u.type==='sniper'?.6:.85):1.25)*(!ally?this.enemyDamageScale(u):1);
@@ -563,11 +563,18 @@ class FrontGame{
   }
   return best;
  }
+ enemySniperCount(){return this.units.filter(u=>u.team!==0&&u.type==='sniper'&&u.hp>0).length;}
+ enforceEnemySniperLimit(){
+  let count=0;for(const u of this.units){if(u.team===0||u.type!=='sniper'||u.hp<=0||++count<=2)continue;
+   const ratio=Math.min(1,u.hp/Math.max(1,u.maxHp));u.type='rifle';u.sniperAim=null;u.maxHp=this.stats(u).hp;u.hp=u.maxHp*ratio;
+  }
+ }
  syncEnemyGrowth(){
+  this.enforceEnemySniperLimit();
   const tier=this.pressure().tier;if(tier===this.lastEnemyGrowth)return;this.lastEnemyGrowth=tier;
   for(const u of this.units){if(u.team===0||u.hp<=0||tier<=(u.threat||0))continue;const ratio=u.hp/u.maxHp;u.threat=tier;u.maxHp=this.stats(u).hp;u.hp=u.maxHp*ratio;}
  }
- addUnit(team,type,x,y,patrol=false){const u={id:++this.serial,team,type,x,y,face:team===0?-Math.PI/2:Math.PI/2,hp:1,maxHp:1,threat:team!==0&&type!=='leader'?this.pressure().tier:0,cooldown:this.random()*.4,deadUntil:0,patrol,homeX:x,homeY:y,walk:0,flash:0,recoil:0};u.hp=u.maxHp=this.stats(u).hp;if(u.type==='tank'||u.type==='crimsonAce'||u.type==='guntruck'||u.type==='lucky')u.moveFace=u.face;if(u.type==='tank'||u.type==='crimsonAce'||u.type==='guntruck')u.turretFace=u.face;this.resolvePosition(u);u.homeX=u.x;u.homeY=u.y;if(type==='lucky'&&team===0){u.nextLuckyAt=this.time+LUCKY.interval;u.luckyInterval=LUCKY.interval;}if(type==='leader'&&team===0){u.appearance=this.commanderId||'sarge';u.flameSkin=this.flameSkinId||'classic';}if(type==='sniper'&&team===0)u.appearance=this.sniperSkinId||'classic';if(type==='medic'&&team===0)u.appearance=this.medicSkinId||'classic';this.units.push(u);return u;}
+ addUnit(team,type,x,y,patrol=false){if(team!==0&&type==='sniper'&&this.enemySniperCount()>=2)type='rifle';const u={id:++this.serial,team,type,x,y,spawnedAt:this.time,face:team===0?-Math.PI/2:Math.PI/2,hp:1,maxHp:1,threat:team!==0&&type!=='leader'?this.pressure().tier:0,cooldown:this.random()*.4,deadUntil:0,patrol,homeX:x,homeY:y,walk:0,flash:0,recoil:0};u.hp=u.maxHp=this.stats(u).hp;if(u.type==='tank'||u.type==='crimsonAce'||u.type==='guntruck'||u.type==='lucky')u.moveFace=u.face;if(u.type==='tank'||u.type==='crimsonAce'||u.type==='guntruck')u.turretFace=u.face;this.resolvePosition(u);u.homeX=u.x;u.homeY=u.y;if(type==='lucky'&&team===0){u.nextLuckyAt=this.time+LUCKY.interval;u.luckyInterval=LUCKY.interval;}if(type==='leader'&&team===0){u.appearance=this.commanderId||'sarge';u.flameSkin=this.flameSkinId||'classic';}if(type==='sniper'&&team===0)u.appearance=this.sniperSkinId||'classic';if(type==='medic'&&team===0)u.appearance=this.medicSkinId||'classic';this.units.push(u);return u;}
  spawnPatrol(x,y){this.addUnit(2,'ant',x-24,y,true);this.addUnit(2,'ant',x+24,y+34,true);}
  queueCost(queue,team=0){let total=0;for(const [type,n]of Object.entries(queue)){if(!Number.isInteger(n)||n<0||n>30)return Infinity;if(type==='truck'){if(n>0)return Infinity;}else if(ROSTER.includes(type))total+=TYPES[type].cost*n;else return Infinity;}return total;}
  supportValid(queue,team=0){
@@ -594,7 +601,7 @@ class FrontGame{
  stageChoice(type,queue){
   if(this.phase!=='choice'||this.turnChoice||type==='scout')return false;
   if(type==='support'){if(!this.supportValid(queue))return false;this.pendingChoice={type,queue:{...queue}};}
-  else{if(this.choiceKind==='recovery')return false;if(!this.currentOptions?.includes(type)||!this.eligibleCard(type)||this.choiceKind==='boss'&&!this.bossRewardEligible(type))return false;this.pendingChoice={type};}
+  else{if(['recovery','supply','periodic'].includes(this.choiceKind))return false;if(!this.currentOptions?.includes(type)||!this.eligibleCard(type)||this.choiceKind==='boss'&&!this.bossRewardEligible(type))return false;this.pendingChoice={type};}
   return true;
  }
  confirmChoice(){
@@ -641,7 +648,7 @@ class FrontGame{
  bossRewardEligible(type){if(type==='fieldGold'||type==='fieldRepair')return true;const key=this.abilityKey(type);return this.eligibleCard(type)&&(key?this.abilities[key]>0:this.alive(0).some(u=>u.type===type));}
  choose(type){
   if(this.phase!=='choice'||this.turnChoice||type==='scout')return false;
-  if(this.choiceKind==='recovery')return false;
+  if(['recovery','supply','periodic'].includes(this.choiceKind))return false;
   const boss=this.choiceKind==='boss',key=this.abilityKey(type);
   if(boss&&(this.bossState.rewards<=0||type==='scout'||!this.bossRewardEligible(type)))return false;
    if(!this.currentOptions?.includes(type)||!this.eligibleCard(type)||this.choiceKind==='boss'&&!this.bossRewardEligible(type))return false;
@@ -1631,7 +1638,7 @@ class FrontGame{
   }
   if(this.mode==='crisis'&&this.crisis.phase==='cleared')return{title:'포병 위기 연습 / 완료',progress:`포병 2기 격파 · 피격 ${this.crisis.hits}회 · 완전 회피 ${this.crisis.dodges}회`,target:this.commander(0),showMarker:false};
   if(this.mode==='crisis')return{title:'포병 위기 연습 / 이동 준비',progress:`${Math.max(0,Math.ceil(this.crisis.startAt-this.time))}초 뒤 포병 출현 · 전차까지 범위 밖으로 이동`,target:{x:800,y:1900},targetName:'북쪽 전선'};
-  const boss=this.activeBoss(),bosses=this.isRoomCampaign()?this.units.filter(u=>u.boss&&!u.roadCaptain&&u.hp>0):[];if(bosses.length>1)return{title:'보스 2기 / '+bosses.map(u=>u.bossName).join(' + '),progress:bosses.map(u=>u.bossName+' '+Math.ceil(u.hp/u.maxHp*100)+'%').join(' · ')+' · 각 보스 처치 시 강화 보상',target:boss,targetName:boss.bossName};if(this.mode==='pve'&&boss)return{title:`보스 / ${boss.bossName}`,progress:`HP ${Math.ceil(boss.hp)} / ${Math.ceil(boss.maxHp)}${boss.miniBoss?' · 체력·공격력 50% · 자원·경험치 보상':' · 처치 시 추가 강화 1회'}${this.bossArmorPenetration(boss)?' · 방어 관통 '+Math.round(this.bossArmorPenetration(boss)*100)+'%':''}`,target:boss,targetName:boss.bossName};
+  const boss=this.activeBoss(),bosses=this.isRoomCampaign()?this.units.filter(u=>u.boss&&!u.roadCaptain&&u.hp>0):[];if(bosses.length>1)return{title:'보스 2기 / '+bosses.map(u=>u.bossName).join(' + '),progress:bosses.map(u=>u.bossName+' '+Math.ceil(u.hp/u.maxHp*100)+'%').join(' · ')+' · 각 보스 처치 시 강화 보상',target:boss,targetName:boss.bossName};if(this.mode==='pve'&&boss)return{title:`보스 / ${boss.bossName}`,progress:`HP ${Math.ceil(boss.hp)} / ${Math.ceil(boss.maxHp)}${boss.miniBoss?' · 체력·공격력 30% · 자원·경험치 보상':' · 처치 시 추가 강화 1회'}${this.bossArmorPenetration(boss)?' · 방어 관통 '+Math.round(this.bossArmorPenetration(boss)*100)+'%':''}`,target:boss,targetName:boss.bossName};
   if(this.isRoomCampaign())return this.roomObjective();
   if(this.mode==='duel')return{title:'1대1 훈련 · 상대 본진 파괴',progress:'3분 종료 시 남은 본진 체력으로 판정',target:this.bases[1]};
   if(this.mission.stage===1){
