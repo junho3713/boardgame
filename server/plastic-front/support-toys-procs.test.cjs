@@ -131,6 +131,7 @@ test('electric tiers stun at most one, three and eight valid targets with the sa
   const g=scene(),u=ready(g,'toyStunner',tier),targets=Array.from({length:10},(_,i)=>enemy(g,u.x+80+i*8,u.y)),boss=enemy(g,u.x+70,u.y,'rhinoBeetle');boss.boss=true;
   assert.equal(g.useSupportToy(u),true);assert.equal(targets.filter(t=>t.toyStunUntil===1).length,count);assert.equal(boss.toyStunUntil,undefined);assert.equal(g.effects.filter(e=>e.kind==='toyZap').length,count);assert.equal(u.toyNextAt,10);
   const links=g.effects.filter(e=>e.kind==='toyZap');for(let i=1;i<links.length;i++)assert.equal(links[i].from,links[i-1].target);
+  assert.deepEqual(links.map(e=>e.hop),Array.from({length:count},(_,i)=>i));
   const storm=g.effects.find(e=>e.kind==='toyThunder');assert.equal(!!storm,tier===2);if(storm)assert.deepEqual(storm.targets,links.map(e=>e.target));
  }
 });

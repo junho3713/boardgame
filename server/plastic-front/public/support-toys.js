@@ -215,10 +215,10 @@ function install({FrontGame:Game,TYPES}){
    const threats=this.toyThreats(u,rules.electric.range).filter(t=>this.supportControlAllowed(t,'stun'));if(!threats.length)return false;
    const tier=this.rollSupportToyTier(u),targets=threats.slice(0,rules.electric.targets[tier]);let previous=u;
    u.face=Math.atan2(targets[0].y-u.y,targets[0].x-u.x);
-   for(const t of targets){
+   for(const [hop,t] of targets.entries()){
     t.toyStunUntil=this.time+rules.electric.duration;t.toyControlReadyAt=t.toyStunUntil+rules.controlResistance;t.sniperAim=t.bayonetAttack=null;
     this.effects.push({kind:'bossGroggy',stun:true,target:t,x:t.x,y:t.y,t:rules.electric.duration,max:rules.electric.duration,team:0});
-    this.effects.push({kind:'toyZap',x:previous.x,y:previous.y,from:previous,target:t,source:u,tier,storm:tier===2,t:1,max:1,team:0});previous=t;
+    this.effects.push({kind:'toyZap',x:previous.x,y:previous.y,from:previous,target:t,source:u,tier,hop,storm:tier===2,t:1,max:1,team:0});previous=t;
    }
    if(tier===2){
     const x=targets.reduce((sum,t)=>sum+t.x,0)/targets.length,y=targets.reduce((sum,t)=>sum+t.y,0)/targets.length;

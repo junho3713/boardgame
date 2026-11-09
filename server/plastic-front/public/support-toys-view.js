@@ -212,9 +212,7 @@ function drumBoost(c,e){
  for(let i=0;i<10;i++){const a=i*2.399963,d=22+q*85;c.globalAlpha=(1-q)*.85;label(c,i%2?'♪':'♫',Math.cos(a)*d,-25+Math.sin(a)*d*.35-q*55,color);}
  c.restore();return true;
 }
-// Fine branching discharge: cool corona, an ivory filament, then a short ember.
-// Geometry is seeded per target on the simulation clock; rendering never rolls
-// combat RNG or writes to a unit. Keep the halo local instead of whitening foes.
+// Presentation randomness is independent of targeting and combat rolls.
 const electricPreference=root.matchMedia?.('(prefers-reduced-motion: reduce)');
 const electricNoise=n=>{const x=Math.sin(n*127.1+311.7)*43758.5453;return x-Math.floor(x);};
 const gentleElectric=g=>g.reducedMotion??electricPreference?.matches??false;
@@ -228,86 +226,253 @@ function electricHands(u,face){
  const palms=frame===7?[[[55,107],[178,105]],[[96,113],[181,96]],[[145,126]],[[169,92]],[[52,111],[176,110]]]:[[[71,125],[156,125]],[[122,121],[173,111]],[[170,117]],[[172,114]],[[150,125]]];
  return palms[row].map(([x,y])=>({x:u.x+(x-anchor[0])*scale*(flip?-1:1),y:u.y+(y-anchor[1])*scale}));
 }
-function electricGlow(c,x,y,r,alpha=1,warm=false){
- if(alpha<=0)return;c.save();c.globalCompositeOperation='lighter';c.globalAlpha*=alpha;
- const fill=c.createRadialGradient(x,y,0,x,y,r);fill.addColorStop(0,warm?'#fff2bc99':'#edfcffb0');fill.addColorStop(.18,warm?'#ffdc6e66':'#a7e9ff77');fill.addColorStop(.48,'#53bfe72b');fill.addColorStop(1,'#3989c900');c.fillStyle=fill;c.fillRect(x-r,y-r,r*2,r*2);c.restore();
+// The channel runs along the first coordinate. Two short backwards cuts and
+// uneven widths give each stroke a hooked silhouette even when drawn at 50%.
+const lightningCuts = [
+ [[0,0,.40],[.16,-.24,.50],[.37,-1,.13],[.32,.06,1.14],[.54,-.22,.54],[.71,.78,.11],[.66,-.04,.91],[.83,.16,.48],[1,0,.025]],
+ [[0,0,.42],[.13,.29,.68],[.26,.19,.54],[.44,.94,.16],[.41,-.31,1.16],[.57,-.42,.80],[.76,-.88,.13],[.74,-.36,.61],[1,0,.025]],
+ [[0,0,.44],[.23,-.54,.65],[.40,-.42,.69],[.56,-.93,.09],[.49,.31,1.21],[.64,.22,.71],[.79,.61,.43],[.86,.28,.31],[1,0,.025]]
+];
+function electricRoute(from,to,seed){
+ const dx=to.x-from.x,dy=to.y-from.y,length=Math.hypot(dx,dy),safe=length||1;
+ const nx=-dy/safe,ny=dx/safe,pattern=lightningCuts[Math.floor(electricNoise(seed)*lightningCuts.length)];
+ const swing=Math.min(length*.17,39)*(.83+.35*electricNoise(seed+11))*(electricNoise(seed+3)<.5?-1:1);
+ const points=pattern.map(([along,side,width])=>({
+  x:from.x+dx*along+nx*side*swing,y:from.y+dy*along+ny*side*swing,width
+ }));
+ return {points,nx,ny,length};
 }
-function electricPath(x,y,tx,ty,seed,age,gentle){
- const dx=tx-x,dy=ty-y,length=Math.hypot(dx,dy)||1,n=Math.max(8,Math.min(24,Math.ceil(length/12))),nx=-dy/length,ny=dx/length,epoch=gentle?0:Math.floor(age*18),points=[];
- const broad=Math.min(21,length*.075),fine=Math.min(8,length*.04);
- for(let i=0;i<=n;i++){
-  const q=i/n,taper=Math.sin(q*Math.PI),cell=q*5,at=Math.floor(cell),coarse=(electricNoise(seed+at*7.3)*(1-cell+at)+electricNoise(seed+(at+1)*7.3)*(cell-at)-.5)*2;
-  const bend=(coarse*broad+(electricNoise(seed+i*1.73+epoch*.91)-.5)*fine*2)*taper;
-  points.push([x+dx*q+nx*bend,y+dy*q+ny*bend]);
+function electricLight(c,x,y,r,alpha,squash=1){
+ if(alpha<.015)return;
+ c.save();c.translate(x,y);c.scale(1,squash);c.globalAlpha*=Math.min(1,alpha);
+ const glow=c.createRadialGradient(0,0,0,0,0,r);
+ glow.addColorStop(0,'#fff5c8e6');glow.addColorStop(.19,'#ffdf7fa3');
+ glow.addColorStop(.49,'#ffb64352');glow.addColorStop(1,'#fc8b2300');
+ c.fillStyle=glow;c.fillRect(-r,-r,r*2,r*2);c.restore();
+}
+function traceChannel(c,points){
+ c.beginPath();c.moveTo(points[0].x,points[0].y);
+ for(let i=1;i<points.length;i++)c.lineTo(points[i].x,points[i].y);
+}
+function electricRibbon(c,route,width,color){
+ const {points,nx,ny}=route;
+ c.beginPath();
+ for(let i=0;i<points.length;i++){
+  const p=points[i],w=p.width*width;
+  if(i===0)c.moveTo(p.x+nx*w,p.y+ny*w);else c.lineTo(p.x+nx*w,p.y+ny*w);
  }
- return points;
+ for(let i=points.length-1;i>=0;i--){
+  const p=points[i],w=p.width*width*.77;
+  c.lineTo(p.x-nx*w,p.y-ny*w);
+ }
+ c.closePath();c.fillStyle=color;c.fill();
 }
-function electricBolt(c,from,to,seed,age,power,alpha,gentle){
- if(alpha<.025)return;const points=electricPath(from.x,from.y,to.x,to.y,seed,age,gentle);
- c.save();c.globalAlpha*=alpha;c.lineJoin='miter';c.lineCap='round';
- // Paint chroma before the emissive core: pure additive blue becomes white on
- // the warm wooden floor and loses the electric colour at gameplay scale.
- c.globalCompositeOperation='source-over';line(c,points,'#18579024',9*power);line(c,points,'#168cb3b8',3.5*power);line(c,points,'#7ce2f5dc',2*power);
- c.globalCompositeOperation='lighter';
- // Taper the core toward its contact point rather than drawing a neon tube.
- const mid=Math.floor(points.length*.55);line(c,points.slice(0,mid+1),'#e2f9ff',.95*power);line(c,points.slice(mid),'#f5fcff',.6*power);
- line(c,points,'#fff4c580',.3*power);
- for(let j=0;j<3;j++){
-  const i=Math.min(points.length-2,Math.floor(points.length*(.27+j*.21))),p=points[i],next=points[i+1],angle=Math.atan2(next[1]-p[1],next[0]-p[0])+(j%2?-.9:.8),length=(10+electricNoise(seed+j*6)*18)*power;
-  const end={x:p[0]+Math.cos(angle)*length,y:p[1]+Math.sin(angle)*length},branch=electricPath(p[0],p[1],end.x,end.y,seed+j+23,age,gentle);
-  c.globalCompositeOperation='source-over';line(c,branch,'#29a5cda0',1.5*power);c.globalCompositeOperation='lighter';line(c,branch,'#d5f6ffc9',.55*power);
+function lightningStrength(age,gentle){
+ if(age<0||age>=.39)return 0;
+ if(gentle)return .90*clamp(age/.075)*clamp((.39-age)/.16);
+ return clamp(age/.045)*clamp((.34-age)/.19);
+}
+function steppedChannel(route,age,gentle){
+ const knots=route.points,points=[knots[0]];
+ const epoch=gentle?0:age<.11?0:age<.2?1:2;
+ for(let i=1;i<knots.length;i++){
+  const a=knots[i-1],b=knots[i],dx=b.x-a.x,dy=b.y-a.y,span=Math.hypot(dx,dy);
+  if(span>17){
+   const key=i*8.73+route.length*.057,at=.32+.34*electricNoise(key);
+   const bend=(electricNoise(key+epoch*17)-.5)*Math.min(span*.28,11);
+   points.push({x:a.x+dx*at-dy/span*bend,y:a.y+dy*at+dx/span*bend,width:(a.width+b.width)*.47});
+  }
+  points.push(b);
+ }
+ return {...route,points};
+}
+function electricStroke(c,route,age,width,gentle){
+ const intensity=lightningStrength(age,gentle);
+ if(intensity<.015||route.length<1)return;
+ const joint=route.points[3],arm=route.points[4];
+ route=steppedChannel(route,age,gentle);
+ const points=route.points;
+ c.save();c.globalAlpha*=intensity;c.lineJoin='round';c.lineCap='round';
+ if(!gentle&&age<.045){
+  // A thin leader finds the surface. The hot return stroke lights the entire
+  // same channel on contact, so that its shape is continuous across frames.
+  const reach=clamp(age/.045)*(points.length-1),end=Math.floor(reach);
+  const tip=points[end],next=points[Math.min(end+1,points.length-1)],part=reach-end;
+  traceChannel(c,points.slice(0,end+1));c.lineTo(tip.x+(next.x-tip.x)*part,tip.y+(next.y-tip.y)*part);
+  c.strokeStyle='#ffed9c';c.lineWidth=Math.max(1.3,width*.34);c.stroke();c.restore();return;
+ }
+ const body=width*(.50+.50*intensity);
+ if(!gentle&&width>=8&&age<.22){
+  // A side channel briefly runs along the cloud's field, then splits into
+  // two open ends. Its tip never pretends to strike an extra game target.
+  const sign=(arm.x-joint.x)*route.nx+(arm.y-joint.y)*route.ny>0?-1:1;
+  const reach=Math.min(42,route.length*.22),fx=route.ny,fy=-route.nx;
+  const at=(forward,side)=>[joint.x+(fx*forward+route.nx*side*sign)*reach,
+   joint.y+(fy*forward+route.ny*side*sign)*reach];
+  const fork=at(.49,.65),branch=[[joint.x,joint.y],at(.27,.20),at(.23,.36),fork,at(.79,.71),at(.95,1.04)];
+  line(c,branch,'#ffbd4666',4);line(c,branch,'#ffeb9d',1.7);
+  line(c,[fork,at(.46,.87),at(.61,.93)],'#ffeb9d',.95);
+  electricLight(c,joint.x,joint.y,body*2.5,intensity*.35);
+ }
+ traceChannel(c,points);
+ c.strokeStyle='#e48a2130';c.lineWidth=body*3.35;c.stroke();
+ c.strokeStyle='#ffc14d70';c.lineWidth=body*1.58;c.stroke();
+ electricRibbon(c,route,body*1.14,'#e88a27');
+ electricRibbon(c,route,body,'#ffce57');
+ electricRibbon(c,route,body*.76,'#fff1a8');
+ electricRibbon(c,route,body*.48,'#fffdeb');
+ // A continuous white filament crosses the narrow, sideways cuts in the
+ // ribbon. The brightest section races back from the point of contact.
+ traceChannel(c,points);c.strokeStyle='#fff5c7';c.lineWidth=Math.max(.75,body*.20);c.stroke();
+ if(!gentle&&age<.17){
+  const tip=Math.round((1-clamp((age-.045)/.12))*(points.length-1));
+  traceChannel(c,points.slice(Math.max(0,tip-2),Math.min(points.length,tip+3)));
+  c.strokeStyle='#fffef2';c.lineWidth=Math.max(1.4,body*.42);c.stroke();
  }
  c.restore();
 }
-function electricPulse(age,delay,gentle){
- const t=age-delay;if(t<0||t>.58)return 0;
- if(gentle)return Math.max(0,1-t/.48)*.65;
- const first=Math.exp(-t*7)*clamp(t/.018),echo=t>=.22?Math.exp(-(t-.22)*19)*.43:0;
- return Math.min(1,first+echo);
+function electricFlecks(c,point,age,seed,power,gentle){
+ const progress=clamp(age/.46),count=gentle?2:6;
+ for(let i=0;i<count;i++){
+  const a=electricNoise(seed+i*13)*TAU,speed=(13+electricNoise(seed+i*19+6)*28)*power;
+  const dx=Math.cos(a),dy=Math.sin(a)*.7-.3,travel=gentle?9:4+(1-(1-progress)**2)*speed;
+  const x=point.x+dx*travel,y=point.y+dy*travel+progress*progress*6;
+  const length=(1-progress)*(3+electricNoise(seed+i)*5)*power;
+  c.beginPath();c.moveTo(x+dx*length,y+dy*length);
+  c.lineTo(x-dy*1.2,y+dx*1.2);c.lineTo(x-dx*length*.6,y-dy*length*.6);
+  c.lineTo(x+dy,y-dx);c.closePath();c.fillStyle=i%3?'#fff0a2':'#ffc446';c.fill();
+ }
 }
-function electricImpact(c,point,age,power,seed,gentle){
- if(age<0||age>.72)return;const q=clamp(age/.55),fade=Math.pow(1-q,1.5),x=point.x,y=point.y;
- electricGlow(c,x,y,(16+q*13)*power,fade*.85,true);
- c.save();c.globalCompositeOperation='lighter';c.globalAlpha*=fade;c.lineCap='round';
- if(age<.16){const flash=Math.pow(1-age/.16,2),r=(4+flash*6)*power;
-  line(c,[[x-r*.45,y],[x+r*.45,y]],'#fff9dc',1.2*power);line(c,[[x,y-r],[x,y+r]],'#fffbe6',.8*power);
+function contactGlint(c,x,y,size){
+ // Two unequal lenses catch the light, with a short crosswise flare.
+ c.beginPath();c.moveTo(x-size,y+size*.13);c.lineTo(x-2,y-1);
+ c.lineTo(x+size*.20,y-size*.68);c.lineTo(x+2,y-2);
+ c.lineTo(x+size*.78,y-size*.09);c.lineTo(x+2,y+1);
+ c.lineTo(x-size*.12,y+size*.44);c.lineTo(x-1,y+2);
+ c.closePath();c.fillStyle='#fffbd7';c.fill();
+}
+function electricContact(c,target,point,age,seed,power,gentle){
+ if(age<0||age>.54)return;
+ const fade=clamp(1-age/.54),ground={x:target.x,y:target.y+2};
+ c.save();c.globalAlpha*=fade*(gentle?.85:1);
+ c.globalCompositeOperation='screen';
+ electricLight(c,ground.x,ground.y,(33+12*(1-fade))*power,fade,.31);
+ c.globalCompositeOperation='source-over';
+ const r=(gentle?20:13+15*(1-(1-clamp(age/.30))**2))*power;
+ // A low rim of ionized air hugs the floor. Keep the rear arc broken so the
+ // feet stay planted inside it, and the bolts read on light oak as well as grass.
+ c.beginPath();c.ellipse(ground.x,ground.y,r,r*.26,0,.02,Math.PI*.95);
+ c.strokeStyle='#ffc04a';c.lineWidth=3.1*power*fade+.6;c.stroke();
+ c.strokeStyle='#fff4b6';c.lineWidth=1.35*power*fade+.4;c.stroke();
+ c.beginPath();c.ellipse(ground.x,ground.y,r*.93,r*.23,0,3.7,5.18);
+ c.strokeStyle='#ffdf79';c.lineWidth=1.25*power;c.stroke();
+ // Low angular tongues skim out over the floor in perspective. The airborne
+ // contact uses its own height; the pool of reflected light stays at the feet.
+ for(let side=-1;side<=1;side+=2){
+  const reach=(gentle?18:10+Math.min(1,age/.15)*(14+electricNoise(seed+side)*9))*power;
+  const x=ground.x,y=ground.y,tip=x+side*reach;
+  c.beginPath();c.moveTo(x+side*3,y+1);c.lineTo(x+side*reach*.47,y-1);
+  c.lineTo(x+side*reach*.59,y-10*power);c.lineTo(x+side*reach*.64,y-2);
+  c.lineTo(tip,y-(5+electricNoise(seed+2*side)*10)*power);c.lineTo(x+side*reach*.57,y+1);
+  c.lineTo(x+side*reach*.52,y-1.1);c.closePath();c.fillStyle='#ffe48a';c.fill();
  }
- // Uneven sparks peel away from contact; no radial wheel or full-body flash.
- for(let i=0;i<(gentle?3:7);i++){
-  const a=electricNoise(seed+i*5)*TAU,travel=gentle?5:5+q*(13+electricNoise(seed+i*9)*17),sx=x+Math.cos(a)*travel,sy=y+Math.sin(a)*travel*.8-q*q*5;
-  line(c,[[sx,sy],[sx-Math.cos(a)*(1.5+(1-q)*3),sy-Math.sin(a)*2]],i%3?'#b4edff':'#ffe4a4',i%3?.75:1.1);
- }
- // Small clinging arcs carry the charge onto the body, with the silhouette
- // still readable through their open ends.
- if(age<.4){for(const side of [-1,1]){const a=(gentle?0:age*6)+seed,dx=side*(6+Math.sin(a)*2),arc=[[x+dx,y-9],[x+dx+side*3,y-4],[x+dx-side*2,y+1],[x+dx+side*2,y+7]];c.globalCompositeOperation='source-over';line(c,arc,'#318fb76b',2);c.globalCompositeOperation='lighter';line(c,arc,'#c7f3ff',.65);}}
+ c.globalCompositeOperation='screen';electricLight(c,point.x,point.y,25*power,fade);
+ c.globalCompositeOperation='source-over';
+ if(age<.23)contactGlint(c,point.x,point.y,(9+10*clamp(1-age/.23))*power);
+ electricFlecks(c,point,age,seed,power,gentle);
  c.restore();
 }
-function electricCharge(c,point,age,power,gentle){
- if(age<0||age>.36)return;const alpha=(1-age/.36)*.75;electricGlow(c,point.x,point.y,18*power,alpha);
- c.save();c.globalCompositeOperation='lighter';c.globalAlpha*=alpha;
- const turn=gentle?0:age*7;for(let i=0;i<2;i++){const a=turn+i*Math.PI;c.strokeStyle=i?'#ffe8ad':'#b6edff';c.lineWidth=.9;c.beginPath();c.ellipse(point.x,point.y,6*power,3*power,-.45,a,a+Math.PI*1.25);c.stroke();}c.restore();
+function electricCharge(c,point,age,seed,gentle){
+ if(age<0||age>.32)return;
+ const pulse=clamp(1-age/.32)*(gentle?.56:1);
+ c.save();c.globalAlpha*=pulse;electricLight(c,point.x,point.y,24,pulse);
+ if(!gentle)for(let i=0;i<3;i++){
+  const a=seed+i*2.17,r=5+15*(1-clamp(age/.13)),dx=Math.cos(a),dy=Math.sin(a);
+  line(c,[[point.x+dx*r,point.y+dy*r],[point.x+dx*r*.66-dy*2,point.y+dy*r*.66+dx*2],[point.x+dx*r*.4,point.y+dy*r*.4]],'#ffe28c',1.35);
+ }
+ contactGlint(c,point.x,point.y,8+pulse*4);c.restore();
+}
+function electricZap(c,e,g){
+ if(e.storm||!e.target||e.target.hp<=0)return true;
+ const caster=e.source||e.from;if(!caster)return true;
+ const first=!e.from||e.from===caster||e.from.id!=null&&e.from.id===caster.id;
+ const age=e.max-e.t,gentle=gentleElectric(g),hop=e.hop??(first?0:1);
+ const local=age-(gentle?0:hop*.085),face=caster.toyActionFace??caster.face??0;
+ const hands=first?electricHands(caster,face):[electricPoint(e.from)];
+ const point=electricPoint(e.target),from=hands.reduce((best,p)=>
+  Math.hypot(p.x-point.x,p.y-point.y)<Math.hypot(best.x-point.x,best.y-point.y)?p:best);
+ const seed=(e.target.id||1)*3.17+Math.round((g.time-age)*16);
+ if(first)for(const hand of hands)electricCharge(c,hand,age,seed,gentle);
+ const route=electricRoute(from,point,seed);
+ electricStroke(c,route,local,e.tier?5.9:4.7,gentle);
+ if(e.tier&&!gentle){
+  const split=route.points[3],dx=point.x-from.x,dy=point.y-from.y;
+  const spur={x:split.x+dx*.20+route.nx*16,y:split.y+dy*.20+route.ny*16};
+  electricStroke(c,electricRoute(split,spur,seed+7),local-.015,2.2,false);
+ }
+ electricContact(c,e.target,point,local-(gentle?0:.045),seed,e.tier?1:.82,gentle);
+ return true;
+}
+const stormGroups=new WeakMap();
+function groupThunderTargets(e){
+ let groups=stormGroups.get(e);if(groups)return groups;
+ const targets=(e.targets||[]).filter(Boolean).slice().sort((a,b)=>a.x-b.x||a.y-b.y);
+ // Close enemies share a trunk. Keep the groups for this cast, so units crossing
+ // between animation frames cannot pull a lightning channel across the field.
+ const count=Math.min(3,targets.length);
+ groups=Array.from({length:count},()=>[]);
+ targets.forEach((target,i)=>groups[Math.floor(i*count/targets.length)].push(target));
+ for(const group of groups)group.sort((a,b)=>electricPoint(b).y-electricPoint(a).y);
+ stormGroups.set(e,groups);return groups;
 }
 function thunder(c,e,g){
- const targets=(e.targets||[]).filter(t=>t&&t.hp>0);if(!targets.length)return true;
- const q=clamp(1-e.t/e.max,0,.999),age=e.max-e.t,gentle=gentleElectric(g),frame=gentle?3:Math.min(7,Math.floor(q*8)),width=clamp(Math.max(...targets.map(t=>t.x))-Math.min(...targets.map(t=>t.x))+130,180,440);
- // Keep the raised cloud above every head when a formation runs diagonally;
- // its projected underside must not cover the caster or the nearest target.
- const cloudY=Math.min(e.y-120,...targets.map(t=>electricPoint(t).y-55),e.source?.hp>0?e.source.y-115:Infinity);
- c.save();c.globalAlpha*=clamp((1-q)*4)*clamp(age/.055);
- if(e.source?.hp>0){for(const palm of electricHands(e.source,e.source.toyActionFace??e.source.face??0))electricCharge(c,palm,age,1.3,gentle);}
- if(!sheet(c,cloudArt,frame,e.x,cloudY,width,width*.55)){
-  for(let i=0;i<5;i++)oval(c,e.x+(i-2)*width*.14,cloudY-30-Math.sin(i)*8,width*.22,30,'#718593');
+ const groups=groupThunderTargets(e),targets=groups.flat().filter(t=>t.hp>0);
+ if(!targets.length)return true;
+ const age=e.max-e.t,gentle=gentleElectric(g),q=clamp(age/e.max),xs=targets.map(t=>t.x);
+ const width=clamp(Math.max(...xs)-Math.min(...xs)+130,190,420);
+ const cloudY=Math.min(e.y-95,...targets.map(t=>electricPoint(t).y-36),e.source?.hp>0?e.source.y-91:Infinity);
+ const height=width*.75,cloudX=e.x,base=cloudY-height*.24;
+ const frame=gentle?3:Math.min(7,Math.floor(q*8));
+ const castSeed=(e.source?.id||1)*11+Math.round((g.time-age)*16);
+ const sockets=[];
+ c.save();c.globalAlpha*=clamp(age/.06)*clamp((1-q)*4.2);
+ // The cloud dims only its footprint; contact light then plays against both
+ // the floor texture and the toys without a full-screen flash.
+ c.save();c.translate(cloudX,e.y-14);c.scale(1,.74);
+ const radius=width*.72,shade=c.createRadialGradient(0,0,radius*.10,0,0,radius);
+ shade.addColorStop(0,'#45364945');shade.addColorStop(.65,'#51405c26');shade.addColorStop(1,'#51405c00');
+ c.fillStyle=shade;c.fillRect(-radius,-radius,radius*2,radius*2);c.restore();
+ if(e.source?.hp>0)for(const p of electricHands(e.source,e.source.toyActionFace??e.source.face??0)){
+  electricCharge(c,p,age,castSeed,gentle);
  }
- for(const [i,t]of targets.entries()){
-  const point=electricPoint(t),seed=(t.id||i+1)*3.17,delay=gentle?.02:.018+i*.014,local=age-delay,alpha=electricPulse(age,delay,gentle),power=i===0?1.35:1;
-  const from={x:clamp(point.x+(electricNoise(seed)-.5)*24,e.x-width*.34,e.x+width*.34),y:cloudY-width*.13};
-  electricGlow(c,from.x,from.y,23,alpha*.30);
-  electricBolt(c,from,point,seed,local,power,alpha,gentle);
-  electricImpact(c,point,local,power,seed,gentle);
-  // A faint broken ground arc makes the contact legible without covering feet.
-  if(local>=0&&local<.46){const r=10+clamp(local/.46)*18;c.save();c.globalAlpha*=(1-local/.46)*.36;c.strokeStyle='#8dd8ef';c.lineWidth=.8;for(let j=0;j<2;j++){c.beginPath();c.ellipse(t.x,t.y+2,r,r*.3,0,j*Math.PI+.3,j*Math.PI+2.1);c.stroke();}c.restore();}
+ for(const [i,group] of groups.entries()){
+  const living=group.filter(t=>t.hp>0);if(!living.length)continue;
+  const lead=living[0],point=electricPoint(lead),seed=castSeed+(lead.id||i+1)*3.17;
+  const lane=(i+.5)/groups.length-.5;
+  // Put the three contact patches on separate lobes. Start each trunk inside
+  // the cloud and paint the cloud over it to hide a disconnected blunt cap.
+  const root={x:cloudX+lane*width*.84+(electricNoise(seed)-.5)*width*.055,
+   y:base+Math.abs(lane)*height*.045};
+  const route=electricRoute(root,point,seed),local=age-(gentle?.04:.055+i*.085);
+  const body=i===Math.floor(groups.length/2)?11:8.7;
+  const lit=lightningStrength(local,gentle);
+  sockets.push({x:root.x,y:root.y+3,lit});
+  for(const [j,t] of living.slice(1).entries()){
+   const end=electricPoint(t),portion=clamp((end.y-root.y-30)/(point.y-root.y||1),.18,.73);
+   const split=route.points[Math.min(6,Math.max(1,Math.round(portion*(route.points.length-1))))];
+   const branchSeed=seed+17*(j+1),branchAge=local-(gentle?0:.018+j*.012);
+   electricStroke(c,electricRoute(split,end,branchSeed),branchAge,4.6,gentle);
+   electricContact(c,t,end,branchAge-(gentle?0:.045),branchSeed,.98,gentle);
+  }
+  electricStroke(c,route,local,body,gentle);
+  electricContact(c,lead,point,local-(gentle?0:.045),seed,1.22,gentle);
  }
- label(c,'람쥐 썬더!',e.x,cloudY-width*.42,'#d8f5ff');c.restore();return true;
+ if(!sheet(c,cloudArt,frame,cloudX,cloudY,width,height)){
+  for(let i=0;i<5;i++)oval(c,cloudX+(i-2)*width*.14,base-11-Math.sin(i)*7,width*.19,22,'#677284');
+ }
+ for(const {x,y,lit} of sockets)electricLight(c,x,y,width*.16,lit*.87,.39);
+ label(c,'람쥐 썬더!',cloudX,cloudY-height*.67-7,'#ffeaa0');
+ c.restore();return true;
 }
 function waterMuzzle(source,face){
  const asset=artAssets.get(turtleArt.file),pose=motion.get(source);
@@ -331,10 +496,11 @@ function event(c,e,g){
  if(e.kind==='toyWaterCarry')return waterCarry(c,e,g);
  if(e.kind==='toyDrumBoost')return drumBoost(c,e);
  if(e.kind==='toyThunder')return thunder(c,e,g);
- if(!['toyWater','toyZap','toyDecoyDrop'].includes(e.kind))return false;
+ if(e.kind==='toyZap')return electricZap(c,e,g);
+ if(!['toyWater','toyDecoyDrop'].includes(e.kind))return false;
  const k=clamp(e.t/e.max,0,1),face=e.angle??e.source?.toyActionFace??e.source?.face??0,from=e.from||e.source;
- const nozzle=e.kind==='toyWater'&&from?waterMuzzle(from,face):e.kind==='toyZap'&&from===e.source&&from?{x:from.x+Math.cos(face)*14,y:from.y-34+Math.sin(face)*6}:null;
- const x=nozzle?.x??from?.x??e.x,y=nozzle?.y??((from?.y??e.y)+(e.kind==='toyZap'?(from===e.source?-70:-22):-35)),t=e.target,tx=t?.x??e.tx??e.x,ty=(t?.y??e.ty??e.y)-(t?.visualFlightHeight??0)-22;
+ const nozzle=e.kind==='toyWater'&&from?waterMuzzle(from,face):null;
+ const x=nozzle?.x??from?.x??e.x,y=nozzle?.y??((from?.y??e.y)-35),t=e.target,tx=t?.x??e.tx??e.x,ty=(t?.y??e.ty??e.y)-(t?.visualFlightHeight??0)-22;
  c.save();c.globalAlpha=k;
  if(e.kind==='toyWater'){
   if(e.tier!==2){
@@ -342,12 +508,6 @@ function event(c,e,g){
    for(let i=0;i<8;i++){const q=((1-k)*2+i/8)%1,dx=x+(tx-x)*q+Math.sin(i*2.4)*6,dy=y+(ty-y)*q-Math.sin(q*Math.PI)*12;oval(c,dx,dy,2.2,1.4,'#c4f8ff');}
   }
   oval(c,tx,ty,14*(1-k)+4,8,'#9beaf122','#c9faff');for(let i=0;i<8;i++){const a=i*TAU/8,r=(1-k)*32;oval(c,tx+Math.cos(a)*r,ty+Math.sin(a)*r*.5,2,1.3,'#c9faff');}
- }else if(e.kind==='toyZap'){
-  // The storm owns its eight contact flashes; don't draw a second zap on top.
-  if(!e.storm&&t?.hp>0){
-   const age=e.max-e.t,gentle=gentleElectric(g),seed=(t.id||1)*3.17,delay=gentle?0:e.from===e.source?0:.035,point=electricPoint(t),hands=e.from===e.source?electricHands(e.source,face):[electricPoint(e.from||e.source)],from=hands.reduce((best,p)=>Math.hypot(p.x-point.x,p.y-point.y)<Math.hypot(best.x-point.x,best.y-point.y)?p:best),alpha=electricPulse(age,delay,gentle),power=e.tier?1.1:.9;
-   for(const palm of hands)electricCharge(c,palm,age-delay,power,gentle);electricBolt(c,from,point,seed,age-delay,power,alpha,gentle);electricImpact(c,point,age-delay,power,seed,gentle);
-  }
  }else{
   const progress=clamp((e.max-e.t)/.35),lx=x+(e.x-x)*progress,ly=y+(e.y-y)*progress-Math.sin(progress*Math.PI)*65;
   c.beginPath();c.moveTo(x,y-15);c.quadraticCurveTo((x+lx)/2,Math.min(y,ly)-20,lx,ly);c.strokeStyle='#fff2c4cc';c.lineWidth=.9;c.stroke();
