@@ -12,7 +12,7 @@ test('eligible minutes preview the next main boss once and exclude main-boss min
 });
 test('all mini bosses have exactly thirty percent of main-boss HP and attack damage at the same time and keep pattern timing',()=>{
  const g=scene();for(const minute of [3,5,7,9,11,13]){g.units=g.units.filter(u=>u.team===0);g.time=minute*60;g.updateRoomMiniBosses();const u=minis(g)[0],full={...u,miniBoss:false},small=g.stats(u),large=g.stats(full);near(small.hp,large.hp*.3);near(u.maxHp,small.hp);near(small.damage,large.damage*.3);near(small.rate,large.rate);near(small.speed,large.speed);near(small.defense,large.defense);}
- a.equal(config.combat.bossHpScale,1.35);
+ a.equal(config.combat.bossHpScale,1.485);
 });
 test('mini kills give ordinary resources without extra upgrade cards, boss kills, or main-boss delays',()=>{
  const g=scene();g.time=180;g.updateRoomMiniBosses();a.ok(g.objective().progress.includes('자원·경험치'));a.ok(!g.objective().progress.includes('추가 강화'));const u=minis(g)[0],before={...g.bossState},ready=g.roomCampaign.bossReadyAt,recovery=g.roomCampaign.recoveryUntil,cash=g.cash[0];g.damage(u,1e9,g.commander(0));a.equal(u.hp,0);a.deepEqual(g.bossState,before);a.equal(g.roomCampaign.bossReadyAt,ready);a.equal(g.roomCampaign.recoveryUntil,recovery);a.ok(g.cash[0]>cash);a.equal(g.kills,1);

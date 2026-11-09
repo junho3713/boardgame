@@ -207,7 +207,13 @@ class FrontEffects{
    if(e.kind==='bossSlashWarn'){ctx.translate(e.x,e.y);ctx.rotate(e.angle);ctx.beginPath();ctx.moveTo(0,0);ctx.arc(0,0,e.range,-e.arc/2,e.arc/2);ctx.closePath();ctx.fill();ctx.stroke();}
    else{ctx.beginPath();ctx.ellipse(e.x,e.y,e.radius,e.radius*.8,0,0,TAU);ctx.fill();ctx.stroke();ctx.beginPath();ctx.ellipse(e.x,e.y,e.radius*p,e.radius*.8*p,0,0,TAU);ctx.stroke();ctx.fillStyle='#ffddd1';ctx.font='700 12px sans-serif';ctx.textAlign='center';ctx.fillText(e.kind==='bossDiveWarn'?'맹독 급강하':'후열 포격',e.x,e.y-e.radius-9);}
   }else if(e.kind==='bossGroggy'){
-   const u=e.target;if(u?.hp>0){ctx.strokeStyle='#ffdb86';ctx.fillStyle='#ffe6a0';ctx.font='700 11px sans-serif';ctx.textAlign='center';ctx.fillText('그로기 · 받는 피해 +'+(e.bonus??30)+'%',u.x,u.y-104);for(let i=0;i<3;i++){const a=i*TAU/3+this.time*2;ctx.beginPath();ctx.arc(u.x+Math.cos(a)*25,u.y-86+Math.sin(a)*8,3,0,TAU);ctx.fill();}}
+   const u=e.target,until=e.stun?u?.toyStunUntil:u?.groggyUntil;
+   if(u?.hp>0&&this.time<(until??Infinity)){
+    const height=e.stun?(u.visualFlightHeight||0)+(u.boss?86:['tank','crimsonAce','guntruck','lucky'].includes(u.type)?54:['ant','soldierAnt','beetle','bruteBeetle'].includes(u.type)?38:68):86,cy=u.y-height;
+    ctx.globalAlpha=Math.min(1,e.t*7);ctx.strokeStyle='#b7812a';ctx.fillStyle='#ffe390';ctx.lineWidth=1.1;ctx.font='700 11px sans-serif';ctx.textAlign='center';ctx.strokeText(e.stun?'기절':'그로기 · 받는 피해 +'+(e.bonus??30)+'%',u.x,cy-18);ctx.fillText(e.stun?'기절':'그로기 · 받는 피해 +'+(e.bonus??30)+'%',u.x,cy-18);
+    ctx.beginPath();ctx.ellipse(u.x,cy,22,7,0,0,TAU);ctx.stroke();
+    for(let i=0;i<3;i++){const a=i*TAU/3+this.time*5,x=u.x+Math.cos(a)*22,y=cy+Math.sin(a)*7,r=4.5;ctx.beginPath();for(let j=0;j<10;j++){const b=-Math.PI/2+j*Math.PI/5,d=j%2?r*.43:r;if(j)ctx.lineTo(x+Math.cos(b)*d,y+Math.sin(b)*d);else ctx.moveTo(x+Math.cos(b)*d,y+Math.sin(b)*d);}ctx.closePath();ctx.fill();ctx.stroke();}
+   }
   }else if(e.kind==='butterflyWarn'){
    ctx.translate(e.x,e.y);ctx.rotate(e.angle||0);ctx.scale(1,.85);ctx.globalAlpha=.12+.16*p;ctx.fillStyle='#d3a7ff';ctx.strokeStyle='#ead6ff';ctx.lineWidth=1.4;ctx.setLineDash([5,7]);ctx.beginPath();ctx.moveTo(12,0);ctx.arc(0,0,e.range,-e.arc/2,e.arc/2);ctx.closePath();ctx.fill();ctx.stroke();
   }else if(e.kind==='butterflyWind'){

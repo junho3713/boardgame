@@ -60,7 +60,7 @@ test('allied 777 speed scales with distance while enemy jackpots and missile bui
 
 test('a close boss-killer hovers for one second then flies for 0.28 seconds and applies its existing damage exactly once',()=>{
  const {g,source,target}=scene(10);g.castLucky(source,'bossKiller');const shot=g.shots[0],hp=target.hp;
- near(shot.guidedFlight.duration,.28);near(shot.damage,6000*g.luckyScale(source));
+ near(shot.guidedFlight.duration,.28);near(shot.damage,5000*g.luckyScale(source));
  const expected=shot.damage*100/(100+g.stats(target).defense*.35),impact=g.impact;let calls=0;
  g.impact=function(p){if(p===shot)calls++;return impact.call(this,p);};
  for(let frame=0;frame<19;frame++){g.update(.05);a.ok(g.shots.includes(shot),'close projectile vanished before the minimum flight');a.equal(target.hp,hp);}

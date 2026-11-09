@@ -36,7 +36,7 @@ test('new elite waves gain bounded HP without extra damage or changing existing 
 test('the actual weighted spawner increases melee elite share without multiplying mage escort groups',()=>{
  function run(enabled){const before=pacing.enabled;pacing.enabled=enabled;try{const g=scene();g.time=780;g.roomBeat=()=>({density:1,name:'test'});g.northernSpawn=()=>({x:1500,y:6200});g.roomCanSpawnMageGroup=()=>false;g.roomCampaign.tankScheduleVersion=170;g.roomCampaign.tanksDone=config.tanks.map(()=>true);let seed=12345,elite=0,total=0;
   g.random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
-  for(let wave=0;wave<400;wave++){g.units=g.units.filter(u=>u.team===0);g.roomCampaign.nextSpawnAt=0;g.updateRoomWaves();const spawned=g.units.filter(u=>u.team!==0&&u.roomWave);a.ok(spawned.length<=g.roomWavePlan().count);total+=spawned.length;elite+=spawned.filter(u=>pacing.eliteTypes.includes(u.type)).length;}
+  for(let wave=0;wave<400;wave++){g.units=g.units.filter(u=>u.team===0);g.roomCampaign.nextSpawnAt=0;g.updateRoomWaves();const spawned=g.units.filter(u=>u.team!==0&&u.roomWave&&!u.weakReinforcement);a.ok(spawned.length<=g.roomWavePlan().count);total+=spawned.length;elite+=spawned.filter(u=>pacing.eliteTypes.includes(u.type)).length;}
   return{elite,total};}finally{pacing.enabled=before;}}
  const old=run(false),now=run(true);a.equal(now.total,old.total);a.ok(now.elite>old.elite*1.08,JSON.stringify({old,now}));
 });

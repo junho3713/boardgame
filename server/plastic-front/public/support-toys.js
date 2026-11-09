@@ -217,6 +217,7 @@ function install({FrontGame:Game,TYPES}){
    u.face=Math.atan2(targets[0].y-u.y,targets[0].x-u.x);
    for(const t of targets){
     t.toyStunUntil=this.time+rules.electric.duration;t.toyControlReadyAt=t.toyStunUntil+rules.controlResistance;t.sniperAim=t.bayonetAttack=null;
+    this.effects.push({kind:'bossGroggy',stun:true,target:t,x:t.x,y:t.y,t:rules.electric.duration,max:rules.electric.duration,team:0});
     this.effects.push({kind:'toyZap',x:previous.x,y:previous.y,from:previous,target:t,source:u,tier,storm:tier===2,t:1,max:1,team:0});previous=t;
    }
    if(tier===2){

@@ -35,7 +35,8 @@ test('mortar escorts follow a moving mage, continue their own pursuit after her 
 });
 test('a five-unit escort group consumes future wave slots rather than multiplying regular wave counts',()=>{
  const g=scene();g.time=360;g.units=[];g.northernSpawn=()=>({x:1500,y:6000});g.random=()=>0;g.roomWavePlan=()=>({count:3,interval:1,forced:[],surge:false});g.roomPhase=()=>({at:360,name:'test',cap:100,mix:{blizzardMage:1,ant:1}});g.updateRoomScheduledTanks=()=>{};
- let groups=0;
+ // Isolate escort slot debt; basic reinforcement cadence has its own regression test.
+ g.addRoomWeakReinforcements=()=>{};let groups=0;
  for(let i=0;i<60;i++){g.units=[];g.roomCampaign.nextSpawnAt=g.time;const before=g.roomCampaign.spawned;g.updateRoomWaves();const added=g.roomCampaign.spawned-before;if(g.units.some(u=>u.mobileMage)){a.equal(added,5);groups++;}else a.ok(added<=3);g.time+=1;}
  a.equal(g.roomCampaign.spawned,180);a.equal(groups,1);a.equal(g.roomCampaign.waveSpawnDebt,0);
 });

@@ -60,7 +60,7 @@ test('boss-killer odds consume only blank probability, preserve 777, and require
 });
 test('boss-killer is a separate single-boss projectile, uses existing Lucky scale, and falls back if the boss leaves',()=>{
  const g=scene(),u=actor(g,'lucky'),boss=enemy(g,1300,6000,'tank');boss.boss=true;const crowd=enemy(g,1301,6000),hp=crowd.hp;
- g.castLucky(u,'bossKiller');a.equal(g.shots.length,1);const b=g.shots[0];a.equal(b.kind,'bossKiller');near(b.damage,6000*g.luckyScale(u));const before=boss.hp;g.impact(b);a.ok(boss.hp<before);a.equal(crowd.hp,hp);a.equal(g.luckySalvos.length,0);
+ g.castLucky(u,'bossKiller');a.equal(g.shots.length,1);const b=g.shots[0];a.equal(b.kind,'bossKiller');near(b.damage,5000*g.luckyScale(u));const before=boss.hp;g.impact(b);a.ok(boss.hp<before);a.equal(crowd.hp,hp);a.equal(g.luckySalvos.length,0);
  boss.hp=0;g.random=()=>.99;g.castLucky(u,'bossKiller');a.equal(g.shots.length,1);a.equal(g.luckySalvos.length,0);
 });
 test('boss-killer ignores 65% of boss defense through ordinary damage handling in solo and co-op',()=>{
@@ -68,8 +68,8 @@ test('boss-killer ignores 65% of boss defense through ordinary damage handling i
   const g=scene(coop),owner=coop?1:0,u=actor(g,'lucky',1000,6000,owner),boss=enemy(g,1300,6000,type);u.star=star;boss.boss=true;
   if(coop)g.withOwner(owner,()=>{g.tech[0].lucky=4;g.abilities.damage=2;});else{g.tech[0].lucky=4;g.abilities.damage=2;}
   const scale=coop?g.withOwner(owner,()=>g.luckyScale(u)):g.luckyScale(u),defense=g.stats(boss).defense;
-  const before=boss.hp;g.castLucky(u,'bossKiller');const missile=g.shots.at(-1);near(missile.damage,6000*scale);g.impact(missile);
-  near(before-boss.hp,6000*scale*100/(100+defense*.35));near(g.defenseFactor(boss,u),100/(100+defense));
+  const before=boss.hp;g.castLucky(u,'bossKiller');const missile=g.shots.at(-1);near(missile.damage,5000*scale);g.impact(missile);
+  near(before-boss.hp,5000*scale*100/(100+defense*.35));near(g.defenseFactor(boss,u),100/(100+defense));
   a.equal(missile.source,u);a.ok(g.effects.some(e=>e.kind==='hit'));
   const ordinary=g.addUnit(0,'rifle',1000,6000),hp=boss.hp;g.impact(g.fireUnitProjectiles(ordinary,boss,{damage:100},g.stats(ordinary))[0]);
   near(hp-boss.hp,100*(type==='rifle'?1:.8)*100/(100+defense));
