@@ -886,7 +886,7 @@ class FrontGame{
   const radius=roomGuard?ROOM_CAMPAIGN.config.fortifications.engage:u.assault?650:265,protect=u.team!==0?this.buildings.filter(b=>b.hp>0&&this.targetDistance(u,b)<radius):[];
   const troops=hqDefense?this.alive(0).filter(a=>dist(a,this.bases[1])<1250):u.assault?this.alive(0):this.units.filter(a=>dist(u,a)<radius);
   const candidates=[...troops,...protect,...((TYPES[u.type]?.stab||this.isDesktopDefense())&&u.team!==0&&dist(u,this.bases[0])<radius?[this.bases[0]]:[])].filter(a=>this.canTarget(u,a));
-  const target=candidates.sort((a,b)=>this.targetDistance(u,a)-this.targetDistance(u,b))[0];
+  const target=this.supportDecoyTarget?.(u)||candidates.sort((a,b)=>this.targetDistance(u,a)-this.targetDistance(u,b))[0];
   return target?(this.screeningUnit(u,target)||target):this.isDesktopDefense()&&u.team!==0?this.bases[0]:{x:u.homeX,y:u.homeY};
  }
  pursuitPoint(u,target){
@@ -1725,7 +1725,7 @@ class FrontGame{
   }
   if(this.time<(u.bikeRecoverUntil||0))return;
   const candidates=[...this.alive(0),...this.buildings.filter(b=>b.hp>0),this.bases[0]].filter(t=>this.canTarget(u,t));
-  const target=candidates.sort((a,b)=>this.targetDistance(u,a)-this.targetDistance(u,b))[0];
+  const target=this.supportDecoyTarget?.(u)||candidates.sort((a,b)=>this.targetDistance(u,a)-this.targetDistance(u,b))[0];
   if(!target)return;
   const goal=this.pursuitPoint(u,target);
   if(u.cooldown<=0){

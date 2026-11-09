@@ -312,16 +312,16 @@ const methods={
  },
  updateBossSlash(u,p){
   const a=u.bossAction;if(a){if(this.time<a.hitAt)return true;u.bossAction=null;u.bayonetAttack=null;u.bayonetThrustUntil=this.time+.2;u.bayonetRecoverUntil=this.time+.4;
-   for(const t of [...this.alive(0),...this.buildings.filter(b=>b.hp>0)]){const angle=Math.atan2(t.y-u.y,t.x-u.x),delta=Math.abs(Math.atan2(Math.sin(angle-a.angle),Math.cos(angle-a.angle)));if(this.canTarget(u,t)&&this.targetDistance(u,t)<=p.range&&delta<=p.arc/2&&this.lineClear(u,t,0,{fireTeam:u.team}))this.damage(t,this.attackRoll(u).damage,u);}
+   for(const t of [...this.alive(0),...this.units.filter(t=>t.type==='toyDecoy'&&t.hp>0),...this.buildings.filter(b=>b.hp>0)]){const angle=Math.atan2(t.y-u.y,t.x-u.x),delta=Math.abs(Math.atan2(Math.sin(angle-a.angle),Math.cos(angle-a.angle)));if(this.canTarget(u,t)&&this.targetDistance(u,t)<=p.range&&delta<=p.arc/2&&this.lineClear(u,t,0,{fireTeam:u.team}))this.damage(t,this.attackRoll(u).damage,u);}
    this.effects.push({kind:'bladeSlash',x:u.x,y:u.y,angle:a.angle,range:p.range,t:.3,max:.3,team:u.team});this.notify('fire',u);return true;
   }
   if(this.time<(u.bayonetRecoverUntil||0))return true;
-  const target=this.alive(0).filter(t=>this.canTarget(u,t)&&this.targetDistance(u,t)<=p.range&&this.lineClear(u,t,0,{fireTeam:u.team})).sort((a,b)=>d(u,a)-d(u,b))[0];
+  const target=(this.supportDecoyTarget?.(u)?[this.supportDecoyTarget(u)]:this.alive(0)).filter(t=>this.canTarget(u,t)&&this.targetDistance(u,t)<=p.range&&this.lineClear(u,t,0,{fireTeam:u.team})).sort((a,b)=>d(u,a)-d(u,b))[0];
   if(!target||u.cooldown>0)return false;u.face=u.aimFace=Math.atan2(target.y-u.y,target.x-u.x);u.cooldown=this.stats(u).rate;u.bossAction={angle:u.face,hitAt:this.time+p.windup};u.bayonetAttack={angle:u.face,target,startedAt:this.time,hitAt:u.bossAction.hitAt};this.effects.push({kind:'bossSlashWarn',source:u,x:u.x,y:u.y,angle:u.face,range:p.range,arc:p.arc,t:p.windup,max:p.windup,team:u.team});return true;
  },
  updateVenomDive(u,p){
   let a=u.bossAction;
-  if(!a){if(this.time<(u.nextBossSkillAt||0))return false;const t=this.alive(0).filter(t=>this.canTarget(u,t)&&d(u,t)<=420).sort((a,b)=>d(u,a)-d(u,b))[0];if(!t)return false;a=u.bossAction={phase:'rise',started:this.time,until:this.time+p.rise,target:t,x:t.x,y:t.y,fromX:u.x,fromY:u.y};u.flightStrikeUntil=this.time+p.rise+p.warning+p.descent;return true;}
+  if(!a){if(this.time<(u.nextBossSkillAt||0))return false;const t=(this.supportDecoyTarget?.(u)?[this.supportDecoyTarget(u)]:this.alive(0)).filter(t=>this.canTarget(u,t)&&d(u,t)<=420).sort((a,b)=>d(u,a)-d(u,b))[0];if(!t)return false;a=u.bossAction={phase:'rise',started:this.time,until:this.time+p.rise,target:t,x:t.x,y:t.y,fromX:u.x,fromY:u.y};u.flightStrikeUntil=this.time+p.rise+p.warning+p.descent;return true;}
   if(a.phase==='rise'&&this.time>=a.until){a.phase='high';a.started=this.time;a.until=this.time+p.warning;this.effects.push({kind:'bossDiveWarn',source:u,x:a.x,y:a.y,radius:38,t:p.warning,max:p.warning,team:u.team});}
   else if(a.phase==='high'&&this.time>=a.until){a.phase='dive';a.started=this.time;a.until=this.time+p.descent;u.flightStrikeUntil=this.time+p.descent+.2;}
   else if(a.phase==='dive'){
@@ -340,7 +340,7 @@ const methods={
    for(const target of a.targets||[a])this.mortarShells.push({kind:'bossShell',damageType:'tank',x:target.x,y:target.y,fromX:u.x,fromY:u.y,radius:p.radius,landAt:this.time+.25,delay:.25,source:u,team:u.team,damage:this.stats(u).damage*p.damage*(u.boss?(p.bossDamageMultiplier??1):1),critical:false});u.recoil=.3;this.notify('fire',u);return;
   }
   if(this.time<(u.nextBossSkillAt||0))return;
-  const candidates=this.alive(0).filter(t=>this.canTarget(u,t)&&d(u,t)<=p.range);if(!candidates.length)return;
+  const candidates=(this.supportDecoyTarget?.(u)?[this.supportDecoyTarget(u)]:this.alive(0)).filter(t=>this.canTarget(u,t)&&d(u,t)<=p.range);if(!candidates.length)return;
   candidates.sort((a,b)=>Number(['medic','sniper','mortar'].includes(b.type))-Number(['medic','sniper','mortar'].includes(a.type))||d(u,b)-d(u,a));const t=candidates[0],targets=[{x:t.x,y:t.y}],spacing=p.spacing||p.radius*2+20,count=p.shots||1;
   const add=point=>{if(targets.length<count&&targets.every(v=>d(v,point)>=spacing-1e-6))targets.push({x:point.x,y:point.y});};
   for(const candidate of candidates.slice(1))add(candidate);

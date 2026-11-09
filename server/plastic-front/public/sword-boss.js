@@ -43,7 +43,7 @@ class Trial extends Game{
  checkSwordPhase(b){const st=b.swords;if(st.phase!==1||b.hp>b.maxHp*.5)return;st.phase=2;st.phaseChanges++;st.phaseAt=this.time;st.pending=null;st.nextAttackAt=this.time+this.trialConfig.phaseWarning;for(const s of st.blades){s.mode='attack';s.action={stage:'return',started:this.time,from:{x:s.x,y:s.y,z:s.z||0},duration:this.trialConfig.returnTime};}this.notify('toast','각성 · 눈을 뜹니다! 모든 실드 해제 · 검4개 공격');}
  setSwordModes(modes){const b=this.trialBoss,st=b.swords;if(st.phase===2)return;st.pending={modes:[...modes],commitAt:this.time+this.trialConfig.modeWarning};st.nextAttackAt=st.pending.commitAt+.5;this.notify('toast','공수 전환 예고 · 파란 방향 방어 / 빨간 방향 개방');}
  startSwordPattern(name){
-  const b=this.trialBoss,st=b.swords,allies=this.alive(0);if(!allies.length||!PATTERNS.includes(name))return false;
+  const b=this.trialBoss,st=b.swords,allies=this.supportDecoyTarget?.(b)?[this.supportDecoyTarget(b)]:this.alive(0);if(!allies.length||!PATTERNS.includes(name))return false;
   const red=st.blades.filter(s=>s.mode==='attack'&&!s.action);if(!red.length)return false;
   const cfg=this.trialConfig[name],rear=[...allies].sort((a,c)=>Number(['medic','sniper','mortar'].includes(c.type))-Number(['medic','sniper','mortar'].includes(a.type))||Math.hypot(c.x-b.x,c.y-b.y)-Math.hypot(a.x-b.x,a.y-b.y));
   const leader=this.commander(0),center={x:allies.reduce((n,u)=>n+u.x,0)/allies.length,y:allies.reduce((n,u)=>n+u.y,0)/allies.length};const v=this.trialViewport||{left:center.x-900,right:center.x+900,top:center.y-650,bottom:center.y+650};st.currentPattern=name;st.commandAt=this.time;st.commandFireAt=this.time+cfg.warn;st.volleyHits={};st.volleySerial=(st.volleySerial||0)+1;st.patternsUsed[name]=(st.patternsUsed[name]||0)+1;
@@ -74,7 +74,7 @@ class Trial extends Game{
     const t=clamp((this.time-a.fireAt)/a.duration,0,1),old={x:s.x,y:s.y};s.x=mix(a.start.x,a.end.x,t);s.y=mix(a.start.y,a.end.y,t);s.z=['drop','rear'].includes(a.pattern)?260*(1-t*t*t):0;
     if(a.pattern==='spin')s.angle=Math.atan2(a.end.y-a.start.y,a.end.x-a.start.x)+(this.time-a.fireAt)*TAU*(cfg.spin.turnsPerSecond||6);
     const impact=!['drop','rear'].includes(a.pattern)||t>=1;
-    if(impact)for(const u of this.alive(0)){if(a.hits.includes(u.id))continue;const r=a.radius+(Types[u.type]?.r||12),d=['drop','rear'].includes(a.pattern)?Math.hypot(u.x-a.end.x,u.y-a.end.y):segmentDistance(u,old,s);if(d<=r){a.hits.push(u.id);const counts=st.volleyHits||(st.volleyHits={}),hits=counts[u.id]||0;counts[u.id]=hits+1;const ratio=hits?cfg.overlapHitRatio:cfg.firstHitRatio;this.damage(u,u.maxHp*ratio/Math.max(.0001,this.defenseFactor(u,b)),b);}}
+    if(impact)for(const u of [...this.alive(0),...this.units.filter(t=>t.type==='toyDecoy'&&t.hp>0)]){if(a.hits.includes(u.id))continue;const r=a.radius+(Types[u.type]?.r||12),d=['drop','rear'].includes(a.pattern)?Math.hypot(u.x-a.end.x,u.y-a.end.y):segmentDistance(u,old,s);if(d<=r){a.hits.push(u.id);const counts=st.volleyHits||(st.volleyHits={}),hits=counts[u.id]||0;counts[u.id]=hits+1;const ratio=hits?cfg.overlapHitRatio:cfg.firstHitRatio;this.damage(u,u.maxHp*ratio/Math.max(.0001,this.defenseFactor(u,b)),b);}}
     if(t>=1){this.trialStats.attacks++;a.stage='hold';a.impactAt=this.time;a.holdUntil=this.time+(['drop','rear'].includes(a.pattern)?.48:.25);}
    }
    if(a.stage==='hold'&&this.time>=a.holdUntil){a.stage='return';a.started=this.time;a.from={x:s.x,y:s.y,z:s.z,angle:s.angle};a.duration=cfg.returnTime;}
