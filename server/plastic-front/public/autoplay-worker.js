@@ -1,4 +1,4 @@
-importScripts('waves-survival.js?v=178','waves-defense.js?v=178','room-campaign.js?v=20261108-midpace2','engine.js?v=20261109-ultfx2','evolution-combat.js?v=20261109-toys2','field-supplies.js?v=20261109-toys2','support-toys.js?v=20261109-toys2','evolution-links.js?v=20261108-midpace2','sword-boss.js?v=20261108-midpace2','two-star.js?v=20261108-midpace2','autoplay.js?v=20261109-toys2');
+importScripts('waves-survival.js?v=178','waves-defense.js?v=178','room-campaign.js?v=20261108-midpace2','engine.js?v=20261109-ultfx2','evolution-combat.js?v=20261109-toys2','field-supplies.js?v=20261109-toys2','support-toys.js?v=20261109-toyprocs1','evolution-links.js?v=20261108-midpace2','sword-boss.js?v=20261108-midpace2','two-star.js?v=20261108-midpace2','autoplay.js?v=20261109-toys2');
 let operation=0;
 self.onmessage=e=>{
  const id=++operation;let p,done=0,total=Math.min(86400,Math.max(0,Number(e.data.seconds)||0)),lastReport=0;

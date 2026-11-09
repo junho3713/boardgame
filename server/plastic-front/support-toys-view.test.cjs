@@ -35,7 +35,7 @@ function harness(){
 }
 
 test('rabbit art is requested on first drum draw, shared, and safely falls back after a load failure',()=>{
- const h=harness();h.view.draw(h.ctx,{...h.unit,type:'toyTurtle'},h.game);assert.equal(h.images.length,0);
+ const h=harness();h.view.draw(h.ctx,{...h.unit,type:'toyDecoy',toyExpires:20},h.game);assert.equal(h.images.length,0);
  h.draw();assert.equal(h.images.length,1);assert.equal(h.draws.length,0);
  assert.equal(h.images[0].src,'assets/support-toys/drum-rabbit-v20261109.webp');
  h.images[0].fail();for(let i=0;i<8;i++){h.game.time+=.05;h.draw();}
@@ -51,7 +51,7 @@ test('eight directions select the matching rabbit view and preserve a planted fo
  for(let direction=0;direction<8;direction++){
   h.unit.face=Math.PI/2+direction*Math.PI/4;h.game.time+=.05;h.transforms.length=0;h.draw();
   const pose=h.view.motionPose(h.unit),tile=h.draws.at(-1);
-  assert.equal(pose.drumDirection,direction);assert.equal(tile[1],rows[direction]*229);
+  assert.equal(pose.spriteDirection,direction);assert.equal(tile[1],rows[direction]*229);
   assert.equal(tile[2],229);assert.equal(tile[3],229);
   assert.equal(tile[6],78);assert.equal(tile[7],78);
   assert.ok(tile[5]<-70&&tile[5]>-78);
@@ -60,15 +60,15 @@ test('eight directions select the matching rabbit view and preserve a planted fo
 });
 
 test('rabbit stride follows actual travel while idle, pause, rewind and repair use stable poses',()=>{
- const h=harness();h.draw();h.images[0].load();h.draw();assert.ok(h.view.motionPose(h.unit).drumFrame>=4);
+ const h=harness();h.draw();h.images[0].load();h.draw();assert.ok(h.view.motionPose(h.unit).spriteFrame>=4);
  const phases=[];
- for(let i=0;i<7;i++){h.unit.x+=8;h.game.time+=.05;h.draw();const pose=h.view.motionPose(h.unit);phases.push(pose.phase);assert.equal(pose.walking,true);assert.ok(pose.drumFrame<4);}
+ for(let i=0;i<7;i++){h.unit.x+=8;h.game.time+=.05;h.draw();const pose=h.view.motionPose(h.unit);phases.push(pose.phase);assert.equal(pose.walking,true);assert.ok(pose.spriteFrame<4);}
  assert.ok(new Set(phases).size>3);
  h.game.time+=.3;h.draw();const stopped=h.view.motionPose(h.unit).phase;
- for(let i=0;i<12;i++){h.game.time+=.1;h.draw();assert.equal(h.view.motionPose(h.unit).phase,stopped);assert.ok(h.view.motionPose(h.unit).drumFrame>=4);}
+ for(let i=0;i<12;i++){h.game.time+=.1;h.draw();assert.equal(h.view.motionPose(h.unit).phase,stopped);assert.ok(h.view.motionPose(h.unit).spriteFrame>=4);}
  const paused=JSON.stringify(h.view.motionPose(h.unit));h.draw();assert.equal(JSON.stringify(h.view.motionPose(h.unit)),paused);
- h.unit.hp=0;h.unit.toyDownUntil=h.game.time+20;h.draw();assert.equal(h.view.motionPose(h.unit).drumFrame,4);
- h.unit.hp=100;h.game.time+=20;h.draw();assert.ok(h.view.motionPose(h.unit).drumFrame>=4);
+ h.unit.hp=0;h.unit.toyDownUntil=h.game.time+20;h.draw();assert.equal(h.view.motionPose(h.unit).spriteFrame,4);
+ h.unit.hp=100;h.game.time+=20;h.draw();assert.ok(h.view.motionPose(h.unit).spriteFrame>=4);
  h.game.time=0;h.draw();assert.equal(h.view.motionPose(h.unit).phase,0);
 });
 
@@ -82,6 +82,6 @@ test('the ordinary rare-supply reward creates the drum entity consumed by the ra
  assert.equal(bytes.toString('ascii',0,4),'RIFF');assert.equal(bytes.toString('ascii',8,12),'WEBP');
  for(const entry of ['index.html','boss-test.html']){
   const html=fs.readFileSync(__dirname+'/public/'+entry,'utf8');
-  assert.match(html,/support-toys-view\.js\?v=20261109-rabbit1/);
+  assert.match(html,/support-toys-view\.js\?v=20261109-toyprocs1/);
  }
 });

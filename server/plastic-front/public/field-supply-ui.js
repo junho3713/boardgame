@@ -8,7 +8,16 @@ root.FrontSupplyUI={create({getGame,toast,clearInput}){
   const own=g.supportToys(),offer=g.supportToyOffer(),defs=root.FrontSupportToys.toys,key=own.map(t=>t.id+':'+t.type).join(',')+'|'+(offer?.type||'');
   if(key!==toyKey){toyKey=key;toyPanel.innerHTML='<b>서포토이 '+own.length+'/2</b><div class="support-toy-cards">'+own.map(t=>'<div class="support-toy-card" title="'+defs[t.type].detail+'"><strong>'+defs[t.type].icon+' '+defs[t.type].name+'</strong><small data-toy-state="'+t.id+'"></small><progress data-toy-charge="'+t.id+'" max="1" value="0"></progress></div>').join('')+'</div>'+(offer?'<div class="support-toy-offer"><strong>새 서포토이 · '+defs[offer.type].name+'</strong><p>'+defs[offer.type].detail+'</p>'+own.map(t=>'<button type="button" data-toy-replace="'+t.id+'">'+defs[t.type].name+' 교체</button>').join('')+'<button type="button" data-toy-replace="keep">현재 편성 유지</button></div>':'');}
   toyPanel.hidden=!own.length&&!offer;
-  for(const t of own){const d=defs[t.type],down=t.hp<=0,remaining=down?Math.max(0,t.toyDownUntil-g.time):Math.max(0,(t.toyNextAt||0)-g.time),state=toyPanel.querySelector('[data-toy-state="'+t.id+'"]'),charge=toyPanel.querySelector('[data-toy-charge="'+t.id+'"]');if(state)state.textContent=down?'수리 '+Math.ceil(remaining)+'초':'HP '+Math.ceil(t.hp)+'/'+Math.ceil(t.maxHp)+' · '+(!d.cooldown?'오라 활성':remaining?Math.ceil(remaining)+'초':'발동 대기');if(charge)charge.value=down?1-remaining/20:d.cooldown?1-Math.min(1,remaining/d.cooldown):1;}
+  for(const t of own){
+   const d=defs[t.type],down=t.hp<=0,remaining=down?Math.max(0,t.toyDownUntil-g.time):Math.max(0,(t.toyNextAt||0)-g.time);
+   const state=toyPanel.querySelector('[data-toy-state="'+t.id+'"]'),charge=toyPanel.querySelector('[data-toy-charge="'+t.id+'"]');
+   const boosting=t.type==='toyDrum'&&g.time<(t.toyBoostUntil||0);
+   let status=remaining?Math.ceil(remaining)+'초':'발동 대기';
+   if(t.type==='toyDrum')status=boosting?(t.toyProcTier===2?'대박':'강화')+' '+Math.ceil(t.toyBoostUntil-g.time)+'초 · 다음 '+Math.ceil(remaining)+'초':'오라 · 다음 추첨 '+Math.ceil(remaining)+'초';
+   else if(g.time<(t.toyHighlightUntil||0))status=(t.toyProcTier===2?'대박':'강화')+' · '+status;
+   if(state)state.textContent=down?'수리 '+Math.ceil(remaining)+'초':'HP '+Math.ceil(t.hp)+'/'+Math.ceil(t.maxHp)+' · '+status;
+   if(charge)charge.value=down?1-remaining/20:boosting?(t.toyBoostUntil-g.time)/root.FrontSupportToys.rules.drum.duration:1-Math.min(1,remaining/d.cooldown);
+  }
  }
  toyPanel.addEventListener('click',e=>{const b=e.target.closest('[data-toy-replace]');if(!b)return;const id=b.dataset.toyReplace;if(!getGame().resolveSupportToyOffer(id==='keep'?'keep':Number(id)))toast('전투 중에 자신의 서포토이 슬롯을 선택하세요.');});
  const heal=bar.querySelector('.supply-medkit'),strike=bar.querySelector('.supply-artillery'),buff=bar.querySelector('.supply-buffs'),hint=bar.querySelector('.supply-hint');
