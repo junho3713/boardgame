@@ -29,8 +29,8 @@ test('soldier boss acceleration lasts one second every two seconds and actual st
  const speed=g.stats(boss).speed;for(const [time,multiplier]of [[.45,2.2],[.999,2.2],[1,1],[1.999,1],[2,2.2]]){g.time=time;boss.x=1500;g.move(boss,1000,0,.1,speed);a.ok(Math.abs(boss.x-1500-speed*.1*multiplier)<1e-7);}
  const t=g.addUnit(0,'rifle',boss.x+30,boss.y);t.hp=t.maxHp=10000;const hp=t.hp;boss.face=0;boss.cooldown=0;g.updateBayonet(boss,t,g.stats(boss));g.time+=1;g.updateBayonet(boss,t,g.stats(boss));a.ok(Math.abs(hp-t.hp-base*3*g.defenseFactor(t,boss))<1e-7);
 });
-test('ordinary soldiers and ordinary bike collision damage retain their normal damage rules',()=>{
- const g=game(),soldier=g.addUnit(2,'bayonetCaptain',1000,6000);a.equal(g.enemyDamageScale(soldier),1.25);a.equal(BIKE.maxHpDamage,undefined);
+test('ordinary soldiers gain ten percent damage and ordinary bike collisions retain their existing damage formula',()=>{
+ const g=game(),soldier=g.addUnit(2,'bayonetCaptain',1000,6000);a.equal(g.enemyDamageScale(soldier),1.25*1.1);a.equal(BIKE.maxHpDamage,undefined);
  const t=g.addUnit(0,'rifle',1500,6000),bike=g.addUnit(2,'bikeRaider',1440,6000);bike.bikeAttack={phase:'charge',angle:0,remaining:450,traveled:0,hit:[]};const hp=t.hp,expected=g.stats(bike).damage*g.defenseFactor(t,bike);g.updateBike(bike,.1,BIKE);a.ok(Math.abs(hp-t.hp-expected)<1e-7);
 });
 test('the blade boss can threaten a ranged formation with a 220-range slash and 0.7-second warning',()=>{
