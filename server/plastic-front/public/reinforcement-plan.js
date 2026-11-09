@@ -2,12 +2,12 @@
 (function(root){'use strict';
 function install({FrontGame:Game,TYPES,ROSTER}){
  const p=Game.prototype;if(p.reinforcementPlanVersion)return;p.reinforcementPlanVersion=1;
- const roster=[...ROSTER],defaults={enabled:false,mode:'priority',targets:Object.fromEntries(roster.map(t=>[t,t==='rifle'||t==='medic'?3:0])),priority:[...roster],evolutionGoals:[]};
- function clean(value={}){return{enabled:value.enabled===true,mode:value.mode==='balanced'?'balanced':'priority',targets:Object.fromEntries(roster.map(t=>[t,Math.max(0,Math.min(9,Math.floor(Number(value.targets?.[t])||0)))])),priority:[...new Set([...(Array.isArray(value.priority)?value.priority:[]).filter(t=>roster.includes(t)),...roster])],evolutionGoals:[...new Set((Array.isArray(value.evolutionGoals)?value.evolutionGoals:[]).filter(t=>roster.includes(t)))]};}
+ const roster=[...ROSTER],defaults={enabled:false,preferTwoStar:false,mode:'priority',targets:Object.fromEntries(roster.map(t=>[t,t==='rifle'||t==='medic'?3:0])),priority:[...roster],evolutionGoals:[]};
+ function clean(value={}){return{enabled:value.enabled===true,preferTwoStar:value.preferTwoStar===true,mode:value.mode==='balanced'?'balanced':'priority',targets:Object.fromEntries(roster.map(t=>[t,Math.max(0,Math.min(9,Math.floor(Number(value.targets?.[t])||0)))])),priority:[...new Set([...(Array.isArray(value.priority)?value.priority:[]).filter(t=>roster.includes(t)),...roster])],evolutionGoals:[...new Set((Array.isArray(value.evolutionGoals)?value.evolutionGoals:[]).filter(t=>roster.includes(t)))]};}
  const reset=p.reset,schedule=p.scheduleMinuteSupport,begin=p.beginMinuteSupport;
  p.reset=function(){const plan=this.fieldSupplyState?.reinforcementPlan;reset.call(this);this.supplyState().reinforcementPlan=clean(plan||defaults);};
  p.reinforcementPlan=function(){const state=this.supplyState();return state.reinforcementPlan??=clean(defaults);};
- function valid(value){return !!value&&typeof value==='object'&&typeof value.enabled==='boolean'&&['priority','balanced'].includes(value.mode)&&!!value.targets&&typeof value.targets==='object'&&Array.isArray(value.priority)&&value.priority.length===roster.length&&new Set(value.priority).size===roster.length&&value.priority.every(t=>roster.includes(t))&&roster.every(t=>Number.isInteger(value.targets[t])&&value.targets[t]>=0&&value.targets[t]<=9)&&Array.isArray(value.evolutionGoals)&&value.evolutionGoals.length<=roster.length&&value.evolutionGoals.every(t=>roster.includes(t));}
+ function valid(value){return !!value&&typeof value==='object'&&typeof value.enabled==='boolean'&&(value.preferTwoStar===undefined||typeof value.preferTwoStar==='boolean')&&['priority','balanced'].includes(value.mode)&&!!value.targets&&typeof value.targets==='object'&&Array.isArray(value.priority)&&value.priority.length===roster.length&&new Set(value.priority).size===roster.length&&value.priority.every(t=>roster.includes(t))&&roster.every(t=>Number.isInteger(value.targets[t])&&value.targets[t]>=0&&value.targets[t]<=9)&&Array.isArray(value.evolutionGoals)&&value.evolutionGoals.length<=roster.length&&value.evolutionGoals.every(t=>roster.includes(t));}
  p.setReinforcementPlan=function(value){
   if(!valid(value))return false;
   const plan=clean(value);for(const t of roster)if(this.evolved[t]&&!plan.evolutionGoals.includes(t))plan.evolutionGoals.push(t);
@@ -16,7 +16,9 @@ function install({FrontGame:Game,TYPES,ROSTER}){
  p.reinforcementCounts=function(){const counts=Object.fromEntries(roster.map(t=>[t,0]));for(const u of this.supplySquad())if(!u.patrol&&roster.includes(u.type))counts[u.type]+=this.starExperiment?3**Math.max(0,Math.min(2,(u.star||1)-1)):1;return counts;};
  p.reinforcementCandidates=function(){
   const plan=this.reinforcementPlan(),counts=this.reinforcementCounts(),available=()=>plan.priority.filter(t=>plan.targets[t]>counts[t]&&this.tech[0][t]>0&&this.recruitmentRemaining(t)>0);
-  const types=this.coop?this.scoped(available):available();if(plan.mode==='balanced')types.sort((a,b)=>(plan.targets[b]-counts[b])/plan.targets[b]-(plan.targets[a]-counts[a])/plan.targets[a]||plan.priority.indexOf(a)-plan.priority.indexOf(b));return types;
+  const types=this.coop?this.scoped(available):available();if(plan.mode==='balanced')types.sort((a,b)=>(plan.targets[b]-counts[b])/plan.targets[b]-(plan.targets[a]-counts[a])/plan.targets[a]||plan.priority.indexOf(a)-plan.priority.indexOf(b));
+  if(plan.preferTwoStar&&this.starExperiment){const ready=t=>{const need=3-this.fusionCandidates(t).length%3;return plan.targets[t]-counts[t]>=need&&this.cash[0]>=need*TYPES[t].cost&&this.recruitmentRemaining(t)>=need&&this.capacity()-this.alive(0).length>=need;};const completes=this.coop?this.scoped(()=>types.filter(ready)):types.filter(ready);if(completes.length)return [...completes,...types.filter(t=>!completes.includes(t))];}
+  return types;
  };
  p.runAutomaticReinforcement=function(){
   const plan=this.reinforcementPlan();if(!plan.enabled||this.mode!=='pve'||this.phase!=='playing'||this.commander(0).hp<=0)return false;

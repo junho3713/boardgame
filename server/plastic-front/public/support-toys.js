@@ -72,10 +72,10 @@ function install({FrontGame:Game,TYPES}){
  p.pursuitTarget=function(u){return this.supportDecoyTarget(u)||pursuit.call(this,u);};
  p.supportControlAllowed=function(t,kind){
   if(t.team===0||t.hp<=0||this.bossInvulnerable(t)||this.time<(t.toyControlReadyAt||0)||this.time<(t.toyStunUntil||0))return false;
-  const boss=t.boss||t.roadCaptain||t.finalBoss;return !boss||kind==='push'&&insects.has(t.type);
+  const boss=t.boss||t.roadCaptain||t.finalBoss;return !boss||kind==='stun'||kind==='wave'||kind==='push'&&insects.has(t.type);
  };
  p.pushSupportTarget=function(u,t,strength=1,{duration=0,surf=false,pop=0,angle=null,speed=0}={}){
-  if(!this.supportControlAllowed(t,'push'))return false;const a=angle??Math.atan2(t.y-u.y,t.x-u.x),n=(t.boss?40:72)*strength,b=this.bounds();let x=t.x,y=t.y;
+  if(!this.supportControlAllowed(t,surf?'wave':'push'))return false;const a=angle??Math.atan2(t.y-u.y,t.x-u.x),n=(t.boss?40:72)*strength,b=this.bounds();let x=t.x,y=t.y;
   for(let d=8;d<=n;d+=8){const q={x:clamp(t.x+Math.cos(a)*d,45,b.width-45),y:clamp(t.y+Math.sin(a)*d,70,b.height-70)};if(!this.isFlying(t)&&!this.freePosition(q.x,q.y,this.collisionRadius(t)))break;x=q.x;y=q.y;}
   if(Math.hypot(x-t.x,y-t.y)<.1)return false;
   if(speed>0)duration=Math.hypot(x-t.x,y-t.y)/speed;
@@ -106,7 +106,7 @@ function install({FrontGame:Game,TYPES}){
    const motion=waveMotion(wave,this.time),before=wave.front??0;wave.caught??=[];
    const run=()=>{
     const candidates=this.units.filter(t=>{
-     if(wave.caught.includes(t.id)||!this.supportControlAllowed(t,'push')||!this.visible(t))return false;
+     if(wave.caught.includes(t.id)||!this.supportControlAllowed(t,'wave')||!this.visible(t))return false;
      const d=distance(t,wave),r=this.collisionRadius(t),a=Math.atan2(t.y-wave.y,t.x-wave.x)-wave.angle;
      return d<=wave.range+r&&d+r>=before&&d-r<=motion.front&&Math.abs(Math.atan2(Math.sin(a),Math.cos(a)))<=wave.arc/2&&this.lineClear(wave,t,0,{fireTeam:0});
     }).sort((a,b)=>distance(a,wave)-distance(b,wave)||a.id-b.id);
@@ -203,9 +203,9 @@ function install({FrontGame:Game,TYPES}){
     this.supportBursts.push({source:u,owner:this.coopOwner||0,bait:d,state:'circling',x:d.x,y:d.y,angle:a,tier,damage:this.stats(c).damage*rules.fishing.damage[tier],radius:rules.fishing.radius[tier],strength:rules.fishing.push[tier],shown:false,hit:false});
    }
   }else if(type==='toyTurtle'){
-   if(!this.toyThreats(u,350).some(t=>this.supportControlAllowed(t,'push')))return false;
+   if(!this.toyThreats(u,350).some(t=>this.supportControlAllowed(t,'wave')))return false;
    const tier=this.rollSupportToyTier(u),spec=rules.water;
-   const threats=this.toyThreats(u,spec.range[tier]).filter(t=>this.supportControlAllowed(t,'push')),first=threats[0],angle=Math.atan2(first.y-u.y,first.x-u.x);u.face=angle;
+   const threats=this.toyThreats(u,spec.range[tier]).filter(t=>this.supportControlAllowed(t,'wave')),first=threats[0],angle=Math.atan2(first.y-u.y,first.x-u.x);u.face=angle;
    const hit=threats.filter(t=>Math.abs(Math.atan2(Math.sin(Math.atan2(t.y-u.y,t.x-u.x)-angle),Math.cos(Math.atan2(t.y-u.y,t.x-u.x)-angle)))<=spec.arc[tier]/2).slice(0,spec.targets[tier]);
    if(tier===2){
     const wave={x:u.x,y:u.y,source:u,owner:this.coopOwner||0,angle,range:spec.range[2],arc:spec.arc[2],startedAt:this.time,max:spec.waveDuration,front:0,caught:[]};

@@ -6,6 +6,16 @@ function scene(coop=false,map='livingroom-star'){const g=coop?new CoopGame():new
 function plan(g,targets,mode='priority',order=[]){const p=structuredClone(g.reinforcementPlan());p.enabled=true;p.mode=mode;p.targets=Object.fromEntries(ROSTER.map(t=>[t,targets[t]||0]));p.priority=[...new Set([...order,...ROSTER])];a.equal(g.setReinforcementPlan(p),true);return p;}
 function due(g,time){g.time=time;g.phase='playing';g.levelCheck();}
 
+test('optional two-star priority completes an affordable fusion before balanced shortages without exceeding goals',()=>{
+ const g=scene();g.tech[0].medic=1;for(let i=0;i<2;i++)g.addUnit(0,'rifle',1500+i*40,6000);const p=plan(g,{rifle:3,medic:3},'balanced',['medic','rifle']);a.equal(g.reinforcementCandidates()[0],'medic');p.preferTwoStar=true;g.setReinforcementPlan(p);g.cash[0]=TYPES.rifle.cost;a.equal(g.reinforcementCandidates()[0],'rifle');due(g,30);a.equal(g.reinforcementCounts().rifle,3);a.equal(g.fusionCandidates('rifle').length,0);a.equal(g.reinforcementCounts().medic,0);
+ const copy=unpack(scene(),JSON.parse(JSON.stringify(pack(g))));a.equal(copy.reinforcementPlan().preferTwoStar,true);
+});
+test('two-star preference respects incomplete goals, available funds, normal maps and owner scope',()=>{
+ const g=scene();g.tech[0].medic=1;g.addUnit(0,'rifle',1500,6000);let p=plan(g,{rifle:3,medic:3},'balanced',['medic']);p.preferTwoStar=true;g.setReinforcementPlan(p);g.cash[0]=TYPES.rifle.cost;a.equal(g.reinforcementCandidates()[0],'medic');g.cash[0]=1000;p.targets.rifle=2;g.setReinforcementPlan(p);a.equal(g.reinforcementCandidates()[0],'medic');a.equal(g.setReinforcementPlan({...p,preferTwoStar:'yes'}),false);
+ const normal=scene(false,'livingroom');normal.tech[0].medic=1;normal.addUnit(0,'rifle',1500,6000);p=plan(normal,{rifle:3,medic:3},'balanced',['medic']);p.preferTwoStar=true;normal.setReinforcementPlan(p);a.equal(normal.reinforcementCandidates()[0],'medic');
+ const coop=scene(true);coop.withOwner(0,()=>{coop.addUnit(0,'rifle',1500,6000);coop.addUnit(0,'rifle',1540,6000);});coop.withOwner(1,()=>{coop.cash[0]=10000;coop.tech[0].medic=1;const p=plan(coop,{rifle:3,medic:3},'balanced',['medic']);p.preferTwoStar=true;coop.setReinforcementPlan(p);a.equal(coop.reinforcementCandidates()[0],'medic');});
+});
+
 test('manual support remains the default and automatic support starts at thirty seconds without pausing or consuming a level',()=>{
  const manual=scene();a.equal(manual.reinforcementPlan().enabled,false);due(manual,60);a.equal(manual.choiceKind,'periodic');a.equal(manual.phase,'choice');
  const g=scene();plan(g,{rifle:3});const level=g.level,xp=g.xp;due(g,29.99);a.equal(g.reinforcementCounts().rifle,0);due(g,30);a.equal(g.reinforcementCounts().rifle,3);a.equal(g.alive(0).filter(u=>u.type==='rifle').length,1);a.equal(g.phase,'playing');a.equal(g.level,level);a.equal(g.xp,xp);

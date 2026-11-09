@@ -20,13 +20,13 @@ test('water visibly slides a pursuing enemy back 144 pixels and prevents immedia
  for(let i=0;i<5;i++)g.update(.05);assert.ok(t.x<x+144,'pursuit resumes after the water releases the target');
 });
 
-test('all three water tiers finish their full push in every direction and retain boss immunity',()=>{
+test('all three water tiers finish their full push in every direction and retain normal-shot boss immunity',()=>{
  for(const [tier,push]of [[0,144],[1,192],[2,288]])for(let direction=0;direction<8;direction++){
   const {g,u}=scene(),angle=direction*Math.PI/4,t=target(g,u.x+Math.cos(angle)*200,u.y+Math.sin(angle)*200),from={x:t.x,y:t.y};
   g.random=()=>[.99,.15,.02][tier];assert.equal(g.useSupportToy(u),true);for(let i=1;i<=80;i++){g.time=i*.02;g.updateSupportWaves();g.updateSupportKnockback(t);}
   near(Math.hypot(t.x-from.x,t.y-from.y),push);assert.ok(g.freePosition(t.x,t.y,g.collisionRadius(t)));
  }
- const {g,u}=scene(),boss=target(g,1600,6000,'crimsonAce');boss.boss=true;assert.equal(g.useSupportToy(u),false);assert.equal(boss.toyKnockback,undefined);
+ const {g,u}=scene(),boss=target(g,1600,6000,'crimsonAce');boss.boss=true;g.random=()=>.99;assert.equal(g.useSupportToy(u),true);assert.equal(boss.toyKnockback,undefined);
 });
 
 test('tsunami catches near and far targets only when the shared wave front reaches them and carries them forward once',()=>{

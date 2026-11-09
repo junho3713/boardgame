@@ -5,6 +5,14 @@ const {CoopGame}=require('./public/coop-engine.js'),{pack,unpack,FrontAutoPilot}
 const near=(x,y)=>a.ok(Math.abs(x-y)<1e-7,`${x} != ${y}`);
 function scene(coop=false){const g=coop?new CoopGame():new FrontGame({},undefined,{map:'livingroom-star'});g.start();g.units=g.units.filter(u=>u.team===0&&u.type==='leader');g.obstacles=[];g.defenses=[];g.structures=[];g.buildings=[];g.pickups=[];g.random=()=>.99;g.visible=g.lineClear=()=>true;for(const c of g.units){c.x=1500;c.y=6000;c.cooldown=1e6;}for(const m of ['updateMission','updateSwarm','updateBosses','updateArtillery','updateDefenses','updateBuildings','gainXP','levelCheck'])g[m]=()=>{};return g;}
 function reward(g,type){const c=g.commander(0),p={x:c.x,y:c.y,active:true,rareSupply:true,supplyKind:type,expires:g.time+120};a.equal(g.collectFieldSupply(p),true);return p;}
+
+test('tsunami catches every boss category while normal water still rejects non-insect bosses',()=>{
+ for(const type of ['rhinoBeetle','bayonetCaptain','crimsonAce','swordEmpress']){const g=scene(),u=g.addSupportToy('toyTurtle');u.toyNextAt=0;g.random=()=>.02;const b=g.addUnit(2,type,u.x+150,u.y);b.boss=true;const insect=type==='rhinoBeetle';a.equal(g.supportControlAllowed(b,'push'),insect);a.equal(g.useSupportToy(u),true,type);a.equal(g.supportWaves.length,1);g.time=.4;g.updateSupportWaves();a.ok(b.toyKnockback?.surf,type);a.ok(g.supportWaves[0]?.caught.includes(b.id)||g.effects.some(e=>e.kind==='toyWaterCarry'&&e.target===b));}
+});
+
+test('thunder can target insect, human and vehicle bosses while keeping one-second stun and control resistance',()=>{
+ for(const type of ['hornet','bayonetCaptain','crimsonAce']){const g=scene(),u=g.addSupportToy('toyStunner');u.toyNextAt=0;const b=g.addUnit(2,type,u.x+100,u.y);b.boss=true;a.equal(g.useSupportToy(u),true,type);a.equal(b.toyStunUntil,1);a.equal(g.supportControlAllowed(b,'stun'),false);const x=b.x;g.move(b,1000,0,.05,100);near(b.x,x);g.time=4;a.equal(g.supportControlAllowed(b,'stun'),true);}
+});
 test('all four support toys have exactly 25 percent fresh-drop odds; no new cash, boosts or attack troops are rolled',()=>{
  const g=scene(),counts={};for(let i=0;i<10000;i++){g.random=()=>(i+.5)/10000;const type=g.rollSupply();counts[type]=(counts[type]||0)+1;}a.deepEqual(counts,{toyDrum:2500,toyDecoyMaker:2500,toyTurtle:2500,toyStunner:2500});const cash=g.cash[0];reward(g,'toyTurtle');a.equal(g.cash[0],cash);a.equal(g.supportToys().length,1);
 });
@@ -26,7 +34,7 @@ test('water pushes insect bosses and ordinary enemies but never human, vehicle o
 test('water is a cone with at most three targets, respects walls and grants a shared control-resistance interval',()=>{
  const g=scene(),u=g.addSupportToy('toyTurtle');u.toyNextAt=0;const ts=Array.from({length:5},(_,i)=>g.addUnit(2,'ant',u.x+120+i*20,u.y));const back=g.addUnit(2,'ant',u.x-150,u.y),old=ts.map(t=>t.x);a.equal(g.useSupportToy(u),true);g.time=.5;for(const t of ts)g.updateSupportKnockback(t);a.equal(ts.filter((t,i)=>t.x>old[i]).length,3);near(back.x,u.x-150);a.equal(g.pushSupportTarget(u,ts[0]),false);g.time=3;a.equal(g.pushSupportTarget(u,ts[0]),true);const w=g.addUnit(2,'ant',u.x+100,u.y);g.freePosition=()=>false;const x=w.x;a.equal(g.pushSupportTarget(u,w),false);near(w.x,x);
 });
-test('stun interrupts a normal threat for one second, has a ten-second cooldown and never stuns bosses',()=>{
+test('stun interrupts a normal threat for one second, has a ten-second cooldown and can also stun bosses',()=>{
  const g=scene(),u=g.addSupportToy('toyStunner');u.toyNextAt=0;const t=g.addUnit(2,'bayonet',u.x+120,u.y);t.bayonetAttack={};const boss=g.addUnit(2,'hornet',u.x+80,u.y);boss.boss=true;a.equal(g.useSupportToy(u),true);a.equal(t.toyStunUntil,1);a.equal(t.bayonetAttack,null);a.equal(boss.toyStunUntil,undefined);a.equal(u.toyNextAt,10);a.equal(g.useSupportToy(u),false);const x=t.x;g.move(t,1000,0,.05,100);near(t.x,x);g.time=1;g.move(t,1000,0,.05,100);a.ok(t.x>x);a.equal(g.supportControlAllowed(t,'push'),false);g.time=4;a.equal(g.supportControlAllowed(t,'push'),true);
 });
 test('decoys lure at most two normal enemies, do not rewrite airborne attacks and expire thirty seconds after landing',()=>{
