@@ -23,6 +23,7 @@ const otterArt={
  ]
 };
 const sharkArt={file:'assets/support-toys/shark-breach-v20261109.webp',cell:304,columns:4,rows:4};
+const finArt={file:'assets/support-toys/shark-fin-v20261109.png',cell:313.5,columns:4,rows:4};
 const waveArt={file:'assets/support-toys/tsunami-directions-v20261109.png',cell:181,columns:6,rows:8};
 const jetArt={file:'assets/support-toys/water-jet-v20261109.webp',cell:384,columns:4,rows:2,edges:[[24,359],[21,361],[21,365],[23,369],[23,364],[21,369],[21,372],[21,375]]};
 const turtleArt={
@@ -59,7 +60,7 @@ function prepareArt(art){
 }
 function character(c,u,time,m,facing){
  const art=characterArt[u.type],asset=prepareArt(art);
- if(u.type==='toyDecoyMaker')prepareArt(sharkArt);
+ if(u.type==='toyDecoyMaker'){prepareArt(sharkArt);prepareArt(finArt);}
  if(u.type==='toyTurtle'){prepareArt(waveArt);prepareArt(jetArt);}
  if(u.type==='toyStunner')prepareArt(cloudArt);
  if(!asset?.ready)return false;
@@ -180,13 +181,28 @@ function shark(c,e,g){
  if(e.source?.hp>0&&!e.source.toyRetired&&e.source.y>=e.y-12)draw(c,e.source,g);
  return true;
 }
+function sharkFin(c,e,g){
+ const bait=e.bait;if(!bait||bait.hp<=0||g.time<(bait.toyArrivesAt||0)||g.time>=bait.toyExpires||Number.isFinite(bait.toySharkTriggeredAt)&&g.time>=bait.toySharkTriggeredAt)return true;
+ const large=e.tier===2,age=Math.max(0,g.time-e.startedAt),phase=age*(large?2.6:3.5),radius=large?66:46,x=bait.x+Math.cos(phase)*radius,y=bait.y+Math.sin(phase)*radius*.55,angle=Math.atan2(Math.cos(phase)*.55,-Math.sin(phase)),direction=((Math.round(angle/(Math.PI/4))%8)+8)%8,size=large?86:62;
+ c.save();c.globalAlpha=clamp(age*5,0,1);
+ const points=[];for(let i=0;i<10;i++){const a=phase-.65+i*.065;points.push([bait.x+Math.cos(a)*radius,bait.y+Math.sin(a)*radius*.55]);}
+ line(c,points,'#8cebf17a',5);line(c,points,'#e8ffffb0',1.2);
+ sheet(c,finArt,direction+(large?8:0),x,y+5,size,size);c.restore();return true;
+}
 function tsunami(c,e,g){
  const q=clamp(1-e.t/e.max,0,.999),direction=((Math.round(e.angle/(Math.PI/4))%8)+8)%8,frame=direction*6+Math.min(5,Math.floor(q*6));
- const width=e.range*(.76+.12*Math.sin(q*Math.PI)),distance=e.range*(.14+.62*(1-(1-q)**1.4)),x=e.x+Math.cos(e.angle)*distance,y=e.y+Math.sin(e.angle)*distance;
+ const width=e.range*(.76+.12*Math.sin(q*Math.PI)),motion=root.FrontSupportToys.waveMotion(e,g.time),distance=Math.max(0,motion.front-width*.42*Math.abs(Math.cos(e.angle))),x=e.x+Math.cos(e.angle)*distance,y=e.y+Math.sin(e.angle)*distance;
  c.save();c.globalAlpha=clamp((1-q)*5);
  // The upright crest has its own camera-relative view. A ground-cone clip cuts
  // off its height when firing toward the camera, so bound the sprite itself.
  if(!sheet(c,waveArt,frame,x,y,width,width*.85)){oval(c,x,y,width*.45,30,'#63dfed66','#e1ffff');}
+ c.restore();return true;
+}
+function waterCarry(c,e,g){
+ const t=e.target;if(!t||t.hp<=0)return true;const q=clamp(1-e.t/e.max),direction=((Math.round(e.angle/(Math.PI/4))%8)+8)%8;
+ c.save();c.globalAlpha=Math.sin(Math.PI*q)*.85;
+ sheet(c,waveArt,direction*6+5,t.x-Math.cos(e.angle)*10,t.y+4,90,54);
+ for(let i=0;i<7;i++){const age=(q*2+i/7)%1,side=Math.sin(i*2.4)*18,x=t.x-Math.cos(e.angle)*age*38-Math.sin(e.angle)*side,y=t.y-Math.sin(e.angle)*age*38+Math.cos(e.angle)*side-age*22;oval(c,x,y,2.5*(1-age)+.8,2,'#d9ffff');}
  c.restore();return true;
 }
 function drumBoost(c,e){
@@ -231,7 +247,9 @@ function waterJet(c,e,g,x,y,tx,ty){
 }
 function event(c,e,g){
  if(e.kind==='toyShark')return shark(c,e,g);
+ if(e.kind==='toySharkFin')return sharkFin(c,e,g);
  if(e.kind==='toyTsunami')return tsunami(c,e,g);
+ if(e.kind==='toyWaterCarry')return waterCarry(c,e,g);
  if(e.kind==='toyDrumBoost')return drumBoost(c,e);
  if(e.kind==='toyThunder')return thunder(c,e,g);
  if(!['toyWater','toyZap','toyDecoyDrop'].includes(e.kind))return false;

@@ -23,10 +23,32 @@ test('water visibly slides a pursuing enemy back 144 pixels and prevents immedia
 test('all three water tiers finish their full push in every direction and retain boss immunity',()=>{
  for(const [tier,push]of [[0,144],[1,192],[2,288]])for(let direction=0;direction<8;direction++){
   const {g,u}=scene(),angle=direction*Math.PI/4,t=target(g,u.x+Math.cos(angle)*200,u.y+Math.sin(angle)*200),from={x:t.x,y:t.y};
-  g.random=()=>[.99,.15,.02][tier];assert.equal(g.useSupportToy(u),true);g.time=.5;g.updateSupportKnockback(t);
+  g.random=()=>[.99,.15,.02][tier];assert.equal(g.useSupportToy(u),true);for(let i=1;i<=80;i++){g.time=i*.02;g.updateSupportWaves();g.updateSupportKnockback(t);}
   near(Math.hypot(t.x-from.x,t.y-from.y),push);assert.ok(g.freePosition(t.x,t.y,g.collisionRadius(t)));
  }
  const {g,u}=scene(),boss=target(g,1600,6000,'crimsonAce');boss.boss=true;assert.equal(g.useSupportToy(u),false);assert.equal(boss.toyKnockback,undefined);
+});
+
+test('tsunami catches near and far targets only when the shared wave front reaches them and carries them forward once',()=>{
+ const {g,u}=scene(),close=target(g,1550,6000),far=target(g,1850,6000),beyond=target(g,2000,6000),side=target(g,1400,6350);g.random=()=>.02;
+ assert.equal(g.useSupportToy(u),true);assert.equal(close.toyKnockback,undefined);assert.equal(far.toyKnockback,undefined);
+ g.time=.2;g.updateSupportWaves();assert.equal(close.toyKnockback.surf,true);assert.equal(far.toyKnockback,undefined);const started=close.toyKnockback.startedAt;
+ g.time=.4;g.updateSupportWaves();g.updateSupportKnockback(close);assert.ok(close.x>1550&&close.x<1838);assert.equal(close.toyKnockback.startedAt,started);assert.equal(far.toyKnockback,undefined);
+ g.time=.75;g.updateSupportWaves();assert.equal(far.toyKnockback.surf,true);assert.equal(beyond.toyKnockback,undefined);assert.equal(side.toyKnockback,undefined);
+ for(const t of [close,far]){g.time=1.5;g.updateSupportKnockback(t);}near(close.x,1550+288);near(far.x,1850+288);assert.equal(g.effects.filter(e=>e.kind==='toyWaterCarry').length,2);
+});
+
+test('a launched tsunami survives owner toy replacement and a saved in-progress front without recapturing enemies',()=>{
+ const {g,u}=scene(true),close=target(g,1550,6000),far=target(g,1850,6000);g.random=()=>.02;g.useSupportToy(u);g.time=.2;g.updateSupportWaves();g.updateSupportKnockback(close);
+ u.toyRetired=true;u.hp=0;const copy=unpack(new CoopGame(),JSON.parse(JSON.stringify(pack(g))));
+ for(let i=11;i<=80;i++)for(const game of [g,copy]){game.time=i*.02;game.updateSupportWaves();for(const t of game.units)game.updateSupportKnockback(t);}
+ for(const id of [close.id,far.id]){const a=g.units.find(t=>t.id===id),b=copy.units.find(t=>t.id===id);near(a.x,b.x);near(a.y,b.y);assert.equal(b.toyKnockback,undefined);}
+ assert.equal(g.effects.filter(e=>e.kind==='toyWaterCarry').length,2);assert.equal(copy.effects.filter(e=>e.kind==='toyWaterCarry').length,2);assert.deepEqual(copy.supportWaves,[]);
+});
+
+test('swept infantry visibly lifts and tilts while rigid vehicles retain a restrained pose',()=>{
+ const {pose}=require('./public/hit-feedback.js'),surf={surf:true,startedAt:0,until:1,dx:288,dy:0},infantry={type:'rifle',toyKnockback:surf},tank={type:'tank',toyKnockback:surf};
+ const a=pose(infantry,.5),b=pose(tank,.5);assert.ok(a.y<-8);assert.ok(a.angle>.15);assert.ok(Math.abs(b.y)<Math.abs(a.y));assert.ok(Math.abs(b.angle)<Math.abs(a.angle));assert.equal(pose(infantry,1),null);
 });
 
 test('water interrupts a normal charge, stops at newly blocked terrain and never pushes through a map edge',()=>{

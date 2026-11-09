@@ -1,7 +1,12 @@
 /* Short visual impacts. Unit positions, movement speed and simulation timing never change. */
 (function(root){'use strict';
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n)),TAU=Math.PI*2;
-function pose(u,time){const h=u.hitReaction;if(!h)return null;const age=time-h.at;if(age<0||age>=.22)return null;const k=1-age/.22,pulse=Math.sin(Math.min(1,age/.065)*Math.PI)*k,rigid=u.boss||['tank','crimsonAce','guntruck','lucky','titan'].includes(u.type),distance=(rigid?1.8:5)*h.power*pulse;return{x:Math.cos(h.angle)*distance,y:Math.sin(h.angle)*distance*.65,angle:Math.sin(age*65)*k*(rigid?.012:.045)*h.power,scaleX:1+.045*pulse,scaleY:1-.045*pulse,flash:age<.065?1-age/.065:0};}
+function pose(u,time){
+ const surf=u.toyKnockback;
+ if(surf?.surf&&time>=surf.startedAt&&time<surf.until){const q=clamp((time-surf.startedAt)/(surf.until-surf.startedAt),0,1),lift=Math.sin(q*Math.PI),rigid=u.boss||['tank','crimsonAce','guntruck','lucky','titan'].includes(u.type);return{x:Math.sin(q*Math.PI*5)*lift*1.5,y:-lift*(rigid?3:10),angle:Math.cos(Math.atan2(surf.dy,surf.dx))*lift*(rigid?.045:.22)+Math.sin(q*Math.PI*5)*lift*.025,scaleX:1,scaleY:1,flash:0};}
+ if(surf?.popHeight&&time>=surf.startedAt&&time<surf.until){const q=clamp((time-surf.startedAt)/(surf.until-surf.startedAt),0,1),lift=Math.sin(q*Math.PI),rigid=u.boss||['tank','crimsonAce','guntruck','lucky','titan'].includes(u.type);return{x:0,y:-lift*Math.min(surf.popHeight,rigid?7:48),angle:Math.cos(Math.atan2(surf.dy,surf.dx))*lift*(rigid?.055:.32),scaleX:1+lift*.04,scaleY:1-lift*.03,flash:0};}
+ const h=u.hitReaction;if(!h)return null;const age=time-h.at,duration=h.heavy?.28:.24;if(age<0||age>=duration)return null;const k=1-age/duration,pulse=Math.sin(Math.min(1,age/.075)*Math.PI)*k,rigid=u.boss||['tank','crimsonAce','guntruck','lucky','titan'].includes(u.type),distance=(rigid?1.8:7)*h.power*pulse;return{x:Math.cos(h.angle)*distance,y:Math.sin(h.angle)*distance*.65,angle:Math.sin(age*45)*k*(rigid?.012:.085)*h.power,scaleX:1+.055*pulse,scaleY:1-.055*pulse,flash:age<.065?1-age/.065:0};
+}
 function transform(c,u,time){const p=pose(u,time);if(!p)return;c.translate(p.x,p.y);c.rotate(p.angle);c.scale(p.scaleX,p.scaleY);if(p.flash>0)c.filter='brightness('+(1+p.flash*.7)+') saturate('+(1-p.flash*.35)+')';}
 function shake(game){const h=game.impactPulse;if(!h)return{x:0,y:0};const age=game.time-h.at;if(age<0||age>=.18||Math.hypot(h.x-game.camera.x,h.y-game.camera.y)>650)return{x:0,y:0};const k=(1-age/.18)*Math.min(3,h.power*1.6);return{x:Math.sin(age*103)*k,y:Math.cos(age*87)*k*.65};}
 function install(Effects){const p=Effects.prototype,draw=p.drawEvent,emit=p.emit;p.emit=function(e){emit.call(this,e);if(e.kind==='hit')this.impactSound?.(e);};

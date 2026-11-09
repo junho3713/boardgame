@@ -7,8 +7,8 @@ function install({FrontGame:Game,TYPES}){
   odds:{toyDrum:.25,toyDecoyMaker:.25,toyTurtle:.25,toyStunner:.25},
   procOdds:{normal:.70,enhanced:.25,jackpot:.05},
   drum:{interval:30,duration:10,move:[1.05,1.15,1.30],haste:[1.03,1.10,1.25]},
-  fishing:{arrival:.35,breach:.65,impact:1.13,radius:[0,140,240],damage:[0,2,4],push:[0,1,5/3]},
-  water:{range:[350,400,500],targets:[3,5,8],push:[2,8/3,4],duration:[.32,.38,.48],recovery:.15,arc:[Math.PI/2,Math.PI/2,Math.PI*.78]},
+  fishing:{arrival:.35,triggerRange:80,windup:.12,radius:[0,140,240],damage:[0,2,4],push:[0,2,10/3]},
+  water:{range:[350,400,500],targets:[3,5,8],push:[2,8/3,4],duration:[.32,.38,.48],waveDuration:1.35,waveStart:60,recovery:.15,arc:[Math.PI/2,Math.PI/2,Math.PI*.78]},
   electric:{targets:[1,3,8],range:310,duration:1}
  };
  const toys={
@@ -22,7 +22,7 @@ function install({FrontGame:Game,TYPES}){
  const reset=p.reset,stats=p.stats,canTarget=p.canTarget,pursuit=p.pursuitTarget,refresh=p.refreshCommanderHealth;
  for(const [type,t]of Object.entries(toys))TYPES[type]={name:t.name,icon:t.icon,hp:t.hp,speed:t.speed,damage:0,rate:100,range:0,r:type==='toyTurtle'?20:15,cost:0,role:t.detail};
  TYPES.toyDecoy={name:'낚시 미끼',icon:'◇',hp:75,speed:0,damage:0,rate:100,range:0,r:13,cost:0,stationary:true,role:'일반 적 최대 2명 유도 · 3초 뒤 소멸'};
- p.reset=function(){reset.call(this);this.supportBursts=[];};
+ p.reset=function(){reset.call(this);this.supportBursts=[];this.supportWaves=[];};
  p.isSupportToy=function(u){return Object.hasOwn(toys,typeof u==='string'?u:u?.type);};
  p.isSupportEntity=function(u){return this.isSupportToy(u)||u?.type==='toyDecoy';};
  p.supportToys=function(owner=this.coopOwner||0){return this.units.filter(u=>this.isSupportToy(u)&&!u.toyRetired&&(!this.coop||u.coopOwner===owner)).sort((a,b)=>(a.toySlot||0)-(b.toySlot||0)||a.id-b.id);};
@@ -68,19 +68,20 @@ function install({FrontGame:Game,TYPES}){
   if(t.team===0||t.hp<=0||this.bossInvulnerable(t)||this.time<(t.toyControlReadyAt||0)||this.time<(t.toyStunUntil||0))return false;
   const boss=t.boss||t.roadCaptain||t.finalBoss;return !boss||kind==='push'&&insects.has(t.type);
  };
- p.pushSupportTarget=function(u,t,strength=1,{duration=0}={}){
-  if(!this.supportControlAllowed(t,'push'))return false;const a=Math.atan2(t.y-u.y,t.x-u.x),n=(t.boss?40:72)*strength,b=this.bounds();let x=t.x,y=t.y;
+ p.pushSupportTarget=function(u,t,strength=1,{duration=0,surf=false,pop=0,angle=null,speed=0}={}){
+  if(!this.supportControlAllowed(t,'push'))return false;const a=angle??Math.atan2(t.y-u.y,t.x-u.x),n=(t.boss?40:72)*strength,b=this.bounds();let x=t.x,y=t.y;
   for(let d=8;d<=n;d+=8){const q={x:clamp(t.x+Math.cos(a)*d,45,b.width-45),y:clamp(t.y+Math.sin(a)*d,70,b.height-70)};if(!this.isFlying(t)&&!this.freePosition(q.x,q.y,this.collisionRadius(t)))break;x=q.x;y=q.y;}
   if(Math.hypot(x-t.x,y-t.y)<.1)return false;
+  if(speed>0)duration=Math.hypot(x-t.x,y-t.y)/speed;
   if(duration>0){
-   t.toyKnockback={dx:x-t.x,dy:y-t.y,applied:0,startedAt:this.time,until:this.time+duration,recoverUntil:this.time+duration+rules.water.recovery};
+   t.toyKnockback={dx:x-t.x,dy:y-t.y,applied:0,startedAt:this.time,until:this.time+duration,recoverUntil:this.time+duration+rules.water.recovery,surf,popHeight:pop};
    t.bayonetAttack=t.sniperAim=t.bikeAttack=null;t.bikeRecoverUntil=Math.max(t.bikeRecoverUntil||0,t.toyKnockback.recoverUntil);
   }else{t.x=x;t.y=y;if(t.bikeAttack?.origin){t.bikeAttack.origin.x=x;t.bikeAttack.origin.y=y;}}
   t.hitReaction={at:this.time,angle:a,power:1,heavy:true};t.route=t.routeGoal=null;t.toyControlReadyAt=this.time+rules.controlResistance;return true;
  };
  p.updateSupportKnockback=function(u){
   const k=u.toyKnockback;if(!k)return false;if(u.hp<=0){delete u.toyKnockback;return false;}
-  const q=clamp((this.time-k.startedAt)/Math.max(.01,k.until-k.startedAt),0,1),progress=1-(1-q)**2,delta=Math.max(0,progress-k.applied),length=Math.hypot(k.dx,k.dy)*delta,steps=Math.max(1,Math.ceil(length/8));
+  const q=clamp((this.time-k.startedAt)/Math.max(.01,k.until-k.startedAt),0,1),progress=k.surf?q:1-(1-q)**2,delta=Math.max(0,progress-k.applied),length=Math.hypot(k.dx,k.dy)*delta,steps=Math.max(1,Math.ceil(length/8));
   const b=this.bounds();
   for(let i=0;i<steps;i++){
    const x=clamp(u.x+k.dx*delta/steps,45,b.width-45),y=clamp(u.y+k.dy*delta/steps,70,b.height-70);
@@ -88,6 +89,32 @@ function install({FrontGame:Game,TYPES}){
   }
   k.applied=progress;u.route=u.routeGoal=null;
   if(this.time<k.recoverUntil)return true;delete u.toyKnockback;return false;
+ };
+ function waveMotion(wave,time){
+  const duration=wave.max||rules.water.waveDuration,age=Number.isFinite(wave.startedAt)?time-wave.startedAt:duration-wave.t,q=clamp(age/duration,0,1),push=72*rules.water.push[2],speed=(wave.range+push-rules.water.waveStart)/duration;
+  return{q,speed,front:rules.water.waveStart+(wave.range+push-rules.water.waveStart)*q};
+ }
+ p.updateSupportWaves=function(){
+  const pending=[];
+  for(const wave of this.supportWaves||[]){
+   const motion=waveMotion(wave,this.time),before=wave.front??0;wave.caught??=[];
+   const run=()=>{
+    const candidates=this.units.filter(t=>{
+     if(wave.caught.includes(t.id)||!this.supportControlAllowed(t,'push')||!this.visible(t))return false;
+     const d=distance(t,wave),r=this.collisionRadius(t),a=Math.atan2(t.y-wave.y,t.x-wave.x)-wave.angle;
+     return d<=wave.range+r&&d+r>=before&&d-r<=motion.front&&Math.abs(Math.atan2(Math.sin(a),Math.cos(a)))<=wave.arc/2&&this.lineClear(wave,t,0,{fireTeam:0});
+    }).sort((a,b)=>distance(a,wave)-distance(b,wave)||a.id-b.id);
+    for(const t of candidates){
+     if(wave.caught.length>=rules.water.targets[2])break;
+     if(!this.pushSupportTarget(wave,t,rules.water.push[2],{surf:true,angle:wave.angle,speed:motion.speed}))continue;
+     wave.caught.push(t.id);const duration=t.toyKnockback.until-this.time+rules.water.recovery;
+     this.effects.push({kind:'toyWaterCarry',x:t.x,y:t.y,source:wave.source,target:t,angle:wave.angle,startedAt:this.time,t:duration,max:duration,team:0});
+    }
+   };
+   if(this.coop)this.withOwner(wave.owner,run);else run();wave.front=motion.front;
+   if(this.time<wave.startedAt+wave.max&&wave.caught.length<rules.water.targets[2])pending.push(wave);
+  }
+  this.supportWaves=pending;
  };
  p.turtleSupportGoal=function(u,c){
   const facing=this.formationFacing||-Math.PI/2,side=u.toySlot===1?100:-100,r=this.collisionRadius(u),threats=this.toyThreats(u,620);
@@ -115,6 +142,14 @@ function install({FrontGame:Game,TYPES}){
  p.updateSupportBursts=function(){
   const pending=[];
   for(const burst of this.supportBursts||[]){
+   if(burst.state==='circling'){
+    const bait=burst.bait;if(!bait||bait.hp<=0||this.time>=bait.toyExpires)continue;
+    if(this.time<(bait.toyArrivesAt||0)){pending.push(burst);continue;}
+    if(!burst.finShown){burst.finShown=true;this.effects.push({kind:'toySharkFin',x:bait.x,y:bait.y,bait,source:burst.source,tier:burst.tier,startedAt:bait.toyArrivesAt,t:bait.toyExpires-this.time,max:3,team:0});}
+    const arrived=this.units.some(t=>t.team!==0&&t.hp>0&&!t.boss&&!t.roadCaptain&&distance(t,bait)<=rules.fishing.triggerRange);
+    if(!arrived){pending.push(burst);continue;}
+    burst.state='breaching';burst.breachAt=this.time+rules.fishing.windup;burst.impactAt=burst.breachAt+.48;burst.expiresAt=burst.breachAt+1.25;bait.toySharkTriggeredAt=burst.breachAt;
+   }
    if(!burst.shown&&this.time>=burst.breachAt){
     burst.shown=true;const life=Math.max(.02,burst.expiresAt-this.time);
     this.effects.push({kind:'toyShark',source:burst.source,x:burst.x,y:burst.y,angle:burst.angle,tier:burst.tier,range:burst.radius,startedAt:burst.breachAt,t:life,max:burst.expiresAt-burst.breachAt,team:0});
@@ -125,7 +160,10 @@ function install({FrontGame:Game,TYPES}){
     const hit=()=>{for(const target of [...this.units]){
      if(target.team===0||target.hp<=0||distance(target,burst)>burst.radius+(TYPES[target.type]?.r||0)||!this.visible(target)||!this.lineClear(burst,target,0,{fireTeam:0}))continue;
      const hp=target.hp;this.damage(target,burst.damage,burst.source);
-     if(target.hp<hp&&target.hp>0)this.pushSupportTarget(burst,target,burst.strength);
+     if(target.hp<hp&&target.hp>0&&this.pushSupportTarget(burst,target,burst.strength,{duration:burst.tier===2?.55:.42,pop:burst.tier===2?44:28})){
+      const duration=target.toyKnockback.until-this.time+rules.water.recovery;
+      this.effects.push({kind:'toyWaterCarry',x:target.x,y:target.y,source:burst.source,target,angle:Math.atan2(target.y-burst.y,target.x-burst.x),startedAt:this.time,t:duration,max:duration,team:0});
+     }
     }};
     if(this.coop)this.withOwner(burst.owner,hit);else hit();
    }
@@ -151,15 +189,17 @@ function install({FrontGame:Game,TYPES}){
    u.face=a;this.effects.push({kind:'toyDecoyDrop',x:d.x,y:d.y,source:u,angle:a,tier,t:.7,max:.7,team:0});
    if(tier){
     this.supportBursts??=[];
-    this.supportBursts.push({source:u,owner:this.coopOwner||0,x:d.x,y:d.y,angle:a,tier,damage:this.stats(c).damage*rules.fishing.damage[tier],radius:rules.fishing.radius[tier],strength:rules.fishing.push[tier],breachAt:this.time+rules.fishing.breach,impactAt:this.time+rules.fishing.impact,expiresAt:this.time+rules.fishing.breach+1.25,shown:false,hit:false});
+    this.supportBursts.push({source:u,owner:this.coopOwner||0,bait:d,state:'circling',x:d.x,y:d.y,angle:a,tier,damage:this.stats(c).damage*rules.fishing.damage[tier],radius:rules.fishing.radius[tier],strength:rules.fishing.push[tier],shown:false,hit:false});
    }
   }else if(type==='toyTurtle'){
    if(!this.toyThreats(u,350).some(t=>this.supportControlAllowed(t,'push')))return false;
    const tier=this.rollSupportToyTier(u),spec=rules.water;
    const threats=this.toyThreats(u,spec.range[tier]).filter(t=>this.supportControlAllowed(t,'push')),first=threats[0],angle=Math.atan2(first.y-u.y,first.x-u.x);u.face=angle;
    const hit=threats.filter(t=>Math.abs(Math.atan2(Math.sin(Math.atan2(t.y-u.y,t.x-u.x)-angle),Math.cos(Math.atan2(t.y-u.y,t.x-u.x)-angle)))<=spec.arc[tier]/2).slice(0,spec.targets[tier]);
-   for(const t of hit){this.effects.push({kind:'toyWater',x:u.x,y:u.y,tx:t.x,ty:t.y,target:t,source:u,angle,tier,t:.5,max:.5,team:0});this.pushSupportTarget(u,t,spec.push[tier],{duration:spec.duration[tier]});}
-   if(tier===2)this.effects.push({kind:'toyTsunami',x:u.x,y:u.y,source:u,angle,range:spec.range[tier],arc:spec.arc[tier],t:1.1,max:1.1,team:0});
+   if(tier===2){
+    const wave={x:u.x,y:u.y,source:u,owner:this.coopOwner||0,angle,range:spec.range[2],arc:spec.arc[2],startedAt:this.time,max:spec.waveDuration,front:0,caught:[]};
+    this.supportWaves??=[];this.supportWaves.push(wave);this.effects.push({...wave,kind:'toyTsunami',t:wave.max,team:0});
+   }else for(const t of hit){this.effects.push({kind:'toyWater',x:u.x,y:u.y,tx:t.x,ty:t.y,target:t,source:u,angle,tier,t:.5,max:.5,team:0});this.pushSupportTarget(u,t,spec.push[tier],{duration:spec.duration[tier]});}
   }else if(type==='toyStunner'){
    const threats=this.toyThreats(u,rules.electric.range).filter(t=>this.supportControlAllowed(t,'stun'));if(!threats.length)return false;
    const tier=this.rollSupportToyTier(u),targets=threats.slice(0,rules.electric.targets[tier]);let previous=u;
@@ -177,7 +217,7 @@ function install({FrontGame:Game,TYPES}){
   u.toyNextAt=this.time+toys[type].cooldown;u.toyActionStartedAt=this.time;u.toyActionUntil=this.time+duration;u.toyActionFace=u.face;return true;
  };
  p.updateSupportToys=function(dt){
-  this.updateSupportBursts();
+  this.updateSupportBursts();this.updateSupportWaves();
   for(const d of this.units)if(d.type==='toyDecoy'&&d.hp>0&&this.time>=d.toyExpires){d.hp=0;d.diedAt=this.time;}
   for(const u of this.units.filter(t=>this.isSupportToy(t)&&!t.toyRetired)){
    const run=()=>{
@@ -190,7 +230,7 @@ function install({FrontGame:Game,TYPES}){
    };if(this.coop)this.withOwner(u.coopOwner,run);else run();
   }
  };
- root.FrontSupportToys={rules,toys,insects};return root.FrontSupportToys;
+ root.FrontSupportToys={rules,toys,insects,waveMotion};return root.FrontSupportToys;
 }
 if(typeof module!=='undefined'&&module.exports)module.exports=install;else install({FrontGame:root.FrontGame,TYPES:root.FrontTypes});
 })(typeof window==='undefined'?globalThis:window);
