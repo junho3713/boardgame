@@ -17,16 +17,7 @@ function install({FrontGame:Game,TYPES,ROSTER}){
  p.reinforcementCandidates=function(){
   const plan=this.reinforcementPlan(),counts=this.reinforcementCounts(),available=()=>plan.priority.filter(t=>plan.targets[t]>counts[t]&&this.tech[0][t]>0&&this.recruitmentRemaining(t)>0);
   const types=this.coop?this.scoped(available):available();if(plan.mode==='balanced')types.sort((a,b)=>(plan.targets[b]-counts[b])/plan.targets[b]-(plan.targets[a]-counts[a])/plan.targets[a]||plan.priority.indexOf(a)-plan.priority.indexOf(b));
-  if(plan.preferTwoStar&&plan.mode==='balanced'&&this.starExperiment){
-   const state=this.supplyState(),focus=state.autoFusionFocus;state.autoFusionServed??=[];
-   if(focus){
-    const fused=this.supplySquad().some(u=>u.type===focus.type&&(u.star||1)>=2&&(u.star||1)>(focus.stars[u.id]||1));
-    if(fused||!types.includes(focus.type)){if(!state.autoFusionServed.includes(focus.type))state.autoFusionServed.push(focus.type);state.autoFusionFocus=null;}
-    else return [focus.type,...types.filter(t=>t!==focus.type)];
-   }
-   let next=types.filter(t=>!state.autoFusionServed.includes(t));if(!next.length){state.autoFusionServed=[];next=types;}
-   return [...next,...types.filter(t=>!next.includes(t))];
-  }
+  if(plan.preferTwoStar&&plan.mode==='balanced'&&this.starExperiment)types.sort((a,b)=>Math.floor(counts[a]/3)-Math.floor(counts[b]/3)||(counts[b]%3)-(counts[a]%3)||TYPES[b].cost-TYPES[a].cost||plan.priority.indexOf(a)-plan.priority.indexOf(b));
   return types;
  };
  p.runAutomaticReinforcement=function(){
@@ -36,8 +27,7 @@ function install({FrontGame:Game,TYPES,ROSTER}){
   this.events={...events,toast:undefined,change:undefined};try{
    this.autoFuseUnits?.();
    for(let i=0;i<81;i++){
-    const types=this.reinforcementCandidates(),t=types[0];if(!t){if(roster.some(t=>plan.targets[t]>this.reinforcementCounts()[t]))result.reason='locked';break;}
-    if(plan.preferTwoStar&&plan.mode==='balanced'&&this.starExperiment&&!state.autoFusionFocus)state.autoFusionFocus={type:t,stars:Object.fromEntries(this.supplySquad().filter(u=>u.type===t&&(u.star||1)>=2).map(u=>[u.id,u.star]))};
+    const types=this.reinforcementCandidates(),t=plan.mode==='balanced'?(types.find(t=>this.cash[0]>=TYPES[t].cost)||types[0]):types[0];if(!t){if(roster.some(t=>plan.targets[t]>this.reinforcementCounts()[t]))result.reason='locked';break;}
     if(this.cash[0]<TYPES[t].cost){result.reason='funds';result.waitingType=t;break;}
     if(!this.buy(t)){result.reason='capacity';result.waitingType=t;break;}
     result.bought[t]=(result.bought[t]||0)+1;
