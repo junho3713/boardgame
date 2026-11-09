@@ -75,7 +75,7 @@ function mount(){
  $('startOverlay').hidden=true;
  $('coopJoinCode').value=new URLSearchParams(location.search).get('room')||'';try{$('coopMedicSkin').value=localStorage.getItem('plastic-front-medic-skin')==='rina'?'rina':'classic';}catch{}
  async function enter(route){try{await bridge.ready;bridge.enableAudio();const value=await request(route,{name:$('coopName').value,code:$('coopJoinCode').value,medicSkin:$('coopMedicSkin').value,reinforcementPlan:bridge.getGame().reinforcementPlan()});token=value.token;try{sessionStorage.setItem('plastic-front-coop-token',token);}catch{}apply(value.state);}catch(e){error(e.message);}}
- $('coopPlanSettings').onclick=()=>{$('displayBtn').click();modal(false);};
+ $('coopPlanSettings').onclick=()=>{$('startReinforcement').click();modal(false);};
  new MutationObserver(()=>{if($('displayOverlay').hidden)modal(!state?.started||state?.paused||!connected);else modal(false);}).observe($('displayOverlay'),{attributes:true,attributeFilter:['hidden']});
  $('coopCreate').onclick=()=>enter('/rooms');$('coopJoin').onclick=()=>enter('/join');
  $('coopStart').onclick=()=>{bridge.enableAudio();command('start');};$('coopResume').onclick=()=>command('resume');
