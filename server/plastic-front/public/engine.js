@@ -444,7 +444,7 @@ class FrontGame{
  baseShielded(){if(this.isRoomCampaign())return false;return this.isDesktopDefense()||this.mode==='pve'&&(this.mission.stage<3||this.bounds().id==='livingroom'&&(this.time<ROOM_RULES.finalAt||!this.finalBattle?.killed||this.crisis.phase!=='cleared'));}
  notify(type,data){if(this.events[type])this.events[type](data);}
  start(){this.phase='playing';this.notify('change');}
- neededXP(){return (18+this.level*5)*(this.isRoomCampaign()?3:1);}
+ neededXP(){return (18+this.level*5)*(this.isRoomCampaign()?2:1);}
  waveRules(){if(this.isRoomCampaign())return ROOM_WAVES;return this.mode==='pve'&&(this.mapId==='desktop'||this.world?.id==='desktop')?WAVE_CONFIGS.defense:WAVE_CONFIGS.survival;}
  flyingStart(){const state={};for(const [type,r]of Object.entries(this.waveRules().flying)){state[type+'Next']=r.at;state[type+'Spawned']=0;}return state;}
  waveType(rule,n,wave=0,count=0){const pick=rule.mix.find(r=>{const pace=this.isDesktopDefense()?this.evolutionPace().progress:0,every=r.every===undefined?null:Math.max(1,Math.round(r.every/(1+(ROOM_CAMPAIGN.config.evolutionPacing.eliteTypes.includes(r.type)?ROOM_CAMPAIGN.config.evolutionPacing.eliteWeight*pace:0))));return this.time>=(r.at||0)&&wave>=(r.wave||0)&&(every===null||n%every===0)&&(r.firstFraction===undefined||n<Math.floor(count*r.firstFraction))&&(r.maxAlive===undefined||this.units.filter(u=>u.team!==0&&u.hp>0&&u.type===r.type).length<r.maxAlive);});return pick?.type||rule.fallback;}

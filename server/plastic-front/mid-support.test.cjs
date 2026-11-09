@@ -56,15 +56,15 @@ test('support-only choices can be skipped without money, do not appear in duel, 
 });
 
 
-test('room growth takes three times the XP while old saves keep earned levels, XP and evolution',()=>{
+test('room growth takes twice the XP while old saves keep earned levels, XP and evolution',()=>{
  for(const map of ['livingroom','livingroom-star','livingroom-star3']){
-  const g=new FrontGame({},undefined,{map});g.start();a.equal(g.neededXP(),69);
+  const g=new FrontGame({},undefined,{map});g.start();a.equal(g.neededXP(),46);
   g.level=10;g.xp=42;g.tech[0].rifle=5;g.abilities.damage=5;g.evolved.rifle=true;
   const copy=unpack(new FrontGame(),JSON.parse(JSON.stringify(pack(g))));
-  a.equal(copy.level,10);a.equal(copy.xp,42);a.equal(copy.neededXP(),204);a.equal(copy.evolved.rifle,true);
+  a.equal(copy.level,10);a.equal(copy.xp,42);a.equal(copy.neededXP(),136);a.equal(copy.evolved.rifle,true);
  }
  const other=new FrontGame({},undefined,{map:'backyard'});other.start();a.equal(other.neededXP(),23);
- const coop=scene(true);for(const owner of [0,1])coop.withOwner(owner,()=>a.equal(coop.neededXP(),69));
+ const coop=scene(true);for(const owner of [0,1])coop.withOwner(owner,()=>a.equal(coop.neededXP(),46));
 });
 
 test('level upgrades cannot spend their opportunity on troops and the AI completes an upgrade',()=>{
