@@ -4,6 +4,7 @@ function install({FrontGame:Game,TYPES}){
  const p=Game.prototype;if(p.fieldSupplyVersion)return;p.fieldSupplyVersion=1;
  const config={odds:{toyDrum:.25,toyDecoyMaker:.25,toyTurtle:.25,toyStunner:.25},legacyOdds:{support:.25,medkit:.20,boost:.15,artillery:.15,special:.10,spectre:.10,titan:.05},cash:400,boostDuration:60,damage:1.3,haste:1.2,strikeRange:900,strikeDamage:320,strikeRadius:120};
  const specialTypes=['commando','spectre','titan'],specialRewards={special:'commando',spectre:'spectre',titan:'titan'},armor={commando:24,spectre:12,titan:44};
+ const openingSupply=pickup=>pickup.spawnedAt>=120-1e-8&&pickup.spawnedAt<240;
  const fresh=()=>({medkits:0,artillery:0,boostUntil:0,pendingSupport:0,collected:0,supportMinute:0,pendingMinute:null});
  const reset=p.reset,stats=p.stats,capacity=p.capacity,levelCheck=p.levelCheck,cancel=p.cancelRecovery,shot=p.fireUnitProjectiles,update=p.update,refresh=p.refreshCommanderHealth,defense=p.defenseFactor,select=p.selectCombatTarget;
  TYPES.commando={...TYPES.machinegun,name:'블랙베어 특전병',icon:'✦',hp:480,damage:22,rate:.13,range:360,speed:138,r:14,cost:0,role:'희귀 보급 전용 · 중장갑 조끼 · 미니건 3명 관통 · 별도 병력 슬롯'};
@@ -96,20 +97,24 @@ function install({FrontGame:Game,TYPES}){
   for(let i=0;i<120&&points.length<count;i++){const a=i*2.39996,r=110+i%3*35,q={x:pickup.x+Math.cos(a)*r,y:pickup.y+Math.sin(a)*r};if(q.x>55&&q.x<b.width-55&&q.y>75&&q.y<b.height-75&&this.freePosition(q.x,q.y,26)&&![...taken,...points].some(p=>Math.hypot(p.x-q.x,p.y-q.y)<57))points.push(q);}return points;
  };
  p.addSupplyGuards=function(pickup,types,positions){for(const [i,q]of positions.entries()){const u=this.addUnit(2,types[i%types.length],q.x,q.y,true);Object.assign(u,{rareSupplyGuard:true,supplyAnchorX:pickup.x,supplyAnchorY:pickup.y,homeX:u.x,homeY:u.y});this.stampEvolutionWave?.(u);pickup.guardIds.push(u.id);}};
- p.upgradeRareSupplyGuards=function(){for(const pickup of this.pickups){if(!pickup.active||!pickup.rareSupply||pickup.guardVersion===3||!Array.isArray(pickup.guardIds))continue;
-  const baseCount=Math.min(8,pickup.guardIds.length-(pickup.ambushPending===false?4:0)),removed=new Set(pickup.guardIds.slice(6,Math.max(6,baseCount)));
+ p.upgradeRareSupplyGuards=function(){for(const pickup of this.pickups){
+  const opening=openingSupply(pickup),version=opening?4:3;
+  if(!pickup.active||!pickup.rareSupply||pickup.guardVersion>=version||!Array.isArray(pickup.guardIds))continue;
+  const baseCount=Math.min(8,pickup.guardIds.length-(pickup.ambushPending===false?4:0)),keep=opening?3:6;
+  const removed=new Set(pickup.guardIds.slice(keep,Math.max(keep,baseCount)));
+  if(opening&&pickup.ambushPending===false)for(const id of pickup.guardIds.slice(baseCount+2))removed.add(id);
   for(const u of this.units)if(removed.has(u.id)&&u.hp>0){u.hp=0;u.diedAt=this.time;u.rareSupplyWithdrawn=true;}
-  pickup.guardIds=pickup.guardIds.filter(id=>!removed.has(id));for(const u of this.rareSupplyGuards(pickup)){u.supplyAnchorX=pickup.x;u.supplyAnchorY=pickup.y;}pickup.guardVersion=3;
+  pickup.guardIds=pickup.guardIds.filter(id=>!removed.has(id));for(const u of this.rareSupplyGuards(pickup)){u.supplyAnchorX=pickup.x;u.supplyAnchorY=pickup.y;}pickup.guardVersion=version;
  }};
  p.updateRareSupplySecurity=function(){
   if(this.phase!=='playing')return;this.upgradeRareSupplyGuards();
   for(const pickup of this.pickups){if(!pickup.active||!pickup.rareSupply||!pickup.ambushPending)continue;
    const c=this.units.find(u=>u.team===0&&u.type==='leader'&&u.hp>0&&Math.hypot(u.x-pickup.x,u.y-pickup.y)<360);if(!c)continue;
-   const bounds=this.bounds(),positions=[];
-   for(let i=0;i<48&&positions.length<4;i++){const a=Math.atan2(c.y-pickup.y,c.x-pickup.x)+Math.PI/2+(i%4)*Math.PI/2+Math.floor(i/4)*.17,r=205+Math.floor(i/16)*30,q={x:pickup.x+Math.cos(a)*r,y:pickup.y+Math.sin(a)*r};if(q.x>50&&q.y>70&&q.x<bounds.width-50&&q.y<bounds.height-70&&this.freePosition(q.x,q.y,26)&&!positions.some(p=>Math.hypot(p.x-q.x,p.y-q.y)<100))positions.push(q);}
-   if(positions.length<4)continue;pickup.ambushPending=false;
-   for(const [i,q]of positions.entries()){const type=(this.time<360?['bayonet','rifle','bayonet','machinegun']:['bladeGuard','machinegun','bayonet','rifle'])[i],u=this.addUnit(2,type,q.x,q.y,true);u.rareSupplyGuard=true;u.supplyAnchorX=pickup.x;u.supplyAnchorY=pickup.y;u.cooldown=Math.max(.8,u.cooldown);u.homeX=u.x;u.homeY=u.y;this.stampEvolutionWave?.(u);pickup.guardIds.push(u.id);this.effects.push({kind:'drop',x:u.x,y:u.y,t:.8,max:.8,team:2});}
-   this.notify('toast','희귀 보급 경계 발동 · 주변 경계병 4기 합류');
+   const bounds=this.bounds(),positions=[],types=openingSupply(pickup)?['bayonet','rifle']:this.time<360?['bayonet','rifle','bayonet','machinegun']:['bladeGuard','machinegun','bayonet','rifle'];
+   for(let i=0;i<48&&positions.length<types.length;i++){const a=Math.atan2(c.y-pickup.y,c.x-pickup.x)+Math.PI/2+(i%4)*Math.PI/2+Math.floor(i/4)*.17,r=205+Math.floor(i/16)*30,q={x:pickup.x+Math.cos(a)*r,y:pickup.y+Math.sin(a)*r};if(q.x>50&&q.y>70&&q.x<bounds.width-50&&q.y<bounds.height-70&&this.freePosition(q.x,q.y,26)&&!positions.some(p=>Math.hypot(p.x-q.x,p.y-q.y)<100))positions.push(q);}
+   if(positions.length<types.length)continue;pickup.ambushPending=false;
+   for(const [i,q]of positions.entries()){const u=this.addUnit(2,types[i],q.x,q.y,true);u.rareSupplyGuard=true;u.supplyAnchorX=pickup.x;u.supplyAnchorY=pickup.y;u.cooldown=Math.max(.8,u.cooldown);u.homeX=u.x;u.homeY=u.y;this.stampEvolutionWave?.(u);pickup.guardIds.push(u.id);this.effects.push({kind:'drop',x:u.x,y:u.y,t:.8,max:.8,team:2});}
+   this.notify('toast','희귀 보급 경계 발동 · 주변 경계병 '+types.length+'기 합류');
   }
  };
  p.updateRareSupplies=function(){
@@ -121,11 +126,13 @@ function install({FrontGame:Game,TYPES}){
   const c=leaders[Math.floor(this.time/120-1)%leaders.length],bounds=this.bounds();let point=null;
   for(let i=0;i<36;i++){const a=-Math.PI/2+((i%12)-5.5)*.22,r=700+(i%3)*75,candidate={x:Math.max(65,Math.min(bounds.width-65,c.x+Math.cos(a)*r)),y:Math.max(this.frontline()+100,Math.min(bounds.height-100,c.y+Math.sin(a)*r))};if(Math.hypot(candidate.x-c.x,candidate.y-c.y)>=550&&this.freePosition(candidate.x,candidate.y,26)&&!this.pickups.some(p=>p.active&&Math.hypot(p.x-candidate.x,p.y-candidate.y)<90)){point=candidate;break;}}
   if(!point){this.nextRareSupply=this.time+5;return;}
-  const guardTypes=this.time<360?['bayonet','bayonet','bayonet','rifle','rifle','machinegun']:this.time<720?['bladeGuard','bayonet','bayonet','machinegun','mortar','sniper']:['stagBeetle','bladeGuard','machinegun','mortar','mortar','sniper'];
-  const pickup={...point,active:true,rareSupply:true,spawnedAt:this.time,expires:this.time+120,ambushPending:true,guardVersion:3,guardIds:[]},positions=this.supplyGuardPositions(pickup,6);
-  if(positions.length<6){this.nextRareSupply=this.time+5;return;}
+  const pickup={...point,active:true,rareSupply:true,spawnedAt:this.time,expires:this.time+120,ambushPending:true,guardIds:[]},opening=openingSupply(pickup);
+  const guardTypes=opening?['bayonet','rifle','rifle']:this.time<360?['bayonet','bayonet','bayonet','rifle','rifle','machinegun']:this.time<720?['bladeGuard','bayonet','bayonet','machinegun','mortar','sniper']:['stagBeetle','bladeGuard','machinegun','mortar','mortar','sniper'];
+  pickup.guardVersion=opening?4:3;
+  const positions=this.supplyGuardPositions(pickup,guardTypes.length);
+  if(positions.length<guardTypes.length){this.nextRareSupply=this.time+5;return;}
   this.addSupplyGuards(pickup,guardTypes,positions);
-  this.pickups.push(pickup);this.notify('toast','희귀 보급 도착 · 보급 옆 호위 6기 · 처치 없이 접근 획득 · 접근 시 4기 추가 출동 · 보라색 신호를 확인하세요');this.effects.push({kind:'fieldSupply',...point,reward:'airdrop',t:1.2,max:1.2,team:0});
+  this.pickups.push(pickup);this.notify('toast','희귀 보급 도착 · 보급 옆 호위 '+guardTypes.length+'기 · 처치 없이 접근 획득 · 접근 시 '+(opening?2:4)+'기 추가 출동 · 보라색 신호를 확인하세요');this.effects.push({kind:'fieldSupply',...point,reward:'airdrop',t:1.2,max:1.2,team:0});
  };
  p.update=function(dt){if(this.phase==='playing'){this.updateSupplyStrikes();this.expireRareSupplies();this.updateRareSupplySecurity();}const result=update.call(this,dt);this.updateRareSupplies();return result;};
  root.FrontFieldSupplies={config,specialTypes};return {config,specialTypes};

@@ -11,6 +11,34 @@ test('fresh rare supplies use four equal support-toy odds',()=>{
  const g=scene(),counts={};for(let i=0;i<10000;i++){g.random=()=>(i+.5)/10000;const kind=g.rollSupply();counts[kind]=(counts[kind]||0)+1;}
  a.deepEqual(counts,{toyDrum:2500,toyDecoyMaker:2500,toyTurtle:2500,toyStunner:2500});
 });
+
+test('only the two-minute supply window uses three guards and two approach reinforcements',()=>{
+ for(const time of [120,125,239.99,240,360]){
+  const g=scene();g.time=time;g.updateRareSupplies();const p=g.pickups[0],opening=time<240;
+  const base=opening?3:6,extra=opening?2:4;
+  a.equal(g.rareSupplyGuards(p).length,base);a.equal(p.expires,time+120);
+  Object.assign(g.commander(0),{x:p.x+300,y:p.y});
+  g.updateRareSupplySecurity();a.equal(g.rareSupplyGuards(p).length,base+extra);
+  g.updateRareSupplySecurity();a.equal(g.rareSupplyGuards(p).length,base+extra);
+ }
+});
+
+test('legacy first-drop guards shrink once across saves and retain prior casualties without kill rewards',()=>{
+ for(const ambushed of [false,true]){
+  const g=scene();g.time=120;g.updateRareSupplies();const p=g.pickups[0];
+  g.units=g.units.filter(u=>u.team===0);p.guardIds=[];p.guardVersion=3;p.ambushPending=!ambushed;
+  const count=ambushed?10:6;
+  g.addSupplyGuards(p,['bayonet','rifle','rifle'],Array.from({length:count},(_,i)=>({x:p.x+i*30,y:p.y+70})));
+  const guards=p.guardIds.map(id=>g.units.find(u=>u.id===id));guards[1].hp=0;
+  const before={kills:g.kills,cash:g.cash[0],gold:g.profile.gold};
+  const copy=unpack(scene(),JSON.parse(JSON.stringify(pack(g)))),saved=copy.pickups[0];
+  copy.upgradeRareSupplyGuards();a.equal(saved.guardIds.length,ambushed?5:3);
+  a.equal(copy.units.find(u=>u.id===guards[1].id).hp,0);
+  a.deepEqual({kills:copy.kills,cash:copy.cash[0],gold:copy.profile.gold},before);
+  const ids=[...saved.guardIds];copy.upgradeRareSupplyGuards();a.deepEqual(saved.guardIds,ids);
+  for(const u of guards.filter(u=>!ids.includes(u.id)))a.equal(copy.units.find(v=>v.id===u.id).rareSupplyWithdrawn,true);
+ }
+});
 test('the actual solo and cooperative collection loops award a nearby crate exactly once to its collector',()=>{
  for(const coop of [false,true]){const g=scene(coop),owner=coop?1:0,c=scope(g,owner,()=>g.commander(0));g.pickups=[{x:c.x,y:c.y,active:true,supplyKind:'artillery',rareSupply:true}];g.update(.05);a.equal(scope(g,owner,()=>g.supplyState().artillery),1);g.update(.05);a.equal(scope(g,owner,()=>g.supplyState().artillery),1);if(coop)a.equal(scope(g,0,()=>g.supplyState().artillery),0);}
 });
@@ -64,12 +92,12 @@ test('rare supply expiry and saved schedule prevent retroactive stockpiles and r
 
 test('wave test clock jumps rebuild rare supply timing and discard stale strikes and link marks',()=>{const g=scene(),lab=require('./public/wave-test.js');g.waveTest=true;g.time=120;g.nextRareSupply=240;g.supplyStrikes=[{index:0}];g.evolutionLinkState={owners:[{ready:{breach:126}}]};g.commander(0).evolutionLinkMarks={0:{snipe:124}};lab.seek(g,601);a.equal(g.nextRareSupply,720);a.deepEqual(g.supplyStrikes,[]);a.deepEqual(g.evolutionLinkState,{owners:[]});a.equal(g.commander(0).evolutionLinkMarks,undefined);lab.seek(g,0);a.equal(g.nextRareSupply,120);});
 
-test('rare supplies retain distance and danger but can be collected beside six living guards and four reinforcements',()=>{
- const g=scene();g.time=120;g.updateRareSupplies();const p=g.pickups[0],c=g.commander(0),cash=g.cash[0];a.ok(Math.hypot(p.x-c.x,p.y-c.y)>=550);a.equal(g.rareSupplyGuards(p).length,6);p.supplyKind='support';Object.assign(c,{x:p.x,y:p.y});a.equal(g.collectFieldSupply(p),true);a.equal(p.active,false);a.equal(g.cash[0],cash+400);a.equal(g.rareSupplyGuards(p).length,10);a.equal(g.collectFieldSupply(p),false);a.ok(g.rareSupplyGuards(p).every(u=>u.hp>0));
+test('rare supplies retain distance and danger but can be collected beside three first-drop guards and two reinforcements',()=>{
+ const g=scene();g.time=120;g.updateRareSupplies();const p=g.pickups[0],c=g.commander(0),cash=g.cash[0];a.ok(Math.hypot(p.x-c.x,p.y-c.y)>=550);a.equal(g.rareSupplyGuards(p).length,3);p.supplyKind='support';Object.assign(c,{x:p.x,y:p.y});a.equal(g.collectFieldSupply(p),true);a.equal(p.active,false);a.equal(g.cash[0],cash+400);a.equal(g.rareSupplyGuards(p).length,5);a.equal(g.collectFieldSupply(p),false);a.ok(g.rareSupplyGuards(p).every(u=>u.hp>0));
 });
 test('guard composition grows with time and expiration withdraws living guards without kill rewards',()=>{
- for(const [time,types]of [[120,['bayonet','bayonet','bayonet','rifle','rifle','machinegun']],[360,['bladeGuard','bayonet','bayonet','machinegun','mortar','sniper']],[780,['stagBeetle','bladeGuard','machinegun','mortar','mortar','sniper']]]){const g=scene();g.time=time;g.updateRareSupplies();const p=g.pickups[0],guards=g.rareSupplyGuards(p);a.deepEqual(guards.map(u=>u.type),types);a.ok(guards.every(u=>u.rareSupplyGuard&&!u.boss));const before={kills:g.kills,cash:g.cash[0],gold:g.profile.gold};g.time=p.expires;g.expireRareSupplies();a.equal(p.active,false);a.equal(g.rareSupplyGuards(p).length,0);a.ok(guards.every(u=>u.rareSupplyWithdrawn));a.deepEqual({kills:g.kills,cash:g.cash[0],gold:g.profile.gold},before);}
+ for(const [time,types]of [[120,['bayonet','rifle','rifle']],[240,['bayonet','bayonet','bayonet','rifle','rifle','machinegun']],[360,['bladeGuard','bayonet','bayonet','machinegun','mortar','sniper']],[780,['stagBeetle','bladeGuard','machinegun','mortar','mortar','sniper']]]){const g=scene();g.time=time;g.updateRareSupplies();const p=g.pickups[0],guards=g.rareSupplyGuards(p);a.deepEqual(guards.map(u=>u.type),types);a.ok(guards.every(u=>u.rareSupplyGuard&&!u.boss));const before={kills:g.kills,cash:g.cash[0],gold:g.profile.gold};g.time=p.expires;g.expireRareSupplies();a.equal(p.active,false);a.equal(g.rareSupplyGuards(p).length,0);a.ok(guards.every(u=>u.rareSupplyWithdrawn));a.deepEqual({kills:g.kills,cash:g.cash[0],gold:g.profile.gold},before);}
 });
 test('saved cooperative supplies remain collectible with living guards and reward only the collector',()=>{
- const g=scene(true);g.time=120;g.updateRareSupplies();const restored=unpack(scene(true),JSON.parse(JSON.stringify(pack(g)))),p=restored.pickups[0];a.equal(restored.rareSupplyGuards(p).length,6);restored.withOwner(1,()=>{const c=restored.commander(0);Object.assign(c,{x:p.x,y:p.y});p.supplyKind='artillery';a.equal(restored.collectFieldSupply(p),true);a.equal(restored.supplyState().artillery,1);});a.equal(restored.withOwner(0,()=>restored.supplyState().artillery),0);
+ const g=scene(true);g.time=120;g.updateRareSupplies();const restored=unpack(scene(true),JSON.parse(JSON.stringify(pack(g)))),p=restored.pickups[0];a.equal(restored.rareSupplyGuards(p).length,3);restored.withOwner(1,()=>{const c=restored.commander(0);Object.assign(c,{x:p.x,y:p.y});p.supplyKind='artillery';a.equal(restored.collectFieldSupply(p),true);a.equal(restored.supplyState().artillery,1);});a.equal(restored.withOwner(0,()=>restored.supplyState().artillery),0);
 });
