@@ -123,13 +123,13 @@ test('Ramjwi Thunder keeps eight target references and a one-time stun through a
 });
 
 test('water tiers push three, five and eight targets with progressively broader reach and force',()=>{
- for(const [tier,count,push]of [[0,3,72],[1,5,96],[2,8,144]]){
+ for(const [tier,count,push]of [[0,3,144],[1,5,192],[2,8,288]]){
   const g=scene(),u=ready(g,'toyTurtle',tier),targets=Array.from({length:10},(_,i)=>enemy(g,u.x+100+i*10,u.y)),positions=targets.map(t=>t.x);
-  assert.equal(g.useSupportToy(u),true);assert.equal(targets.filter((t,i)=>t.x>positions[i]).length,count);
+  assert.equal(g.useSupportToy(u),true);g.time=.5;for(const t of targets)g.updateSupportKnockback(t);assert.equal(targets.filter((t,i)=>t.x>positions[i]).length,count);
   near(targets[0].x-positions[0],push);assert.equal(g.effects.some(e=>e.kind==='toyTsunami'),tier===2);
  }
  const g=scene(),u=ready(g,'toyTurtle',2);enemy(g,u.x+120,u.y);
- const wide=enemy(g,u.x+Math.cos(1)*440,u.y+Math.sin(1)*440),x=wide.x;g.useSupportToy(u);assert.ok(wide.x>x);
+ const wide=enemy(g,u.x+Math.cos(1)*440,u.y+Math.sin(1)*440),x=wide.x;g.useSupportToy(u);g.time=.5;g.updateSupportKnockback(wide);assert.ok(wide.x>x);
 });
 
 test('clock jumps preserve buff time and cancel queued breaches, and old saves safely update without them',()=>{

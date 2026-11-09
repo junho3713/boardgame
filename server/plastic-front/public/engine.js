@@ -776,7 +776,7 @@ class FrontGame{
 
  isStationary(u){return !!TYPES[u.type]?.stationary&&!u.mobileMage;}
  move(u,dx,dy,dt,speed){
-  if(this.time<(u.rootedUntil||0)||this.time<(u.toyStunUntil||0)||this.isStationary(u))return;
+  if(this.time<(u.rootedUntil||0)||this.time<(u.toyStunUntil||0)||this.time<(u.toyKnockback?.recoverUntil||0)||this.isStationary(u))return;
   if(this.time<(u.slowUntil||0))speed*=1-clamp(u.slowAmount||.3,0,.9);
   if(u.bossPattern==='soldierDash'){const p=this.bossPatternRules(u);if(p&&this.time%p.every<p.duration)speed*=p.speed;}
   if(this.time<(u.luckySlowUntil||0))speed*=1-(this.isFlying(u)?LUCKY.flyingSlow:LUCKY.groundSlow);
@@ -1775,6 +1775,7 @@ class FrontGame{
    const player=this.commander(0);
    if(this.isSupportEntity?.(u))continue;
    if(u.hp<=0){if(u.type==='leader'&&u.deadUntil&&this.time>=u.deadUntil)this.reviveCommander(u);continue;}
+   if(this.updateSupportKnockback?.(u))continue;
    if((u.roadCaptain||u.roomGarrison)&&!this.updateRoadCaptain(u,dt))continue;
    if(u.type==='lucky'){if(u.team===0)this.updateLuckyUnit(u);else if(this.isRoomCampaign())this.updateEnemyLucky(u);}
    u.flash=Math.max(0,u.flash-dt);u.recoil=Math.max(0,(u.recoil||0)-dt);const s=this.stats(u);u.cooldown-=dt;if(this.time<(u.toyStunUntil||0))continue;

@@ -8,13 +8,13 @@ function install({FrontGame:Game,TYPES}){
   procOdds:{normal:.70,enhanced:.25,jackpot:.05},
   drum:{interval:30,duration:10,move:[1.05,1.15,1.30],haste:[1.03,1.10,1.25]},
   fishing:{arrival:.35,breach:.65,impact:1.13,radius:[0,140,240],damage:[0,2,4],push:[0,1,5/3]},
-  water:{range:[350,400,500],targets:[3,5,8],push:[1,4/3,2],arc:[Math.PI/2,Math.PI/2,Math.PI*.78]},
+  water:{range:[350,400,500],targets:[3,5,8],push:[2,8/3,4],duration:[.32,.38,.48],recovery:.15,arc:[Math.PI/2,Math.PI/2,Math.PI*.78]},
   electric:{targets:[1,3,8],range:310,duration:1}
  };
  const toys={
   toyDrum:{name:'태엽 북 토이',icon:'♫',hp:200,speed:145,cooldown:30,detail:'주변 이동 +5%·공속 +3% · 30초마다 추첨 · 강화 25%·대박 5%, 10초 지속'},
   toyDecoyMaker:{name:'미끼 토이',icon:'◇',hp:180,speed:145,cooldown:12,detail:'12초마다 낚시 미끼 · 일반 적 최대 2명 유도 · 상어 25%·메갈로돈 5%'},
-  toyTurtle:{name:'물대포 거북이',icon:'≈',hp:480,speed:90,cooldown:5,detail:'5초마다 전방 넉백 · 강화 물대포 25%, 최대 5명 · 쓰나미 5%, 최대 8명'},
+  toyTurtle:{name:'물대포 거북이',icon:'≈',hp:480,speed:TYPES.rifle.speed*.9,cooldown:5,detail:'5초마다 전방 넉백 · 기본 144 / 강화 192 / 쓰나미 288 · 강화 25%·쓰나미 5%'},
   toyStunner:{name:'람쥐썬더',icon:'ϟ',hp:180,speed:140,cooldown:10,detail:'10초마다 1초 스턴 · 연쇄 전격 25%, 최대 3명 · 람쥐 썬더 5%, 최대 8명'}
  };
  const insects=new Set(['ant','soldierAnt','beetle','bruteBeetle','stagBeetle','rhinoBeetle','honeybee','hornet','butterfly','bombBug','acidBeetle']);
@@ -68,10 +68,44 @@ function install({FrontGame:Game,TYPES}){
   if(t.team===0||t.hp<=0||this.bossInvulnerable(t)||this.time<(t.toyControlReadyAt||0)||this.time<(t.toyStunUntil||0))return false;
   const boss=t.boss||t.roadCaptain||t.finalBoss;return !boss||kind==='push'&&insects.has(t.type);
  };
- p.pushSupportTarget=function(u,t,strength=1){
+ p.pushSupportTarget=function(u,t,strength=1,{duration=0}={}){
   if(!this.supportControlAllowed(t,'push'))return false;const a=Math.atan2(t.y-u.y,t.x-u.x),n=(t.boss?40:72)*strength,b=this.bounds();let x=t.x,y=t.y;
   for(let d=8;d<=n;d+=8){const q={x:clamp(t.x+Math.cos(a)*d,45,b.width-45),y:clamp(t.y+Math.sin(a)*d,70,b.height-70)};if(!this.isFlying(t)&&!this.freePosition(q.x,q.y,this.collisionRadius(t)))break;x=q.x;y=q.y;}
-  t.x=x;t.y=y;if(t.bikeAttack?.origin){t.bikeAttack.origin.x=x;t.bikeAttack.origin.y=y;}t.hitReaction={at:this.time,angle:a,power:1,heavy:true};t.route=t.routeGoal=null;t.toyControlReadyAt=this.time+rules.controlResistance;return true;
+  if(Math.hypot(x-t.x,y-t.y)<.1)return false;
+  if(duration>0){
+   t.toyKnockback={dx:x-t.x,dy:y-t.y,applied:0,startedAt:this.time,until:this.time+duration,recoverUntil:this.time+duration+rules.water.recovery};
+   t.bayonetAttack=t.sniperAim=t.bikeAttack=null;t.bikeRecoverUntil=Math.max(t.bikeRecoverUntil||0,t.toyKnockback.recoverUntil);
+  }else{t.x=x;t.y=y;if(t.bikeAttack?.origin){t.bikeAttack.origin.x=x;t.bikeAttack.origin.y=y;}}
+  t.hitReaction={at:this.time,angle:a,power:1,heavy:true};t.route=t.routeGoal=null;t.toyControlReadyAt=this.time+rules.controlResistance;return true;
+ };
+ p.updateSupportKnockback=function(u){
+  const k=u.toyKnockback;if(!k)return false;if(u.hp<=0){delete u.toyKnockback;return false;}
+  const q=clamp((this.time-k.startedAt)/Math.max(.01,k.until-k.startedAt),0,1),progress=1-(1-q)**2,delta=Math.max(0,progress-k.applied),length=Math.hypot(k.dx,k.dy)*delta,steps=Math.max(1,Math.ceil(length/8));
+  const b=this.bounds();
+  for(let i=0;i<steps;i++){
+   const x=clamp(u.x+k.dx*delta/steps,45,b.width-45),y=clamp(u.y+k.dy*delta/steps,70,b.height-70);
+   if(!this.isFlying(u)&&!this.freePosition(x,y,this.collisionRadius(u))){k.dx=k.dy=0;break;}u.x=x;u.y=y;
+  }
+  k.applied=progress;u.route=u.routeGoal=null;
+  if(this.time<k.recoverUntil)return true;delete u.toyKnockback;return false;
+ };
+ p.turtleSupportGoal=function(u,c){
+  const facing=this.formationFacing||-Math.PI/2,side=u.toySlot===1?100:-100,r=this.collisionRadius(u),threats=this.toyThreats(u,620);
+  if(!threats.length){u.toyPositionGoal=null;return{x:c.x-Math.cos(facing)*55-Math.sin(facing)*side,y:c.y-Math.sin(facing)*55+Math.cos(facing)*side};}
+  const threat=threats[0],angle=Math.atan2(threat.y-c.y,threat.x-c.x),forward=clamp(distance(c,threat)-240,-150,85),near=threats.some(t=>distance(t,u)<140);
+  if(u.toyPositionGoal&&this.time<(u.toyPositionNextAt||0)&&distance(u.toyPositionGoal,c)<250&&!near)return u.toyPositionGoal;
+  const candidates=[];
+  for(const ahead of [forward,Math.min(forward,0),-110])for(const flank of [side,side*1.4,-side]){
+   const point=this.resolvePosition({team:0,x:c.x+Math.cos(angle)*ahead-Math.sin(angle)*flank,y:c.y+Math.sin(angle)*ahead+Math.cos(angle)*flank},r);
+   if(!this.freePosition(point.x,point.y,r)||distance(point,c)>250)continue;
+   let score=(ahead-forward)**2+(flank-side)**2*.35;
+   for(const t of threats)score+=Math.max(0,190-distance(point,t))**2*4;
+   for(const ally of this.units)if(ally!==u&&ally.team===0&&ally.hp>0)score+=Math.max(0,r+this.collisionRadius(ally)+16-distance(point,ally))**2*3;
+   if(!this.lineClear(point,threat,0,{fireTeam:0}))score+=30000;
+   candidates.push({point,score});
+  }
+  const goal=candidates.sort((a,b)=>a.score-b.score)[0]?.point||{x:c.x-Math.cos(angle)*110-Math.sin(angle)*side,y:c.y-Math.sin(angle)*110+Math.cos(angle)*side};
+  u.toyPositionGoal=goal;u.toyPositionNextAt=this.time+.45;return goal;
  };
  p.toyThreats=function(u,range=350){const c=this.commander(0),urgent=t=>t.bikeAttack||t.bayonetAttack||t.bombFuse?0:1;return this.units.filter(t=>t.team!==0&&t.hp>0&&distance(u,t)<=range&&this.visible(t)&&this.lineClear(u,t,0,{fireTeam:0})).sort((a,b)=>urgent(a)-urgent(b)||distance(a,c)-distance(b,c)||a.id-b.id);};
  p.rollSupportToyTier=function(u){
@@ -124,7 +158,7 @@ function install({FrontGame:Game,TYPES}){
    const tier=this.rollSupportToyTier(u),spec=rules.water;
    const threats=this.toyThreats(u,spec.range[tier]).filter(t=>this.supportControlAllowed(t,'push')),first=threats[0],angle=Math.atan2(first.y-u.y,first.x-u.x);u.face=angle;
    const hit=threats.filter(t=>Math.abs(Math.atan2(Math.sin(Math.atan2(t.y-u.y,t.x-u.x)-angle),Math.cos(Math.atan2(t.y-u.y,t.x-u.x)-angle)))<=spec.arc[tier]/2).slice(0,spec.targets[tier]);
-   for(const t of hit){this.effects.push({kind:'toyWater',x:u.x,y:u.y,tx:t.x,ty:t.y,target:t,source:u,angle,tier,t:.5,max:.5,team:0});this.pushSupportTarget(u,t,spec.push[tier]);}
+   for(const t of hit){this.effects.push({kind:'toyWater',x:u.x,y:u.y,tx:t.x,ty:t.y,target:t,source:u,angle,tier,t:.5,max:.5,team:0});this.pushSupportTarget(u,t,spec.push[tier],{duration:spec.duration[tier]});}
    if(tier===2)this.effects.push({kind:'toyTsunami',x:u.x,y:u.y,source:u,angle,range:spec.range[tier],arc:spec.arc[tier],t:1.1,max:1.1,team:0});
   }else if(type==='toyStunner'){
    const threats=this.toyThreats(u,rules.electric.range).filter(t=>this.supportControlAllowed(t,'stun'));if(!threats.length)return false;
@@ -148,9 +182,10 @@ function install({FrontGame:Game,TYPES}){
   for(const u of this.units.filter(t=>this.isSupportToy(t)&&!t.toyRetired)){
    const run=()=>{
     if(u.hp<=0){if(this.time<(u.toyDownUntil||Infinity))return;u.hp=u.maxHp*.5;u.diedAt=undefined;u.toyDownUntil=0;u.toyNextAt=this.time+(u.type==='toyDrum'?rules.drum.interval:1);}
-    const c=this.commander(0),angle=this.formationFacing||-Math.PI/2,side=u.toySlot===1?80:-80,goal={x:c.x-Math.cos(angle)*95-Math.sin(angle)*side,y:c.y-Math.sin(angle)*95+Math.cos(angle)*side};
+    const c=this.commander(0),angle=this.formationFacing||-Math.PI/2,side=u.toySlot===1?80:-80,goal=u.type==='toyTurtle'?this.turtleSupportGoal(u,c):{x:c.x-Math.cos(angle)*95-Math.sin(angle)*side,y:c.y-Math.sin(angle)*95+Math.cos(angle)*side};
     const combat=this.units.some(t=>t.team!==0&&t.hp>0&&(distance(t,c)<550||distance(t,u)<300)),s=this.stats(u),speed=!combat&&distance(u,c)>240?Math.max(s.speed,this.stats(c).speed*1.4):s.speed;
-    const oldX=u.x,oldY=u.y;if(distance(u,goal)>18)this.navigate(u,goal.x,goal.y,dt,speed);if(Math.hypot(u.x-oldX,u.y-oldY)>.05)u.toyBodyFace=Math.atan2(u.y-oldY,u.x-oldX);
+    const holding=u.type==='toyTurtle'&&this.time<(u.toyActionUntil||0)&&distance(u,c)<300&&!this.units.some(t=>t.team!==0&&t.hp>0&&distance(t,u)<130);
+    const oldX=u.x,oldY=u.y;if(!holding&&distance(u,goal)>18)this.navigate(u,goal.x,goal.y,dt,speed);if(Math.hypot(u.x-oldX,u.y-oldY)>.05)u.toyBodyFace=Math.atan2(u.y-oldY,u.x-oldX);
     this.useSupportToy(u);
    };if(this.coop)this.withOwner(u.coopOwner,run);else run();
   }

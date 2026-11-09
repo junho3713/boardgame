@@ -23,7 +23,7 @@ const otterArt={
  ]
 };
 const sharkArt={file:'assets/support-toys/shark-breach-v20261109.webp',cell:304,columns:4,rows:4};
-const waveArt={file:'assets/support-toys/tsunami-v20261109b.webp',cell:384,columns:4,rows:2};
+const waveArt={file:'assets/support-toys/tsunami-directions-v20261109.png',cell:181,columns:6,rows:8};
 const jetArt={file:'assets/support-toys/water-jet-v20261109.webp',cell:384,columns:4,rows:2,edges:[[24,359],[21,361],[21,365],[23,369],[23,364],[21,369],[21,372],[21,375]]};
 const turtleArt={
  file:'assets/support-toys/water-turtle-v20261109.webp',cell:224,height:78,columns:6,rows:5,
@@ -181,11 +181,12 @@ function shark(c,e,g){
  return true;
 }
 function tsunami(c,e,g){
- const q=clamp(1-e.t/e.max,0,.999),frame=Math.min(7,Math.floor(q*8)),width=e.range*(.7+.25*Math.sin(q*Math.PI)),distance=e.range*(.24+.36*q),x=e.x+Math.cos(e.angle)*distance,y=e.y+Math.sin(e.angle)*distance;
+ const q=clamp(1-e.t/e.max,0,.999),direction=((Math.round(e.angle/(Math.PI/4))%8)+8)%8,frame=direction*6+Math.min(5,Math.floor(q*6));
+ const width=e.range*(.76+.12*Math.sin(q*Math.PI)),distance=e.range*(.14+.62*(1-(1-q)**1.4)),x=e.x+Math.cos(e.angle)*distance,y=e.y+Math.sin(e.angle)*distance;
  c.save();c.globalAlpha=clamp((1-q)*5);
- c.beginPath();c.moveTo(e.x,e.y);c.arc(e.x,e.y,e.range,e.angle-e.arc/2,e.angle+e.arc/2);c.closePath();c.clip();
- c.translate(x,y);if(Math.cos(e.angle)<0)c.scale(-1,1);
- if(!sheet(c,waveArt,frame,0,0,width,width*.65)){oval(c,0,0,width*.45,30,'#63dfed66','#e1ffff');}
+ // The upright crest has its own camera-relative view. A ground-cone clip cuts
+ // off its height when firing toward the camera, so bound the sprite itself.
+ if(!sheet(c,waveArt,frame,x,y,width,width*.85)){oval(c,x,y,width*.45,30,'#63dfed66','#e1ffff');}
  c.restore();return true;
 }
 function drumBoost(c,e){

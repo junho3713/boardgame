@@ -8,7 +8,7 @@ function viewHarness(){
   'water-turtle-v20261109.webp':[1344,1120],
   'water-jet-v20261109.webp':[1536,768],
   'shark-breach-v20261109.webp':[1216,1216],
-  'tsunami-v20261109b.webp':[1536,768],
+  'tsunami-directions-v20261109.png':[1086,1448],
   'ramjwi-thunder-v20261109.webp':[1536,960],
   'thundercloud-v20261109.webp':[1536,768]
  };
@@ -70,4 +70,14 @@ test('failed skill textures settle once and retain a drawable fallback',()=>{
  for(const image of h.requests)image.fail();const count=h.requests.length;
  for(let i=0;i<8;i++){g.time+=.1;h.view.draw(h.ctx,u,g);h.view.event(h.ctx,{kind:'toyTsunami',source:u,x:u.x,y:u.y,angle:0,arc:2,range:500,t:.5,max:1},g);h.check();}
  assert.equal(h.requests.length,count);assert.equal(h.draws.length,0);
+});
+
+test('tsunami selects all forty-eight directional animation cells while keeping the crest upright',()=>{
+ const h=viewHarness(),u=actor('toyTurtle'),g={time:1};h.view.draw(h.ctx,u,g);for(const image of h.requests)image.load();
+ const cells=new Set();
+ for(let direction=0;direction<8;direction++)for(let frame=0;frame<6;frame++){
+  const phase=(frame+.25)/6;h.view.event(h.ctx,{kind:'toyTsunami',source:u,x:u.x,y:u.y,angle:direction*Math.PI/4,range:500,arc:Math.PI*.78,t:1-phase,max:1},g);
+  const [file,x,y,w,height]=h.draws.at(-1);assert.ok(file.includes('tsunami-directions'));assert.equal(x,frame*181);assert.equal(y,direction*181);assert.equal(w,181);assert.equal(height,181);cells.add(x+','+y);h.check();
+ }
+ assert.equal(cells.size,48);
 });
