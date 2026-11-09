@@ -82,6 +82,6 @@ test('the ordinary rare-supply reward creates the drum entity consumed by the ra
  assert.equal(bytes.toString('ascii',0,4),'RIFF');assert.equal(bytes.toString('ascii',8,12),'WEBP');
  for(const entry of ['index.html','boss-test.html']){
   const html=fs.readFileSync(__dirname+'/public/'+entry,'utf8');
-  assert.match(html,/support-toys-view\.js\?v=20261109-thunder1/);
+  assert.match(html,/support-toys-view\.js\?v=20261109-electric2/);
  }
 });

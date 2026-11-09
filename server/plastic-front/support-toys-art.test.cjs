@@ -50,7 +50,7 @@ test('shark, megalodon, stronger jets, tsunami and drum bursts render finite fra
  const h=viewHarness(),g={time:1},otter=actor('toyDecoyMaker'),turtle=actor('toyTurtle'),drum=actor('toyDrum'),squirrel=actor('toyStunner');
  h.view.draw(h.ctx,otter,g);h.view.draw(h.ctx,turtle,g);h.view.draw(h.ctx,drum,g);h.view.draw(h.ctx,squirrel,g);
  for(const image of h.requests)image.load();
- const target={x:1120,y:6000,visualFlightHeight:0};
+ const target={x:1120,y:6000,hp:100,visualFlightHeight:0};
  for(const tier of [0,1,2])for(let direction=0;direction<8;direction++)for(const phase of [.01,.25,.48,.75,.99]){
   const angle=direction*Math.PI/4,events=[
    {kind:'toyWater',source:turtle,target,angle,tier,t:1-phase,max:1},
@@ -58,7 +58,7 @@ test('shark, megalodon, stronger jets, tsunami and drum bursts render finite fra
    {kind:'toyZap',source:otter,from:turtle,target,tier,t:1-phase,max:1},
    {kind:'toyDecoyDrop',source:otter,x:1120,y:6000,angle,tier,t:1-phase,max:1},
    {kind:'toyDrumBoost',source:drum,x:1000,y:6000,tier,range:300,t:1-phase,max:1},
-   {kind:'toyThunder',source:squirrel,x:1120,y:6000,targets:[target,{x:1180,y:6030}],tier:2,t:1-phase,max:1},
+   {kind:'toyThunder',source:squirrel,x:1120,y:6000,targets:[target,{x:1180,y:6030,hp:100}],tier:2,t:1-phase,max:1},
    {kind:'toyShark',source:otter,x:1120,y:6000,angle,tier:Math.max(1,tier),range:tier===2?240:140,startedAt:1-phase,t:1-phase,max:1},
    {kind:'toyTsunami',source:turtle,x:1000,y:6000,angle,range:500,arc:Math.PI*.78,t:1-phase,max:1}
   ];
