@@ -11,6 +11,7 @@ class CoopGame extends Game{
   this.coopStates[1].medicSkinId=settings.medicSkins?.[1]==='rina'?'rina':'classic';
   for(const state of this.coopStates){state.bossRewards=0;state.bossClaimed=0;}
   for(const u of this.units)if(u.team===0)u.coopOwner=0;
+  for(const owner of [0,1])if(settings.reinforcementPlans?.[owner])this.withOwner(owner,()=>this.setReinforcementPlan(settings.reinforcementPlans[owner]));
   const c=this.commander(0);
   this.withOwner(1,()=>{const blue=this.addUnit(0,'leader',c.x+160,c.y+20);for(const dx of [-40,40])this.addUnit(0,'rifle',blue.x+dx,blue.y+70);});
   for(const u of this.units)if(u.team===0&&u.type!=='leader')Object.assign(u,this.formationPoint(u,this.withOwner(u.coopOwner,()=>this.commander(0))));

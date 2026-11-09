@@ -9,9 +9,9 @@ async function request(route,body){const response=await fetch(base+route,{method
 function error(message){$('coopStatus').textContent=message;bridge?.events.toast(message);}
 function command(action,data={}){
  const round=state?.round;
- queue=queue.catch(()=>{}).then(()=>request('/command',{action,round,...data})).then(apply).catch(e=>{error(e.message);});return queue;
+ queue=queue.catch(()=>{}).then(()=>request('/command',{action,round,...data})).then(data=>{apply(data);return data;}).catch(e=>{error(e.message);});return queue;
 }
-function modal(show){$('coopLobby').hidden=!show;}
+function modal(show){$('coopLobby').hidden=!show||!$('displayOverlay').hidden;}
 function updateRoom(){
  if(!state)return;
  const mine=state.owner?'파랑':'초록';document.body.dataset.coopColor=state.owner?'blue':'green';
@@ -68,13 +68,15 @@ async function poll(){
 function mount(){
  document.body.classList.add('coop-mode');
  document.querySelector('.choice-foot>b').textContent='전투 계속 · 내 분대만 5초 무적';
- const panel=document.createElement('div');panel.id='coopLobby';panel.className='overlay';panel.innerHTML=`<section class="modal coop-modal" role="dialog" aria-modal="true" aria-labelledby="coopLobbyTitle"><div class="eyebrow">TWO COMMANDERS / LIVING ROOM ★★</div><h2 id="coopLobbyTitle">초록과 파랑, 함께 진격.</h2><p>기존 2성 거실맵 · 일반 적 등장 수 1.8배<br>자원·경험치·강화·병력은 개인별로 성장합니다.</p><p class="coop-rule">강화를 골라도 전투는 계속됩니다.<br>레벨업 선택창이 열리면 내 분대만 5초 무적.</p><div id="coopEntry"><label for="coopName">대장 이름</label><input id="coopName" maxlength="16" autocomplete="nickname" value="대장"><label for="coopMedicSkin">내 의무병 스킨</label><select id="coopMedicSkin"><option value="classic">기본 의무병</option><option value="rina">리나 · 입체 모션</option></select><button id="coopCreate" class="primary">초록 대장으로 방 만들기</button><label for="coopJoinCode">친구의 방 코드</label><input id="coopJoinCode" maxlength="6" autocapitalize="characters" autocomplete="off" placeholder="6자리 코드"><button id="coopJoin">파랑 대장으로 입장</button></div><div id="coopWaiting" hidden><p class="coop-code">방 코드 <strong id="coopCode"></strong></p><div id="coopMembers"></div><button id="coopCopy">초대 링크 복사</button><button id="coopStart" class="primary">둘이 함께 출격 →</button><button id="coopResume" class="primary" hidden>함께 작전 재개 →</button></div><p id="coopStatus" role="status" aria-live="polite">방을 만들거나 친구의 코드를 입력하세요.</p><p class="coop-note">방은 서버 재시작 시 종료됩니다. 연결이 끊기면 작전이 멈추며, 같은 탭을 새로고침하면 재접속합니다.</p><button id="coopLeave" class="pause-reset">협동에서 나가기</button></section>`;
+ const panel=document.createElement('div');panel.id='coopLobby';panel.className='overlay';panel.innerHTML=`<section class="modal coop-modal" role="dialog" aria-modal="true" aria-labelledby="coopLobbyTitle"><div class="eyebrow">TWO COMMANDERS / LIVING ROOM ★★</div><h2 id="coopLobbyTitle">초록과 파랑, 함께 진격.</h2><p>기존 2성 거실맵 · 일반 적 등장 수 1.8배<br>자원·경험치·강화·병력은 개인별로 성장합니다.</p><p class="coop-rule">강화를 골라도 전투는 계속됩니다.<br>레벨업 선택창이 열리면 내 분대만 5초 무적.</p><button type="button" id="coopPlanSettings">목표 편성 · 자동 충원 설정 ↗</button><div id="coopEntry"><label for="coopName">대장 이름</label><input id="coopName" maxlength="16" autocomplete="nickname" value="대장"><label for="coopMedicSkin">내 의무병 스킨</label><select id="coopMedicSkin"><option value="classic">기본 의무병</option><option value="rina">리나 · 입체 모션</option></select><button id="coopCreate" class="primary">초록 대장으로 방 만들기</button><label for="coopJoinCode">친구의 방 코드</label><input id="coopJoinCode" maxlength="6" autocapitalize="characters" autocomplete="off" placeholder="6자리 코드"><button id="coopJoin">파랑 대장으로 입장</button></div><div id="coopWaiting" hidden><p class="coop-code">방 코드 <strong id="coopCode"></strong></p><div id="coopMembers"></div><button id="coopCopy">초대 링크 복사</button><button id="coopStart" class="primary">둘이 함께 출격 →</button><button id="coopResume" class="primary" hidden>함께 작전 재개 →</button></div><p id="coopStatus" role="status" aria-live="polite">방을 만들거나 친구의 코드를 입력하세요.</p><p class="coop-note">방은 서버 재시작 시 종료됩니다. 연결이 끊기면 작전이 멈추며, 같은 탭을 새로고침하면 재접속합니다.</p><button id="coopLeave" class="pause-reset">협동에서 나가기</button></section>`;
  document.body.append(panel);
  const strip=document.createElement('div');strip.id='coopStrip';strip.hidden=true;strip.innerHTML='<strong id="coopIdentity"></strong><span>방 <b id="coopRoomCode"></b></span><span id="coopConnection"></span><strong id="coopShield" hidden></strong><button id="coopPause">함께 일시정지</button><button id="coopExit">나가기</button>';
  document.querySelector('.topbar').after(strip);
  $('startOverlay').hidden=true;
  $('coopJoinCode').value=new URLSearchParams(location.search).get('room')||'';try{$('coopMedicSkin').value=localStorage.getItem('plastic-front-medic-skin')==='rina'?'rina':'classic';}catch{}
- async function enter(route){try{await bridge.ready;bridge.enableAudio();const value=await request(route,{name:$('coopName').value,code:$('coopJoinCode').value,medicSkin:$('coopMedicSkin').value});token=value.token;try{sessionStorage.setItem('plastic-front-coop-token',token);}catch{}apply(value.state);}catch(e){error(e.message);}}
+ async function enter(route){try{await bridge.ready;bridge.enableAudio();const value=await request(route,{name:$('coopName').value,code:$('coopJoinCode').value,medicSkin:$('coopMedicSkin').value,reinforcementPlan:bridge.getGame().reinforcementPlan()});token=value.token;try{sessionStorage.setItem('plastic-front-coop-token',token);}catch{}apply(value.state);}catch(e){error(e.message);}}
+ $('coopPlanSettings').onclick=()=>{$('displayBtn').click();modal(false);};
+ new MutationObserver(()=>{if($('displayOverlay').hidden)modal(!state?.started||state?.paused||!connected);else modal(false);}).observe($('displayOverlay'),{attributes:true,attributeFilter:['hidden']});
  $('coopCreate').onclick=()=>enter('/rooms');$('coopJoin').onclick=()=>enter('/join');
  $('coopStart').onclick=()=>{bridge.enableAudio();command('start');};$('coopResume').onclick=()=>command('resume');
  $('coopPause').onclick=$('pauseBtn').onclick=()=>{bridge.clearInput();command('pause');};
@@ -84,6 +86,7 @@ function mount(){
  $('againBtn').onclick=$('toMenuBtn').onclick=leave;
  if(token)poll();setInterval(poll,125);
 }
+api.configureReinforcement=plan=>{if(!globalThis.FrontReinforcementPlan.valid(plan))return false;if(!token)return bridge.getGame().setReinforcementPlan(plan);return command('reinforcementPlan',{plan}).then(data=>{if(!data)return false;const g=bridge.getGame();if(!state.started)g.setReinforcementPlan(plan);return JSON.stringify(g.reinforcementPlan().targets)===JSON.stringify(plan.targets)&&g.reinforcementPlan().enabled===plan.enabled&&g.reinforcementPlan().mode===plan.mode;});};
 api.install=value=>{bridge=value;mount();};
 api.pause=()=>{bridge.clearInput();command('pause');};
 api.frame=game=>{

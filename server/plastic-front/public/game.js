@@ -23,7 +23,9 @@ async function prepareGameAssets(){const b=$('startBtn'),label=b.textContent;b.d
 let selectedMode='pve',autoPilot=null,waveTestBackup=null,waveTestReturn='ready',waveTestFocus=null;const directProfile=profile;
 const gameEvents={level:showUpgrade,change:updateUI,toast:toast,end:data=>{if(autoPilot)autoPilot.lastEnd=data;showResult(data);},fire:weaponSound,explosion:explosionSound,profile:persistProfile};
 let game=COOP?.active?new window.FrontCoopGame(gameEvents):new window.FrontGame(gameEvents,profile,{map:battlefield,commander:selectedCommander,sniperSkin:selectedSniperSkin,medicSkin:selectedMedicSkin,flameSkin:selectedFlameSkin});
+let reinforcementUI=null;
 const fieldSupplyUI=window.FrontSupplyUI.create({getGame:()=>game,toast,clearInput});
+reinforcementUI=window.FrontReinforcementUI.create({getGame:()=>game,toast});
 const autoSessionOptions={events:gameEvents,apply:applyAuto,message:toast,busy:(value,progress)=>{$('autoBusy').hidden=!value;if(value&&progress){const total=Math.max(0,progress.total),done=Math.min(total,progress.processed||0);$('autoBusyProgress').max=Math.max(1,total);$('autoBusyProgress').value=done;$('autoBusyStatus').textContent=`${Math.floor(done)}초 / ${Math.ceil(total)}초 반영${progress.fallback?' · 응답을 복구하며 계산 중':''}`;}}};let autoSession=new window.FrontAutoSession(autoSessionOptions);const normalAutoSession=autoSession;
 let idlePlan=window.FrontAutoCleanPlan(window.FrontAutoPresets[battlefield.startsWith('livingroom')?'roomBalanced':'balanced']);
 let runSave=new window.FrontRunSave({getItem:k=>localStorage.getItem(k),setItem:(k,v)=>localStorage.setItem(k,v),removeItem:k=>localStorage.removeItem(k)});
@@ -227,7 +229,7 @@ $('fusionBtn').onclick=()=>{if(!game.starExperiment||!['playing','paused'].inclu
 $('closeFusion').onclick=()=>{$('fusionOverlay').hidden=true;game.phase=fusionReturn;updateUI();};
 
 function updateUI(){if(game.phase!=='ready')unitModels.prefetch(game);
- fieldSupplyUI.update();
+ fieldSupplyUI.update();reinforcementUI?.update();
  $('fusionBtn').hidden=!game.starExperiment||game.mode!=='pve';$('fusionBtn').disabled=!['playing','paused'].includes(game.phase);if(game.starExperiment)$('fusionBtn').textContent=(game.isThreeStarExperiment()?'★★★':'★★')+' 자동 합성';
  const room=game.bounds().id==='livingroom',desk=game.isDesktopDefense();$('mapName').textContent=desk?'DESK DEFENSE 03':room?(game.isThreeStarExperiment()?'LIVING ROOM ★★★':game.starExperiment?'LIVING ROOM ★★':'LIVING ROOM 02'):'BACKYARD 01';$('mapSubtitle').textContent=desk?'책상 위 방어선 · 북쪽 공세 / 20분 생존':room?'확장 거실 · 20분 혼합 공세':'작전 구역 · 뒷마당';$('constructionCount').textContent=game.buildings.filter(b=>b.hp>0).length;$('constructionBtn').disabled=game.mode!=='pve'||!['playing','paused'].includes(game.phase);renderBattlefieldChoice();
  renderBuild();updateIntel();

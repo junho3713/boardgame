@@ -1,6 +1,20 @@
 'use strict';
 const {test}=require('node:test'),assert=require('node:assert/strict'),http=require('node:http');
 const {createCoopHandler}=require('./coop-server.cjs');
+
+test('co-op plans can be set before starting and while paused, are validated, and affect only the authenticated squad',async()=>{
+ const {FrontGame,ROSTER,TYPES}=require('./public/engine.js'),seed=new FrontGame().reinforcementPlan(),plan=(type,n)=>({...structuredClone(seed),enabled:true,mode:'balanced',targets:Object.fromEntries(ROSTER.map(t=>[t,t===type?n:0]))});
+ let clock=10000;const handler=createCoopHandler({automatic:false,now:()=>clock}),app=http.createServer(handler);await new Promise(r=>app.listen(0,'127.0.0.1',r));const origin=`http://127.0.0.1:${app.address().port}/plastic-front/api/coop`;
+ async function call(route,body,token){const res=await fetch(origin+route,{method:body?'POST':'GET',headers:{...(body?{'Content-Type':'application/json'}:{}),...(token?{Authorization:'Bearer '+token}:{})},...(body?{body:JSON.stringify(body)}:{})});return{status:res.status,data:await res.json()};}
+ try{
+  const green=(await call('/rooms',{name:'green',reinforcementPlan:plan('rifle',3)})).data,blue=(await call('/join',{code:green.state.code,name:'blue',reinforcementPlan:plan('rifle',3)})).data;
+  assert.equal((await call('/command',{action:'reinforcementPlan',plan:plan('rifle',6)},blue.token)).status,200);assert.equal((await call('/command',{action:'start'},green.token)).status,200);
+  const room=handler.rooms.get(green.state.code),g=room.game;assert.equal(g.withOwner(0,()=>g.reinforcementPlan().targets.rifle),3);assert.equal(g.withOwner(1,()=>g.reinforcementPlan().targets.rifle),6);
+  assert.equal((await call('/command',{action:'pause'},green.token)).status,200);const cash=g.withOwner(0,()=>g.cash[0]);assert.equal((await call('/command',{action:'reinforcementPlan',owner:0,plan:plan('medic',3)},blue.token)).status,200);assert.equal(g.withOwner(0,()=>g.reinforcementPlan().targets.rifle),3);assert.equal(g.withOwner(1,()=>g.reinforcementPlan().targets.medic),3);assert.equal(g.withOwner(0,()=>g.cash[0]),cash);
+  const bad=plan('rifle',3);bad.targets.rifle=-1;assert.equal((await call('/command',{action:'reinforcementPlan',plan:bad},blue.token)).status,400);assert.equal(g.withOwner(1,()=>g.reinforcementPlan().targets.medic),3);
+  assert.equal((await call('/command',{action:'reinforcementPlan',plan:plan('rifle',6)},blue.token)).status,200);for(const owner of [0,1])g.withOwner(owner,()=>{g.cash[0]=1000;g.xp=0;});assert.equal((await call('/command',{action:'resume'},green.token)).status,200);g.time=59.99;handler.step();assert.equal(g.withOwner(0,()=>g.reinforcementCounts().rifle),3);assert.equal(g.withOwner(1,()=>g.reinforcementCounts().rifle),6);assert.equal(g.coopChoosing[0],false);assert.equal(g.coopChoosing[1],false);
+ }finally{handler.close();await new Promise(r=>app.close(r));}
+});
 test('two clients authenticate, grow independently without pausing, reconnect and reject stale choices',async()=>{
  let clock=10000;const handler=createCoopHandler({automatic:false,now:()=>clock});const app=http.createServer(handler);await new Promise(r=>app.listen(0,'127.0.0.1',r));const origin=`http://127.0.0.1:${app.address().port}/plastic-front/api/coop`;
  async function call(route,body,token){const response=await fetch(origin+route,{method:body?'POST':'GET',headers:{...(body?{'Content-Type':'application/json'}:{}),...(token?{Authorization:'Bearer '+token}:{})},...(body?{body:JSON.stringify(body)}:{})});return {status:response.status,data:await response.json()};}

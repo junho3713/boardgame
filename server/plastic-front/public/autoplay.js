@@ -40,7 +40,7 @@ class FrontAutoPilot{
  log(message){if(this.history.at(-1)?.message===message)return;this.history.push({time:this.game.time,message});if(this.history.length>10)this.history.shift();}
  prepare(plan=this.plan){this.plan=cleanPlan(plan);this.remainder=0;this.nextThink=0;this.nextBuild=0;this.nextPermanent=0;this.dodgeUntil=0;this.escape=null;this.motion=null;this.supply=null;this.supplyPauseUntil=0;this.baseDefense=null;this.hqGuardUntil=0;this.advanceState=null;this.nextAdvance=0;this.lineAnchor=null;this.lastScoutStage=0;this.lastEnd=null;this.active=false;this.history=[];this.game.reset('pve');this.action='AI 출격 대기';}
  start(plan=this.plan){this.prepare(plan);this.active=true;this.game.start();this.log(this.game.isDesktopDefense()?'책상 디펜스 · 20분 기지 방어':'동일한 돌파 작전 · AI 지휘 시작');}
- desired(){const g=this.game,total=Object.values(this.plan.counts).reduce((a,b)=>a+b,0),counts=Object.fromEntries(ROLES.map(t=>[t,Math.floor(g.capacity()*this.plan.counts[t]/total)]));let left=g.capacity()-Object.values(counts).reduce((a,b)=>a+b,0);const order=ROLES.filter(t=>this.plan.counts[t]).sort((a,b)=>(g.capacity()*this.plan.counts[b]/total%1)-(g.capacity()*this.plan.counts[a]/total%1));for(let i=0;i<left;i++)counts[order[i%order.length]]++;return counts;}
+ desired(){const g=this.game;if(g.reinforcementPlan?.().enabled)return {...g.reinforcementPlan().targets};const total=Object.values(this.plan.counts).reduce((a,b)=>a+b,0),counts=Object.fromEntries(ROLES.map(t=>[t,Math.floor(g.capacity()*this.plan.counts[t]/total)]));let left=g.capacity()-Object.values(counts).reduce((a,b)=>a+b,0);const order=ROLES.filter(t=>this.plan.counts[t]).sort((a,b)=>(g.capacity()*this.plan.counts[b]/total%1)-(g.capacity()*this.plan.counts[a]/total%1));for(let i=0;i<left;i++)counts[order[i%order.length]]++;return counts;}
  reinforcementStatus(){
   const g=this.game,c=g.commander(0),troops=g.alive(0).filter(u=>u.type!=='leader'),cap=g.capacity(),fighters=troops.filter(u=>T[u.type].damage>0).length;
   const pressured=g.units.some(u=>u.team!==0&&u.hp>0&&g.visible(u)&&(dist(u,c)<480||dist(u,g.bases[0])<400));
@@ -48,6 +48,7 @@ class FrontAutoPilot{
   return{alive:troops.length,fighters,target,pressured,understrength:troops.length<target,urgent:troops.length<Math.min(6,cap)||fighters<Math.min(4,cap)||pressured&&troops.length<target};
  }
  queue(){
+  if(this.game.reinforcementPlan?.().enabled)return Object.fromEntries(ROLES.map(t=>[t,0]));
   const g=this.game,goal=this.desired(),status=this.reinforcementStatus(),troops=g.alive(0).filter(u=>u.type!=='leader'),owned=Object.fromEntries(ROLES.map(t=>[t,troops.filter(u=>u.type===t).length])),q=Object.fromEntries(ROLES.map(t=>[t,0]));
   let cash=g.cash[0],slots=g.capacity()-troops.length;
   const needed=['medic','tank','guntruck'].find(t=>goal[t]>0&&g.tech[0][t]&&!owned[t]);
