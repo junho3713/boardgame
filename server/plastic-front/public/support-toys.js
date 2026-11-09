@@ -3,17 +3,17 @@
 function install({FrontGame:Game,TYPES}){
  const p=Game.prototype;if(p.supportToyVersion)return;p.supportToyVersion=1;
  const rules={
-  slots:2,range:300,move:1.05,haste:1.03,repair:20,controlResistance:3,
+  slots:2,range:300,move:1.05,haste:1.03,repair:20,controlResistance:3,duplicateMax:2,duplicateReduction:.05,
   odds:{toyDrum:.25,toyDecoyMaker:.25,toyTurtle:.25,toyStunner:.25},
   procOdds:{normal:.70,enhanced:.25,jackpot:.05},
   drum:{interval:30,duration:10,move:[1.05,1.15,1.30],haste:[1.03,1.10,1.25]},
-  fishing:{arrival:.35,lifetime:30,triggerRange:80,windup:.12,radius:[0,140,240],damage:[0,2,4],push:[0,2,10/3]},
+  fishing:{arrival:.35,lifetime:30,interval:20,maxBaits:3,triggerRange:80,windup:.12,radius:[0,140,240],damage:[0,2,4],push:[0,2,10/3]},
   water:{range:[350,400,500],targets:[3,5,8],push:[2,8/3,4],duration:[.32,.38,.48],waveDuration:1.35,waveStart:60,recovery:.15,arc:[Math.PI/2,Math.PI/2,Math.PI*.78]},
   electric:{targets:[1,3,8],range:310,duration:1}
  };
  const toys={
   toyDrum:{name:'태엽 북 토이',icon:'♫',hp:200,speed:145,cooldown:30,detail:'주변 이동 +5%·공속 +3% · 30초마다 추첨 · 강화 25%·대박 5%, 10초 지속'},
-  toyDecoyMaker:{name:'미끼 토이',icon:'◇',hp:180,speed:145,cooldown:rules.fishing.arrival+rules.fishing.lifetime,detail:'미끼 착지 후 30초 유지 · 미끼 1개·일반 적 최대 2명 유도 · 상어 25%·메갈로돈 5%'},
+  toyDecoyMaker:{name:'미끼 토이',icon:'◇',hp:180,speed:145,cooldown:rules.fishing.interval,detail:'20초마다 설치 · 각 미끼 착지 후 30초 유지 · 최대 3개·각 일반 적 2명 유도 · 상어 25%·메갈로돈 5%'},
   toyTurtle:{name:'물대포 거북이',icon:'≈',hp:480,speed:TYPES.rifle.speed*.9,cooldown:5,detail:'5초마다 전방 넉백 · 기본 144 / 강화 192 / 쓰나미 288 · 강화 25%·쓰나미 5%'},
   toyStunner:{name:'람쥐썬더',icon:'ϟ',hp:180,speed:140,cooldown:10,detail:'10초마다 1초 스턴 · 연쇄 전격 25%, 최대 3명 · 람쥐 썬더 5%, 최대 8명'}
  };
@@ -27,7 +27,11 @@ function install({FrontGame:Game,TYPES}){
  p.isSupportEntity=function(u){return this.isSupportToy(u)||u?.type==='toyDecoy';};
  p.supportToys=function(owner=this.coopOwner||0){return this.units.filter(u=>this.isSupportToy(u)&&!u.toyRetired&&(!this.coop||u.coopOwner===owner)).sort((a,b)=>(a.toySlot||0)-(b.toySlot||0)||a.id-b.id);};
  p.supportToyOffer=function(){return this.supplyState().toyOffer||null;};
- p.supportBait=function(owner=this.coopOwner||0){return this.units.find(u=>u.type==='toyDecoy'&&u.hp>0&&u.toyExpires>this.time&&(!this.coop||u.coopOwner===owner))||null;};
+ p.supportBaits=function(owner=this.coopOwner||0){return this.units.filter(u=>u.type==='toyDecoy'&&u.hp>0&&u.toyExpires>this.time&&(!this.coop||u.coopOwner===owner));};
+ p.supportBait=function(owner=this.coopOwner||0){return this.supportBaits(owner)[0]||null;};
+ p.supportToyUpgrades=function(u){return clamp(Math.floor(Number(u.toyUpgradeLevel)||0),0,rules.duplicateMax);};
+ p.supportToyCooldown=function(u){return toys[u.type].cooldown*(1-rules.duplicateReduction*this.supportToyUpgrades(u));};
+ p.refreshSupportToyCooldown=function(u){const next=this.supportToyCooldown(u),old=u.toyCooldown??(u.type==='toyDecoyMaker'?30.35:toys[u.type].cooldown);if(old!==next&&u.toyNextAt>this.time)u.toyNextAt=this.time+(u.toyNextAt-this.time)*next/old;u.toyCooldown=next;return next;};
  p.damage=function(target,amount,source){if(target?.type==='toyDecoy'&&target.hp>0&&this.time<target.toyExpires){target.flash=.13;return;}return damage.call(this,target,amount,source);};
  p.stats=function(u){const s=stats.call(this,u);if(this.isSupportEntity(u)){
   const level=this.commanderLevel(this.commander(0));s.hp=TYPES[u.type].hp*(1+.12*(level-1));s.damage=0;s.defense=u.type==='toyTurtle'?24:8;
@@ -42,12 +46,12 @@ function install({FrontGame:Game,TYPES}){
  p.refreshCommanderHealth=function(){refresh.call(this);for(const t of this.supportToys()){const hp=this.stats(t).hp,ratio=t.hp/Math.max(1,t.maxHp);t.maxHp=hp;t.hp=hp*ratio;}};
  p.addSupportToy=function(type,slot){
   if(!this.isSupportToy(type))return null;const current=this.supportToys();if(current.length>=rules.slots)return null;
-  const c=this.commander(0),u=this.addUnit(0,type,c.x+(slot===1?65:-65),c.y+80,true);u.toySlot=slot??([0,1].find(s=>!current.some(t=>t.toySlot===s))??0);u.toyNextAt=this.time+(type==='toyDrum'?rules.drum.interval:.8);if(type==='toyDrum')u.toyBeatStartedAt=this.time;u.hp=u.maxHp=this.stats(u).hp;this.resolvePosition(u);return u;
+  const c=this.commander(0),u=this.addUnit(0,type,c.x+(slot===1?65:-65),c.y+80,true);u.toySlot=slot??([0,1].find(s=>!current.some(t=>t.toySlot===s))??0);u.toyUpgradeLevel=0;u.toyCooldown=this.supportToyCooldown(u);u.toyNextAt=this.time+(type==='toyDrum'?u.toyCooldown:.8);if(type==='toyDrum')u.toyBeatStartedAt=this.time;u.hp=u.maxHp=this.stats(u).hp;this.resolvePosition(u);return u;
  };
  p.collectSupportToy=function(pickup,type){
   const state=this.supplyState();if(state.toyOffer){if(this.time>=(pickup.nextToyHint||0)){pickup.nextToyHint=this.time+2;this.notify('toast','서포토이 교체를 먼저 선택하세요 · 희귀 보급은 유지됩니다');}return false;}
   const own=this.supportToys(),same=own.find(u=>u.type===type);pickup.active=false;pickup.supplyKind=type;state.collected++;this.gainXP(18);this.awardGold(5);
-  if(same){same.toyDownUntil=0;same.diedAt=undefined;same.hp=same.maxHp=this.stats(same).hp;this.notify('toast',toys[type].name+' 중복 · 기존 서포토이 완전 수리');}
+  if(same){const before=this.supportToyUpgrades(same);same.toyUpgradeLevel=Math.min(rules.duplicateMax,before+1);const interval=this.refreshSupportToyCooldown(same);same.toyDownUntil=0;same.diedAt=undefined;same.hp=same.maxHp=this.stats(same).hp;this.notify('toast',toys[type].name+(same.toyUpgradeLevel===2?' ★★':' ★ (2/3)')+' · '+(before===2?'최대 강화 · 완전 수리':'중복 강화 '+same.toyUpgradeLevel+'/2 · 발동 주기 '+Number(interval.toFixed(2))+'초 · 완전 수리'));}
   else if(own.length<rules.slots){this.addSupportToy(type);this.notify('toast','서포토이 합류 · '+toys[type].name+' · '+toys[type].detail);}
   else{state.toyOffer={type,at:this.time};if(this.coop)this.coopInvulnerable[this.coopOwner]=Math.max(this.coopInvulnerable[this.coopOwner]||0,this.time+5);this.notify('toast','새 서포토이 · '+toys[type].name+' · 교체할 슬롯 또는 현재 편성 유지 선택');}
   this.effects.push({kind:'fieldSupply',x:pickup.x,y:pickup.y,reward:'supportToy',t:1.2,max:1.2,team:0});this.notify('change');return true;
@@ -176,8 +180,9 @@ function install({FrontGame:Game,TYPES}){
   this.supportBursts=pending;
  };
  p.useSupportToy=function(u){
+  this.refreshSupportToyCooldown(u);
   if(u.type==='toyDrum'&&!Number.isFinite(u.toyBeatStartedAt)){
-   u.toyBeatStartedAt=this.time;u.toyNextAt=this.time+rules.drum.interval;
+   u.toyBeatStartedAt=this.time;u.toyNextAt=this.time+this.supportToyCooldown(u);
   }
   if(u.hp<=0||this.time<(u.toyNextAt||0))return false;const type=u.type;
   if(type==='toyDrum'){
@@ -185,10 +190,11 @@ function install({FrontGame:Game,TYPES}){
    u.toyBoostUntil=this.time+(tier?rules.drum.duration:0);u.toyHighlightUntil=u.toyBoostUntil;
    if(tier)this.effects.push({kind:'toyDrumBoost',source:u,x:u.x,y:u.y,tier,range:rules.range,t:1.4,max:1.4,team:0});
   }else if(type==='toyDecoyMaker'){
-   const existing=this.supportBait();if(existing){u.toyNextAt=Math.max(u.toyNextAt||0,existing.toyExpires);return false;}
-   const threats=this.toyThreats(u,460).filter(t=>!t.boss&&!t.roadCaptain);if(!threats.length)return false;
+   const existing=this.supportBaits();if(existing.length>=rules.fishing.maxBaits){u.toyNextAt=Math.max(u.toyNextAt||0,Math.min(...existing.map(d=>d.toyExpires)));return false;}
+   const claimed=new Set(this.units.filter(t=>t.type==='toyDecoy'&&t.hp>0&&t.toyExpires>this.time).flatMap(t=>t.toyLuredIds||[]));
+   const threats=this.toyThreats(u,460).filter(t=>!t.boss&&!t.roadCaptain&&!this.isStationary(t)&&!claimed.has(t.id));if(!threats.length)return false;
    const c=this.commander(0),a=Math.atan2(threats[0].y-c.y,threats[0].x-c.x);let point=null;
-   for(const r of [150,120,90]){const q={x:c.x+Math.cos(a)*r,y:c.y+Math.sin(a)*r};if(this.freePosition(q.x,q.y,15)){point=q;break;}}if(!point)return false;
+   for(const r of [150,120,90]){for(const offset of [0,.35,-.35,.7,-.7]){const q={x:c.x+Math.cos(a+offset)*r,y:c.y+Math.sin(a+offset)*r};if(this.freePosition(q.x,q.y,15)&&existing.every(d=>distance(d,q)>=35)){point=q;break;}}if(point)break;}if(!point)return false;
    const tier=this.rollSupportToyTier(u);
    const d=this.addUnit(0,'toyDecoy',point.x,point.y,true);d.toyArrivesAt=this.time+rules.fishing.arrival;d.toyExpires=d.toyArrivesAt+rules.fishing.lifetime;d.toyLifetimeVersion=2;d.toyLuredIds=threats.slice(0,2).map(t=>t.id);d.toyMakerId=u.id;
    u.face=a;this.effects.push({kind:'toyDecoyDrop',x:d.x,y:d.y,source:u,angle:a,tier,t:.7,max:.7,team:0});
@@ -219,7 +225,7 @@ function install({FrontGame:Game,TYPES}){
    }
   }else return false;
   const duration=type==='toyDecoyMaker' ? .7 : type==='toyStunner'&&u.toyProcTier===2 ? 1.2 : .5;
-  u.toyNextAt=this.time+toys[type].cooldown;u.toyActionStartedAt=this.time;u.toyActionUntil=this.time+duration;u.toyActionFace=u.face;return true;
+  u.toyNextAt=this.time+this.supportToyCooldown(u);u.toyActionStartedAt=this.time;u.toyActionUntil=this.time+duration;u.toyActionFace=u.face;return true;
  };
  p.updateSupportToys=function(dt){
   for(const d of this.units.filter(u=>u.type==='toyDecoy'&&u.hp>0)){
@@ -234,7 +240,7 @@ function install({FrontGame:Game,TYPES}){
   for(const d of this.units)if(d.type==='toyDecoy'&&d.hp>0&&this.time>=d.toyExpires){d.hp=0;d.diedAt=this.time;}
   for(const u of this.units.filter(t=>this.isSupportToy(t)&&!t.toyRetired)){
    const run=()=>{
-    if(u.hp<=0){if(this.time<(u.toyDownUntil||Infinity))return;u.hp=u.maxHp*.5;u.diedAt=undefined;u.toyDownUntil=0;u.toyNextAt=this.time+(u.type==='toyDrum'?rules.drum.interval:1);}
+    if(u.hp<=0){if(this.time<(u.toyDownUntil||Infinity))return;u.hp=u.maxHp*.5;u.diedAt=undefined;u.toyDownUntil=0;u.toyNextAt=this.time+(u.type==='toyDrum'?this.supportToyCooldown(u):1);}
     const c=this.commander(0),angle=this.formationFacing||-Math.PI/2,side=u.toySlot===1?80:-80,goal=u.type==='toyTurtle'?this.turtleSupportGoal(u,c):{x:c.x-Math.cos(angle)*95-Math.sin(angle)*side,y:c.y-Math.sin(angle)*95+Math.cos(angle)*side};
     const combat=this.units.some(t=>t.team!==0&&t.hp>0&&(distance(t,c)<550||distance(t,u)<300)),s=this.stats(u),speed=!combat&&distance(u,c)>240?Math.max(s.speed,this.stats(c).speed*1.4):s.speed;
     const holding=u.type==='toyTurtle'&&this.time<(u.toyActionUntil||0)&&distance(u,c)<300&&!this.units.some(t=>t.team!==0&&t.hp>0&&distance(t,u)<130);

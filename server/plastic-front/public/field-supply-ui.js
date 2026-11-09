@@ -5,19 +5,20 @@ root.FrontSupplyUI={create({getGame,toast,clearInput}){
  const frame=document.getElementById('battleFrame');frame.append(bar);
  const toyPanel=document.createElement('div');toyPanel.className='support-toy-panel';toyPanel.setAttribute('aria-label','서포토이 편성');bar.prepend(toyPanel);let toyKey='';
  function updateToys(g){
-  const own=g.supportToys(),offer=g.supportToyOffer(),defs=root.FrontSupportToys.toys,key=own.map(t=>t.id+':'+t.type).join(',')+'|'+(offer?.type||'');
-  if(key!==toyKey){toyKey=key;toyPanel.innerHTML='<b>서포토이 '+own.length+'/2</b><div class="support-toy-cards">'+own.map(t=>'<div class="support-toy-card" title="'+defs[t.type].detail+'"><strong>'+defs[t.type].icon+' '+defs[t.type].name+'</strong><small data-toy-state="'+t.id+'"></small><progress data-toy-charge="'+t.id+'" max="1" value="0"></progress></div>').join('')+'</div>'+(offer?'<div class="support-toy-offer"><strong>새 서포토이 · '+defs[offer.type].name+'</strong><p>'+defs[offer.type].detail+'</p>'+own.map(t=>'<button type="button" data-toy-replace="'+t.id+'">'+defs[t.type].name+' 교체</button>').join('')+'<button type="button" data-toy-replace="keep">현재 편성 유지</button></div>':'');}
+  const own=g.supportToys(),offer=g.supportToyOffer(),defs=root.FrontSupportToys.toys,key=own.map(t=>t.id+':'+t.type+':'+g.supportToyUpgrades(t)).join(',')+'|'+(offer?.type||'');
+  if(key!==toyKey){toyKey=key;toyPanel.innerHTML='<b>서포토이 '+own.length+'/2</b><div class="support-toy-cards">'+own.map(t=>'<div class="support-toy-card" title="'+defs[t.type].detail+' · 중복 최대 2회, 주기 5%씩 단축"><strong>'+defs[t.type].icon+' '+defs[t.type].name+' '+(g.supportToyUpgrades(t)===2?'★★':'★ ('+(g.supportToyUpgrades(t)+1)+'/3)')+'</strong><small data-toy-state="'+t.id+'"></small><progress data-toy-charge="'+t.id+'" max="1" value="0"></progress></div>').join('')+'</div>'+(offer?'<div class="support-toy-offer"><strong>새 서포토이 · '+defs[offer.type].name+'</strong><p>'+defs[offer.type].detail+'</p>'+own.map(t=>'<button type="button" data-toy-replace="'+t.id+'">'+defs[t.type].name+' 교체</button>').join('')+'<button type="button" data-toy-replace="keep">현재 편성 유지</button></div>':'');}
   toyPanel.hidden=!own.length&&!offer;
   for(const t of own){
    const d=defs[t.type],down=t.hp<=0,remaining=down?Math.max(0,t.toyDownUntil-g.time):Math.max(0,(t.toyNextAt||0)-g.time);
    const state=toyPanel.querySelector('[data-toy-state="'+t.id+'"]'),charge=toyPanel.querySelector('[data-toy-charge="'+t.id+'"]');
    const boosting=t.type==='toyDrum'&&g.time<(t.toyBoostUntil||0);
    let status=remaining?'다음 발동 '+Math.ceil(remaining)+'초':'발동 대기';
-   if(t.type==='toyDecoyMaker'&&g.supportBait())status='미끼 유지 '+Math.ceil(g.supportBait().toyExpires-g.time)+'초 · 유인 '+(g.supportBait().toyLuredIds?.length||0)+'/2';
+   const baits=t.type==='toyDecoyMaker'?g.supportBaits():[];
+   if(baits.length)status='미끼 '+baits.length+'/3 · 남음 '+baits.map(d=>Math.ceil(d.toyExpires-g.time)).join('/')+'초 · 다음 '+Math.ceil(remaining)+'초';
    else if(t.type==='toyDrum')status=boosting?(t.toyProcTier===2?'대박':'강화')+' '+Math.ceil(t.toyBoostUntil-g.time)+'초 · 다음 '+Math.ceil(remaining)+'초':'오라 · 다음 추첨 '+Math.ceil(remaining)+'초';
    else if(g.time<(t.toyHighlightUntil||0))status=(t.toyProcTier===2?'대박':'강화')+' · '+status;
-   if(state)state.textContent=down?'수리 '+Math.ceil(remaining)+'초':'HP '+Math.ceil(t.hp)+'/'+Math.ceil(t.maxHp)+' · '+status;
-   if(charge){charge.setAttribute('aria-label',d.name+' · '+(down?'수리':boosting?'강화 남은 시간':t.type==='toyDrum'?'다음 추첨':'재사용 충전'));charge.setAttribute('aria-valuetext',state?.textContent||status);charge.value=down?1-remaining/20:boosting?(t.toyBoostUntil-g.time)/root.FrontSupportToys.rules.drum.duration:1-Math.min(1,remaining/d.cooldown);}
+   if(state)state.textContent=(down?'수리 '+Math.ceil(remaining)+'초':'HP '+Math.ceil(t.hp)+'/'+Math.ceil(t.maxHp)+' · '+status)+' · 주기 '+Number(g.supportToyCooldown(t).toFixed(2))+'초';
+   if(charge){charge.setAttribute('aria-label',d.name+' · '+(down?'수리':boosting?'강화 남은 시간':t.type==='toyDrum'?'다음 추첨':'재사용 충전'));charge.setAttribute('aria-valuetext',state?.textContent||status);charge.value=down?1-remaining/20:boosting?(t.toyBoostUntil-g.time)/root.FrontSupportToys.rules.drum.duration:1-Math.min(1,remaining/g.supportToyCooldown(t));}
   }
  }
  toyPanel.addEventListener('click',e=>{const b=e.target.closest('[data-toy-replace]');if(!b)return;const id=b.dataset.toyReplace;if(!getGame().resolveSupportToyOffer(id==='keep'?'keep':Number(id)))toast('전투 중에 자신의 서포토이 슬롯을 선택하세요.');});

@@ -35,10 +35,10 @@ test('midgame and late ordinary wave pressure grows without increasing boss atta
  near(config.patterns.rearBarrage.bossDamageMultiplier,.85);
 });
 
-test('one bait remains for all thirty seconds even under fire and is not overwritten by a fresh cast',()=>{
+test('a fresh cast can overlap while the first bait retains all thirty seconds under fire',()=>{
  const g=scene(),u=g.addSupportToy('toyDecoyMaker');u.toyNextAt=0;for(let i=0;i<5;i++){const t=g.addUnit(2,'rifle',1600+i*20,6000,true);t.cooldown=1e6;}assert.equal(g.useSupportToy(u),true);const bait=g.supportBait(),hp=bait.hp;near(bait.toyExpires-bait.toyArrivesAt,30);
- for(const at of [.35,3.35,12,20,30.349]){g.time=at;g.damage(bait,1e9,g.units.find(t=>t.team!==0));g.updateSupportToys(0);assert.equal(bait.hp,hp);assert.equal(g.supportBait(),bait);assert.equal(g.useSupportToy(u),false);assert.equal(g.units.filter(t=>t.type==='toyDecoy'&&t.hp>0).length,1);assert.ok(bait.toyLuredIds.length<=2);}
- g.time=30.35;g.updateSupportToys(0);assert.equal(bait.hp,0);assert.notEqual(g.supportBait()?.id,bait.id);assert.ok(g.units.filter(t=>t.type==='toyDecoy'&&t.hp>0).length<=1);
+ for(const at of [.35,3.35,12,20,30.349]){g.time=at;g.damage(bait,1e9,g.units.find(t=>t.team!==0));g.updateSupportToys(0);assert.equal(bait.hp,hp);assert.equal(g.supportBait(),bait);assert.equal(g.useSupportToy(u),false);assert.ok(g.supportBaits().length<=3);assert.ok(bait.toyLuredIds.length<=2);if(at===20)assert.equal(g.supportBaits().length,2);}
+ g.time=30.35;g.updateSupportToys(0);assert.equal(bait.hp,0);assert.notEqual(g.supportBait()?.id,bait.id);assert.ok(g.supportBaits().length<=3);
 });
 
 test('a living legacy bait extends from its original landing time and replaces dead lured targets without exceeding two',()=>{
