@@ -9,13 +9,13 @@ function install({FrontGame:Game,TYPES}){
   drum:{interval:30,duration:10,move:[1.05,1.15,1.30],haste:[1.03,1.10,1.25]},
   fishing:{arrival:.35,lifetime:30,interval:20,maxBaits:3,triggerRange:80,windup:.12,radius:[0,140,240],damage:[0,2,4],push:[0,2,10/3]},
   water:{range:[350,400,500],targets:[3,5,8],push:[2,8/3,4],duration:[.32,.38,.48],waveDuration:1.35,waveStart:60,recovery:.15,arc:[Math.PI/2,Math.PI/2,Math.PI*.78]},
-  electric:{targets:[1,3,8],range:310,duration:1}
+  electric:{targets:[1,3,8],range:[310,310,500],duration:[1,2,3]}
  };
  const toys={
   toyDrum:{name:'태엽 북 토이',icon:'♫',hp:200,speed:145,cooldown:30,detail:'주변 이동 +5%·공속 +3% · 30초마다 추첨 · 강화 25%·대박 5%, 10초 지속'},
   toyDecoyMaker:{name:'미끼 토이',icon:'◇',hp:180,speed:145,cooldown:rules.fishing.interval,detail:'20초마다 설치 · 각 미끼 착지 후 30초 유지 · 최대 3개·각 보스 포함 적 2명 유도 · 상어 25%·메갈로돈 5%'},
   toyTurtle:{name:'물대포 거북이',icon:'≈',hp:480,speed:TYPES.rifle.speed*.9,cooldown:5,detail:'5초마다 전방 넉백 · 기본 144 / 강화 192 / 쓰나미 288 · 강화 25%·쓰나미 5%'},
-  toyStunner:{name:'람쥐썬더',icon:'ϟ',hp:180,speed:140,cooldown:10,detail:'10초마다 1초 스턴 · 연쇄 전격 25%, 최대 3명 · 람쥐 썬더 5%, 최대 8명'}
+  toyStunner:{name:'람쥐썬더',icon:'ϟ',hp:180,speed:140,cooldown:10,detail:'기본 1명·1초 · 연쇄 25%: 3명·2초 · 벼락 5%: 범위 500·8명·3초 · 기본 주기 10초'}
  };
  const insects=new Set(['ant','soldierAnt','beetle','bruteBeetle','stagBeetle','rhinoBeetle','honeybee','hornet','butterfly','bombBug','acidBeetle']);
  const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y),clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -212,12 +212,13 @@ function install({FrontGame:Game,TYPES}){
     this.supportWaves??=[];this.supportWaves.push(wave);this.effects.push({...wave,kind:'toyTsunami',t:wave.max,team:0});
    }else for(const t of hit){this.effects.push({kind:'toyWater',x:u.x,y:u.y,tx:t.x,ty:t.y,target:t,source:u,angle,tier,t:.5,max:.5,team:0});this.pushSupportTarget(u,t,spec.push[tier],{duration:spec.duration[tier]});}
   }else if(type==='toyStunner'){
-   const threats=this.toyThreats(u,rules.electric.range).filter(t=>this.supportControlAllowed(t,'stun'));if(!threats.length)return false;
-   const tier=this.rollSupportToyTier(u),targets=threats.slice(0,rules.electric.targets[tier]);let previous=u;
+   const nearby=this.toyThreats(u,Math.max(...rules.electric.range)).filter(t=>this.supportControlAllowed(t,'stun'));if(!nearby.length)return false;
+   const tier=this.rollSupportToyTier(u),duration=rules.electric.duration[tier],threats=nearby.filter(t=>distance(u,t)<=rules.electric.range[tier]);if(!threats.length){u.toyNextAt=this.time+this.supportToyCooldown(u);return false;}
+   const targets=threats.slice(0,rules.electric.targets[tier]);let previous=u;
    u.face=Math.atan2(targets[0].y-u.y,targets[0].x-u.x);
    for(const [hop,t] of targets.entries()){
-    t.toyStunUntil=this.time+rules.electric.duration;t.toyControlReadyAt=t.toyStunUntil+rules.controlResistance;t.sniperAim=t.bayonetAttack=null;
-    this.effects.push({kind:'bossGroggy',stun:true,target:t,x:t.x,y:t.y,t:rules.electric.duration,max:rules.electric.duration,team:0});
+    t.toyStunUntil=this.time+duration;t.toyControlReadyAt=t.toyStunUntil+rules.controlResistance;t.sniperAim=t.bayonetAttack=null;
+    this.effects.push({kind:'bossGroggy',stun:true,target:t,x:t.x,y:t.y,t:duration,max:duration,team:0});
     this.effects.push({kind:'toyZap',x:previous.x,y:previous.y,from:previous,target:t,source:u,tier,hop,storm:tier===2,t:1,max:1,team:0});previous=t;
    }
    if(tier===2){

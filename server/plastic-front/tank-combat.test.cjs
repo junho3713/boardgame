@@ -4,6 +4,12 @@ const {FrontGame}=require('./public/engine.js');
 const {CoopGame}=require('./public/coop-engine.js');
 function scene(coop=false){const g=coop?new CoopGame():new FrontGame({},undefined,{map:'livingroom-star'});g.start();g.units=[];g.obstacles=[];g.buildings=[];g.defenses=[];g.structures=[];g.mission.stage=3;for(const key of ['updateMission','updateSwarm','updateBosses','updateArtillery','gainXP','levelCheck','syncEnemyGrowth'])g[key]=()=>{};return g;}
 function durable(u){u.hp=u.maxHp=100000;u.cooldown=10000;u.aiEvade={x:u.x,y:u.y,until:1e6};return u;}
+
+test('an enemy tank keeps its actual screened target while front soldiers swap order',()=>{
+ const g=scene(),main=durable(g.addUnit(0,'tank',1500,6160)),left=durable(g.addUnit(0,'rifle',1490,6100)),right=durable(g.addUnit(0,'rifle',1510,6100));durable(g.addUnit(0,'leader',1500,7000));const tank=g.addUnit(2,'tank',1500,6000,true);tank.cooldown=0;tank.turretFace=0;let fired=0;g.events.fire=u=>{if(u===tank)fired++;};
+ for(let i=0;i<160;i++){left.x=1490;right.x=1510;left.y=6100+(i%2?1:-1);right.y=6100+(i%2?-1:1);for(const u of [main,left,right])u.aiEvade={x:u.x,y:u.y,until:g.time+1};g.update(.05);}
+ a.ok(fired>=3,'screening prevented repeated shots: '+fired);a.ok(left.hp<100000||right.hp<100000);
+});
 test('ordinary enemy tanks finish aiming and hit even as almost equidistant targets trade nearest priority',()=>{
  for(const coop of [false,true])for(const team of [1,2]){
   const g=scene(coop),left=durable(g.addUnit(0,'tank',1300,6000)),right=durable(coop?g.withOwner(1,()=>g.addUnit(0,'tank',1701,6000)):g.addUnit(0,'tank',1701,6000)),tank=g.addUnit(team,'tank',1500,6000,true);

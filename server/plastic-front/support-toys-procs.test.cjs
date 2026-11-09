@@ -7,6 +7,13 @@ const {pack,unpack}=require('./public/autoplay.js');
 const {applySnapshot}=require('./public/coop-state.js');
 const wave=require('./public/wave-test.js');
 const rolls=[.99,.15,.02];
+
+test('jackpot thunder reaches eight targets out to 500 while ordinary and chain casts keep their 310 range',()=>{
+ for(const tier of [0,1,2]){const g=scene(),u=ready(g,'toyStunner',tier);const nearTarget=enemy(g,u.x+120,u.y);const far=Array.from({length:8},(_,i)=>enemy(g,u.x+340+i*20,u.y));const outside=enemy(g,u.x+501,u.y);far[0].boss=true;
+  assert.equal(g.useSupportToy(u),true);assert.equal(nearTarget.toyStunUntil,tier+1);assert.equal(far.filter(t=>t.toyStunUntil===3).length,tier===2?7:0);assert.equal(outside.toyStunUntil,undefined);const fill=g.effects.filter(e=>e.kind==='bossGroggy');assert.ok(fill.every(e=>e.max===tier+1));
+ }
+ const g=scene(),u=ready(g,'toyStunner',0);enemy(g,u.x+450,u.y);assert.equal(g.useSupportToy(u),false);assert.equal(u.toyNextAt,10);g.random=()=>.02;assert.equal(g.useSupportToy(u),false);assert.equal(g.effects.some(e=>e.kind==='toyThunder'),false);
+});
 const near=(actual,expected)=>assert.ok(Math.abs(actual-expected)<1e-7,actual+' != '+expected);
 function scene(coop=false){
  const g=coop?new CoopGame():new FrontGame({},undefined,{map:'livingroom-star'});
@@ -126,10 +133,10 @@ test('a launched shark survives source retirement and cooperative snapshots with
  const after=restored.units.find(t=>t.id===victim.id),afterHp=after.hp;restored.updateSupportBursts();assert.equal(after.hp,afterHp);
 });
 
-test('electric tiers stun at most one, three and eight valid targets with the same one-second duration',()=>{
+test('electric tiers stun at most one, three and eight valid targets for one, two and three seconds respectively',()=>{
  for(const [tier,count]of [[0,1],[1,3],[2,8]]){
   const g=scene(),u=ready(g,'toyStunner',tier),targets=Array.from({length:10},(_,i)=>enemy(g,u.x+80+i*8,u.y)),boss=enemy(g,u.x+70,u.y,'rhinoBeetle');boss.boss=true;
-  assert.equal(g.useSupportToy(u),true);assert.equal(targets.filter(t=>t.toyStunUntil===1).length,count-1);assert.equal(boss.toyStunUntil,1);assert.equal(g.effects.filter(e=>e.kind==='toyZap').length,count);assert.equal(u.toyNextAt,10);
+  assert.equal(g.useSupportToy(u),true);assert.equal(targets.filter(t=>t.toyStunUntil===tier+1).length,count-1);assert.equal(boss.toyStunUntil,tier+1);assert.equal(g.effects.filter(e=>e.kind==='toyZap').length,count);assert.equal(u.toyNextAt,10);
   const links=g.effects.filter(e=>e.kind==='toyZap');for(let i=1;i<links.length;i++)assert.equal(links[i].from,links[i-1].target);
   assert.deepEqual(links.map(e=>e.hop),Array.from({length:count},(_,i)=>i));
   const storm=g.effects.find(e=>e.kind==='toyThunder');assert.equal(!!storm,tier===2);if(storm)assert.deepEqual(storm.targets,links.map(e=>e.target));
@@ -142,7 +149,7 @@ test('Ramjwi Thunder keeps eight target references and a one-time stun through a
  assert.equal(TYPES.toyStunner.name,'람쥐썬더');assert.equal(u.toyActionUntil,1.2);
  const copy=unpack(scene(true),JSON.parse(JSON.stringify(pack(g)))),storm=copy.effects.find(e=>e.kind==='toyThunder');
  assert.equal(storm.source.coopOwner,1);assert.equal(storm.targets.length,8);
- for(const target of storm.targets){assert.equal(copy.units.find(t=>t.id===target.id),target);assert.equal(target.toyStunUntil,1);}
+ for(const target of storm.targets){assert.equal(copy.units.find(t=>t.id===target.id),target);assert.equal(target.toyStunUntil,3);}
  const hp=copy.units.filter(t=>targets.some(v=>v.id===t.id)).map(t=>t.hp);copy.time=.5;copy.updateSupportToys(0);
  assert.deepEqual(copy.units.filter(t=>targets.some(v=>v.id===t.id)).map(t=>t.hp),hp);
  assert.equal(copy.effects.filter(e=>e.kind==='toyThunder').length,1);

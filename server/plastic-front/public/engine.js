@@ -1788,7 +1788,7 @@ class FrontGame{
    if(this.updateBossPattern(u,dt))continue;
    if(u.type==='bikeRaider'){this.updateBike(u,dt,u.bossPattern==='rapidBike'?{...BIKE,...this.bossPatternRules(u)}:BIKE);continue;}
    const channeling=u===player&&this.ultimateStatus().active;if(this.isSwordCommander(u))this.updateSwordAttack(u);if(u.type!=='tank'&&u.type!=='crimsonAce'&&u.type!=='guntruck'&&!channeling)u.aimFace=null;
-   let target=null,nearest=Infinity;
+   let target=null,nearest=Infinity,tankLocked=false;
    if(u.type==='medic'){
     const patients=this.medicPatients(u,s.range).slice(0,this.evolutionEnabled(u)?3:1);
     target=patients[0]||null;if(target)nearest=dist(u,target);
@@ -1798,14 +1798,14 @@ class FrontGame{
     // Finish the turret's aim before reconsidering almost equidistant moving targets.
     if(u.team!==0&&u.type==='tank'){
      const locked=[...this.units,...this.buildings].find(a=>a.id===u.tankAimTargetId);
-     if(locked&&this.canTarget(u,locked)&&this.targetDistance(u,locked)<s.range&&this.targetDistance(u,locked)>=(s.minRange||0))target=locked;
-     u.tankAimTargetId=target?.id??null;
+     if(locked&&this.canTarget(u,locked)&&this.targetDistance(u,locked)<s.range&&this.targetDistance(u,locked)>=(s.minRange||0)){target=locked;tankLocked=true;}
     }
     if(u.team!==0&&u.type==='mortar'&&u.roomWave)target=this.selectEnemyMortarTarget(u,s)||target;
     const decoy=this.supportDecoyTarget?.(u);if(decoy)target=this.canTarget(u,decoy)&&dist(u,decoy)<=Math.min(65,s.range*.85)?decoy:null;
-    if(target&&target.type!=='toyDecoy'&&u.team!==0&&u.type!=='mortar'){const screen=this.screeningUnit(u,target);if(screen&&dist(u,screen)<s.range)target=screen;}
+    if(target&&target.type!=='toyDecoy'&&u.team!==0&&u.type!=='mortar'&&!tankLocked){const screen=this.screeningUnit(u,target);if(screen&&dist(u,screen)<s.range)target=screen;}
     const b=(u.team===1||u.team!==0&&(this.isDesktopDefense()||TYPES[u.type]?.stab))?this.bases[0]:null;if(!target&&b&&this.canTarget(u,b)&&(TYPES[u.type]?.stab||this.isDesktopDefense()&&MELEE.has(u.type)?this.targetDistance(u,b)<s.range:dist(u,b)>=(s.minRange||0)&&dist(u,b)<s.range+45))target=b;
     if(u.team===0&&this.focusTarget&&!this.focusAutomatic&&dist(u,this.focusTarget)>=(s.minRange||0)&&dist(u,this.focusTarget)<s.range+(this.focusTarget.base||this.focusTarget.structure?35:0))target=this.focusTarget;
+    if(u.team!==0&&u.type==='tank')u.tankAimTargetId=target?.id??null;
     if(u.type==='sniper'){const windup=Math.min(ROOM_RULES.sniperAim,s.rate*.7);if(!target)u.sniperAim=null;else if(u.cooldown<=windup&&(!u.sniperAim||u.sniperAim.target!==target)){u.sniperAim={target,started:this.time,fireAt:this.time+windup};u.cooldown=Math.max(u.cooldown,windup);}}
     if(TYPES[u.type]?.stab){if(u.bossPattern!=='wideSlash')this.updateBayonet(u,target,s);}
     else if(target&&!channeling){u.face=Math.atan2(target.y-u.y,target.x-u.x);u.aimFace=u.face;let aligned=true;if(u.type==='tank'||u.type==='crimsonAce'||u.type==='guntruck'){const delta=Math.atan2(Math.sin(u.aimFace-(u.turretFace??u.aimFace)),Math.cos(u.aimFace-(u.turretFace??u.aimFace)));u.turretFace=(u.turretFace??u.aimFace)+clamp(delta,-ROOM_RULES.turretSpeed*dt,ROOM_RULES.turretSpeed*dt);aligned=Math.abs(delta)<.13;}if(u.cooldown<=0&&aligned&&(u.type!=='sniper'||u.sniperAim&&this.time>=u.sniperAim.fireAt)){if(u.type==='sniper')u.sniperAim=null;const attack=this.attackRoll(u);u.cooldown=this.isFlameCommander(u)?Math.max(u.cooldown,-dt)+s.rate:s.rate;if(this.isSwordCommander(u)){this.beginSwordAttack(u,target,attack);}else if(this.isFlameCommander(u)){this.flamePulse(u,u.face);}else if(u.type==='mortar'){this.launchMortar(u,target,attack);u.recoil=.25;}else if(MELEE.has(u.type)){if(this.isFlying(u)){u.flightStrikeUntil=this.time+.22;u.recoil=.18;this.effects.push({kind:'sting',x:u.x,y:u.y,tx:target.x,ty:target.y,flightHeight:s.flightHeight,t:.2,max:.2,team:u.team});}this.damage(target,attack.damage,u);}else{this.fireUnitProjectiles(u,target,attack,s);u.recoil=(u.type==='tank'||u.type==='crimsonAce')?.24:u.type==='rocket'?.2:.16;this.notify('fire',u);this.effects.push({kind:'muzzle',x:u.x,y:u.y,origin:true,t:.12,max:.12,team:u.team,weapon:u.appearance==='shino'?'shino':u.type,boss:!!u.boss,...(u.type==='sniper'&&['kayla','hayeon'].includes(u.appearance)?{appearance:u.appearance}:{}),angle:u.face});if(u.type==='sniper')this.effects.push({kind:'tracer',x:u.x,y:u.y,tx:target.x,ty:target.y,t:.12,max:.12,team:u.team});}}}

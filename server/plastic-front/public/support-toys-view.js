@@ -429,7 +429,7 @@ function thunder(c,e,g){
  const groups=groupThunderTargets(e),targets=groups.flat().filter(t=>t.hp>0);
  if(!targets.length)return true;
  const age=e.max-e.t,gentle=gentleElectric(g),q=clamp(age/e.max),xs=targets.map(t=>t.x);
- const width=clamp(Math.max(...xs)-Math.min(...xs)+130,190,420);
+ const width=clamp((Math.max(...xs)-Math.min(...xs))*1.25+220,300,680);
  const cloudY=Math.min(e.y-95,...targets.map(t=>electricPoint(t).y-36),e.source?.hp>0?e.source.y-91:Infinity);
  const height=width*.75,cloudX=e.x,base=cloudY-height*.24;
  const frame=gentle?3:Math.min(7,Math.floor(q*8));

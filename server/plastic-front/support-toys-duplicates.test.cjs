@@ -11,7 +11,7 @@ test('an upgrade preserves current cooldown progress and further duplicates cann
  const g=scene(),u=g.addSupportToy('toyDrum');g.time=15;duplicate(g,u);near(u.toyNextAt,29.25);duplicate(g,u);near(u.toyNextAt,28.5);const at=u.toyNextAt;duplicate(g,u);near(u.toyNextAt,at);g.time=28.5;a.equal(g.useSupportToy(u),true);near(u.toyNextAt-g.time,27);near(u.toyBoostUntil-g.time,0);
 });
 test('shortened real casts keep effect duration and 70/25/5 probability rules unchanged',()=>{
- for(const type of ['toyDrum','toyDecoyMaker','toyTurtle','toyStunner']){const g=scene(),u=g.addSupportToy(type);duplicate(g,u);duplicate(g,u);g.addUnit(2,'ant',u.x+120,u.y,true);u.toyNextAt=0;g.random=()=>.02;a.equal(g.useSupportToy(u),true);a.equal(u.toyProcTier,2);near(u.toyNextAt-g.time,g.supportToyCooldown(u));if(type==='toyDrum')near(u.toyBoostUntil,10);if(type==='toyStunner')near(g.units.find(t=>t.team!==0).toyStunUntil,1);}
+ for(const type of ['toyDrum','toyDecoyMaker','toyTurtle','toyStunner']){const g=scene(),u=g.addSupportToy(type);duplicate(g,u);duplicate(g,u);g.addUnit(2,'ant',u.x+120,u.y,true);u.toyNextAt=0;g.random=()=>.02;a.equal(g.useSupportToy(u),true);a.equal(u.toyProcTier,2);near(u.toyNextAt-g.time,g.supportToyCooldown(u));if(type==='toyDrum')near(u.toyBoostUntil,10);if(type==='toyStunner')near(g.units.find(t=>t.team!==0).toyStunUntil,3);}
 });
 test('three separate baits coexist without duplicate aggro assignments; a fourth waits without overwriting',()=>{
  const g=scene(),u=g.addSupportToy('toyDecoyMaker');for(let i=0;i<8;i++){const t=g.addUnit(2,'ant',1700+i*12,6000,true);t.hp=t.maxHp=1e6;}
