@@ -1,0 +1,56 @@
+/* Battle-first layout, using the existing paper and olive palette. */
+html:not(.game-fullscreen),html:not(.game-fullscreen) body{height:100%;overflow:hidden}
+html:not(.game-fullscreen) .app{height:100dvh;min-height:0;overflow:hidden;padding-bottom:0}
+html:not(.game-fullscreen) .workspace{flex:1 1 0;min-height:0;overflow:hidden;align-items:stretch;padding-top:10px}
+html:not(.game-fullscreen) .battle-section{height:100%;min-height:0;display:flex;flex-direction:column}
+html:not(.game-fullscreen) .battle-frame{height:auto;min-height:0;flex:1 1 0}
+.topbar{height:64px;min-height:64px}.header-meta{display:none}
+.sidebar{max-height:100%;overflow-y:auto}.sidebar>h1,.sidebar>.section-caption{display:none}
+.squad-panel{padding-top:14px}.battle-footer{height:26px;min-height:26px;font-size:11px}
+.battle-hud{height:46px;min-height:46px}.tactical-toolbar{margin-bottom:5px}.run-build-bar{margin-bottom:8px}
+.roster-info small,.squad-note,.intel-note,.intel-row{font-size:11px;color:#52634b}
+.ability-slot small{font-size:11px}.ability-slot b{font-size:11px}.level-panel small{font-size:10px}
+.ui-scroll{min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:24px;scroll-padding:16px}
+.overlay>.start-card.ui-split,.overlay>.upgrade-modal.ui-split{display:flex;flex-direction:column;padding:0;overflow:hidden;height:calc(var(--ui-height,100dvh) - 28px);max-height:900px}
+.ui-actions{flex:none;padding:12px 24px;background:var(--paper);border-top:1px solid var(--line);display:grid;gap:8px}
+.ui-actions .meta-entry{margin:0;min-height:44px}.ui-actions .primary,.ui-actions .continue-battle{position:static;margin:0;box-shadow:none;min-height:48px}
+.ui-launch-summary{font-size:12px;line-height:1.5;color:#40523a;margin:0}
+.ui-details{border-top:1px solid var(--line);padding:12px 0;margin:10px 0;text-align:left}
+.ui-details>summary{font-size:13px;font-weight:700;cursor:pointer;padding:8px 0;color:#344f34}
+.ui-scroll .start-card>p,.ui-scroll>p{font-size:13px;line-height:1.7;color:#52634b}
+.start-card h2{font-size:30px;letter-spacing:-1px;margin:4px 0 16px}
+.start-card .eyebrow,.start-rules{display:none}
+.commander-picker:not(.unit-skin-picker) .commander-options{grid-template-columns:repeat(2,minmax(0,1fr))}
+.commander-option small,.battlefield-option small{font-size:11px;color:#53634b}
+.commander-picker p,.save-personal-note,.start-sub{font-size:12px;color:#52634b}
+.mode-picker small{font-size:11px;color:#52634b}.mode-picker b{font-size:13px}
+.start-card .commander-picker,.start-card .battlefield-picker{margin:14px 0}
+.ui-scroll .upgrade-desc{font-size:13px;line-height:1.6;margin-bottom:14px}
+.ui-scroll .upgrade-card{padding:14px;min-height:0}.ui-scroll .upgrade-card h3{font-size:15px}
+.ui-scroll .upgrade-card p{font-size:12px;line-height:1.65;color:#52634b}
+.ui-scroll .card-badge,.ui-scroll .card-bottom,.ui-scroll .evolution-hint{font-size:11px}
+.ui-scroll .card-icon{margin:8px 0}.ui-scroll .choice-foot{font-size:12px;margin-bottom:4px}
+.ui-scroll .support-note{font-size:12px;line-height:1.6}
+.support-toy-card small{font-size:11px}.support-toy-card progress{width:100%}
+.modal :focus-visible{outline:3px solid var(--orange);outline-offset:3px}
+@media(max-width:760px),(pointer:coarse){
+ html:not(.game-fullscreen) .app{height:var(--ui-height,100dvh);min-height:0;padding:0 8px}
+ html:not(.game-fullscreen) .workspace{display:flex;padding-top:4px}
+ .topbar{height:46px;min-height:46px}.battle-hud{height:32px;min-height:32px}
+ .battle-footer{display:none}.run-build-bar{min-height:30px;margin:0 0 5px;padding:3px}
+ .ability-slot small{font-size:10px}.run-build-bar>b,.run-build-bar>button{font-size:10px}
+ .tactical-toolbar .order-buttons button,.tactical-toolbar>#mobileIntel{font-size:11px;min-height:36px}
+ .ui-scroll{padding:16px}.ui-actions{padding:10px 16px max(10px,env(safe-area-inset-bottom))}
+ .overlay>.start-card.ui-split,.overlay>.upgrade-modal.ui-split{height:calc(var(--ui-height,100dvh) - 16px)}
+ .upgrade-cards{grid-template-columns:1fr}.ui-scroll .upgrade-card{display:grid;grid-template-columns:52px minmax(0,1fr);column-gap:12px;text-align:left}
+ .ui-scroll .card-num{display:none}.ui-scroll .card-icon{grid-column:1;grid-row:1/5;align-self:center;margin:0;font-size:32px;width:52px;height:52px;min-height:0}
+ .ui-scroll .card-icon .unit-art,.ui-scroll .card-icon .upgrade-art{width:52px;height:52px;min-width:0;max-width:100%;display:block}
+ .ui-scroll .card-badge,.ui-scroll .upgrade-card h3,.ui-scroll .upgrade-card p,.ui-scroll .card-bottom{grid-column:2}
+ .ui-scroll .upgrade-card p{margin-bottom:8px}.ui-scroll .card-badge{margin-bottom:4px}
+ .ui-scroll .unit-card-icon img{width:52px;height:52px}
+ .battle-frame>.minimap{opacity:.9}.minimap canvas{width:56px;height:74px}
+ .base-status>span{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.objective-details>span,.objective-details>small{font-size:11px!important}
+ #greenLabel,#redLabel{font-size:0}#greenLabel:after,#redLabel:after{content:attr(data-compact);font-size:10px}
+ .operation-objective b,.objective-toggle{font-size:11px}.mission-label small{display:none}
+ .battle-frame>.map-label{display:none}
+}
