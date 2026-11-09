@@ -13,7 +13,8 @@ root.FrontSupplyUI={create({getGame,toast,clearInput}){
    const state=toyPanel.querySelector('[data-toy-state="'+t.id+'"]'),charge=toyPanel.querySelector('[data-toy-charge="'+t.id+'"]');
    const boosting=t.type==='toyDrum'&&g.time<(t.toyBoostUntil||0);
    let status=remaining?Math.ceil(remaining)+'초':'발동 대기';
-   if(t.type==='toyDrum')status=boosting?(t.toyProcTier===2?'대박':'강화')+' '+Math.ceil(t.toyBoostUntil-g.time)+'초 · 다음 '+Math.ceil(remaining)+'초':'오라 · 다음 추첨 '+Math.ceil(remaining)+'초';
+   if(t.type==='toyDecoyMaker'&&g.supportBait())status='미끼 유지 '+Math.ceil(g.supportBait().toyExpires-g.time)+'초 · 유인 '+(g.supportBait().toyLuredIds?.length||0)+'/2';
+   else if(t.type==='toyDrum')status=boosting?(t.toyProcTier===2?'대박':'강화')+' '+Math.ceil(t.toyBoostUntil-g.time)+'초 · 다음 '+Math.ceil(remaining)+'초':'오라 · 다음 추첨 '+Math.ceil(remaining)+'초';
    else if(g.time<(t.toyHighlightUntil||0))status=(t.toyProcTier===2?'대박':'강화')+' · '+status;
    if(state)state.textContent=down?'수리 '+Math.ceil(remaining)+'초':'HP '+Math.ceil(t.hp)+'/'+Math.ceil(t.maxHp)+' · '+status;
    if(charge)charge.value=down?1-remaining/20:boosting?(t.toyBoostUntil-g.time)/root.FrontSupportToys.rules.drum.duration:1-Math.min(1,remaining/d.cooldown);

@@ -4,8 +4,8 @@ const {FrontGame,LUCKY}=require('./public/engine.js');require('./public/two-star
 const {CoopGame}=require('./public/coop-engine.js'),{pack,unpack}=require('./public/autoplay.js');
 const near=(x,y)=>a.ok(Math.abs(x-y)<1e-7,`${x} != ${y}`);
 function scene(coop=false){const g=coop?new CoopGame():new FrontGame({},undefined,{map:'livingroom-star'});g.start();g.units=g.units.filter(u=>u.team===0&&u.type==='leader');g.obstacles=[];g.buildings=[];g.structures=[];g.defenses=[];g.pickups=[];g.visible=g.lineClear=()=>true;return g;}
-test('the seven-minute spike retains 25 percent health relief and returns continuously through twelve minutes',()=>{
- const g=scene();for(const [time,factor]of [[300,.75],[419.99,.75],[420,.75],[480,.75],[540,.8125],[600,.875],[660,.9375],[720,1],[900,1]]){
+test('the five-to-eight-minute health recovery restores midgame durability smoothly',()=>{
+ const g=scene();for(const [time,factor]of [[300,.75],[360,5/6],[420,11/12],[480,1],[540,1],[600,1],[660,1],[720,1],[900,1]]){
   g.time=time;const u=g.addUnit(2,'bladeGuard',1500,6000),full={...u,spawnedAt:720};near(g.stats(u).hp/g.stats(full).hp,factor);a.equal(g.stats(u).damage,g.stats(full).damage);a.equal(g.stats(u).defense,g.stats(full).defense);
  }
 });

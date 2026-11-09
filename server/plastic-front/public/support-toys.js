@@ -7,26 +7,28 @@ function install({FrontGame:Game,TYPES}){
   odds:{toyDrum:.25,toyDecoyMaker:.25,toyTurtle:.25,toyStunner:.25},
   procOdds:{normal:.70,enhanced:.25,jackpot:.05},
   drum:{interval:30,duration:10,move:[1.05,1.15,1.30],haste:[1.03,1.10,1.25]},
-  fishing:{arrival:.35,triggerRange:80,windup:.12,radius:[0,140,240],damage:[0,2,4],push:[0,2,10/3]},
+  fishing:{arrival:.35,lifetime:30,triggerRange:80,windup:.12,radius:[0,140,240],damage:[0,2,4],push:[0,2,10/3]},
   water:{range:[350,400,500],targets:[3,5,8],push:[2,8/3,4],duration:[.32,.38,.48],waveDuration:1.35,waveStart:60,recovery:.15,arc:[Math.PI/2,Math.PI/2,Math.PI*.78]},
   electric:{targets:[1,3,8],range:310,duration:1}
  };
  const toys={
   toyDrum:{name:'태엽 북 토이',icon:'♫',hp:200,speed:145,cooldown:30,detail:'주변 이동 +5%·공속 +3% · 30초마다 추첨 · 강화 25%·대박 5%, 10초 지속'},
-  toyDecoyMaker:{name:'미끼 토이',icon:'◇',hp:180,speed:145,cooldown:12,detail:'12초마다 낚시 미끼 · 일반 적 최대 2명 유도 · 상어 25%·메갈로돈 5%'},
+  toyDecoyMaker:{name:'미끼 토이',icon:'◇',hp:180,speed:145,cooldown:rules.fishing.arrival+rules.fishing.lifetime,detail:'미끼 착지 후 30초 유지 · 미끼 1개·일반 적 최대 2명 유도 · 상어 25%·메갈로돈 5%'},
   toyTurtle:{name:'물대포 거북이',icon:'≈',hp:480,speed:TYPES.rifle.speed*.9,cooldown:5,detail:'5초마다 전방 넉백 · 기본 144 / 강화 192 / 쓰나미 288 · 강화 25%·쓰나미 5%'},
   toyStunner:{name:'람쥐썬더',icon:'ϟ',hp:180,speed:140,cooldown:10,detail:'10초마다 1초 스턴 · 연쇄 전격 25%, 최대 3명 · 람쥐 썬더 5%, 최대 8명'}
  };
  const insects=new Set(['ant','soldierAnt','beetle','bruteBeetle','stagBeetle','rhinoBeetle','honeybee','hornet','butterfly','bombBug','acidBeetle']);
  const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y),clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
- const reset=p.reset,stats=p.stats,canTarget=p.canTarget,pursuit=p.pursuitTarget,refresh=p.refreshCommanderHealth;
+ const reset=p.reset,stats=p.stats,damage=p.damage,canTarget=p.canTarget,pursuit=p.pursuitTarget,refresh=p.refreshCommanderHealth;
  for(const [type,t]of Object.entries(toys))TYPES[type]={name:t.name,icon:t.icon,hp:t.hp,speed:t.speed,damage:0,rate:100,range:0,r:type==='toyTurtle'?20:15,cost:0,role:t.detail};
- TYPES.toyDecoy={name:'낚시 미끼',icon:'◇',hp:75,speed:0,damage:0,rate:100,range:0,r:13,cost:0,stationary:true,role:'일반 적 최대 2명 유도 · 3초 뒤 소멸'};
+ TYPES.toyDecoy={name:'낚시 미끼',icon:'◇',hp:75,speed:0,damage:0,rate:100,range:0,r:13,cost:0,stationary:true,role:'일반 적 최대 2명 유도 · 착지 후 30초 유지'};
  p.reset=function(){reset.call(this);this.supportBursts=[];this.supportWaves=[];};
  p.isSupportToy=function(u){return Object.hasOwn(toys,typeof u==='string'?u:u?.type);};
  p.isSupportEntity=function(u){return this.isSupportToy(u)||u?.type==='toyDecoy';};
  p.supportToys=function(owner=this.coopOwner||0){return this.units.filter(u=>this.isSupportToy(u)&&!u.toyRetired&&(!this.coop||u.coopOwner===owner)).sort((a,b)=>(a.toySlot||0)-(b.toySlot||0)||a.id-b.id);};
  p.supportToyOffer=function(){return this.supplyState().toyOffer||null;};
+ p.supportBait=function(owner=this.coopOwner||0){return this.units.find(u=>u.type==='toyDecoy'&&u.hp>0&&u.toyExpires>this.time&&(!this.coop||u.coopOwner===owner))||null;};
+ p.damage=function(target,amount,source){if(target?.type==='toyDecoy'&&target.hp>0&&this.time<target.toyExpires){target.flash=.13;return;}return damage.call(this,target,amount,source);};
  p.stats=function(u){const s=stats.call(this,u);if(this.isSupportEntity(u)){
   const level=this.commanderLevel(this.commander(0));s.hp=TYPES[u.type].hp*(1+.12*(level-1));s.damage=0;s.defense=u.type==='toyTurtle'?24:8;
  }
@@ -145,7 +147,9 @@ function install({FrontGame:Game,TYPES}){
    if(burst.state==='circling'){
     const bait=burst.bait;if(!bait||bait.hp<=0||this.time>=bait.toyExpires)continue;
     if(this.time<(bait.toyArrivesAt||0)){pending.push(burst);continue;}
-    if(!burst.finShown){burst.finShown=true;this.effects.push({kind:'toySharkFin',x:bait.x,y:bait.y,bait,source:burst.source,tier:burst.tier,startedAt:bait.toyArrivesAt,t:bait.toyExpires-this.time,max:3,team:0});}
+    const fin=this.effects.find(e=>e.kind==='toySharkFin'&&e.bait===bait);
+    if(!fin){burst.finShown=true;this.effects.push({kind:'toySharkFin',x:bait.x,y:bait.y,bait,source:burst.source,tier:burst.tier,startedAt:bait.toyArrivesAt,t:bait.toyExpires-this.time,max:rules.fishing.lifetime,team:0});}
+    else{fin.t=Math.max(fin.t,bait.toyExpires-this.time);fin.max=rules.fishing.lifetime;}
     const arrived=this.units.some(t=>t.team!==0&&t.hp>0&&!t.boss&&!t.roadCaptain&&distance(t,bait)<=rules.fishing.triggerRange);
     if(!arrived){pending.push(burst);continue;}
     burst.state='breaching';burst.breachAt=this.time+rules.fishing.windup;burst.impactAt=burst.breachAt+.48;burst.expiresAt=burst.breachAt+1.25;bait.toySharkTriggeredAt=burst.breachAt;
@@ -181,11 +185,12 @@ function install({FrontGame:Game,TYPES}){
    u.toyBoostUntil=this.time+(tier?rules.drum.duration:0);u.toyHighlightUntil=u.toyBoostUntil;
    if(tier)this.effects.push({kind:'toyDrumBoost',source:u,x:u.x,y:u.y,tier,range:rules.range,t:1.4,max:1.4,team:0});
   }else if(type==='toyDecoyMaker'){
+   const existing=this.supportBait();if(existing){u.toyNextAt=Math.max(u.toyNextAt||0,existing.toyExpires);return false;}
    const threats=this.toyThreats(u,460).filter(t=>!t.boss&&!t.roadCaptain);if(!threats.length)return false;
    const c=this.commander(0),a=Math.atan2(threats[0].y-c.y,threats[0].x-c.x);let point=null;
    for(const r of [150,120,90]){const q={x:c.x+Math.cos(a)*r,y:c.y+Math.sin(a)*r};if(this.freePosition(q.x,q.y,15)){point=q;break;}}if(!point)return false;
    const tier=this.rollSupportToyTier(u);
-   const d=this.addUnit(0,'toyDecoy',point.x,point.y,true);d.toyArrivesAt=this.time+rules.fishing.arrival;d.toyExpires=d.toyArrivesAt+3;d.toyLuredIds=threats.slice(0,2).map(t=>t.id);d.toyMakerId=u.id;
+   const d=this.addUnit(0,'toyDecoy',point.x,point.y,true);d.toyArrivesAt=this.time+rules.fishing.arrival;d.toyExpires=d.toyArrivesAt+rules.fishing.lifetime;d.toyLifetimeVersion=2;d.toyLuredIds=threats.slice(0,2).map(t=>t.id);d.toyMakerId=u.id;
    u.face=a;this.effects.push({kind:'toyDecoyDrop',x:d.x,y:d.y,source:u,angle:a,tier,t:.7,max:.7,team:0});
    if(tier){
     this.supportBursts??=[];
@@ -217,6 +222,14 @@ function install({FrontGame:Game,TYPES}){
   u.toyNextAt=this.time+toys[type].cooldown;u.toyActionStartedAt=this.time;u.toyActionUntil=this.time+duration;u.toyActionFace=u.face;return true;
  };
  p.updateSupportToys=function(dt){
+  for(const d of this.units.filter(u=>u.type==='toyDecoy'&&u.hp>0)){
+   if(d.toyLifetimeVersion!==2&&this.time<d.toyExpires){d.toyExpires=Math.max(d.toyExpires,(d.toyArrivesAt??this.time)+rules.fishing.lifetime);d.toyLifetimeVersion=2;}
+   if(this.time>=d.toyExpires||this.time<(d.toyArrivesAt||0))continue;
+   const refill=()=>{const others=new Set(this.units.filter(t=>t!==d&&t.type==='toyDecoy'&&t.hp>0&&this.time<t.toyExpires).flatMap(t=>t.toyLuredIds||[]));
+    d.toyLuredIds=(d.toyLuredIds||[]).filter(id=>!others.has(id)&&this.units.some(t=>t.id===id&&t.team!==0&&t.hp>0&&!t.boss&&!t.roadCaptain&&distance(t,d)<500));
+    for(const t of this.toyThreats(d,500)){if(d.toyLuredIds.length>=2)break;if(!t.boss&&!t.roadCaptain&&!this.isStationary(t)&&!others.has(t.id)&&!d.toyLuredIds.includes(t.id))d.toyLuredIds.push(t.id);}
+   };if(this.coop)this.withOwner(d.coopOwner,refill);else refill();
+  }
   this.updateSupportBursts();this.updateSupportWaves();
   for(const d of this.units)if(d.type==='toyDecoy'&&d.hp>0&&this.time>=d.toyExpires){d.hp=0;d.diedAt=this.time;}
   for(const u of this.units.filter(t=>this.isSupportToy(t)&&!t.toyRetired)){

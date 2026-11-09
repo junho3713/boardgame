@@ -68,7 +68,7 @@ test('fishing bait takes aggro only after landing and never redirects an existin
  const g=scene(),u=ready(g,'toyDecoyMaker'),targets=Array.from({length:4},(_,i)=>enemy(g,1600+i*20,6000)),shot={target:g.commander(0)};g.shots=[shot];
  assert.equal(g.useSupportToy(u),true);const bait=g.units.find(t=>t.type==='toyDecoy');
  assert.equal(g.supportDecoyTarget(targets[0]),null);assert.equal(g.canTarget(targets[0],bait),false);
- g.time=.35;assert.equal(targets.filter(t=>g.supportDecoyTarget(t)===bait).length,2);assert.equal(shot.target,g.commander(0));assert.equal(bait.toyExpires,3.35);
+ g.time=.35;assert.equal(targets.filter(t=>g.supportDecoyTarget(t)===bait).length,2);assert.equal(shot.target,g.commander(0));assert.equal(bait.toyExpires,30.35);
 });
 
 test('sharks circle a landed bait without attacking and breach only after an enemy reaches the eighty-pixel trigger',()=>{

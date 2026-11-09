@@ -1,9 +1,9 @@
 /* Isolated room experiments. The regular room keeps the original unit rules. */
 (function(root){'use strict';
 const api=typeof module!=='undefined'&&module.exports?require('./engine.js'):root,Game=api.FrontGame,roster=api.ROSTER||root.FrontRoster;
-const RULES={copies:3,maxTwoStars:3,capacityGains:[1,1,2,2,3],damage:2.4,hp:2.6,heal:2.5,roulettes:3,
+const RULES={copies:3,maxTwoStars:3,capacityGains:[1,1,2,2,3],damage:3,hp:2.5,heal:2.5,roulettes:3,
  three:{damage:7.2,hp:7.8,heal:7.2,roulettes:3,sniperShots:2,lucky:{normal:{glue:.44,mine:.20,spray:.24,missiles:.06,blank:.06},evolved:{glue:.29,mine:.13,spray:.41,missiles:.14,blank:.03}}}};
-const p=Game.prototype,stats=p.stats,update=p.update,buy=p.buy,bonus=p.abilityBonus,remaining=p.recruitmentRemaining,lucky=p.updateLuckyUnit,scale=p.luckyScale,odds=p.luckyOdds,projectiles=p.fireUnitProjectiles;
+const p=Game.prototype,stats=p.stats,update=p.update,upgrade=p.upgradeBalance,buy=p.buy,bonus=p.abilityBonus,remaining=p.recruitmentRemaining,lucky=p.updateLuckyUnit,scale=p.luckyScale,odds=p.luckyOdds,projectiles=p.fireUnitProjectiles;
 p.isThreeStarExperiment=function(){return this.starExperiment&&this.starMax===3&&this.mode==='pve';};
 p.battlefieldId=function(){return this.starExperiment?(this.starMax===3?'livingroom-star3':'livingroom-star'):this.bounds().id;};
 p.starCount=function(type,star){return this.alive(0).filter(u=>u.type===type&&(u.star||1)===star).length;};
@@ -11,6 +11,11 @@ p.threeStarCount=function(type){return this.starCount(type,3);};
 p.starRosterLabel=function(type){return this.isThreeStarExperiment()?`1성 ${this.fusionCandidates(type).length} · ★★ ${this.twoStarCount(type)} · ★★★ ${this.threeStarCount(type)}/1`:`1성 ${this.fusionCandidates(type).length} · ★★ ${this.twoStarCount(type)}/3`;};
 p.abilityBonus=function(key,level=this.abilities[key]||0){if(this.starExperiment&&this.mode==='pve'&&key==='capacity')return RULES.capacityGains.slice(0,Math.max(0,Math.min(5,Math.floor(level)))).reduce((sum,gain)=>sum+gain,0);return bonus.call(this,key,level);};
 p.stats=function(u){const s=stats.call(this,u),r=u.star===3&&this.isThreeStarExperiment()?RULES.three:RULES;return this.starExperiment&&u.team===0&&u.star>=2?{...s,hp:s.hp*r.hp,damage:s.damage*r.damage,heal:s.heal*r.heal}:s;};
+p.refreshTwoStarHealth=function(){
+ if(!this.starExperiment||this.mode!=='pve')return false;let changed=false;
+ for(const u of this.units){if(u.team!==0||u.star!==2||!roster.includes(u.type))continue;const hp=this.stats(u).hp;if(Math.abs(hp-u.maxHp)<1e-6)continue;const ratio=Math.max(0,Math.min(1,u.hp/Math.max(1,u.maxHp)));u.maxHp=hp;u.hp=hp*ratio;changed=true;}return changed;
+};
+p.upgradeBalance=function(){const changed=upgrade.call(this);return this.refreshTwoStarHealth()||changed;};
 p.fusionCandidates=function(type,star=1){return this.starExperiment&&this.mode==='pve'&&roster.includes(type)?this.alive(0).filter(u=>u.type===type&&(u.star||1)===star):[];};
 p.twoStarCount=function(type){return this.alive(0).filter(u=>u.type===type&&u.star===2).length;};
 p.recoverTwoStarLoss=function(u){
@@ -58,6 +63,6 @@ p.fireUnitProjectiles=function(u,target,attack,s=this.stats(u)){
  for(const [i,t] of targets.entries()){const bullet=projectiles.call(this,u,t,{...attack,damage:attack.damage/RULES.three.sniperShots},s)[0],angle=Math.atan2(t.y-u.y,t.x-u.x),side=i?3:-3;bullet.x-=Math.sin(angle)*side;bullet.y+=Math.cos(angle)*side;shots.push(bullet);}
  this.effects.push({kind:'tracer',x:shots[1].x,y:shots[1].y,tx:other.x,ty:other.y,t:.12,max:.12,team:u.team});return shots;
 };
-p.update=function(dt){if(this.phase==='playing')this.autoFuseUnits();return update.call(this,dt);};
+p.update=function(dt){if(this.phase==='playing'){this.refreshTwoStarHealth();this.autoFuseUnits();}return update.call(this,dt);};
 root.FrontTwoStar={RULES};if(typeof module!=='undefined'&&module.exports)module.exports=root.FrontTwoStar;
 })(typeof window==='undefined'?globalThis:window);
