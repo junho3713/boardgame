@@ -444,7 +444,7 @@ class FrontGame{
  baseShielded(){if(this.isRoomCampaign())return false;return this.isDesktopDefense()||this.mode==='pve'&&(this.mission.stage<3||this.bounds().id==='livingroom'&&(this.time<ROOM_RULES.finalAt||!this.finalBattle?.killed||this.crisis.phase!=='cleared'));}
  notify(type,data){if(this.events[type])this.events[type](data);}
  start(){this.phase='playing';this.notify('change');}
- neededXP(){return 18+this.level*5;}
+ neededXP(){return (18+this.level*5)*(this.isRoomCampaign()?3:1);}
  waveRules(){if(this.isRoomCampaign())return ROOM_WAVES;return this.mode==='pve'&&(this.mapId==='desktop'||this.world?.id==='desktop')?WAVE_CONFIGS.defense:WAVE_CONFIGS.survival;}
  flyingStart(){const state={};for(const [type,r]of Object.entries(this.waveRules().flying)){state[type+'Next']=r.at;state[type+'Spawned']=0;}return state;}
  waveType(rule,n,wave=0,count=0){const pick=rule.mix.find(r=>{const pace=this.isDesktopDefense()?this.evolutionPace().progress:0,every=r.every===undefined?null:Math.max(1,Math.round(r.every/(1+(ROOM_CAMPAIGN.config.evolutionPacing.eliteTypes.includes(r.type)?ROOM_CAMPAIGN.config.evolutionPacing.eliteWeight*pace:0))));return this.time>=(r.at||0)&&wave>=(r.wave||0)&&(every===null||n%every===0)&&(r.firstFraction===undefined||n<Math.floor(count*r.firstFraction))&&(r.maxAlive===undefined||this.units.filter(u=>u.team!==0&&u.hp>0&&u.type===r.type).length<r.maxAlive);});return pick?.type||rule.fallback;}
@@ -579,6 +579,7 @@ class FrontGame{
  queueCost(queue,team=0){let total=0;for(const [type,n]of Object.entries(queue)){if(!Number.isInteger(n)||n<0||n>30)return Infinity;if(type==='truck'){if(n>0)return Infinity;}else if(ROSTER.includes(type))total+=TYPES[type].cost*n;else return Infinity;}return total;}
  supportValid(queue,team=0){
   if(this.choiceKind==='boss'||this.phase!=='choice'||this.turnChoice||!queue||typeof queue!=='object')return false;
+  if(this.mode==='pve'&&this.choiceKind==='level'&&this.pendingChoice?.type!=='support')return false;
   const cost=this.queueCost(queue,team),count=this.units.filter(u=>u.team===team&&u.hp>0&&!u.patrol&&u.type!=='leader'&&(!this.coop||u.coopOwner===this.coopOwner)).length;
   const troops=Object.entries(queue).filter(([t])=>t!=='truck').reduce((n,[t,q])=>n+q,0),trucks=queue.truck||0;
   return cost>0&&Number.isFinite(cost)&&cost<=this.cash[team]&&this.trucks[team]+trucks<=7&&count+troops<=this.capacity(team)&&!Object.entries(queue).some(([t,n])=>n>0&&t!=='truck'&&(!this.tech[team][t]||n>this.recruitmentRemaining(t,team)));

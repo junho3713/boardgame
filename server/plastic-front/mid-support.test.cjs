@@ -1,4 +1,5 @@
 'use strict';
+
 const {test}=require('node:test'),a=require('node:assert/strict');
 const {FrontGame,TYPES}=require('./public/engine.js');require('./public/two-star.js');
 const {CoopGame}=require('./public/coop-engine.js'),{pack,unpack,FrontAutoPilot}=require('./public/autoplay.js');
@@ -31,9 +32,9 @@ test('legacy excess snipers convert without healing or kill rewards, including o
  const g=scene();for(let i=0;i<5;i++){const u=g.addUnit(i%2+1,'rifle',1500,6000);u.type='sniper';u.maxHp=g.stats(u).hp;u.hp=u.maxHp*.6;u.sniperAim={target:g.commander(0)};u.rareSupplyGuard=true;}const ids=g.units.filter(u=>u.type==='sniper').map(u=>u.id),kills=g.kills;
  const copy=unpack(scene(),JSON.parse(JSON.stringify(pack(g))));a.equal(copy.enemySniperCount(),2);for(const id of ids.slice(2)){const u=copy.units.find(u=>u.id===id);a.equal(u.type,'rifle');near(u.hp/u.maxHp,.6);a.equal(u.sniperAim,null);a.equal(u.rareSupplyGuard,true);}a.equal(copy.kills,kills);g.lastEnemyGrowth=g.pressure().tier;g.syncEnemyGrowth();a.equal(g.enemySniperCount(),2);
 });
-test('minute support starts at 10:00, only spends recruited resources and offers no upgrade or accumulated repeats',()=>{
- const g=scene();g.time=599.99;g.levelCheck();a.equal(g.phase,'playing');g.time=600;const xp=g.xp,level=g.level,cash=g.cash[0];g.levelCheck();a.equal(g.choiceKind,'periodic');a.deepEqual(g.currentOptions,[]);a.equal(g.cash[0],cash);a.equal(g.stageChoice('rifle'),false);a.equal(g.choose('fieldSupply'),false);a.equal(g.stageChoice('support',{rifle:1}),true);a.equal(g.confirmChoice(),true);a.equal(g.cash[0],cash-TYPES.rifle.cost);a.equal(g.xp,xp);a.equal(g.level,level);a.equal(g.nextRecoveryAt,0);
- resume(g);g.levelCheck();a.equal(g.phase,'playing');g.time=659.99;g.levelCheck();a.equal(g.phase,'playing');g.time=660;g.levelCheck();a.equal(g.choiceKind,'periodic');a.equal(g.cancelRecovery(),true);g.levelCheck();a.equal(g.phase,'playing');g.time=900;g.levelCheck();a.equal(g.choiceKind,'periodic');g.cancelRecovery();g.levelCheck();a.equal(g.phase,'playing');
+test('minute support starts at 1:00, only spends recruited resources and offers no upgrade or accumulated repeats',()=>{
+ const g=scene();g.time=59.99;g.levelCheck();a.equal(g.phase,'playing');g.time=60;const xp=g.xp,level=g.level,cash=g.cash[0];g.levelCheck();a.equal(g.choiceKind,'periodic');a.deepEqual(g.currentOptions,[]);a.equal(g.cash[0],cash);a.equal(g.stageChoice('rifle'),false);a.equal(g.choose('fieldSupply'),false);a.equal(g.stageChoice('support',{rifle:1}),true);a.equal(g.confirmChoice(),true);a.equal(g.cash[0],cash-TYPES.rifle.cost);a.equal(g.xp,xp);a.equal(g.level,level);a.equal(g.nextRecoveryAt,0);
+ resume(g);g.levelCheck();a.equal(g.phase,'playing');g.time=119.99;g.levelCheck();a.equal(g.phase,'playing');g.time=120;g.levelCheck();a.equal(g.choiceKind,'periodic');a.equal(g.cancelRecovery(),true);g.levelCheck();a.equal(g.phase,'playing');g.time=300;g.levelCheck();a.equal(g.choiceKind,'periodic');g.cancelRecovery();g.levelCheck();a.equal(g.phase,'playing');
 });
 test('a full roster skips that minute; a loss waits for the next minute and supply troops use separate slots',()=>{
  const g=scene();fill(g);g.time=600;g.levelCheck();a.equal(g.phase,'playing');g.units.find(u=>u.type==='rifle').hp=0;g.time=620;g.levelCheck();a.equal(g.phase,'playing');g.time=660;g.levelCheck();a.equal(g.choiceKind,'periodic');
@@ -51,5 +52,31 @@ test('cooperative minute support is personal, does not pause time and retains th
  const g=scene(true);g.withOwner(0,()=>fill(g));g.withOwner(1,()=>{g.cash[0]=1000;});g.time=600;g.levelCheck();a.deepEqual(g.coopChoosing,[false,true]);a.equal(g.phase,'playing');a.equal(g.coopInvulnerable[1],605);a.equal(g.withOwner(1,()=>g.choiceKind),'periodic');a.equal(g.withOwner(0,()=>g.choiceKind),'level');g.withOwner(1,()=>{g.phase='choice';a.equal(g.cancelRecovery(),true);g.coopChoosing[1]=false;});g.levelCheck();a.deepEqual(g.coopChoosing,[false,false]);g.time=660;g.levelCheck();a.deepEqual(g.coopChoosing,[false,true]);
 });
 test('support-only choices can be skipped without money, do not appear in duel, and AI handles them without upgrading',()=>{
- const g=scene();g.time=600;g.cash[0]=0;g.levelCheck();a.equal(g.choiceKind,'periodic');a.equal(g.stageChoice('support',{rifle:1}),false);a.equal(g.cancelRecovery(),true);const h=scene();h.mode='duel';h.time=600;h.levelCheck();a.equal(h.phase,'playing');const auto=scene();auto.time=600;auto.levelCheck();const level=auto.level,xp=auto.xp;const pilot=new FrontAutoPilot(auto,{},123);pilot.choice();a.equal(auto.phase,'playing');a.equal(auto.level,level);a.equal(auto.xp,xp);
+ const g=scene();g.time=600;g.cash[0]=0;g.levelCheck();a.equal(g.phase,'playing');g.cash[0]=1000;g.levelCheck();a.equal(g.phase,'playing');g.time=660;g.levelCheck();a.equal(g.choiceKind,'periodic');g.cancelRecovery();const h=scene();h.mode='duel';h.time=600;h.levelCheck();a.equal(h.phase,'playing');const auto=scene();auto.time=600;auto.levelCheck();const level=auto.level,xp=auto.xp;const pilot=new FrontAutoPilot(auto,{},123);pilot.choice();a.equal(auto.phase,'playing');a.equal(auto.level,level);a.equal(auto.xp,xp);
+});
+
+
+test('room growth takes three times the XP while old saves keep earned levels, XP and evolution',()=>{
+ for(const map of ['livingroom','livingroom-star','livingroom-star3']){
+  const g=new FrontGame({},undefined,{map});g.start();a.equal(g.neededXP(),69);
+  g.level=10;g.xp=42;g.tech[0].rifle=5;g.abilities.damage=5;g.evolved.rifle=true;
+  const copy=unpack(new FrontGame(),JSON.parse(JSON.stringify(pack(g))));
+  a.equal(copy.level,10);a.equal(copy.xp,42);a.equal(copy.neededXP(),204);a.equal(copy.evolved.rifle,true);
+ }
+ const other=new FrontGame({},undefined,{map:'backyard'});other.start();a.equal(other.neededXP(),23);
+ const coop=scene(true);for(const owner of [0,1])coop.withOwner(owner,()=>a.equal(coop.neededXP(),69));
+});
+
+test('level upgrades cannot spend their opportunity on troops and the AI completes an upgrade',()=>{
+ const g=scene();g.xp=g.neededXP();g.levelCheck();a.equal(g.choiceKind,'level');
+ a.equal(g.stageChoice('support',{rifle:1}),false);a.equal(g.request({rifle:1}),false);
+ const before=g.cash[0],pilot=new FrontAutoPilot(g,{},123);pilot.choice();
+ a.equal(g.phase,'playing');a.equal(g.cash[0],before);a.equal(g.level,2);
+});
+
+test('an already staged reinforcement from an old level-up save can still be confirmed once',()=>{
+ const g=scene();g.phase='choice';g.choiceKind='level';g.pendingChoice={type:'support',queue:{rifle:1}};
+ const cash=g.cash[0],copy=unpack(scene(),JSON.parse(JSON.stringify(pack(g))));
+ a.equal(copy.confirmChoice(),true);a.equal(copy.cash[0],cash-TYPES.rifle.cost);
+ a.equal(copy.confirmChoice(),false);
 });

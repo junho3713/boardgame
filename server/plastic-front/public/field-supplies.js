@@ -4,7 +4,7 @@ function install({FrontGame:Game,TYPES}){
  const p=Game.prototype;if(p.fieldSupplyVersion)return;p.fieldSupplyVersion=1;
  const config={odds:{toyDrum:.25,toyDecoyMaker:.25,toyTurtle:.25,toyStunner:.25},legacyOdds:{support:.25,medkit:.20,boost:.15,artillery:.15,special:.10,spectre:.10,titan:.05},cash:400,boostDuration:60,damage:1.3,haste:1.2,strikeRange:900,strikeDamage:320,strikeRadius:120};
  const specialTypes=['commando','spectre','titan'],specialRewards={special:'commando',spectre:'spectre',titan:'titan'},armor={commando:24,spectre:12,titan:44};
- const fresh=()=>({medkits:0,artillery:0,boostUntil:0,pendingSupport:0,collected:0,supportMinute:9,pendingMinute:null});
+ const fresh=()=>({medkits:0,artillery:0,boostUntil:0,pendingSupport:0,collected:0,supportMinute:0,pendingMinute:null});
  const reset=p.reset,stats=p.stats,capacity=p.capacity,levelCheck=p.levelCheck,cancel=p.cancelRecovery,shot=p.fireUnitProjectiles,update=p.update,refresh=p.refreshCommanderHealth,defense=p.defenseFactor,select=p.selectCombatTarget;
  TYPES.commando={...TYPES.machinegun,name:'블랙베어 특전병',icon:'✦',hp:480,damage:22,rate:.13,range:360,speed:138,r:14,cost:0,role:'희귀 보급 전용 · 중장갑 조끼 · 미니건 3명 관통 · 별도 병력 슬롯'};
  TYPES.spectre={...TYPES.sniper,name:'고스트 특임저격수',icon:'⌖',hp:320,damage:200,rate:1,range:620,speed:128,r:13,cost:0,role:'특수 저격 · 방어력 35% 무시 · 보스·정예 우선 · 3명 관통'};
@@ -43,12 +43,12 @@ function install({FrontGame:Game,TYPES}){
  // Keep one due opportunity, scoped to the squad and persisted with its supplies.
  p.hasReinforcementSlot=function(){
   const count=this.supplySquad().filter(u=>u.type!=='leader'&&!u.patrol).length;
-  const available=()=>Object.keys(this.tech[0]).some(t=>TYPES[t]?.cost>0&&t!=='truck'&&this.tech[0][t]>0&&this.recruitmentRemaining(t)>0);
+  const available=()=>Object.keys(this.tech[0]).some(t=>TYPES[t]?.cost>0&&TYPES[t].cost<=this.cash[0]&&t!=='truck'&&this.tech[0][t]>0&&this.recruitmentRemaining(t)>0);
   return count<this.capacity()&&(this.coop?this.scoped(available):available());
  };
  p.scheduleMinuteSupport=function(){
   const state=this.supplyState(),minute=Math.floor((this.time+1e-8)/60);
-  if(this.mode!=='pve'||minute<10){state.supportMinute=9;state.pendingMinute=null;return;}
+  if(this.mode!=='pve'||minute<1){state.supportMinute=0;state.pendingMinute=null;return;}
   if(state.supportMinute!==minute){state.supportMinute=minute;state.pendingMinute=this.hasReinforcementSlot()?minute:null;}
   if(state.pendingMinute!==minute||!this.hasReinforcementSlot())state.pendingMinute=null;
  };

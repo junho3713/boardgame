@@ -54,3 +54,5 @@ html:not(.game-fullscreen) .battle-frame{height:auto;min-height:0;flex:1 1 0}
  .operation-objective b,.objective-toggle{font-size:11px}.mission-label small{display:none}
  .battle-frame>.map-label{display:none}
 }
+
+.upgrade-layout.upgrade-only{grid-template-columns:minmax(0,1fr)}

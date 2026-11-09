@@ -17,7 +17,7 @@ test('the real opening spawner eases in for two minutes, with no first-minute cr
   const minute=Math.floor(g.time/60),added=g.roomCampaign.spawned-before;totals[minute]+=added;maxBatch[minute]=Math.max(maxBatch[minute],added);
   a.equal(g.roomBeat().density,1);a.ok(g.roomEnemyCount()<=g.roomWaveCap());
  }
- a.deepEqual(maxBatch,[1,2]);a.ok(totals[0]>=9&&totals[0]<=10);a.ok(totals[1]>=20&&totals[1]<=22);
+ a.deepEqual(maxBatch,[1,2]);a.ok(totals[0]===6);a.ok(totals[1]>=20&&totals[1]<=22);
  g.time=119.95;a.equal(g.roomWaveCap(),16);g.time=120;a.equal(g.roomWaveCap(),34);a.equal(g.roomWavePlan().count,4);a.equal(g.roomWavePlan().interval,4);
 });
 

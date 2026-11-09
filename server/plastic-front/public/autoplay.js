@@ -82,6 +82,7 @@ class FrontAutoPilot{
   else if(g.choiceKind==='recovery'||g.choiceKind!=='boss'&&count>0&&(alive<4||missingMedic||essentialReady||!unlock&&alive<Math.min(6,g.capacity())||count>=3&&(!best||score(best)<100)))type='support';
   else if(unlock)type=unlock;
   else type=best;
+  if(g.mode==='pve'&&g.choiceKind==='level'){type=unlock||growthCard||best;cheap=false;}
   if(type==='support'&&!Object.values(q).some(Boolean)){if(g.choiceKind==='recovery')g.nextRecoveryAt=g.time+5;g.cancelRecovery();this.action='AI 지정 병과 해금 대기 · 자원 보존';return;}
   if(type&&g.stageChoice(type,type==='support'?q:undefined)&&g.confirmChoice()){this.action=cheap?'AI 카드 대신 소총병 1기 · 45 자원':type==='support'?'AI 병력 충원':'AI 강화 선택';this.log(this.action);g.phase='playing';g.pendingChoice=null;g.turnChoice=null;}
  }
