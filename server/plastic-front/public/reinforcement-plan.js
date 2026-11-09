@@ -11,13 +11,22 @@ function install({FrontGame:Game,TYPES,ROSTER}){
  p.setReinforcementPlan=function(value){
   if(!valid(value))return false;
   const plan=clean(value);for(const t of roster)if(this.evolved[t]&&!plan.evolutionGoals.includes(t))plan.evolutionGoals.push(t);
-  const state=this.supplyState();state.reinforcementPlan=plan;state.autoSupportCycle=Math.floor((this.time+1e-8)/30);state.pendingAutoCycle=null;if(plan.enabled)state.pendingMinute=null;this.notify('change');return true;
+  const state=this.supplyState();state.reinforcementPlan=plan;state.autoFusionFocus=null;state.autoFusionServed=[];state.autoSupportCycle=Math.floor((this.time+1e-8)/30);state.pendingAutoCycle=null;if(plan.enabled)state.pendingMinute=null;this.notify('change');return true;
  };
  p.reinforcementCounts=function(){const counts=Object.fromEntries(roster.map(t=>[t,0]));for(const u of this.supplySquad())if(!u.patrol&&roster.includes(u.type))counts[u.type]+=this.starExperiment?3**Math.max(0,Math.min(2,(u.star||1)-1)):1;return counts;};
  p.reinforcementCandidates=function(){
   const plan=this.reinforcementPlan(),counts=this.reinforcementCounts(),available=()=>plan.priority.filter(t=>plan.targets[t]>counts[t]&&this.tech[0][t]>0&&this.recruitmentRemaining(t)>0);
   const types=this.coop?this.scoped(available):available();if(plan.mode==='balanced')types.sort((a,b)=>(plan.targets[b]-counts[b])/plan.targets[b]-(plan.targets[a]-counts[a])/plan.targets[a]||plan.priority.indexOf(a)-plan.priority.indexOf(b));
-  if(plan.preferTwoStar&&this.starExperiment){const ready=t=>{const need=3-this.fusionCandidates(t).length%3;return plan.targets[t]-counts[t]>=need&&this.cash[0]>=need*TYPES[t].cost&&this.recruitmentRemaining(t)>=need&&this.capacity()-this.alive(0).length>=need;};const completes=this.coop?this.scoped(()=>types.filter(ready)):types.filter(ready);if(completes.length)return [...completes,...types.filter(t=>!completes.includes(t))];}
+  if(plan.preferTwoStar&&plan.mode==='balanced'&&this.starExperiment){
+   const state=this.supplyState(),focus=state.autoFusionFocus;state.autoFusionServed??=[];
+   if(focus){
+    const fused=this.supplySquad().some(u=>u.type===focus.type&&(u.star||1)>=2&&(u.star||1)>(focus.stars[u.id]||1));
+    if(fused||!types.includes(focus.type)){if(!state.autoFusionServed.includes(focus.type))state.autoFusionServed.push(focus.type);state.autoFusionFocus=null;}
+    else return [focus.type,...types.filter(t=>t!==focus.type)];
+   }
+   let next=types.filter(t=>!state.autoFusionServed.includes(t));if(!next.length){state.autoFusionServed=[];next=types;}
+   return [...next,...types.filter(t=>!next.includes(t))];
+  }
   return types;
  };
  p.runAutomaticReinforcement=function(){
@@ -28,6 +37,7 @@ function install({FrontGame:Game,TYPES,ROSTER}){
    this.autoFuseUnits?.();
    for(let i=0;i<81;i++){
     const types=this.reinforcementCandidates(),t=types[0];if(!t){if(roster.some(t=>plan.targets[t]>this.reinforcementCounts()[t]))result.reason='locked';break;}
+    if(plan.preferTwoStar&&plan.mode==='balanced'&&this.starExperiment&&!state.autoFusionFocus)state.autoFusionFocus={type:t,stars:Object.fromEntries(this.supplySquad().filter(u=>u.type===t&&(u.star||1)>=2).map(u=>[u.id,u.star]))};
     if(this.cash[0]<TYPES[t].cost){result.reason='funds';result.waitingType=t;break;}
     if(!this.buy(t)){result.reason='capacity';result.waitingType=t;break;}
     result.bought[t]=(result.bought[t]||0)+1;

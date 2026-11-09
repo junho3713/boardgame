@@ -6,14 +6,22 @@ function scene(coop=false,map='livingroom-star'){const g=coop?new CoopGame():new
 function plan(g,targets,mode='priority',order=[]){const p=structuredClone(g.reinforcementPlan());p.enabled=true;p.mode=mode;p.targets=Object.fromEntries(ROSTER.map(t=>[t,targets[t]||0]));p.priority=[...new Set([...order,...ROSTER])];a.equal(g.setReinforcementPlan(p),true);return p;}
 function due(g,time){g.time=time;g.phase='playing';g.levelCheck();}
 
-test('optional two-star priority completes an affordable fusion before balanced shortages without exceeding goals',()=>{
- const g=scene();g.tech[0].medic=1;for(let i=0;i<2;i++)g.addUnit(0,'rifle',1500+i*40,6000);const p=plan(g,{rifle:3,medic:3},'balanced',['medic','rifle']);a.equal(g.reinforcementCandidates()[0],'medic');p.preferTwoStar=true;g.setReinforcementPlan(p);g.cash[0]=TYPES.rifle.cost;a.equal(g.reinforcementCandidates()[0],'rifle');due(g,30);a.equal(g.reinforcementCounts().rifle,3);a.equal(g.fusionCandidates('rifle').length,0);a.equal(g.reinforcementCounts().medic,0);
- const copy=unpack(scene(),JSON.parse(JSON.stringify(pack(g))));a.equal(copy.reinforcementPlan().preferTwoStar,true);
+test('balanced two-star batches complete one fusion per class before repeating a class',()=>{
+ const g=scene();g.tech[0].medic=1;const p=plan(g,{rifle:9,medic:9},'balanced',['rifle','medic']);p.preferTwoStar=true;g.setReinforcementPlan(p);const order=[],buy=g.buy;g.buy=function(t){order.push(t);return buy.call(this,t);};due(g,30);a.deepEqual(order,['rifle','rifle','rifle','medic','medic','medic','rifle','rifle','rifle','medic','medic','medic','rifle','rifle','rifle','medic','medic','medic']);
 });
-test('two-star preference respects incomplete goals, available funds, normal maps and owner scope',()=>{
- const g=scene();g.tech[0].medic=1;g.addUnit(0,'rifle',1500,6000);let p=plan(g,{rifle:3,medic:3},'balanced',['medic']);p.preferTwoStar=true;g.setReinforcementPlan(p);g.cash[0]=TYPES.rifle.cost;a.equal(g.reinforcementCandidates()[0],'medic');g.cash[0]=1000;p.targets.rifle=2;g.setReinforcementPlan(p);a.equal(g.reinforcementCandidates()[0],'medic');a.equal(g.setReinforcementPlan({...p,preferTwoStar:'yes'}),false);
- const normal=scene(false,'livingroom');normal.tech[0].medic=1;normal.addUnit(0,'rifle',1500,6000);p=plan(normal,{rifle:3,medic:3},'balanced',['medic']);p.preferTwoStar=true;normal.setReinforcementPlan(p);a.equal(normal.reinforcementCandidates()[0],'medic');
- const coop=scene(true);coop.withOwner(0,()=>{coop.addUnit(0,'rifle',1500,6000);coop.addUnit(0,'rifle',1540,6000);});coop.withOwner(1,()=>{coop.cash[0]=10000;coop.tech[0].medic=1;const p=plan(coop,{rifle:3,medic:3},'balanced',['medic']);p.preferTwoStar=true;coop.setReinforcementPlan(p);a.equal(coop.reinforcementCandidates()[0],'medic');});
+test('an unfinished two-star batch persists across money shortages, thirty-second checks and saved games',()=>{
+ const g=scene();g.tech[0].medic=1;const p=plan(g,{rifle:6,medic:6},'balanced',['rifle','medic']);p.preferTwoStar=true;g.setReinforcementPlan(p);g.cash[0]=TYPES.rifle.cost;due(g,30);a.equal(g.reinforcementCounts().rifle,1);a.equal(g.reinforcementCounts().medic,0);a.equal(g.supplyState().autoFusionFocus.type,'rifle');
+ const copy=unpack(scene(),JSON.parse(JSON.stringify(pack(g))));copy.cash[0]=TYPES.rifle.cost;due(copy,60);a.equal(copy.reinforcementCounts().rifle,2);a.equal(copy.reinforcementCounts().medic,0);copy.cash[0]=TYPES.rifle.cost+TYPES.medic.cost;due(copy,90);a.equal(copy.reinforcementCounts().rifle,3);a.equal(copy.reinforcementCounts().medic,1);a.equal(copy.supplyState().autoFusionFocus.type,'medic');
+});
+test('priority mode fills the selected class goal continuously even with two-star preference checked',()=>{
+ const g=scene();g.tech[0].medic=1;const p=plan(g,{rifle:6,medic:3},'priority',['rifle','medic']);p.preferTwoStar=true;g.setReinforcementPlan(p);const order=[],buy=g.buy;g.buy=function(t){order.push(t);return buy.call(this,t);};due(g,30);a.deepEqual(order,['rifle','rifle','rifle','rifle','rifle','rifle','medic','medic','medic']);
+});
+test('batch selection respects partial goals, normal modes, co-op owners and explicit plan changes',()=>{
+ const g=scene(true);for(const owner of [0,1])g.withOwner(owner,()=>{g.tech[0].medic=1;const p=plan(g,{rifle:2,medic:3},'balanced',owner?['medic','rifle']:['rifle','medic']);p.preferTwoStar=true;g.setReinforcementPlan(p);g.cash[0]=owner?TYPES.medic.cost:TYPES.rifle.cost;});due(g,30);
+ g.withOwner(0,()=>{a.equal(g.supplyState().autoFusionFocus.type,'rifle');a.equal(g.reinforcementCounts().rifle,1);const p=structuredClone(g.reinforcementPlan());p.targets.rifle=0;g.setReinforcementPlan(p);a.equal(g.supplyState().autoFusionFocus,null);a.equal(g.reinforcementCandidates()[0],'medic');});
+ g.withOwner(1,()=>{a.equal(g.supplyState().autoFusionFocus.type,'medic');a.equal(g.reinforcementCounts().medic,1);});
+ const normal=scene(false,'livingroom');normal.tech[0].medic=1;const p=plan(normal,{rifle:6,medic:3},'balanced');p.preferTwoStar=true;normal.setReinforcementPlan(p);normal.cash[0]=TYPES.rifle.cost+TYPES.medic.cost;due(normal,30);a.equal(normal.reinforcementCounts().rifle,1);a.equal(normal.reinforcementCounts().medic,1);
+ const partial=scene();const q=plan(partial,{rifle:2},'balanced');q.preferTwoStar=true;partial.setReinforcementPlan(q);due(partial,30);a.equal(partial.reinforcementCounts().rifle,2);
 });
 
 test('manual support remains the default and automatic support starts at thirty seconds without pausing or consuming a level',()=>{
