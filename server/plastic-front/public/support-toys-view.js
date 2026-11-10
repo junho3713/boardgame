@@ -24,6 +24,7 @@ const otterArt={
 };
 const sharkArt={file:'assets/support-toys/shark-breach-v20261109.webp',cell:304,columns:4,rows:4};
 const finArt={file:'assets/support-toys/shark-fin-v20261109.png',cell:313.5,columns:4,rows:4};
+const baitArt={file:'assets/support-toys/fishing-bait-v20261110.png',cell:256,columns:1,rows:1};
 const waveArt={file:'assets/support-toys/tsunami-directions-v20261109.png',cell:181,columns:6,rows:8};
 const jetArt={file:'assets/support-toys/water-jet-v20261109.webp',cell:384,columns:4,rows:2,edges:[[24,359],[21,361],[21,365],[23,369],[23,364],[21,369],[21,372],[21,375]]};
 const turtleArt={
@@ -60,7 +61,7 @@ function prepareArt(art){
 }
 function character(c,u,time,m,facing){
  const art=characterArt[u.type],asset=prepareArt(art);
- if(u.type==='toyDecoyMaker'){prepareArt(sharkArt);prepareArt(finArt);}
+ if(u.type==='toyDecoyMaker'){prepareArt(sharkArt);prepareArt(finArt);prepareArt(baitArt);}
  if(u.type==='toyTurtle'){prepareArt(waveArt);prepareArt(jetArt);}
  if(u.type==='toyStunner')prepareArt(cloudArt);
  if(!asset?.ready)return false;
@@ -89,8 +90,14 @@ function box(c,x,y,w,h,r,color,stroke){c.beginPath();c.roundRect(x,y,w,h,r);c.fi
 function line(c,points,color,width=2){c.strokeStyle=color;c.lineWidth=width;c.lineCap='round';c.lineJoin='round';c.beginPath();for(const [i,p]of points.entries())i?c.lineTo(...p):c.moveTo(...p);c.stroke();}
 function plastic(c,x,y,r,light,dark){const g=c.createRadialGradient(x-r*.35,y-r*.45,1,x,y,r*1.2);g.addColorStop(0,light);g.addColorStop(1,dark);return g;}
 function key(c,x,y,t){c.save();c.translate(x,y);c.scale(.7+Math.abs(Math.sin(t*2))*.3,1);line(c,[[0,0],[8,0]],'#9e7b2d',4);oval(c,12,-4,5,4,'#d1b25b','#765b23');oval(c,12,4,5,4,'#d1b25b','#765b23');oval(c,12,-4,2.4,1.8,'#403b2d');oval(c,12,4,2.4,1.8,'#403b2d');c.restore();}
-function lure(c,time){
+function lure(c,time,hits=0){
  c.save();c.translate(0,Math.sin(time*5)*1.2);
+ const asset=prepareArt(baitArt);
+ if(asset?.ready){
+  c.rotate(Math.sin(time*1.7)*.045);c.drawImage(asset.image,-28,-38,56,56);
+  if(hits){line(c,[[-8,-9],[-4,-5],[-7,-1],[-2,3],[-4,7]],'#714022',1.6);line(c,[[-7.2,-9],[-3.2,-5],[-6.2,-1],[-1.2,3]],'#fff0b7',.65);}
+  c.restore();return;
+ }
  c.fillStyle='#dd7436';c.beginPath();c.moveTo(8,0);c.lineTo(18,-8);c.lineTo(17,8);c.closePath();c.fill();
  oval(c,0,0,12,8,plastic(c,-3,-2,15,'#ffe879','#d68d1e'),'#9c6932');oval(c,-6,-2,2,2.4,'#342b23');oval(c,-6.6,-2.8,.6,.7,'#fff8e9');
  line(c,[[4,-5],[7,-11]],'#ed9452',3);line(c,[[4,5],[7,10]],'#ed9452',3);oval(c,-13,0,2.5,2.5,'#00000000','#c6c8b4');
@@ -133,7 +140,7 @@ function body(c,u,time,weight=0,back=false){const step=Math.sin((u.walk||0)*.8)*
   if(!back){oval(c,1,-27,15,10,'#f0d9b4');for(const side of [-1,1])oval(c,side*7,-35,3,4,'#422a1a');oval(c,1,-29,3,2,'#68402a');line(c,[[-4,-23],[1,-21],[6,-24]],'#825038',1.2);for(const side of [-1,1])line(c,[[side*5,-47],[side*3,-40]],'#eed4aa',3);}
   box(c,-20,-4,9,17,3,'#73733b');box(c,-18,0,4,9,1,'#ffd877');
   for(const side of [-1,1]){const y=action?-29:-9;line(c,[[side*13,-10],[side*20,y]],'#b67541',7);oval(c,side*20,y,5,5,'#e4bc88');}
- }else lure(c,time);
+ }else lure(c,time,u.toyBossHits||0);
 }
 function label(c,text,x,y,color='#e8e7c1'){c.font='700 10px system-ui';c.textAlign='center';c.lineWidth=3;c.strokeStyle='#203a36dd';c.strokeText(text,x,y);c.fillStyle=color;c.fillText(text,x,y);}
 function draw(c,u,g){if(u.type==='toyDecoy'&&(u.hp<=0||g.time<(u.toyArrivesAt||0)||g.time>=u.toyExpires)||u.toyRetired)return;const data=root.FrontSupportToys.toys[u.type],down=u.hp<=0;
@@ -157,7 +164,7 @@ function draw(c,u,g){if(u.type==='toyDecoy'&&(u.hp<=0||g.time<(u.toyArrivesAt||0
     if(tier)label(c,(tier===2?'대박':'강화')+' '+Math.ceil(u.toyBoostUntil-g.time)+'초',0,top-22,color);
    }else if(g.time<(u.toyHighlightUntil||0))label(c,u.toyProcTier===2?'대박!':'강화!',0,top-22,u.toyProcTier===2?'#ffe075':'#9be9f4');
   }
- }else label(c,'낚시 미끼',0,-48,'#ffe2a0');c.restore();}
+ }else label(c,'낚시 미끼',0,-65,'#ffe2a0');c.restore();}
 function sheet(c,art,frame,x,y,width,height){
  const asset=prepareArt(art);if(!asset?.ready)return false;
  const column=frame%art.columns,row=Math.floor(frame/art.columns);

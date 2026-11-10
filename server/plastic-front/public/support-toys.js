@@ -13,7 +13,7 @@ function install({FrontGame:Game,TYPES}){
  };
  const toys={
   toyDrum:{name:'태엽 북 토이',icon:'♫',hp:200,speed:145,cooldown:30,detail:'주변 이동 +5%·공속 +3% · 30초마다 추첨 · 강화 25%·대박 5%, 10초 지속'},
-  toyDecoyMaker:{name:'미끼 토이',icon:'◇',hp:180,speed:145,cooldown:rules.fishing.interval,detail:'20초마다 설치 · 각 미끼 착지 후 30초 유지 · 최대 3개·경로 근처 적 2명 유도 · 보스 타격 1회에 파괴 · 상어 25%·메갈로돈 5%'},
+  toyDecoyMaker:{name:'미끼 토이',icon:'◇',hp:180,speed:145,cooldown:rules.fishing.interval,detail:'20초마다 설치 · 각 미끼 착지 후 30초 유지 · 최대 3개·경로 근처 적 2명 유도 · 보스 타격 2회에 파괴 · 상어 25%·메갈로돈 5%'},
   toyTurtle:{name:'물대포 거북이',icon:'≈',hp:480,speed:TYPES.rifle.speed*.9,cooldown:5,detail:'5초마다 전방 넉백 · 기본 144 / 강화 192 / 쓰나미 288 · 강화 25%·쓰나미 5%'},
   toyStunner:{name:'람쥐썬더',icon:'ϟ',hp:180,speed:140,cooldown:10,detail:'기본 1명·1초 · 연쇄 25%: 3명·2초 · 벼락 5%: 범위 500·8명·3초 · 기본 주기 10초'}
  };
@@ -21,7 +21,7 @@ function install({FrontGame:Game,TYPES}){
  const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y),clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
  const reset=p.reset,stats=p.stats,damage=p.damage,canTarget=p.canTarget,pursuit=p.pursuitTarget,refresh=p.refreshCommanderHealth;
  for(const [type,t]of Object.entries(toys))TYPES[type]={name:t.name,icon:t.icon,hp:t.hp,speed:t.speed,damage:0,rate:100,range:0,r:type==='toyTurtle'?20:15,cost:0,role:t.detail};
- TYPES.toyDecoy={name:'낚시 미끼',icon:'◇',hp:75,speed:0,damage:0,rate:100,range:0,r:13,cost:0,stationary:true,role:'경로 근처 적 최대 2명 유도 · 최대 30초 · 보스 타격 1회에 파괴'};
+ TYPES.toyDecoy={name:'낚시 미끼',icon:'◇',hp:75,speed:0,damage:0,rate:100,range:0,r:13,cost:0,stationary:true,role:'경로 근처 적 최대 2명 유도 · 최대 30초 · 보스 타격 2회에 파괴'};
  p.reset=function(){reset.call(this);this.supportBursts=[];this.supportWaves=[];};
  p.isSupportToy=function(u){return Object.hasOwn(toys,typeof u==='string'?u:u?.type);};
  p.isSupportEntity=function(u){return this.isSupportToy(u)||u?.type==='toyDecoy';};
@@ -34,9 +34,10 @@ function install({FrontGame:Game,TYPES}){
  p.refreshSupportToyCooldown=function(u){const next=this.supportToyCooldown(u),old=u.toyCooldown??(u.type==='toyDecoyMaker'?30.35:toys[u.type].cooldown);if(old!==next&&u.toyNextAt>this.time)u.toyNextAt=this.time+(u.toyNextAt-this.time)*next/old;u.toyCooldown=next;return next;};
  p.damage=function(target,amount,source){
   if(target?.type==='toyDecoy'&&target.hp>0&&this.time<target.toyExpires){
-   if(amount>0&&source?.team!==0&&(source?.boss||source?.roadCaptain||source?.finalBoss)){
+   if(amount>0&&this.time>=(target.toyArrivesAt||0)&&source?.team!==0&&(source?.boss||source?.roadCaptain||source?.finalBoss)){
     // Let an approaching boss spring the ambush before its hit consumes the bait.
-    this.updateSupportBursts();this.disableSupportEntity(target);
+    this.updateSupportBursts();target.toyBossHits=Math.min(2,(target.toyBossHits||0)+1);target.flash=.13;
+    if(target.toyBossHits>=2)this.disableSupportEntity(target);else target.hp=target.maxHp*.5;
    }else target.flash=.13;
    return;
   }return damage.call(this,target,amount,source);

@@ -9,6 +9,7 @@ function viewHarness(){
   'water-jet-v20261109.webp':[1536,768],
   'shark-breach-v20261109.webp':[1216,1216],
   'shark-fin-v20261109.png':[1254,1254],
+  'fishing-bait-v20261110.png':[256,256],
   'tsunami-directions-v20261109.png':[1086,1448],
   'ramjwi-thunder-v20261109.webp':[1536,960],
   'thundercloud-v20261109.webp':[1536,768]
@@ -34,7 +35,7 @@ const actor=(type,id=1)=>({id,type,team:0,x:1000,y:6000,face:Math.PI/2,hp:100,ma
 test('otter, turtle and squirrel atlases render eight directions and their articulated actions with shared assets',()=>{
  const h=viewHarness(),g={time:1},otter=actor('toyDecoyMaker'),turtle=actor('toyTurtle',2),squirrel=actor('toyStunner',3);
  h.view.draw(h.ctx,otter,g);h.view.draw(h.ctx,turtle,g);h.view.draw(h.ctx,squirrel,g);assert.equal(h.draws.length,0);
- assert.equal(h.requests.length,8);for(const image of h.requests)image.load();
+ assert.equal(h.requests.length,9);for(const image of h.requests)image.load();
  for(const u of [otter,turtle,squirrel])for(let direction=0;direction<8;direction++){
   u.face=Math.PI/2+direction*Math.PI/4;g.time+=.2;h.view.draw(h.ctx,u,g);h.check();assert.equal(h.view.motionPose(u).spriteDirection,direction);
  }
@@ -43,7 +44,7 @@ test('otter, turtle and squirrel atlases render eight directions and their artic
  g.time+=.2;h.view.draw(h.ctx,otter,g);assert.equal(h.view.motionPose(otter).spriteFrame,7);
  g.time+=1;delete otter.toyActionUntil;otter.x+=9;h.view.draw(h.ctx,otter,g);assert.ok(h.view.motionPose(otter).spriteFrame<4);
  squirrel.toyActionUntil=g.time+1;squirrel.toyActionFace=0;squirrel.toyProcTier=2;h.view.draw(h.ctx,squirrel,g);assert.equal(h.view.motionPose(squirrel).spriteFrame,7);
- assert.equal(h.requests.length,8);
+ assert.equal(h.requests.length,9);
 });
 
 test('shark, megalodon, stronger jets, tsunami and drum bursts render finite frames without mutating combat state',()=>{

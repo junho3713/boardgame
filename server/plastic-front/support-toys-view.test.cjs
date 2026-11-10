@@ -35,7 +35,7 @@ function harness(){
 }
 
 test('rabbit art is requested on first drum draw, shared, and safely falls back after a load failure',()=>{
- const h=harness();h.view.draw(h.ctx,{...h.unit,type:'toyDecoy',toyExpires:20},h.game);assert.equal(h.images.length,0);
+ const h=harness();
  h.draw();assert.equal(h.images.length,1);assert.equal(h.draws.length,0);
  assert.equal(h.images[0].src,'assets/support-toys/drum-rabbit-v20261109.webp');
  h.images[0].fail();for(let i=0;i<8;i++){h.game.time+=.05;h.draw();}
@@ -84,4 +84,17 @@ test('the ordinary rare-supply reward creates the drum entity consumed by the ra
   const html=fs.readFileSync(__dirname+'/public/'+entry,'utf8');
   assert.match(html,/support-toys-view\.js\?v=[a-zA-Z0-9-]+/);
  }
+});
+
+
+test('the three-dimensional bait sprite loads once, falls back safely and renders damaged and airborne versions',()=>{
+ const h=harness(),bait={...h.unit,type:'toyDecoy',toyExpires:20};
+ h.view.draw(h.ctx,bait,h.game);assert.equal(h.images.length,1);assert.equal(h.draws.length,0);
+ assert.equal(h.images[0].src,'assets/support-toys/fishing-bait-v20261110.png');
+ h.images[0].naturalWidth=h.images[0].naturalHeight=256;h.images[0].onload();
+ h.view.draw(h.ctx,bait,h.game);assert.deepEqual(h.draws.at(-1),[-28,-38,56,56]);
+ bait.toyBossHits=1;h.view.draw(h.ctx,bait,h.game);assert.equal(h.draws.length,2);
+ h.view.event(h.ctx,{kind:'toyDecoyDrop',x:100,y:100,from:{x:20,y:20},t:.2,max:.35},h.game);assert.equal(h.draws.length,3);assert.equal(h.images.length,1);
+ bait.hp=0;h.view.draw(h.ctx,bait,h.game);assert.equal(h.draws.length,3);
+ const bytes=fs.readFileSync(__dirname+'/public/assets/support-toys/fishing-bait-v20261110.png');assert.equal(bytes.toString('ascii',1,4),'PNG');assert.equal(bytes.readUInt32BE(16),256);assert.equal(bytes.readUInt32BE(20),256);assert.equal(bytes[25],6);
 });

@@ -24,17 +24,17 @@ test('route changes release lure slots and later approaching enemies can take th
  const ally=g.addUnit(0,'rifle',1750,6000);g.updateSupportToys(0);assert.deepEqual(bait.toyLuredIds,[]);
  ally.hp=0;g.updateSupportToys(0);assert.deepEqual(bait.toyLuredIds,[enemy.id]);assert.equal(g.supportDecoyTarget(enemy),bait);
 });
-test('all boss categories destroy bait with one damaging hit, ordinary enemies retain the thirty-second lifetime',()=>{
- for(const [type,flag]of [['rhinoBeetle','boss'],['hornet','boss'],['bayonetCaptain','roadCaptain'],['crimsonAce','boss'],['swordEmpress','finalBoss']]){const {g,enemy,bait}=scene(type);enemy[flag]=true;const losses=g.losses[0],cash=g.cash[0];g.damage(bait,0,enemy);assert.ok(bait.hp>0);g.damage(bait,1,enemy);assert.equal(bait.hp,0,type);assert.equal(bait.toyExpires,g.time);assert.equal(g.supportDecoyTarget(enemy),null);assert.equal(g.losses[0],losses);assert.equal(g.cash[0],cash);}
+test('all boss categories destroy bait with two damaging hits, ordinary enemies retain the thirty-second lifetime',()=>{
+ for(const [type,flag]of [['rhinoBeetle','boss'],['hornet','boss'],['bayonetCaptain','roadCaptain'],['crimsonAce','boss'],['swordEmpress','finalBoss']]){const {g,enemy,bait}=scene(type);enemy[flag]=true;const losses=g.losses[0],cash=g.cash[0];g.damage(bait,0,enemy);assert.ok(bait.hp>0);g.damage(bait,1,enemy);assert.equal(bait.hp,bait.maxHp*.5,type);assert.equal(bait.toyBossHits,1);g.damage(bait,1,enemy);assert.equal(bait.hp,0,type);assert.equal(bait.toyExpires,g.time);assert.equal(g.supportDecoyTarget(enemy),null);assert.equal(g.losses[0],losses);assert.equal(g.cash[0],cash);}
  const {g,enemy,bait}=scene();g.damage(bait,1e6,enemy);assert.equal(bait.hp,bait.maxHp);g.time=29.99;g.updateSupportToys(0);assert.ok(bait.hp>0);g.time=30;g.updateSupportToys(0);assert.equal(bait.hp,0);
 });
 test('a boss arriving at a shark bait triggers the ambush before destroying it, without repeated damage',()=>{
  const {g,enemy,bait}=scene('rhinoBeetle');enemy.boss=true;enemy.x=bait.x+50;enemy.hp=enemy.maxHp=1e6;
  g.supportBursts=[{source:g.commander(0),owner:0,bait,state:'circling',x:bait.x,y:bait.y,angle:0,tier:1,damage:100,radius:140,strength:2,shown:false,hit:false}];
- g.damage(bait,1,enemy);assert.equal(bait.hp,0);const burst=g.supportBursts[0];assert.equal(burst.state,'breaching');
+ g.damage(bait,1,enemy);assert.equal(bait.hp,bait.maxHp*.5);g.damage(bait,1,enemy);assert.equal(bait.hp,0);const burst=g.supportBursts[0];assert.equal(burst.state,'breaching');
  g.time=burst.impactAt;g.updateSupportBursts();assert.ok(enemy.hp<enemy.maxHp);const hp=enemy.hp;g.updateSupportBursts();assert.equal(enemy.hp,hp);
 });
 test('a cooperative saved bait uses the same route and boss-hit rules after restoration',()=>{
- const {g,enemy,bait}=scene('rhinoBeetle',true);enemy.boss=true;const copy=unpack(new CoopGame(),JSON.parse(JSON.stringify(pack(g))));copy.visible=copy.lineClear=()=>true;
+ const {g,enemy,bait}=scene('rhinoBeetle',true);enemy.boss=true;g.damage(bait,1,enemy);assert.equal(bait.toyBossHits,1);const copy=unpack(new CoopGame(),JSON.parse(JSON.stringify(pack(g))));copy.visible=copy.lineClear=()=>true;
  const boss=copy.units.find(t=>t.id===enemy.id),d=copy.units.find(t=>t.id===bait.id);assert.equal(copy.supportDecoyTarget(boss),d);copy.damage(d,1,boss);assert.equal(d.hp,0);
 });
