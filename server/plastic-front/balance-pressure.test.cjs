@@ -42,7 +42,7 @@ test('a fresh cast can overlap while the first bait retains all thirty seconds u
 });
 
 test('a living legacy bait extends from its original landing time and replaces dead lured targets without exceeding two',()=>{
- const g=scene(),u=g.addSupportToy('toyDecoyMaker');u.toyNextAt=0;const enemies=Array.from({length:5},(_,i)=>g.addUnit(2,'ant',1600+i*20,6000,true));g.useSupportToy(u);const d=g.supportBait();d.toyExpires=3.35;delete d.toyLifetimeVersion;g.time=1;g.updateSupportToys(0);near(d.toyExpires,30.35);
+ const g=scene(),u=g.addSupportToy('toyDecoyMaker');u.toyNextAt=0;const enemies=Array.from({length:5},(_,i)=>g.addUnit(2,'ant',1600+i*20,6000,true));g.useSupportToy(u);const d=g.supportBait();d.toyExpires=3.35;delete d.toyLifetimeVersion;Object.assign(d,{x:1550,y:6000});g.time=1;g.updateSupportToys(0);near(d.toyExpires,30.35);
  const old=[...d.toyLuredIds];for(const t of enemies)if(old.includes(t.id))t.hp=0;g.updateSupportToys(0);assert.equal(d.toyLuredIds.length,2);assert.ok(d.toyLuredIds.every(id=>!old.includes(id)));
  const copy=unpack(scene(),JSON.parse(JSON.stringify(pack(g)))),next=copy.units.find(t=>t.id===d.id);near(next.toyExpires,30.35);copy.time=29;copy.damage(next,1e9,copy.units.find(t=>t.team!==0&&t.hp>0));assert.ok(next.hp>0);
 });

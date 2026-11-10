@@ -75,7 +75,7 @@ test('fishing bait takes aggro only after landing and never redirects an existin
  const g=scene(),u=ready(g,'toyDecoyMaker'),targets=Array.from({length:4},(_,i)=>enemy(g,1600+i*20,6000)),shot={target:g.commander(0)};g.shots=[shot];
  assert.equal(g.useSupportToy(u),true);const bait=g.units.find(t=>t.type==='toyDecoy');
  assert.equal(g.supportDecoyTarget(targets[0]),null);assert.equal(g.canTarget(targets[0],bait),false);
- g.time=.35;assert.equal(targets.filter(t=>g.supportDecoyTarget(t)===bait).length,2);assert.equal(shot.target,g.commander(0));assert.equal(bait.toyExpires,30.35);
+ g.time=.35;Object.assign(bait,{x:1550,y:6000});assert.equal(targets.filter(t=>g.supportDecoyTarget(t)===bait).length,2);assert.equal(shot.target,g.commander(0));assert.equal(bait.toyExpires,30.35);
 });
 
 test('sharks circle a landed bait without attacking and breach only after an enemy reaches the eighty-pixel trigger',()=>{
@@ -92,8 +92,8 @@ test('an expired or broken bait cancels a waiting shark without a remote attack'
  for(const broken of [false,true]){const g=scene(),u=ready(g,'toyDecoyMaker',2),t=enemy(g,1800,6000);g.useSupportToy(u);const burst=g.supportBursts[0];if(broken){burst.bait.hp=0;g.time=.6;}else g.time=burst.bait.toyExpires;g.updateSupportBursts();assert.deepEqual(g.supportBursts,[]);assert.equal(t.hp,t.maxHp);assert.equal(g.effects.some(e=>e.kind==='toyShark'),false);}
 });
 
-test('a lured ranged enemy actually walks into the bait and receives visible shark knockback in the ordinary update loop',()=>{
- const g=scene(),u=ready(g,'toyDecoyMaker',2);Object.assign(u,{x:1400,y:6000});const t=enemy(g,1800,6000,'rifle');t.patrol=true;t.cooldown=1e6;g.commander(0).cooldown=1e6;g.navigate=FrontGame.prototype.navigate;
+test('an approaching enemy walks into an on-route bait and receives visible shark knockback in the ordinary update loop',()=>{
+ const g=scene(),u=ready(g,'toyDecoyMaker',2);Object.assign(u,{x:1400,y:6000});const t=enemy(g,1800,6000,'ant');t.patrol=true;t.assault=true;t.cooldown=1e6;g.commander(0).cooldown=1e6;g.navigate=FrontGame.prototype.navigate;
  for(const key of ['updateMission','updateSwarm','updateBosses','updateArtillery','updateDefenses','updateBuildings','gainXP','levelCheck','updateMageQuest','updateLaserQuest'])g[key]=()=>{};
  g.useSupportToy(u);const burst=g.supportBursts[0],x=t.x;for(let i=0;i<100&&burst.state==='circling';i++)g.update(.025);assert.ok(t.x<x);assert.notEqual(burst.state,'circling');assert.ok(g.time<burst.bait.toyExpires);
  for(let i=0;i<60&&!t.toyKnockback?.popHeight;i++)g.update(.025);assert.equal(t.toyKnockback.popHeight,44);const from={x:t.x,y:t.y},until=t.toyKnockback.until;
