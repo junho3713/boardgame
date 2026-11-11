@@ -35,7 +35,7 @@ html.game-hud .battle-frame>.mission-label{bottom:78px}
 html.game-hud .battle-frame>.field-supply-bar{position:absolute;right:120px;bottom:84px;max-width:min(430px,55%)}
 html.game-hud .battle-frame>.wave-test-strip{position:absolute;top:116px;left:50%;transform:translateX(-50%);z-index:10;max-width:70%;margin:0}
 html.game-hud .battle-frame>.auto-state{position:absolute;left:12px;bottom:68px;z-index:7;color:#f0f3df;background:#20382edd;padding:6px 10px;max-width:80%;margin:0}
-html.game-hud .battle-frame>.toast{bottom:74px}
+html.game-hud .battle-frame>.toast{top:auto;right:auto;bottom:calc(74px + env(safe-area-inset-bottom,0px));left:50%;width:max-content;max-width:min(420px,calc(100% - 32px));height:auto;min-height:0;max-height:25vh;overflow:hidden;line-height:1.5;padding:8px 12px;z-index:12}
 .hud-overlay .hud-info-modal{width:min(580px,calc(100vw - 24px));max-height:calc(var(--ui-height,100dvh) - 24px);padding:0;overflow:hidden;display:flex;flex-direction:column;text-align:left}
 .hud-panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex:none;padding:16px 20px;border-bottom:1px solid var(--line)}
 .hud-panel-head h2{font-size:20px;margin:0;letter-spacing:-.5px}
