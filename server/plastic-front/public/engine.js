@@ -94,7 +94,7 @@ const TYPES={swordEmpress:{name:'사검의 군주',hp:140800,damage:0,rate:100,r
  medic:{name:'의무병',icon:'✚',hp:110,damage:0,rate:MEDIC_HEALING.interval,range:280,speed:145,r:11,cost:70,role:'부상 대장 우선 · 기본 10 회복 · 1초 간격 · 중첩 치료 100%/60%/40%'},
  bayonetCaptain:{name:'장난감 병정 대장',icon:'♛',hp:640,damage:32,rate:1.6,range:64,speed:90,r:16,cost:0,windup:.38,stab:true,role:'적 전용 경장갑 · 강화 총검병 · 일반 정예 5분 / 대장 보스 2분부터'},
  bayonet:{name:'너트크래커 총검병',icon:'⚔',hp:320,damage:24,rate:1.6,range:58,speed:96,r:14,cost:0,windup:.38,stab:true,role:'적 전용 경장갑 · 총검 준비 후 찌르기 · 3분부터 웨이브 합류'},
- bombBug:{name:'폭탄개미',icon:'◉',hp:260,damage:95,rate:99,range:65,speed:42,r:18,cost:0,role:'느린 자폭개미를 각색한 토이 적 · 접근 후 0.9초 예고 / 반경 125 · 처치해도 그 자리에서 폭발하여 양쪽 병력에 피해'},
+ bombBug:{name:'폭탄개미',icon:'◉',hp:260,damage:95,rate:99,range:65,speed:42,r:18,cost:0,role:'느린 자폭개미를 각색한 토이 적 · 접근 후 0.9초 예고 / 반경 125 · 처치해도 그 자리에서 폭발하여 양쪽 병력에 피해 · 일반 적 개미에는 폭발 피해 2배'},
  acidBeetle:{name:'투석 딱정벌레',icon:'●',hp:220,damage:28,rate:2.3,range:210,speed:66,r:15,cost:0,role:'앞발로 나무 구슬 투척 · 사거리 210 · 0.3초 준비 + 0.4초 비행 · 표시된 착탄 위치에서 벗어나 회피'},
  ant:{name:'개미',icon:'•',hp:110,damage:12,rate:1.15,range:25,speed:91.2,r:10,cost:0,role:'접근하면 추격하는 근접 몬스터'},
  soldierAnt:{name:'병정개미',icon:'◆',hp:260,damage:20,rate:1.05,range:28,speed:102,r:13,cost:0,role:'1분 이후 출현하는 강화 근접 벌레'},
@@ -557,6 +557,11 @@ class FrontGame{
    if(laser)return laser;
   }
   const hq=this.aiHQTarget;if(hq&&this.canTarget(u,hq)&&this.targetDistance(u,hq)<s.range&&this.targetDistance(u,hq)>=(s.minRange||0)&&this.lineClear(u,hq,0,{fireTeam:0}))return hq;
+  if(u.team===0){
+   const bombs=candidates.filter(t=>t.type==='bombBug'&&this.canTarget(u,t)&&this.visible(t)&&this.targetDistance(u,t)<s.range&&this.targetDistance(u,t)>=(s.minRange||0)&&this.lineClear(u,t,0,{fireTeam:0}));
+   if(bombs.length){const nearby=t=>this.units.filter(a=>a.team!==0&&a.hp>0&&a.type==='ant'&&dist(a,t)<=INSECTS.bomb.radius).length;
+    bombs.sort((a,b)=>Number(!!b.bombFuse)-Number(!!a.bombFuse)||nearby(b)-nearby(a)||a.hp-b.hp||this.targetDistance(u,a)-this.targetDistance(u,b));return bombs[0];}
+  }
   let best=null,rank=null;
   for(const a of candidates){if(!this.canTarget(u,a))continue;const d=this.targetDistance(u,a),extra=this.isSwordCommander(u)?0:a.base?45:a.structure?35:0;if(d<(s.minRange||0)||d>=s.range+extra)continue;
    const next=this.combatPriority(u,a,threats);let better=!rank;for(let i=0;rank&&i<next.length;i++){if(next[i]===rank[i])continue;better=next[i]<rank[i];break;}if(better){best=a;rank=next;}
@@ -1002,7 +1007,7 @@ class FrontGame{
    const blast=this.bombBlastQueue[i],radius=INSECTS.bomb.radius;
    this.effects.push({kind:'explosion',x:blast.x,y:blast.y,radius,t:.7,max:.7,team:2,visualKind:'bombBug'});
    this.notify('explosion',{x:blast.x,y:blast.y,kind:'rocket',team:2});
-   for(const target of [...this.units]){if(target===blast.unit||target.hp<=0||dist(target,blast)>radius)continue;this.damage(target,blast.damage,target.team===0?{...blast.source,team:2,coopOwner:undefined}:blast.source);}
+   for(const target of [...this.units]){if(target===blast.unit||target.hp<=0||dist(target,blast)>radius)continue;const ant=target.team!==0&&target.type==='ant'&&!target.boss&&!target.roadCaptain&&!target.finalBoss;this.damage(target,blast.damage*(ant?2:1),target.team===0?{...blast.source,team:2,coopOwner:undefined}:blast.source);}
   }}finally{this.bombBlastQueue=[];this.processingBombBlasts=false;}
  }
  updateAcidBeetle(u,dt){

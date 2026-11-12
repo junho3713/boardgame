@@ -28,14 +28,14 @@ const config={version:116,duration:1200,enemyLuckyInterval:5,recoverySeconds:16,
  {at:0,name:'첫 지원 대기',interval:10,batch:1,cap:4,mix:{ant:1}},
  {at:60,name:'분대 성장',interval:5.5,batch:2,cap:16,mix:{ant:8,bayonet:2,bladeGuard:1}},
  {at:120,name:'첫 특수 위기',interval:4,batch:4,cap:34,mix:{ant:3,bayonet:3,bladeGuard:2,honeybee:3,machinegun:2,butterfly:.8}},
- {at:180,name:'폭탄개미·투석 딱정벌레 합류',interval:4,batch:4,cap:34,mix:{ant:2,bombBug:.45,acidBeetle:.55,bayonet:3,bladeGuard:2,honeybee:3,machinegun:2,butterfly:.8}},
- {at:240,name:'장갑·저격 혼합',interval:3.84,batch:5,cap:38,mix:{ant:2,bombBug:.45,acidBeetle:.55,bayonet:3,stagBeetle:2,sniper:1.5,honeybee:2,bladeGuard:2,machinegun:1.5,butterfly:.6}},
- {at:360,name:'기동·원거리 위기',interval:4,batch:5,cap:41,mix:{blizzardMage:.7,ant:2,bombBug:.45,acidBeetle:.55,bayonet:2,bladeGuard:3,hornet:1,bikeRaider:1,machinegun:2,sniper:1,honeybee:2}},
- {at:480,name:'돌진·치유 약화',interval:4.16,batch:5,cap:41,mix:{blizzardMage:.7,ant:4,bombBug:.45,acidBeetle:.55,bayonet:2,rhinoBeetle:1,butterfly:.8,bikeRaider:1,bladeGuard:1,honeybee:2}},
- {at:600,name:'재편성·혼합 공세',interval:3.9,batch:6,cap:46,mix:{blizzardMage:1.4,ant:3,bombBug:.45,acidBeetle:.55,bayonet:3,bladeGuard:2,honeybee:2,machinegun:1.5,stagBeetle:1,sniper:1,butterfly:.6}},
- {at:720,name:'중장갑 방어선',interval:3.6,batch:6,cap:50,mix:{blizzardMage:1.4,ant:3,bombBug:.45,acidBeetle:.55,bayonet:2,stagBeetle:2,hornet:1,sniper:1,machinegun:2,honeybee:2,bikeRaider:.6,lucky:.5}},
- {at:900,name:'맹독·장갑 혼합',interval:3.6,batch:6,cap:50,mix:{blizzardMage:1.4,ant:3,bombBug:.45,acidBeetle:.55,bayonet:2,stagBeetle:2,rhinoBeetle:1,butterfly:.8,hornet:1,machinegun:1,sniper:1,lucky:.5}},
- {at:1080,name:'최종 공세',interval:3.4,batch:6,cap:52,mix:{blizzardMage:1.4,ant:2,bombBug:.45,acidBeetle:.55,bayonet:3,bladeGuard:2,rhinoBeetle:1,stagBeetle:2,butterfly:.8,hornet:1,machinegun:2,sniper:1,bikeRaider:1,lucky:.5}}
+ {at:180,name:'폭탄개미·투석 딱정벌레 합류',interval:4,batch:4,cap:34,mix:{ant:4,bombBug:.45,acidBeetle:.55,bayonet:3,bladeGuard:2,honeybee:3,machinegun:2,butterfly:.8}},
+ {at:240,name:'장갑·저격 혼합',interval:3.84,batch:5,cap:38,mix:{ant:4,bombBug:.45,acidBeetle:.55,bayonet:3,stagBeetle:2,sniper:1.5,honeybee:2,bladeGuard:2,machinegun:1.5,butterfly:.6}},
+ {at:360,name:'기동·원거리 위기',interval:4,batch:5,cap:41,mix:{blizzardMage:.7,ant:4,bombBug:.45,acidBeetle:.55,bayonet:2,bladeGuard:3,hornet:1,bikeRaider:1,machinegun:2,sniper:1,honeybee:2}},
+ {at:480,name:'돌진·치유 약화',interval:4.16,batch:5,cap:41,mix:{blizzardMage:.7,ant:8,bombBug:.45,acidBeetle:.55,bayonet:2,rhinoBeetle:1,butterfly:.8,bikeRaider:1,bladeGuard:1,honeybee:2}},
+ {at:600,name:'재편성·혼합 공세',interval:3.9,batch:6,cap:46,mix:{blizzardMage:1.4,ant:6,bombBug:.45,acidBeetle:.55,bayonet:3,bladeGuard:2,honeybee:2,machinegun:1.5,stagBeetle:1,sniper:1,butterfly:.6}},
+ {at:720,name:'중장갑 방어선',interval:3.6,batch:6,cap:50,mix:{blizzardMage:1.4,ant:6,bombBug:.45,acidBeetle:.55,bayonet:2,stagBeetle:2,hornet:1,sniper:1,machinegun:2,honeybee:2,bikeRaider:.6,lucky:.5}},
+ {at:900,name:'맹독·장갑 혼합',interval:3.6,batch:6,cap:50,mix:{blizzardMage:1.4,ant:6,bombBug:.45,acidBeetle:.55,bayonet:2,stagBeetle:2,rhinoBeetle:1,butterfly:.8,hornet:1,machinegun:1,sniper:1,lucky:.5}},
+ {at:1080,name:'최종 공세',interval:3.4,batch:6,cap:52,mix:{blizzardMage:1.4,ant:4,bombBug:.45,acidBeetle:.55,bayonet:3,bladeGuard:2,rhinoBeetle:1,stagBeetle:2,butterfly:.8,hornet:1,machinegun:2,sniper:1,bikeRaider:1,lucky:.5}}
  ],
  tanks:[780,930,1020],
  encirclement:{from:180,intervalScale:2.25,pressureFrom:300,pressureUntil:600,lateIntervalScale:2},
@@ -186,7 +186,18 @@ const methods={
   const p=this.roomPhase(),beat=this.roomBeat(),r=config.surges,surge=r.enabled&&this.time>=r.from&&beat.density>1;
   const portal=this.roomPortalAlive(),late=portal&&this.time>=900;const plan={surge,count:beat.density<.6?1:surge?Math.min(this.time>=r.growthFrom&&this.time<r.growthUntil?r.growthMaxBatch:r.maxBatch,p.batch+r.extra):Math.min(6,p.batch+(beat.density>1&&this.time>=240?1:0)),interval:p.interval/beat.density*(surge?r.intervalScale:1),forced:surge?(r.rosters.filter(row=>row.at<=this.time).at(-1)?.types||[]):[],window:p.at+':'+Math.floor((this.time-p.at)/config.rhythm.cycle)};if(!portal){const late=this.time>=config.lateWaves.from;plan.count=Math.max(1,Math.ceil(plan.count*(late?config.lateWaves.closedCount:.65)));plan.interval*=late?config.lateWaves.closedInterval:1.4;}else if(late&&beat.density>=.6){plan.count=Math.min(10,plan.count+config.lateWaves.openExtra);plan.interval*=config.lateWaves.openInterval;plan.surge=true;plan.forced=['machinegun','sniper','butterfly','bikeRaider'];}if(this.time>=config.bossRush.from&&this.time>=(this.roomCampaign?.recoveryUntil||0)){const row=config.bossRush.troops[this.units.some(u=>u.boss&&!u.miniBoss&&!u.roadCaptain&&u.hp>0)?'boss':'between'];plan.count=portal?row.openCount:row.closedCount;plan.interval=portal?row.openInterval:row.closedInterval;plan.surge=false;plan.forced=[];}if(!this.units.some(u=>u.boss&&!u.miniBoss&&!u.roadCaptain&&u.hp>0)){if(this.time>=config.encirclement.from){const r=config.encirclement,q=clamp((this.time-r.pressureFrom)/Math.max(1,r.pressureUntil-r.pressureFrom),0,1);plan.interval*=r.intervalScale+(r.lateIntervalScale-r.intervalScale)*q;}if(beat.density>=1)plan.interval/=this.evolutionPace().spawnScale;}return plan;
  },
- spawnRoomEnemy(type,lane=null){if(!this.roomCanSpawn(type))return null;const cursor=this.roomCampaign.entryCursor||0,p=this.roomEntry(this.serial+1+(lane||0)*3,55,cursor%4);if(!p)return null;this.roomCampaign.entryCursor=Number.isInteger(p.entrySide)?p.entrySide+1:cursor+1;const team=['rifle','machinegun','sniper','crimsonAce','lucky'].includes(type)?1:2,u=this.addUnit(team,type,p.x,p.y,true);if(config.insects.intervals[type]){const next=this.roomCampaign.insectNext??={};next[type]=this.time+config.insects.intervals[type];}u.roomEntrySide=p.entrySide;u.assault=true;u.roomWave=true;this.stampEvolutionWave(u);if(type==='blizzardMage')Object.assign(u,{mobileMage:true,activeStage:1,cooldown:1.2});return u;},
+ spawnRoomEnemy(type,lane=null,entry=null){if(!this.roomCanSpawn(type))return null;const cursor=this.roomCampaign.entryCursor||0,p=entry||this.roomEntry(this.serial+1+(lane||0)*3,55,cursor%4);if(!p)return null;this.roomCampaign.entryCursor=Number.isInteger(p.entrySide)?p.entrySide+1:cursor+1;const team=['rifle','machinegun','sniper','crimsonAce','lucky'].includes(type)?1:2,u=this.addUnit(team,type,p.x,p.y,true);if(config.insects.intervals[type]){const next=this.roomCampaign.insectNext??={};next[type]=this.time+config.insects.intervals[type];}u.roomEntrySide=p.entrySide;u.assault=true;u.roomWave=true;this.stampEvolutionWave(u);if(type==='blizzardMage')Object.assign(u,{mobileMage:true,activeStage:1,cooldown:1.2});return u;},
+ spawnRoomAntGroup(lane=null,budget=5){
+  const count=Math.min(this.time>=300?4:3,budget-1,this.roomWaveCap()-this.roomEnemyCount()-1);
+  if(count<3||!this.roomCanSpawn('bombBug'))return[];
+  // Reserve a clear offscreen area for the entire packet, not four unrelated entries.
+  const point=this.roomEntry(this.serial+1+(lane||0)*3,120,(this.roomCampaign.entryCursor||0)%4);if(!point)return[];
+  const bomb=this.spawnRoomEnemy('bombBug',lane,point);if(!bomb)return[];const group=[bomb];
+  for(let i=0;i<count;i++){
+   const angle=i*Math.PI*2/count,p={x:bomb.x+Math.cos(angle)*70,y:bomb.y+Math.sin(angle)*70,entrySide:point.entrySide},ant=this.spawnRoomEnemy('ant',lane,p);
+   if(!ant)break;Object.assign(ant,{roomBombLeaderId:bomb.id,roomBombSlot:i,roomBombCount:count});group.push(ant);
+  }return group;
+ },
  roomCanSpawnMageGroup(){
   const r=config.mageEscort,scale=this.coop?this.coopSpawnScale:1;
   return this.time>=r.from&&this.time>=(this.roomCampaign?.nextMageEscortAt||0)&&this.roomCanSpawn('blizzardMage')&&this.roomEnemyCount()+1+r.mortars<=this.roomWaveCap()&&this.roomEnemyCount('mortar')+r.mortars<=Math.ceil(config.caps.mortar*scale);
@@ -198,6 +209,11 @@ const methods={
   return group;
  },
  followRoomEscort(u,dt,s){
+  if(u.roomBombLeaderId){
+   const bomb=this.units.find(t=>t.id===u.roomBombLeaderId&&t.hp>0&&!t.bombDetonated);if(!bomb){delete u.roomBombLeaderId;return false;}
+   const angle=Math.atan2(this.commander(0).y-bomb.y,this.commander(0).x-bomb.x)+(u.roomBombSlot||0)*Math.PI*2/(u.roomBombCount||3),goal={x:bomb.x+Math.cos(angle)*70,y:bomb.y+Math.sin(angle)*70};
+   if(d(u,goal)>16)this.navigate(u,goal.x,goal.y,dt,Math.min(s.speed,this.stats(bomb).speed*1.15));return true;
+  }
   if(!u.roomEscortLeaderId)return false;const mage=this.units.find(v=>v.id===u.roomEscortLeaderId&&v.hp>0);if(!mage)return false;
   const r=config.mageEscort,angle=mage.aimFace??mage.face,side=(u.roomEscortSlot-(r.mortars-1)/2)*r.spacing;
   const goal={x:mage.x-Math.cos(angle)*r.depth-Math.sin(angle)*side,y:mage.y-Math.sin(angle)*r.depth+Math.cos(angle)*side};
@@ -221,9 +237,16 @@ const methods={
   const mix=this.evolutionWaveMix(p.mix),eligible=type=>type==='blizzardMage'?this.roomCanSpawnMageGroup():this.roomCanSpawn(type);
   const melee=['bombBug','ant','bayonet','bladeGuard','stagBeetle','rhinoBeetle'],beforeSpawned=s.spawned;
   for(let i=0;i<count;i++){
+   if(i===0&&count>=4&&this.roomCanSpawn('bombBug')){
+    const group=this.spawnRoomAntGroup(null,count);if(group.length){s.spawned+=group.length;i+=group.length-1;continue;}
+   }
    const forced=i===0&&this.roomCanSpawnMageGroup()&&p.mix.blizzardMage>0?'blizzardMage':plan.forced[i];let type=forced&&p.mix[forced]>0&&eligible(forced)?forced:null;
    if(!type){const pool=Object.entries(mix).filter(([t])=>eligible(t)&&(i<4||melee.includes(t))),total=pool.reduce((n,[,w])=>n+w,0);if(!total)break;let roll=this.random()*total;type=pool.at(-1)[0];for(const [t,w]of pool){roll-=w;if(roll<0){type=t;break;}}}
    const lane=plan.surge?config.surges.lanes[(i+s.spawned)%config.surges.lanes.length]:null;
+   if(type==='bombBug'){
+    const group=this.spawnRoomAntGroup(lane,count-i);if(group.length){s.spawned+=group.length;i+=group.length-1;continue;}
+    type='ant';
+   }
    if(type==='blizzardMage'){const group=this.spawnRoomMageGroup(lane);if(!group){s.nextSpawnAt=this.time+2;break;}s.spawned+=group.length;s.waveSpawnDebt+=Math.max(0,group.length-(count-i));i+=group.length-1;continue;}
    if(!this.spawnRoomEnemy(type,lane)){s.nextSpawnAt=this.time+2;break;}s.spawned++;
   }
