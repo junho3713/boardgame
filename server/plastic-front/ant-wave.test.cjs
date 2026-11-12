@@ -8,10 +8,14 @@ function scene(time=180,coop=false){
  for(const c of g.units)Object.assign(c,{x:1500,y:6000,cooldown:1e6});g.camera={x:1500,y:6000};g.viewport={width:1000,height:700};
  g.visible=g.lineClear=()=>true;g.levelCheck=g.gainXP=()=>{};g.random=()=>.99;return g;
 }
-test('ant packets start at three minutes, share one offscreen entry and obey the existing bomb cooldown',()=>{
+
+test('solo and co-op remove bomb limits even in old saves while retaining opening and global capacity rules',()=>{
+ for(const coop of [false,true]){const g=scene(179.99,coop);a.equal(g.roomCanSpawn('bombBug'),false);g.time=300;g.roomCampaign.insectNext={bombBug:9999};for(let i=0;i<5;i++)a.equal(g.spawnRoomAntGroup().length,5);a.equal(g.roomEnemyCount('bombBug'),5);const copy=unpack(scene(300,coop),JSON.parse(JSON.stringify(pack(g))));a.equal(copy.roomCanSpawn('bombBug'),true);while(g.roomEnemyCount()<g.roomWaveCap())g.addUnit(2,'ant',1500,4000,true);a.equal(g.roomCanSpawn('bombBug'),false);a.deepEqual(g.spawnRoomAntGroup(),[]);a.ok(g.spawnRoomEnemy('acidBeetle')===null);}
+});
+test('ant packets start at three minutes, share one offscreen entry and have no bomb-specific cooldown or count cap',()=>{
  const g=scene(179.99);a.deepEqual(g.spawnRoomAntGroup(),[]);g.time=180;const group=g.spawnRoomAntGroup();a.deepEqual(group.map(u=>u.type),['bombBug','ant','ant','ant']);
  const b=group[0],view=g.spawnView();for(const ant of group.slice(1)){a.equal(ant.roomBombLeaderId,b.id);a.equal(ant.roomEntrySide,b.roomEntrySide);a.ok(Math.hypot(ant.x-b.x,ant.y-b.y)<125);a.ok(ant.x+TYPES.ant.r<view.left||ant.x-TYPES.ant.r>view.right||ant.y+TYPES.ant.r<view.top||ant.y-TYPES.ant.r>view.bottom);}
- a.deepEqual(g.spawnRoomAntGroup(),[]);g.time=204;a.equal(g.spawnRoomAntGroup().length,4);g.time=228;a.deepEqual(g.spawnRoomAntGroup(),[]);
+ for(let i=0;i<3;i++)a.equal(g.spawnRoomAntGroup().length,4);a.equal(g.roomEnemyCount('bombBug'),4);g.roomCampaign.insectNext={bombBug:g.time+1000};a.equal(g.spawnRoomAntGroup().length,4);
 });
 test('midgame packets use up to four ants and never exceed the wave budget or living-enemy cap',()=>{
  const g=scene(300);a.equal(g.spawnRoomAntGroup(null,5).length,5);
@@ -56,7 +60,7 @@ test('the ant blast bonus leaves allied damage, armor and boss damage unchanged'
 });
 test('cooperative saves keep ant escorts, cooldown and player-owned chain rewards',()=>{
  const g=scene(300,true),group=g.spawnRoomAntGroup(),copy=unpack(new CoopGame(),JSON.parse(JSON.stringify(pack(g))));copy.visible=copy.lineClear=()=>true;
- const bomb=copy.units.find(u=>u.id===group[0].id),ants=copy.units.filter(u=>u.roomBombLeaderId===bomb.id);a.equal(ants.length,4);a.equal(copy.roomCanSpawn('bombBug'),false);a.equal(copy.followRoomEscort(ants[0],.05,copy.stats(ants[0])),true);
+ const bomb=copy.units.find(u=>u.id===group[0].id),ants=copy.units.filter(u=>u.roomBombLeaderId===bomb.id);a.equal(ants.length,4);a.equal(copy.roomCanSpawn('bombBug'),true);a.equal(copy.followRoomEscort(ants[0],.05,copy.stats(ants[0])),true);
  const blue=copy.withOwner(1,()=>copy.commander(0)),before=copy.withOwner(1,()=>copy.profile.gold);copy.damage(bomb,1e6,blue);a.ok(ants.every(u=>u.hp===0));a.ok(copy.withOwner(1,()=>copy.profile.gold)>before);
 });
 test('real automatic gunfire hits the bomb first and its explosion clears the accompanying ants',()=>{

@@ -15,3 +15,7 @@
 ## 배포
 
 `public`의 engine.js, room-campaign.js, coop-engine.js, index.html, boss-test.html, autoplay-worker.js, auto-session.js, patch-notes.html, patch-notes.txt를 반영합니다. 테스트·이 문서는 정적 웹 루트에 올리지 않습니다.
+
+## 후속 변경: 폭탄개미 제한 해제
+
+사용자 요청으로 bombBug의 insects.intervals와 caps 항목을 제거했습니다. roomCanSpawn은 싱글/협동 모두 bombBug의 첫 등장 180초만 별도로 검사합니다. 이전 insectNext.bombBug 값은 무시합니다. 편대는 기존 웨이브/전역 상한을 사용하고 투석 딱정벌레 규칙은 유지합니다. 386개 테스트 통과.
