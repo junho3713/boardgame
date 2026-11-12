@@ -869,13 +869,8 @@ class FrontGame{
   }
   return first;
  }
- commanderMoveSpeed(dx,dy){
-  const c=this.commander(0),length=Math.hypot(dx,dy),normal=this.stats(c).speed;if(!length||this.isFrontCommander(c))return normal;
-  const troops=this.alive(0),armor=troops.filter(u=>u.type==='tank'||u.type==='guntruck'),front=armor.length?armor:troops.filter(u=>u.type==='rifle'||u.type==='machinegun');
-  if(!front.length)return normal;
-  const lead=Math.max(...front.map(u=>((u.x-c.x)*dx+(u.y-c.y)*dy)/length));
-  return lead<95?Math.min(normal,Math.min(...front.map(u=>this.stats(u).speed))*.9):normal;
- }
+ // Player movement uses the commander's own speed; lagging escorts must not throttle input.
+ commanderMoveSpeed(){return this.stats(this.commander(0)).speed;}
  // Melee can reach the outside of a solid building, never its occupied centre.
  targetDistance(u,target){
   if((this.isSwordCommander(u)||TYPES[u.type]?.stab||TYPES[u.type]?.charge||this.isDesktopDefense()&&MELEE.has(u.type))&&target.base)return Math.max(0,dist(u,target)-(target.r||0));
