@@ -27,7 +27,7 @@ test('enemy HP recovery is gradual from five to eight minutes, and reopening a s
 });
 
 test('midgame and late ordinary wave pressure grows without increasing boss attack or removing opening limits',()=>{
- const g=scene();g.roomBeat=()=>({density:1.3,name:'test'});g.time=420;assert.equal(g.roomWavePlan().count,7);
+ const g=scene();g.roomBeat=()=>({density:1.3,name:'test'});g.time=420;assert.equal(g.roomWavePlan().count,14);
  const r=config.encirclement,p=config.evolutionPacing,saved={...r};try{g.roomBeat=()=>({density:1,name:'test'});for(const at of [300,420,600,780,900]){g.time=at;const now=g.roomWavePlan().interval;r.lateIntervalScale=r.intervalScale;const old=g.roomWavePlan().interval;Object.assign(r,saved);assert.ok(now<=old);if(at>300)assert.ok(now<old);}}
  finally{Object.assign(r,saved);}
  g.time=780;near(g.evolutionPace().spawnScale,1.7);assert.equal(g.evolutionPace().capExtra,10);const before=g.addUnit(2,'bladeGuard',1500,6000);g.stampEvolutionWave(before);near(before.evolutionWaveHp,1.45);

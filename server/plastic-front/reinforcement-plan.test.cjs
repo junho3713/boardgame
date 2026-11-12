@@ -6,20 +6,24 @@ function scene(coop=false,map='livingroom-star'){const g=coop?new CoopGame():new
 function plan(g,targets,mode='priority',order=[]){const p=structuredClone(g.reinforcementPlan());p.enabled=true;p.mode=mode;p.targets=Object.fromEntries(ROSTER.map(t=>[t,targets[t]||0]));p.priority=[...new Set([...order,...ROSTER])];a.equal(g.setReinforcementPlan(p),true);return p;}
 function due(g,time){g.time=time;g.phase='playing';g.levelCheck();}
 
-test('balanced two-star preference buys a Retona and medic, then buys Retona again at 160 despite its last priority',()=>{
- const g=scene();g.tech[0].lucky=g.tech[0].medic=1;const p=plan(g,{lucky:6,medic:6},'balanced',['medic',...ROSTER.filter(t=>!['lucky','medic'].includes(t)),'lucky']);p.preferTwoStar=true;g.setReinforcementPlan(p);g.cash[0]=TYPES.lucky.cost+TYPES.medic.cost;due(g,30);a.equal(g.reinforcementCounts().lucky,1);a.equal(g.reinforcementCounts().medic,1);
- const copy=unpack(scene(),JSON.parse(JSON.stringify(pack(g))));copy.cash[0]=160;due(copy,60);a.equal(copy.reinforcementCounts().lucky,2);a.equal(copy.reinforcementCounts().medic,1);copy.cash[0]=160;due(copy,90);a.equal(copy.reinforcementCounts().lucky,3);a.equal(copy.reinforcementCounts().medic,1);a.equal(copy.twoStarCount('lucky'),1);
- copy.cash[0]=320;due(copy,120);a.equal(copy.reinforcementCounts().medic,3);a.equal(copy.twoStarCount('medic'),1);
+test('each check buys only its first two ranks; the third waits even if it is affordable',()=>{
+ for(const mode of ['priority','balanced']){const g=scene();g.tech[0].tank=g.tech[0].medic=1;const p=plan(g,{tank:3,medic:3,rifle:3},mode,['tank','medic','rifle']);p.preferTwoStar=true;g.setReinforcementPlan(p);g.cash[0]=50;due(g,30);a.equal(g.reinforcementCounts().rifle,0);a.equal(g.cash[0],50);g.cash[0]=330;due(g,60);a.equal(g.reinforcementCounts().tank,1);a.equal(g.reinforcementCounts().medic,1);a.equal(g.reinforcementCounts().rifle,0);}
 });
-test('an unaffordable near-fusion Retona never blocks affordable medics; 220 still buys it before cheaper units',()=>{
- const g=scene();g.tech[0].lucky=g.tech[0].medic=1;const p=plan(g,{lucky:6,medic:6},'balanced',['medic','lucky']);p.preferTwoStar=true;g.setReinforcementPlan(p);g.addUnit(0,'lucky',1500,6000);g.addUnit(0,'lucky',1540,6000);g.cash[0]=70;due(g,30);a.equal(g.reinforcementCounts().lucky,2);a.equal(g.reinforcementCounts().medic,1);g.cash[0]=160;due(g,60);a.equal(g.twoStarCount('lucky'),1);
- const fresh=scene();fresh.tech[0].lucky=fresh.tech[0].medic=1;const q=plan(fresh,{lucky:3,medic:3},'balanced',['medic','lucky']);q.preferTwoStar=true;fresh.setReinforcementPlan(q);fresh.cash[0]=220;due(fresh,30);a.equal(fresh.reinforcementCounts().lucky,1);a.equal(fresh.cash[0],60);
+test('balanced star mode finishes the highest rank star before pursuing the next rank star',()=>{
+ const g=scene();g.tech[0].medic=g.tech[0].lucky=1;const p=plan(g,{lucky:6,medic:6},'balanced',['lucky','medic']);p.preferTwoStar=true;g.setReinforcementPlan(p);g.cash[0]=230;due(g,30);a.equal(g.reinforcementCounts().lucky,1);a.equal(g.reinforcementCounts().medic,1);g.cash[0]=160;due(g,60);a.equal(g.reinforcementCounts().lucky,2);g.cash[0]=160;due(g,90);a.equal(g.twoStarCount('lucky'),1);a.equal(g.reinforcementCandidates()[0],'medic');
+});
+
+test('balanced two-star recruitment follows configured priority when progress ties instead of preferring price',()=>{
+ for(const order of [['medic','lucky'],['lucky','medic']]){const g=scene();g.tech[0].lucky=g.tech[0].medic=1;const p=plan(g,{lucky:6,medic:6},'balanced',order);p.preferTwoStar=true;g.setReinforcementPlan(p);a.equal(g.reinforcementCandidates()[0],order[0]);g.cash[0]=order[0]==='medic'?70:160;due(g,30);a.equal(g.reinforcementCounts()[order[0]],1);}
+});
+test('partial star progress preserves priority and completed stars rotate to the next class',()=>{
+ const g=scene();g.tech[0].lucky=g.tech[0].medic=1;const p=plan(g,{lucky:6,medic:6},'balanced',['medic','lucky']);p.preferTwoStar=true;g.setReinforcementPlan(p);g.addUnit(0,'lucky',1500,6000);g.addUnit(0,'lucky',1540,6000);a.equal(g.reinforcementCandidates()[0],'medic');g.cash[0]=70;due(g,30);a.equal(g.reinforcementCounts().lucky,2);a.equal(g.reinforcementCounts().medic,1);g.cash[0]=160;due(g,60);a.equal(g.twoStarCount('medic'),1);g.cash[0]=160;due(g,90);a.equal(g.twoStarCount('lucky'),1);a.equal(g.reinforcementCandidates()[0],'medic');const copy=unpack(scene(),JSON.parse(JSON.stringify(pack(g))));a.deepEqual(copy.reinforcementCandidates(),g.reinforcementCandidates());
 });
 test('priority mode fills the selected class goal continuously even with two-star preference checked',()=>{
  const g=scene();g.tech[0].medic=1;const p=plan(g,{rifle:6,medic:3},'priority',['rifle','medic']);p.preferTwoStar=true;g.setReinforcementPlan(p);const order=[],buy=g.buy;g.buy=function(t){order.push(t);return buy.call(this,t);};due(g,30);a.deepEqual(order,['rifle','rifle','rifle','rifle','rifle','rifle','medic','medic','medic']);
 });
 test('affordable balance respects partial goals, ordinary maps, old saved focus and cooperative ownership',()=>{
- const g=scene(true);for(const owner of [0,1])g.withOwner(owner,()=>{g.tech[0].lucky=g.tech[0].medic=1;const p=plan(g,{lucky:3,medic:3},'balanced',['medic','lucky']);p.preferTwoStar=true;g.setReinforcementPlan(p);g.cash[0]=owner?70:160;});due(g,30);g.withOwner(0,()=>{a.equal(g.reinforcementCounts().lucky,1);a.equal(g.reinforcementCounts().medic,0);});g.withOwner(1,()=>{a.equal(g.reinforcementCounts().lucky,0);a.equal(g.reinforcementCounts().medic,1);});
+ const g=scene(true);for(const owner of [0,1])g.withOwner(owner,()=>{g.tech[0].lucky=g.tech[0].medic=1;const p=plan(g,{lucky:3,medic:3},'balanced',['medic','lucky']);p.preferTwoStar=true;g.setReinforcementPlan(p);g.cash[0]=owner?70:160;});due(g,30);g.withOwner(0,()=>{a.equal(g.reinforcementCounts().lucky,0);a.equal(g.reinforcementCounts().medic,2);});g.withOwner(1,()=>{a.equal(g.reinforcementCounts().lucky,0);a.equal(g.reinforcementCounts().medic,1);});
  const partial=scene();const p=plan(partial,{rifle:2},'balanced');p.preferTwoStar=true;partial.setReinforcementPlan(p);partial.supplyState().autoFusionFocus={type:'medic',stars:{}};due(partial,30);a.equal(partial.reinforcementCounts().rifle,2);
  const normal=scene(false,'livingroom');normal.tech[0].medic=1;const q=plan(normal,{rifle:6,medic:3},'balanced');q.preferTwoStar=true;normal.setReinforcementPlan(q);normal.cash[0]=115;due(normal,30);a.equal(normal.reinforcementCounts().rifle,1);a.equal(normal.reinforcementCounts().medic,1);
 });
@@ -28,8 +32,8 @@ test('manual support remains the default and automatic support starts at thirty 
  const manual=scene();a.equal(manual.reinforcementPlan().enabled,false);due(manual,60);a.equal(manual.choiceKind,'periodic');a.equal(manual.phase,'choice');
  const g=scene();plan(g,{rifle:3});const level=g.level,xp=g.xp;due(g,29.99);a.equal(g.reinforcementCounts().rifle,0);due(g,30);a.equal(g.reinforcementCounts().rifle,3);a.equal(g.alive(0).filter(u=>u.type==='rifle').length,1);a.equal(g.phase,'playing');a.equal(g.level,level);a.equal(g.xp,xp);
 });
-test('priority reserves resources for the highest missing unlocked class instead of buying a cheaper lower class',()=>{
- const g=scene();g.tech[0].tank=1;plan(g,{tank:1,rifle:3},'priority',['tank','rifle']);g.cash[0]=TYPES.tank.cost-1;const cash=g.cash[0];due(g,60);a.equal(g.cash[0],cash);a.equal(g.reinforcementCounts().rifle,0);a.equal(g.supplyState().autoReinforcementResult.waitingType,'tank');g.cash[0]=TYPES.tank.cost;due(g,61);a.equal(g.reinforcementCounts().tank,0);due(g,120);a.equal(g.reinforcementCounts().tank,1);a.equal(g.cash[0],0);
+test('priority uses only the highest two eligible classes and spends spare money on its immediate backup',()=>{
+ const g=scene();g.tech[0].tank=1;plan(g,{tank:1,rifle:3},'priority',['tank','rifle']);g.cash[0]=TYPES.tank.cost-1;const cash=g.cash[0];due(g,60);a.equal(g.cash[0],cash-3*TYPES.rifle.cost);a.equal(g.reinforcementCounts().rifle,3);a.equal(g.supplyState().autoReinforcementResult.waitingType,'tank');g.cash[0]=TYPES.tank.cost;due(g,61);a.equal(g.reinforcementCounts().tank,0);due(g,120);a.equal(g.reinforcementCounts().tank,1);a.equal(g.cash[0],0);
 });
 test('balanced recruitment starts with the largest relative shortage and breaks ties using the configured priority',()=>{
  const g=scene();g.tech[0].medic=1;g.addUnit(0,'rifle',1500,6000);g.addUnit(0,'rifle',1530,6000);plan(g,{rifle:6,medic:3},'balanced',['rifle','medic']);a.equal(g.reinforcementCandidates()[0],'medic');const order=[],buy=g.buy;g.buy=function(t){order.push(t);return buy.call(this,t);};due(g,60);a.equal(order[0],'medic');a.equal(g.reinforcementCounts().rifle,6);a.equal(g.reinforcementCounts().medic,3);

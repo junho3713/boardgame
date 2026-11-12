@@ -17,7 +17,7 @@ function install({FrontGame:Game,TYPES,ROSTER}){
  p.reinforcementCandidates=function(){
   const plan=this.reinforcementPlan(),counts=this.reinforcementCounts(),available=()=>plan.priority.filter(t=>plan.targets[t]>counts[t]&&this.tech[0][t]>0&&this.recruitmentRemaining(t)>0);
   const types=this.coop?this.scoped(available):available();if(plan.mode==='balanced')types.sort((a,b)=>(plan.targets[b]-counts[b])/plan.targets[b]-(plan.targets[a]-counts[a])/plan.targets[a]||plan.priority.indexOf(a)-plan.priority.indexOf(b));
-  if(plan.preferTwoStar&&plan.mode==='balanced'&&this.starExperiment)types.sort((a,b)=>Math.floor(counts[a]/3)-Math.floor(counts[b]/3)||(counts[b]%3)-(counts[a]%3)||TYPES[b].cost-TYPES[a].cost||plan.priority.indexOf(a)-plan.priority.indexOf(b));
+  if(plan.preferTwoStar&&plan.mode==='balanced'&&this.starExperiment)types.sort((a,b)=>Math.floor(counts[a]/3)-Math.floor(counts[b]/3)||plan.priority.indexOf(a)-plan.priority.indexOf(b));
   return types;
  };
  p.runAutomaticReinforcement=function(){
@@ -26,8 +26,9 @@ function install({FrontGame:Game,TYPES,ROSTER}){
   state.autoReinforcedCycle=cycle;const result={cycle,at:this.time,bought:{},spent:0,reason:'complete',waitingType:null},cash=this.cash[0],events=this.events;
   this.events={...events,toast:undefined,change:undefined};try{
    this.autoFuseUnits?.();
+   const allowed=this.reinforcementCandidates().slice(0,2);
    for(let i=0;i<81;i++){
-    const types=this.reinforcementCandidates(),t=plan.mode==='balanced'?(types.find(t=>this.cash[0]>=TYPES[t].cost)||types[0]):types[0];if(!t){if(roster.some(t=>plan.targets[t]>this.reinforcementCounts()[t]))result.reason='locked';break;}
+    const types=this.reinforcementCandidates().filter(t=>allowed.includes(t)),t=types.find(t=>this.cash[0]>=TYPES[t].cost)||types[0];if(!t){if(roster.some(t=>plan.targets[t]>this.reinforcementCounts()[t]))result.reason='locked';break;}
     if(this.cash[0]<TYPES[t].cost){result.reason='funds';result.waitingType=t;break;}
     if(!this.buy(t)){result.reason='capacity';result.waitingType=t;break;}
     result.bought[t]=(result.bought[t]||0)+1;

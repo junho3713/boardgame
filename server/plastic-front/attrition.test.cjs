@@ -17,7 +17,7 @@ test('midgame wave pressure applies only to solo two-star troops, while mortar d
  const m=g.addUnit(2,'mortar',1500,6000);m.roomWave=true;a.ok(Math.abs(g.enemyDamageScale(m)-1.25*.6)<1e-7);a.equal(config.caps.mortar,4);
 });
 test('late portal surges remain stronger than closed waves with a reduced spike',()=>{
- const g=scene();g.time=900;g.roomBeat=()=>({density:1,name:'test'});g.bases[1].hp=g.bases[1].maxHp;const open=g.roomWavePlan();g.bases[1].hp=0;const closed=g.roomWavePlan();a.ok(open.count>closed.count);a.ok(open.interval<closed.interval);a.ok(open.count<=10);a.equal(config.lateWaves.openExtra,2);a.equal(config.lateWaves.openInterval,.8);
+ const g=scene();g.time=900;g.roomBeat=()=>({density:1,name:'test'});g.bases[1].hp=g.bases[1].maxHp;const open=g.roomWavePlan();g.bases[1].hp=0;const closed=g.roomWavePlan();a.ok(open.count>closed.count);a.ok(open.interval<closed.interval);a.ok(open.count<=17);a.equal(config.lateWaves.openExtra,2);a.equal(config.lateWaves.openInterval,.8);
 });
 test('mortar escorts have a one-minute spawn interval and restart cleanly in the wave lab',()=>{
  const wave=require('./public/wave-test.js'),g=scene();g.time=600;g.northernSpawn=()=>({x:1500,y:6000});a.equal(g.spawnRoomMageGroup().length,5);g.units=[];g.time=659.999;a.equal(g.spawnRoomMageGroup(),null);g.time=660;a.equal(g.spawnRoomMageGroup().length,5);
