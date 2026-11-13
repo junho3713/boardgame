@@ -41,8 +41,8 @@ const config={version:116,duration:1200,enemyLuckyInterval:5,recoverySeconds:16,
  ],
  tanks:[780,930,1020],
  encirclement:{from:180,intervalScale:2.25,pressureFrom:300,pressureUntil:600,lateIntervalScale:2},
- miniBoss:{from:180,interval:60,until:960,hp:.3,damage:.3,spawnWindow:50,withdrawBefore:8},
- bosses:[{at:240,type:'stagBeetle',name:'거대 사슴벌레',pattern:null},{at:360,type:'bayonetCaptain',name:'장난감 병정 보스',pattern:'soldierDash'},{at:480,type:'bladeGuard',name:'검병 대장',pattern:'wideSlash'},{at:600,type:'rhinoBeetle',name:'장수풍뎅이 보스',pattern:'rhinoCharge'},{at:720,type:'bikeRaider',name:'오토바이병 대장',pattern:'rapidBike'},{at:900,type:'hornet',name:'장수말벌',pattern:'venomDive'},{at:1200,type:'swordEmpress',name:'사검의 군주',pattern:'fourSwords'}],
+ miniBoss:{from:180,interval:60,until:960,hp:.3,damage:.3,spawnWindow:50},
+ bosses:[{at:240,type:'stagBeetle',name:'거대 사슴벌레',pattern:null},{at:360,type:'bayonetCaptain',name:'장난감 병정 보스',pattern:'soldierDash'},{at:480,type:'bladeGuard',name:'검병 대장',pattern:'wideSlash'},{at:600,type:'rhinoBeetle',name:'장수풍뎅이 보스',pattern:'rhinoCharge'},{at:720,type:'bikeRaider',name:'오토바이병 대장',pattern:'rapidBike'},{at:840,type:'hornet',name:'장수말벌',pattern:'venomDive'},{at:1200,type:'swordEmpress',name:'사검의 군주',pattern:'fourSwords'}],
  patterns:{soldierDash:{hpScale:1.75,every:2,duration:1,speed:2.2,damageMultiplier:3},wideSlash:{range:220,arc:1.9,windup:.7,damageMultiplier:2},rhinoCharge:{range:420,cooldown:8,windup:1,distance:360,speed:800,halfWidth:30,recovery:3,vulnerable:1.3,damageScale:.6,infantryHpDamage:.5},rapidBike:{cooldown:4.2},venomDive:{cooldown:8,rise:.25,warning:.6,descent:.1,recovery:2,height:145,lowHeight:24,damage:1.6,maxHpDamage:.5,poisonDuration:4,poisonRate:.25,poisonPerSecond:.12},rearBarrage:{cooldown:7,warning:1.5,radius:100,damage:1.35,bossDamageMultiplier:.85,range:650,shots:3,spacing:220}}
 };
 const d=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y),clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -285,11 +285,6 @@ const methods={
   const pair='room-rush-'+s.rushCursor;for(const [i,b]of entries.entries()){const p=points[i],u=this.addUnit(2,b.type,p.x,p.y,true);Object.assign(u,{boss:true,bossName:b.name,bossPattern:b.pattern,bossRushPair:pair,assault:true,finalBoss:false,bossNumber:++this.bossState.spawned});u.hp=u.maxHp=this.stats(u).hp;u.homeX=u.x;u.homeY=u.y;}
   s.rushCursor++;s.recoveryUntil=0;this.bossState.warned=false;this.bossState.nextAt=this.roomNextBossAt();this.notify('toast','보스 2기 출현 · '+entries.map(b=>b.name).join(' + '));return true;
  },
- withdrawRoomMiniBosses(){
-  for(const u of this.units)if(u.miniBoss&&u.hp>0){u.hp=0;u.diedAt=this.time;u.miniBossWithdrawn=true;u.bikeAttack=u.bossAction=u.bossBarrage=null;
-   for(const key of ['shots','mortarShells','effects'])this[key]=this[key].filter(e=>e.source!==u);
-  }
- },
  upgradeRoomMidBosses(){
   for(const u of this.units)if(u.miniBoss&&u.midBossVersion!==1){
    const ratio=u.hp>0?clamp(u.hp/Math.max(1,u.maxHp),0,1):0;u.maxHp=this.stats(u).hp;u.hp=u.maxHp*ratio;
@@ -302,9 +297,7 @@ const methods={
   const r=config.miniBoss,s=this.roomCampaign,minute=Math.floor((this.time+1e-8)/r.interval),at=minute*r.interval;
   if(s.miniScheduleVersion!==2){s.miniScheduleVersion=2;s.miniMinute=this.units.some(u=>u.miniBossMinute===minute)?minute:minute-1;}
   if(!Number.isInteger(s.miniMinute))s.miniMinute=minute-1;
-  const next=config.bosses.find(b=>b.at>=this.time);
-  if(this.time>=r.until||next&&next.at-this.time<=r.withdrawBefore){this.withdrawRoomMiniBosses();s.miniMinute=minute;return;}
-  if(this.time<r.from){this.withdrawRoomMiniBosses();s.miniMinute=minute;return;}
+  if(this.time<r.from||this.time>=r.until){s.miniMinute=minute;return;}
   if(minute<=s.miniMinute)return;
   const boss=config.bosses.find(b=>b.at>at);
   // Preview only the minute immediately before each main boss, including the 12-to-15-minute gap.
@@ -319,7 +312,7 @@ const methods={
   // Every scheduled group waits for the previous group; finale cannot start before 20:00.
   if((this.units.some(u=>u.boss&&!u.miniBoss&&!u.roadCaptain&&u.hp>0)||this.time<(s.bossReadyAt||0)))return;
   if(!this.bossState.warned&&this.time>=b.at-8){this.bossState.warned=true;this.notify('toast',b.name+' 접근 · 처치 시 추가 강화');}
-  if(this.time<b.at)return;this.withdrawRoomMiniBosses();const p=b.type==='swordEmpress'?{x:config.finalBoss.x,y:this.bases[1].y+config.finalBoss.offset}:this.northernSpawn(this.serial+1,55);if(!p)return;
+  if(this.time<b.at)return;const p=b.type==='swordEmpress'?{x:config.finalBoss.x,y:this.bases[1].y+config.finalBoss.offset}:this.northernSpawn(this.serial+1,55);if(!p)return;
   const u=this.addUnit(2,b.type,p.x,p.y,true);Object.assign(u,{boss:true,bossName:b.name,bossPattern:b.pattern,bossScheduleIndex:s.bossCursor,assault:true,finalBoss:s.bossCursor===config.bosses.length-1,bossNumber:++this.bossState.spawned});u.hp=u.maxHp=this.stats(u).hp;u.homeX=u.x;u.homeY=u.y;
   if(u.finalBoss){this.finalBattle.spawned=true;this.upgradeRoomFinalBossPosition();}s.bossCursor++;this.bossState.warned=false;this.bossState.nextAt=this.roomNextBossAt();this.notify('toast',u.bossName+' 출현 · 처치 시 추가 강화');
  },

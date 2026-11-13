@@ -674,7 +674,7 @@ class FrontGame{
   else return;
   this.phase='choice';this.turnChoice=null;this.pendingChoice=null;this.input={x:0,y:0};this.notify('level',this.currentOptions);
  }
- activeBoss(){if(this.isRoomCampaign())return this.units.find(u=>u.boss&&!u.roadCaptain&&u.hp>0)||null;return this.units.find(u=>u.boss&&!u.roadCaptain&&u.hp>0)||this.units.find(u=>u.roadCaptain&&u.hp>0&&this.mission.stage>=u.roadStage&&dist(this.commander(0),u)<800)||null;}
+ activeBoss(){if(this.isRoomCampaign())return this.units.find(u=>u.boss&&!u.miniBoss&&!u.roadCaptain&&u.hp>0)||this.units.find(u=>u.miniBoss&&u.hp>0)||null;return this.units.find(u=>u.boss&&!u.roadCaptain&&u.hp>0)||this.units.find(u=>u.roadCaptain&&u.hp>0&&this.mission.stage>=u.roadStage&&dist(this.commander(0),u)<800)||null;}
  updateBosses(){
   if(this.mode!=='pve'||this.phase!=='playing')return;
   if(this.isRoomCampaign()){this.updateRoomBosses();return;}
@@ -1661,7 +1661,7 @@ class FrontGame{
   }
   if(this.mode==='crisis'&&this.crisis.phase==='cleared')return{title:'포병 위기 연습 / 완료',progress:`포병 2기 격파 · 피격 ${this.crisis.hits}회 · 완전 회피 ${this.crisis.dodges}회`,target:this.commander(0),showMarker:false};
   if(this.mode==='crisis')return{title:'포병 위기 연습 / 이동 준비',progress:`${Math.max(0,Math.ceil(this.crisis.startAt-this.time))}초 뒤 포병 출현 · 전차까지 범위 밖으로 이동`,target:{x:800,y:1900},targetName:'북쪽 전선'};
-  const boss=this.activeBoss(),bosses=this.isRoomCampaign()?this.units.filter(u=>u.boss&&!u.roadCaptain&&u.hp>0):[];if(bosses.length>1)return{title:'보스 2기 / '+bosses.map(u=>u.bossName).join(' + '),progress:bosses.map(u=>u.bossName+' '+Math.ceil(u.hp/u.maxHp*100)+'%').join(' · ')+' · 각 보스 처치 시 강화 보상',target:boss,targetName:boss.bossName};if(this.mode==='pve'&&boss)return{title:`보스 / ${boss.bossName}`,progress:`HP ${Math.ceil(boss.hp)} / ${Math.ceil(boss.maxHp)}${boss.miniBoss?' · 체력·공격력 30% · 자원·경험치 보상':' · 처치 시 추가 강화 1회'}${this.bossArmorPenetration(boss)?' · 방어 관통 '+Math.round(this.bossArmorPenetration(boss)*100)+'%':''}`,target:boss,targetName:boss.bossName};
+  const boss=this.activeBoss(),bosses=this.isRoomCampaign()?this.units.filter(u=>u.boss&&!u.roadCaptain&&u.hp>0):[];if(bosses.length>1)return{title:'보스 '+bosses.length+'기 / '+bosses.map(u=>u.bossName).join(' + '),progress:bosses.map(u=>u.bossName+' '+Math.ceil(u.hp/u.maxHp*100)+'%').join(' · ')+' · '+(bosses.some(u=>u.miniBoss)?'정식 보스는 강화 · 미드 보스는 자원·경험치':'각 보스 처치 시 강화 보상'),target:boss,targetName:boss.bossName};if(this.mode==='pve'&&boss)return{title:`보스 / ${boss.bossName}`,progress:`HP ${Math.ceil(boss.hp)} / ${Math.ceil(boss.maxHp)}${boss.miniBoss?' · 체력·공격력 30% · 자원·경험치 보상':' · 처치 시 추가 강화 1회'}${this.bossArmorPenetration(boss)?' · 방어 관통 '+Math.round(this.bossArmorPenetration(boss)*100)+'%':''}`,target:boss,targetName:boss.bossName};
   if(this.isRoomCampaign())return this.roomObjective();
   if(this.mode==='duel')return{title:'1대1 훈련 · 상대 본진 파괴',progress:'3분 종료 시 남은 본진 체력으로 판정',target:this.bases[1]};
   if(this.mission.stage===1){
