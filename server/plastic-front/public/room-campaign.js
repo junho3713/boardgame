@@ -1,7 +1,7 @@
 /* Living-room campaign only. Times are simulation seconds; weights replace enemies, never add a second spawner. */
 (function(root){'use strict';
 const config={version:116,duration:1200,enemyLuckyInterval:5,recoverySeconds:16,
- combat:{healthVersion:141,hpScale:1.2,openingHp:{until:300,restoreAt:480,scale:.75},bossHpScale:1.485,bossHpExtra:{rhinoBeetle:1.3,hornet:1.3,crimsonAce:1.3},damageScale:1.25,meleeDamageScale:1.1,bossDamageScale:1.3,bossArmorPenetration:{hornet:.3,crimsonAce:.4},bikeDamageScale:1.05},
+ combat:{healthVersion:142,hpScale:1.2,openingHp:{until:300,restoreAt:480,scale:.75},bossHpScale:1.485,bossHpExtra:{rhinoBeetle:1.3,hornet:1.3,crimsonAce:1.3},damageScale:1.25,meleeDamageScale:1.1,bossDamageScale:1.3,bossArmorPenetration:{hornet:.3,crimsonAce:.4},bikeDamageScale:1.05},
  weakReinforcements:{from:300,lateAt:600,mid:.15,late:.20,types:['ant','rifle']},
  evolutionPacing:{enabled:true,expectedAt:600,reliefSeconds:60,rampSeconds:120,reliefDensity:.8,spawnIncrease:.70,capExtra:10,eliteWeight:.8,eliteHp:.45,eliteTypes:['bayonet','bladeGuard','soldierAnt','bruteBeetle','stagBeetle','rhinoBeetle','tank','guntruck']},
  fences:{version:129,hp:12000,y:4550,postWidth:56,postDepth:32,threadDepth:22,lanes:[{id:'left',xs:[70,490,905,1360],colors:['blue','teal','coral','blue'],guns:[{id:'mg',kind:'bunker',x:960,y:4440},{id:'missile',kind:'missileTower',x:150,y:4410},{id:'inner-missile',kind:'missileTower',x:750,y:4370}]},{id:'right',xs:[1640,2095,2510,2930],colors:['coral','blue','teal','coral'],guns:[{id:'mg',kind:'bunker',x:2040,y:4440},{id:'missile',kind:'missileTower',x:2900,y:4440},{id:'inner-missile',kind:'missileTower',x:2250,y:4370}]}]},
@@ -238,14 +238,15 @@ const methods={
   if(this.time>=config.midgame.from)s.nextSpawnAt=Math.min(s.nextSpawnAt,this.time+plan.interval);
   if(this.time<s.nextSpawnAt)return;s.nextSpawnAt=this.time+plan.interval;
   const debt=s.waveSpawnDebt||0,count=Math.max(0,plan.count-debt);s.waveSpawnDebt=Math.max(0,debt-plan.count);
-  const mix=this.evolutionWaveMix(p.mix),eligible=type=>type==='blizzardMage'?this.roomCanSpawnMageGroup():this.roomCanSpawn(type);
+  const varied=this.time>=180&&count>=4&&this.roomBeat().density>=.6&&this.time>=(s.recoveryUntil||0),pattern=varied?['mixed','ants','troops'][(s.antWaveCursor||0)%3]:'troops';
+  const mix=this.evolutionWaveMix(p.mix),eligible=type=>type==='bombBug'&&pattern!=='mixed'?false:type==='blizzardMage'?this.roomCanSpawnMageGroup():this.roomCanSpawn(type);
   const melee=['bombBug','ant','bayonet','bladeGuard','stagBeetle','rhinoBeetle'],beforeSpawned=s.spawned;
   let antGroups=0;
   for(let i=0;i<count;i++){
-   if(antGroups<2&&count-i>=4&&this.roomCanSpawn('bombBug')){
+   if(pattern==='mixed'&&antGroups<2&&count-i>=4&&this.roomCanSpawn('bombBug')){
     const group=this.spawnRoomAntGroup(null,count-i);if(group.length){antGroups++;s.spawned+=group.length;i+=group.length-1;continue;}
    }
-   const forced=i===0&&this.roomCanSpawnMageGroup()&&p.mix.blizzardMage>0?'blizzardMage':plan.forced[i];let type=forced&&p.mix[forced]>0&&eligible(forced)?forced:null;
+   const forced=pattern==='ants'?'ant':i===0&&this.roomCanSpawnMageGroup()&&p.mix.blizzardMage>0?'blizzardMage':plan.forced[i];let type=forced&&p.mix[forced]>0&&eligible(forced)?forced:null;
    if(!type){const pool=Object.entries(mix).filter(([t])=>eligible(t)&&(i<4||melee.includes(t))),total=pool.reduce((n,[,w])=>n+w,0);if(!total)break;let roll=this.random()*total;type=pool.at(-1)[0];for(const [t,w]of pool){roll-=w;if(roll<0){type=t;break;}}}
    const lane=plan.surge?config.surges.lanes[(i+s.spawned)%config.surges.lanes.length]:null;
    if(type==='bombBug'){
@@ -255,13 +256,14 @@ const methods={
    if(type==='blizzardMage'){const group=this.spawnRoomMageGroup(lane);if(!group){s.nextSpawnAt=this.time+2;break;}s.spawned+=group.length;s.waveSpawnDebt+=Math.max(0,group.length-(count-i));i+=group.length-1;continue;}
    if(!this.spawnRoomEnemy(type,lane)){s.nextSpawnAt=this.time+2;break;}s.spawned++;
   }
-  this.addRoomWeakReinforcements(s.spawned-beforeSpawned);
+  if(varied&&s.spawned>beforeSpawned)s.antWaveCursor=(s.antWaveCursor||0)+1;
+  this.addRoomWeakReinforcements(s.spawned-beforeSpawned,pattern==='ants');
  },
- addRoomWeakReinforcements(spawned){
+ addRoomWeakReinforcements(spawned,antOnly=false){
   const s=this.roomCampaign,r=config.weakReinforcements;if(this.time<r.from||spawned<=0)return;
   const credit=(s.weakWaveCredit||0)+spawned*(this.time>=r.lateAt?r.late:r.mid),extra=Math.floor(credit+1e-9);s.weakWaveCredit=credit-extra;
   for(let i=0;i<extra;i++){
-   const cursor=s.weakWaveCursor||0,type=r.types[cursor%r.types.length],u=this.spawnRoomEnemy(type);if(!u)break;
+   const cursor=s.weakWaveCursor||0,type=antOnly?'ant':r.types[cursor%r.types.length],u=this.spawnRoomEnemy(type);if(!u)break;
    u.weakReinforcement=true;s.weakWaveCursor=cursor+1;s.spawned++;
   }
  },
@@ -305,7 +307,8 @@ const methods={
   if(this.time<r.from){this.withdrawRoomMiniBosses();s.miniMinute=minute;return;}
   if(minute<=s.miniMinute)return;
   const boss=config.bosses.find(b=>b.at>at);
-  if(!boss||this.time-at>r.spawnWindow||config.bosses.some(b=>b.at===at)||this.units.some(u=>u.boss&&!u.roadCaptain&&u.hp>0)||this.time<(s.recoveryUntil||0)){s.miniMinute=minute;return;}
+  // Preview only the minute immediately before each main boss, including the 12-to-15-minute gap.
+  if(!boss||at<boss.at-r.interval||this.time-at>r.spawnWindow||config.bosses.some(b=>b.at===at)||this.units.some(u=>u.boss&&!u.roadCaptain&&u.hp>0)||this.time<(s.recoveryUntil||0)){s.miniMinute=minute;return;}
   const point=this.roomEntry(this.serial+1,55,minute%4);if(!point)return;
   const u=this.addUnit(2,boss.type,point.x,point.y,true);Object.assign(u,{boss:true,miniBoss:true,midBossVersion:1,miniBossMinute:minute,bossName:'미드 보스 · '+boss.name,bossPattern:boss.pattern,assault:true,homeX:point.x,homeY:point.y});u.hp=u.maxHp=this.stats(u).hp;
   s.miniMinute=minute;this.notify('toast',u.bossName+' 접근 · 체력·공격력 30%');

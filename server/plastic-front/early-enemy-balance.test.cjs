@@ -4,9 +4,9 @@ const {FrontGame,TYPES}=require('./public/engine.js'),{CoopGame}=require('./publ
 const {pack,unpack}=require('./public/autoplay.js'),{config}=require('./public/room-campaign.js');
 const near=(x,y)=>a.ok(Math.abs(x-y)<1e-7,`${x} != ${y}`);
 function scene(coop=false){const g=coop?new CoopGame():new FrontGame({},undefined,{map:'livingroom-star'});g.start();g.units=g.units.filter(u=>u.team===0&&u.type==='leader');g.obstacles=[];g.buildings=[];g.structures=[];g.defenses=[];g.pickups=[];for(const c of g.units)Object.assign(c,{x:1500,y:6000});return g;}
-test('bayonet infantry loses half its HP, a quarter of its damage and four base armor without changing blade or boss stats',()=>{
+test('bayonet infantry loses half its HP, a quarter of its damage and four base armor while the shield blade has its separate durability buff',()=>{
  const g=scene();g.time=120;const b=g.addUnit(2,'bayonet',1500,6000,true),v=g.addUnit(2,'bladeGuard',1700,6000,true),s=g.stats(b);
- a.equal(TYPES.bayonet.hp,160);a.equal(TYPES.bayonet.damage,18);near(s.hp,178.56);near(s.damage,37.125);a.equal(s.defense,12);near(g.stats(v).hp,156.24);a.equal(TYPES.bladeGuard.hp,140);a.equal(TYPES.bayonetCaptain.hp,640);a.equal(TYPES.bayonetCaptain.damage,32);
+ a.equal(TYPES.bayonet.hp,160);a.equal(TYPES.bayonet.damage,18);near(s.hp,178.56);near(s.damage,37.125);a.equal(s.defense,12);near(g.stats(v).hp,178.56);a.equal(TYPES.bladeGuard.hp,160);a.equal(TYPES.bayonetCaptain.hp,640);a.equal(TYPES.bayonetCaptain.damage,32);
  a.ok(s.hp/g.stats(v).hp<1.2);a.ok(s.defense<g.stats(v).defense);
 });
 test('bayonets, bees and machine gunners obey distinct wave introduction times in solo and co-op',()=>{
@@ -38,3 +38,13 @@ test('near-start garrison gunner changes to a rifle without resurrecting or heal
  const h=scene(),v=h.addUnit(1,'machinegun',1500,5600,true);Object.assign(v,{guardianId:'room-garrison-approach-2',roomGarrison:true,hp:0});h.roomFortificationVersion=121;h.setupRoomFortifications();a.equal(v.hp,0);a.equal(v.type,'rifle');
 });
 test('the existing boss order keeps the bayonet captain ahead of the blade captain',()=>{a.deepEqual(config.bosses.slice(0,3).map(b=>[b.at,b.type]),[[240,'stagBeetle'],[360,'bayonetCaptain'],[480,'bladeGuard']]);});
+
+test('ordinary shield blades gain HP and armor while captain and mini-captain HP, armor and damage stay unchanged',()=>{
+ const g=scene();g.time=480;const u=g.addUnit(2,'bladeGuard',1500,6000,true),ordinary=g.stats(u);a.equal(ordinary.defense,38);
+ near(ordinary.hp,160*(1+.12*8)*1.2);const boss={...u,boss:true,bossPattern:'wideSlash'},s=g.stats(boss);
+ near(s.hp,140*(1+.12*8)*18*2*(config.patterns.wideSlash.hpScale||1)*config.combat.bossHpScale);a.equal(s.defense,32);near(g.stats({...boss,miniBoss:true}).hp,s.hp*.3);a.equal(TYPES.bladeGuard.damage,14);a.equal(TYPES.bladeGuard.rate,1.7);
+});
+
+test('a resumed shield blade keeps its health fraction through the durability migration without reviving corpses',()=>{
+ const g=scene();g.time=120;const u=g.addUnit(2,'bladeGuard',1500,6000,true),dead=g.addUnit(2,'bladeGuard',1600,6000,true);u.maxHp=156.24;u.hp=u.maxHp*.4;dead.hp=0;g.roomHealthVersion=141;g.refreshRoomEnemyHealth();near(u.maxHp,178.56);near(u.hp/u.maxHp,.4);a.equal(dead.hp,0);a.equal(g.refreshRoomEnemyHealth(),false);
+});

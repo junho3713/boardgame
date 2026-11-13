@@ -37,6 +37,28 @@ test('the normal scheduled wave spends existing slots on a bomb and ants without
 test('opening waves and caps stay intact while the three-minute ant mix is doubled',()=>{
  const g=scene(0);a.equal(g.roomPhase().mix.ant,1);a.equal(g.roomPhase().cap,4);g.time=60;a.equal(g.roomPhase().mix.ant,8);g.time=120;a.equal(g.roomPhase().mix.ant,7);g.time=180;a.equal(g.roomPhase().mix.ant,8);g.time=480;a.equal(g.roomPhase().mix.ant,8);g.time=600;a.equal(g.roomPhase().mix.ant,6);
 });
+
+test('active waves cycle bomb packets, pure ants including weak extras, and ordinary mixed troops in solo and co-op',()=>{
+ for(const coop of [false,true]){
+  const g=scene(360,coop);g.upgradeRoomCampaign=()=>false;g.updateRoomScheduledTanks=()=>{};g.roomBeat=()=>({density:1,name:'test'});g.roomWavePlan=()=>({count:12,interval:5,forced:['blizzardMage','rifle'],surge:true});g.random=()=>.01;
+  for(let wave=0;wave<6;wave++){
+   g.units=g.units.filter(u=>u.team===0);g.time=360+wave*5;g.roomCampaign.nextSpawnAt=g.time;g.updateRoomWaves();const enemies=g.units.filter(u=>u.roomWave);
+   a.ok(enemies.length>=12);a.ok(g.roomEnemyCount()<=g.roomWaveCap());a.equal(g.roomCampaign.antWaveCursor,wave+1);
+   if(wave%3===0)a.ok(enemies.some(u=>u.type==='bombBug'));
+   if(wave%3===1){a.ok(enemies.every(u=>u.type==='ant'));a.ok(enemies.some(u=>u.weakReinforcement));a.ok(enemies.every(u=>!u.roomBombLeaderId));}
+   if(wave%3===2){a.ok(enemies.every(u=>u.type!=='bombBug'));a.ok(enemies.some(u=>u.type!=='ant'));}
+  }
+ }
+});
+
+test('wave variety survives a save and blocked, debt-only and recovery ticks do not consume the next pure-ant wave',()=>{
+ const g=scene(360);g.roomCampaign.antWaveCursor=1;const copy=unpack(scene(360),JSON.parse(JSON.stringify(pack(g))));a.equal(copy.roomCampaign.antWaveCursor,1);
+ copy.upgradeRoomCampaign=()=>false;copy.updateRoomScheduledTanks=()=>{};copy.roomBeat=()=>({density:1,name:'test'});copy.roomWavePlan=()=>({count:12,interval:5,forced:['blizzardMage'],surge:false});
+ const entry=copy.roomEntry;copy.roomEntry=()=>null;copy.roomCampaign.nextSpawnAt=copy.time;copy.updateRoomWaves();a.equal(copy.roomCampaign.antWaveCursor,1);
+ copy.roomEntry=entry;copy.roomCampaign.waveSpawnDebt=12;copy.roomCampaign.nextSpawnAt=copy.time;copy.updateRoomWaves();a.equal(copy.roomCampaign.antWaveCursor,1);
+ copy.roomCampaign.recoveryUntil=copy.time+5;copy.roomWavePlan=()=>({count:1,interval:5,forced:[],surge:false});copy.roomCampaign.nextSpawnAt=copy.time;copy.updateRoomWaves();a.equal(copy.roomCampaign.antWaveCursor,1);
+ copy.units=copy.units.filter(u=>u.team===0);copy.time+=6;copy.roomWavePlan=()=>({count:12,interval:5,forced:['blizzardMage'],surge:false});copy.roomCampaign.nextSpawnAt=copy.time;copy.updateRoomWaves();a.equal(copy.roomCampaign.antWaveCursor,2);a.ok(copy.units.filter(u=>u.roomWave).every(u=>u.type==='ant'));
+});
 test('escorting ants stay with the slow bomb then resume their own pursuit after its death',()=>{
  const g=scene(),[bomb,ant]=g.spawnRoomAntGroup();ant.x=bomb.x+250;const steps=[];g.navigate=(u,x,y,dt,speed)=>steps.push({u,x,y,speed});a.equal(g.followRoomEscort(ant,.05,g.stats(ant)),true);a.equal(steps.length,1);a.ok(steps[0].speed<=g.stats(bomb).speed*1.15);a.ok(Math.hypot(steps[0].x-bomb.x,steps[0].y-bomb.y)<125);
  bomb.hp=0;a.equal(g.followRoomEscort(ant,.05,g.stats(ant)),false);a.equal(ant.roomBombLeaderId,undefined);
