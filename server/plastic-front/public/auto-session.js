@@ -32,7 +32,7 @@ class FrontAutoSession{
    };
    const watch=()=>{clearTimeout(job.watchdog);job.watchdog=setTimeout(fallback,8000);};
    if(show)this.busyUI(true,{processed:0,total:seconds});
-   try{job.worker=new Worker('autoplay-worker.js?v=20261112-commander-speed');job.worker.onmessage=e=>{if(job.done)return;const data=e.data||{};publish(data);if(job.done)return;if(data.error){fallback();return;}if(data.type==='progress'){watch();return;}job.finish({});};job.worker.onerror=fallback;job.worker.onmessageerror=fallback;watch();job.worker.postMessage({snapshot:job.latest,seconds});}catch{fallback();}
+   try{job.worker=new Worker('autoplay-worker.js?v=20261113-opening1');job.worker.onmessage=e=>{if(job.done)return;const data=e.data||{};publish(data);if(job.done)return;if(data.error){fallback();return;}if(data.type==='progress'){watch();return;}job.finish({});};job.worker.onerror=fallback;job.worker.onmessageerror=fallback;watch();job.worker.postMessage({snapshot:job.latest,seconds});}catch{fallback();}
   });
  }
  async tick(report=false){

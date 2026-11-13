@@ -79,7 +79,7 @@ const TYPES={swordEmpress:{name:'사검의 군주',hp:140800,damage:0,rate:100,r
  blizzardMage:{name:'얼음 마녀',icon:'❄',hp:GUARDIANS.mageHp,damage:GUARDIANS.mageDamage,rate:GUARDIANS.mageRate,range:GUARDIANS.range,speed:0,r:17,cost:0,stationary:true,role:'고정 수비 · 광역 빙결 속박 2초 · 아이스 실드로 박격포 차단 · 저격병 우선 공략'},
  bikeRaider:{name:'바이크 돌격병',icon:'➤',hp:420,damage:40,rate:6,range:420,speed:112,r:19,cost:0,charge:true,role:'적 전용 군용 바이크 · 1.25초 방향 예고 후 직선 돌진 · 돌진 후 0.9초 빈틈'},
  bladeGuard:{name:'블랙 실드 검병',icon:'⚔',hp:140,damage:14,rate:1.7,range:56,speed:86,r:13,cost:0,windup:.5,stab:true,slash:true,role:'초반부터 등장 · 경장갑 근접 적 · 0.5초 준비 후 분홍색 칼날 베기'},
- honeybee:{name:'꿀벌',icon:'✥',hp:360,damage:16,rate:1.15,range:40,speed:112,r:14,cost:0,flying:true,flightHeight:36,role:'4분부터 6마리씩 · 비행 근접 · 경장갑'},
+ honeybee:{name:'꿀벌',icon:'✥',hp:360,damage:16,rate:1.15,range:40,speed:112,r:14,cost:0,flying:true,flightHeight:36,role:'비행 근접 · 경장갑 · 거실 4분부터 단계적 합류'},
  hornet:{name:'말벌',icon:'⟡',hp:1500,damage:38,rate:1.5,range:48,speed:98,r:22,cost:0,flying:true,flightHeight:48,role:'6분부터 2마리씩 · 공격 자세 비행 · 중장갑'},
  leader:{name:'지휘관',icon:'★',hp:400,damage:16.8,rate:.65,range:235,speed:130,r:14,cost:0},
  lucky:{name:'럭키 레토나',icon:'🍀',hp:135,damage:8,rate:.95,range:285,speed:140,r:20,cost:160,role:'네잎클로버 군용 지프 · 4초마다 슬롯 추첨 / 꽝 40% · 끈끈이 폭탄/지뢰/퇴치 스프레이/777 미사일(방어력 35% 무시) · 레토나 Lv.5 + 이동속도 Lv.5 진화 시 꽝 감소·희귀 확률 증가'},
@@ -93,7 +93,7 @@ const TYPES={swordEmpress:{name:'사검의 군주',hp:140800,damage:0,rate:100,r
  artillery:{name:'적 포병',icon:'⊕',hp:520,damage:0,rate:99,range:0,speed:0,r:27,cost:0,role:'포격을 지휘하는 장갑 목표'},
  medic:{name:'의무병',icon:'✚',hp:110,damage:0,rate:MEDIC_HEALING.interval,range:280,speed:145,r:11,cost:70,role:'부상 대장 우선 · 기본 10 회복 · 1초 간격 · 중첩 치료 100%/60%/40%'},
  bayonetCaptain:{name:'장난감 병정 대장',icon:'♛',hp:640,damage:32,rate:1.6,range:64,speed:90,r:16,cost:0,windup:.38,stab:true,role:'적 전용 경장갑 · 강화 총검병 · 일반 정예 5분 / 대장 보스 2분부터'},
- bayonet:{name:'너트크래커 총검병',icon:'⚔',hp:320,damage:24,rate:1.6,range:58,speed:96,r:14,cost:0,windup:.38,stab:true,role:'적 전용 경장갑 · 총검 준비 후 찌르기 · 3분부터 웨이브 합류'},
+ bayonet:{name:'너트크래커 총검병',icon:'⚔',hp:160,damage:18,rate:1.6,range:58,speed:96,r:14,cost:0,windup:.38,stab:true,role:'적 전용 경장갑 · 총검 준비 후 찌르기 · 3분부터 웨이브 합류'},
  bombBug:{name:'폭탄개미',icon:'◉',hp:260,damage:95,rate:99,range:65,speed:42,r:18,cost:0,role:'느린 자폭개미를 각색한 토이 적 · 접근 후 0.9초 예고 / 반경 125 · 처치해도 그 자리에서 폭발하여 양쪽 병력에 피해 · 일반 적 개미에는 폭발 피해 2배'},
  acidBeetle:{name:'투석 딱정벌레',icon:'●',hp:220,damage:28,rate:2.3,range:210,speed:66,r:15,cost:0,role:'앞발로 나무 구슬 투척 · 사거리 210 · 0.3초 준비 + 0.4초 비행 · 표시된 착탄 위치에서 벗어나 회피'},
  ant:{name:'개미',icon:'•',hp:110,damage:12,rate:1.15,range:25,speed:91.2,r:10,cost:0,role:'접근하면 추격하는 근접 몬스터'},
@@ -472,7 +472,7 @@ class FrontGame{
   const hpBonus=(e==='tank'||e==='medic'||e==='machinegun'?1.2:e==='rifle'?1.15:e==='guntruck'?1.1:1)*(this.isRoomCampaign()?(this.bossPatternRules(u)?.hpScale||1):1)*(fort?.hp||1)*(ally?1:u.evolutionWaveHp||1);
   const damageBonus=e==='tank'||e==='mortar'?1.35:e==='machinegun'?1.2:e==='rifle'?1.3:e==='rocket'?1.25:e==='guntruck'?1.15:1;
   const commanderMilestones=ally&&u.type==='leader'?Math.floor(Math.max(0,this.level||1)/10):0;
-  const defense=commanderMilestones*6+({crimsonAce:34,bikeRaider:12,bladeGuard:8,bayonetCaptain:20,bayonet:10,hornet:30,soldierAnt:6,beetle:8,bruteBeetle:12,stagBeetle:30,rhinoBeetle:40}[u.type]??(ARMORED.has(u.type)?18:0))+(ally?p.defense*3+r.defense*5:tier*3)+(e==='medic'?12:0)+(fort?.defense||0);
+  const defense=commanderMilestones*6+({crimsonAce:34,bikeRaider:12,bladeGuard:8,bayonetCaptain:20,bayonet:6,hornet:30,soldierAnt:6,beetle:8,bruteBeetle:12,stagBeetle:30,rhinoBeetle:40}[u.type]??(ARMORED.has(u.type)?18:0))+(ally?p.defense*3+r.defense*5:tier*3)+(e==='medic'?12:0)+(fort?.defense||0);
   return {...b,name:e?EVOLUTIONS[e].name:b.name,hp:b.hp*(1+.2*commanderMilestones)*(1+.18*(level-1))*(1+.12*tier)*(u.boss?({bayonetCaptain:4,bladeGuard:18,bikeRaider:7}[u.type]||(u.type==='hornet'?8:5)):1)*(u.boss?2:1)*hpBonus*this.enemyHealthScale(u)*(ally?1+.1*(r.health||0):1),damage:b.damage*(1+.18*(level-1))*(ally?(1+.04*p.damage)*(1+.1*r.damage):enemyPower)*(1+.10*tier)*(u.boss?1.69:1)*damageBonus*(fort?.damage||1),rate:u.type==='medic'?MEDIC_HEALING.interval:b.rate/(1+.09*(level-1))/(ally?(1+.03*p.haste)*(1+.08*r.haste):1)*(e==='guntruck'||e==='machinegun'?.75:1)*(!ally&&this.mode==='pve'&&u.type==='sniper'?1.25:1)*(fort?.rate||1)/(1+this.berserkerHaste(u)),speed:b.speed*(ally?(1+.03*p.speed)*(1+.06*r.speed):1)*(e==='rifle'?1.15:1)*(u.boss?u.type==='rhinoBeetle'?1.6:u.type==='stagBeetle'?1.5:1.35:1),defense,range:b.range+(e==='tank'?35:e==='rifle'?20:e==='sniper'?65:e==='medic'?60:e==='mortar'?70:0),splash:(b.splash||0)+(e==='tank'?35:e==='rocket'||e==='mortar'?30:0),critChance:ally?clamp(.05+p.critChance*.02+r.critChance*.04+(e==='sniper'?.25:e==='rocket'?.2:0),0,.95):0,critDamage:1.5+(ally?p.critDamage*.1+r.critDamage*.15:0)+(e==='sniper'?.5:0),heal:u.type==='medic'?MEDIC_HEALING.base*(1+MEDIC_HEALING.perLevel*(level-1))*(e==='medic'?MEDIC_HEALING.evolvedMultiplier:1):12*(1+.2*(level-1))};
  }
  selectedAbilities(){return Object.keys(ABILITIES).filter(k=>this.abilities[k]>0);}

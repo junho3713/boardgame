@@ -70,5 +70,5 @@ test('room waves introduce both bugs after three minutes with bounded simultaneo
 });
 test('wave testing can rewind the new spawn intervals without blocking early encounters',()=>{
  const g=scene(),wave=require('./public/wave-test.js');g.waveTest=true;g.time=780;g.spawnRoomEnemy('bombBug');g.spawnRoomEnemy('acidBeetle');a.ok(g.roomCampaign.insectNext.acidBeetle>780);wave.seek(g,180);a.ok(g.roomCanSpawn('bombBug'));a.ok(g.roomCanSpawn('acidBeetle'));a.equal(Object.keys(g.roomCampaign.insectNext).length,0);
- g.time=120;a.equal(g.roomPhase().mix.bombBug,undefined);a.equal(g.roomPhase().mix.ant,3);
+ g.time=120;a.equal(g.roomPhase().mix.bombBug,undefined);a.equal(g.roomPhase().mix.ant,7);
 });

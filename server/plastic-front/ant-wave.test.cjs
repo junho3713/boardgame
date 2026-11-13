@@ -35,7 +35,7 @@ test('the normal scheduled wave spends existing slots on a bomb and ants without
  const small=scene(190);small.upgradeRoomCampaign=()=>false;small.updateRoomScheduledTanks=()=>{};small.roomWavePlan=()=>({count:2,interval:5,forced:[],surge:false});small.roomCampaign.nextSpawnAt=190;small.random=()=>.15;small.updateRoomWaves();a.ok(small.units.every(u=>u.type!=='bombBug'));
 });
 test('opening waves and caps stay intact while the three-minute ant mix is doubled',()=>{
- const g=scene(0);a.equal(g.roomPhase().mix.ant,1);a.equal(g.roomPhase().cap,4);g.time=60;a.equal(g.roomPhase().mix.ant,8);g.time=120;a.equal(g.roomPhase().mix.ant,3);g.time=180;a.equal(g.roomPhase().mix.ant,4);g.time=480;a.equal(g.roomPhase().mix.ant,8);g.time=600;a.equal(g.roomPhase().mix.ant,6);
+ const g=scene(0);a.equal(g.roomPhase().mix.ant,1);a.equal(g.roomPhase().cap,4);g.time=60;a.equal(g.roomPhase().mix.ant,8);g.time=120;a.equal(g.roomPhase().mix.ant,7);g.time=180;a.equal(g.roomPhase().mix.ant,8);g.time=480;a.equal(g.roomPhase().mix.ant,8);g.time=600;a.equal(g.roomPhase().mix.ant,6);
 });
 test('escorting ants stay with the slow bomb then resume their own pursuit after its death',()=>{
  const g=scene(),[bomb,ant]=g.spawnRoomAntGroup();ant.x=bomb.x+250;const steps=[];g.navigate=(u,x,y,dt,speed)=>steps.push({u,x,y,speed});a.equal(g.followRoomEscort(ant,.05,g.stats(ant)),true);a.equal(steps.length,1);a.ok(steps[0].speed<=g.stats(bomb).speed*1.15);a.ok(Math.hypot(steps[0].x-bomb.x,steps[0].y-bomb.y)<125);

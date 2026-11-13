@@ -110,7 +110,7 @@ function install({FrontGame:Game,TYPES}){
   if(this.phase!=='playing')return;this.upgradeRareSupplyGuards();
   for(const pickup of this.pickups){if(!pickup.active||!pickup.rareSupply||!pickup.ambushPending)continue;
    const c=this.units.find(u=>u.team===0&&u.type==='leader'&&u.hp>0&&Math.hypot(u.x-pickup.x,u.y-pickup.y)<360);if(!c)continue;
-   const bounds=this.bounds(),positions=[],types=openingSupply(pickup)?['bayonet','rifle']:this.time<360?['bayonet','rifle','bayonet','machinegun']:['bladeGuard','machinegun','bayonet','rifle'];
+   const bounds=this.bounds(),positions=[],types=openingSupply(pickup)?['bladeGuard','rifle']:this.time<360?['bayonet','rifle','bayonet','rifle']:['bladeGuard','machinegun','bayonet','rifle'];
    for(let i=0;i<48&&positions.length<types.length;i++){const a=Math.atan2(c.y-pickup.y,c.x-pickup.x)+Math.PI/2+(i%4)*Math.PI/2+Math.floor(i/4)*.17,r=205+Math.floor(i/16)*30,q={x:pickup.x+Math.cos(a)*r,y:pickup.y+Math.sin(a)*r};if(q.x>50&&q.y>70&&q.x<bounds.width-50&&q.y<bounds.height-70&&this.freePosition(q.x,q.y,26)&&!positions.some(p=>Math.hypot(p.x-q.x,p.y-q.y)<100))positions.push(q);}
    if(positions.length<types.length)continue;pickup.ambushPending=false;
    for(const [i,q]of positions.entries()){const u=this.addUnit(2,types[i],q.x,q.y,true);u.rareSupplyGuard=true;u.supplyAnchorX=pickup.x;u.supplyAnchorY=pickup.y;u.cooldown=Math.max(.8,u.cooldown);u.homeX=u.x;u.homeY=u.y;this.stampEvolutionWave?.(u);pickup.guardIds.push(u.id);this.effects.push({kind:'drop',x:u.x,y:u.y,t:.8,max:.8,team:2});}
@@ -127,7 +127,7 @@ function install({FrontGame:Game,TYPES}){
   for(let i=0;i<36;i++){const a=-Math.PI/2+((i%12)-5.5)*.22,r=700+(i%3)*75,candidate={x:Math.max(65,Math.min(bounds.width-65,c.x+Math.cos(a)*r)),y:Math.max(this.frontline()+100,Math.min(bounds.height-100,c.y+Math.sin(a)*r))};if(Math.hypot(candidate.x-c.x,candidate.y-c.y)>=550&&this.freePosition(candidate.x,candidate.y,26)&&!this.pickups.some(p=>p.active&&Math.hypot(p.x-candidate.x,p.y-candidate.y)<90)){point=candidate;break;}}
   if(!point){this.nextRareSupply=this.time+5;return;}
   const pickup={...point,active:true,rareSupply:true,spawnedAt:this.time,expires:this.time+120,ambushPending:true,guardIds:[]},opening=openingSupply(pickup);
-  const guardTypes=opening?['bayonet','rifle','rifle']:this.time<360?['bayonet','bayonet','bayonet','rifle','rifle','machinegun']:this.time<720?['bladeGuard','bayonet','bayonet','machinegun','mortar','sniper']:['stagBeetle','bladeGuard','machinegun','mortar','mortar','sniper'];
+  const guardTypes=opening?['bladeGuard','rifle','rifle']:this.time<360?['bayonet','bayonet','bayonet','rifle','rifle','rifle']:this.time<720?['bladeGuard','bayonet','bayonet','machinegun','mortar','sniper']:['stagBeetle','bladeGuard','machinegun','mortar','mortar','sniper'];
   pickup.guardVersion=opening?4:3;
   const positions=this.supplyGuardPositions(pickup,guardTypes.length);
   if(positions.length<guardTypes.length){this.nextRareSupply=this.time+5;return;}

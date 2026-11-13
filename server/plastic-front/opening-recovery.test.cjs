@@ -18,7 +18,7 @@ test('the real opening spawner eases in for two minutes, with no first-minute cr
   a.equal(g.roomBeat().density,1);a.ok(g.roomEnemyCount()<=g.roomWaveCap());
  }
  a.deepEqual(maxBatch,[1,2]);a.ok(totals[0]===6);a.ok(totals[1]>=20&&totals[1]<=22);
- g.time=119.95;a.equal(g.roomWaveCap(),16);g.time=120;a.equal(g.roomWaveCap(),34);a.equal(g.roomWavePlan().count,4);a.equal(g.roomWavePlan().interval,4);
+ g.time=119.95;a.equal(g.roomWaveCap(),16);g.time=120;a.equal(g.roomWaveCap(),24);a.equal(g.roomWavePlan().count,3);a.equal(g.roomWavePlan().interval,5);
 });
 
 test('uncleared opening waves respect the lower caps and co-op keeps its 1.8x spawn accounting',()=>{
