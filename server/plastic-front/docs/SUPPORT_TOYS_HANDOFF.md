@@ -162,3 +162,11 @@ public/combat-feedback.js를 commander-effects.js 뒤에 일반 게임과 보스
 PixelFX 0.3.1 commit 5294518ce7c72e48b6100a744596e0acf57f2826: impacts/hit-spark(16f, 544×320, 4열)와 impacts/crit-hit(28f,1080×816,5열)을 height=20·약한 발광·장난감 금속 팔레트로 export합니다. source JSON의 원래 pivot에서 height 20을 뺀 위치가 실제 접촉 앵커입니다. assets/effects/pixelfx의 PNG 두 장은 총 100442 bytes이며 LICENSE.txt/NOTICE.txt를 포함합니다.
 
 재생성: 게임 저장소 옆 pixelfx checkout을 위 커밋에 맞춘 뒤 node server/plastic-front/tools/build-combat-feedback.mjs 실행. 다른 checkout은 첫 인자로 전달합니다. 신규 combat-feedback.test.cjs 4개 및 전체 414개 테스트 통과. 임시 미리보기 페이지는 배포에 포함하지 않습니다.
+
+## 2026-11-14 람쥐썬더 전격 후속
+
+support-toys-view.js: casterCircuit의 손 고리·꼬리 방전, 전격 지속 .39→.46초, 기본/연쇄 두께 4.3/6.6, residualCurrent의 명중 위치 추적. stormLayouts WeakMap으로 구름 위치·크기를 한 시전 동안 고정하며 폭 280..540·높이 폭×.60입니다. 실제 targets와 사망 필터를 사용하고 엔진·스턴 수치·저장/협동 패킷은 바꾸지 않습니다. reducedMotion/OS 접근성 설정에서는 잔전류와 회전 불꽃을 생략합니다.
+
+PixelFX 0.3.1 commit 5294518ce7c72e48b6100a744596e0acf57f2826의 lightning/zap-hit를 금빛으로 export합니다. 기존 전격과 겹치는 접근 번개를 피하려고 원본 10..25 프레임만 사용하고, drawBack의 화상 자국은 제외했습니다. 576×448, 144×112, 4열, 16프레임 PNG 4797 bytes. assets/support-toys/pixelfx/ramjwi-current-v20261114b.{png,json}, 기존 MIT LICENSE/NOTICE를 보존합니다.
+
+재생성: 게임 저장소 옆 pixelfx checkout을 위 커밋으로 맞춘 뒤 node server/plastic-front/tools/build-ramjwi-fx.mjs 실행. 다른 checkout은 첫 인자로 전달합니다. 전체 417개 테스트 및 단계별 실제 렌더러 시각 검증 통과. 임시 검증 페이지는 배포하지 않습니다.

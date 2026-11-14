@@ -1,0 +1,412 @@
+{
+ "frames": [
+  {
+   "filename": "ramjwi-current-v20261114b 0",
+   "frame": {
+    "x": 0,
+    "y": 0,
+    "w": 144,
+    "h": 112
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 144,
+    "h": 112
+   },
+   "sourceSize": {
+    "w": 144,
+    "h": 112
+   },
+   "duration": 33
+  },
+  {
+   "filename": "ramjwi-current-v20261114b 1",
+   "frame": {
+    "x": 144,
+    "y": 0,
+    "w": 144,
+    "h": 112
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 144,
+    "h": 112
+   },
+   "sourceSize": {
+    "w": 144,
+    "h": 112
+   },
+   "duration": 33
+  },
+  {
+   "filename": "ramjwi-current-v20261114b 2",
+   "frame": {
+    "x": 288,
+    "y": 0,
+    "w": 144,
+    "h": 112
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 144,
+    "h": 112
+   },
+   "sourceSize": {
+    "w": 144,
+    "h": 112
+   },
+   "duration": 33
+  },
+  {
+   "filename": "ramjwi-current-v20261114b 3",
+   "frame": {
+    "x": 432,
+    "y": 0,
+    "w": 144,
+    "h": 112
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 144,
+    "h": 112
+   },
+   "sourceSize": {
+    "w": 144,
+    "h": 112
+   },
+   "duration": 33
+  },
+  {
+   "filename": "ramjwi-current-v20261114b 4",
+   "frame": {
+    "x": 0,
+    "y": 112,
+    "w": 144,
+    "h": 112
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 144,
+    "h": 112
+   },
+   "sourceSize": {
+    "w": 144,
+    "h": 112
+   },
+   "duration": 33
+  },
+  {
+   "filename": "ramjwi-current-v20261114b 5",
+   "frame": {
+    "x": 144,
+    "y": 112,
+    "w": 144,
+    "h": 112
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 144,
+    "h": 112
+   },
+   "sourceSize": {
+    "w": 144,
+    "h": 112
+   },
+   "duration": 33
+  },
+  {
+   "filename": "ramjwi-current-v20261114b 6",
+   "frame": {
+    "x": 288,
+    "y": 112,
+    "w": 144,
+    "h": 112
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 144,
+    "h": 112
+   },
+   "sourceSize": {
+    "w": 144,
+    "h": 112
+   },
+   "duration": 33
+  },
+  {
+   "filename": "ramjwi-current-v20261114b 7",
+   "frame": {
+    "x": 432,
+    "y": 112,
+    "w": 144,
+    "h": 112
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 144,
+    "h": 112
+   },
+   "sourceSize": {
+    "w": 144,
+    "h": 112
+   },
+   "duration": 33
+  },
+  {
+   "filename": "ramjwi-current-v20261114b 8",
+   "frame": {
+    "x": 0,
+    "y": 224,
+    "w": 144,
+    "h": 112
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 144,
+    "h": 112
+   },
+   "sourceSize": {
+    "w": 144,
+    "h": 112
+   },
+   "duration": 33
+  },
+  {
+   "filename": "ramjwi-current-v20261114b 9",
+   "frame": {
+    "x": 144,
+    "y": 224,
+    "w": 144,
+    "h": 112
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 144,
+    "h": 112
+   },
+   "sourceSize": {
+    "w": 144,
+    "h": 112
+   },
+   "duration": 33
+  },
+  {
+   "filename": "ramjwi-current-v20261114b 10",
+   "frame": {
+    "x": 288,
+    "y": 224,
+    "w": 144,
+    "h": 112
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 144,
+    "h": 112
+   },
+   "sourceSize": {
+    "w": 144,
+    "h": 112
+   },
+   "duration": 33
+  },
+  {
+   "filename": "ramjwi-current-v20261114b 11",
+   "frame": {
+    "x": 432,
+    "y": 224,
+    "w": 144,
+    "h": 112
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 144,
+    "h": 112
+   },
+   "sourceSize": {
+    "w": 144,
+    "h": 112
+   },
+   "duration": 33
+  },
+  {
+   "filename": "ramjwi-current-v20261114b 12",
+   "frame": {
+    "x": 0,
+    "y": 336,
+    "w": 144,
+    "h": 112
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 144,
+    "h": 112
+   },
+   "sourceSize": {
+    "w": 144,
+    "h": 112
+   },
+   "duration": 33
+  },
+  {
+   "filename": "ramjwi-current-v20261114b 13",
+   "frame": {
+    "x": 144,
+    "y": 336,
+    "w": 144,
+    "h": 112
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 144,
+    "h": 112
+   },
+   "sourceSize": {
+    "w": 144,
+    "h": 112
+   },
+   "duration": 33
+  },
+  {
+   "filename": "ramjwi-current-v20261114b 14",
+   "frame": {
+    "x": 288,
+    "y": 336,
+    "w": 144,
+    "h": 112
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 144,
+    "h": 112
+   },
+   "sourceSize": {
+    "w": 144,
+    "h": 112
+   },
+   "duration": 33
+  },
+  {
+   "filename": "ramjwi-current-v20261114b 15",
+   "frame": {
+    "x": 432,
+    "y": 336,
+    "w": 144,
+    "h": 112
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 144,
+    "h": 112
+   },
+   "sourceSize": {
+    "w": 144,
+    "h": 112
+   },
+   "duration": 33
+  }
+ ],
+ "meta": {
+  "app": "https://github.com/patch-gg/pixelfx",
+  "version": "1",
+  "image": "ramjwi-current-v20261114b.png",
+  "format": "RGBA8888",
+  "size": {
+   "w": 576,
+   "h": 448
+  },
+  "scale": "1",
+  "frameTags": [
+   {
+    "name": "ramjwi-current-v20261114b",
+    "from": 0,
+    "to": 15,
+    "direction": "forward"
+   }
+  ],
+  "pixelfx": {
+   "id": "lightning/zap-hit",
+   "name": "Zap hit",
+   "fps": 30,
+   "loop": false,
+   "frames": 16,
+   "frameSize": [
+    144,
+    112
+   ],
+   "pivot": [
+    76,
+    56
+   ],
+   "columns": 4
+  },
+  "source": {
+   "repository": "https://github.com/patch-gg/pixelfx",
+   "commit": "5294518ce7c72e48b6100a744596e0acf57f2826",
+   "effect": "lightning/zap-hit",
+   "firstFrame": 10,
+   "omitBurnMarks": true,
+   "options": {
+    "seed": 3,
+    "light": 0.24,
+    "palette": [
+     "#826438",
+     "#ba9246",
+     "#dfbb65",
+     "#f3d883",
+     "#ffe6a3",
+     "#fff0bd",
+     "#fff7da",
+     "#fffef0"
+    ]
+   }
+  }
+ }
+}

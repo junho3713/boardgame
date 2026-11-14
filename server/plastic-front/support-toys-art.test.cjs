@@ -13,7 +13,8 @@ function viewHarness(){
   'fishing-bait-v20261110.png':[256,256],
   'tsunami-directions-v20261109.png':[1086,1448],
   'ramjwi-thunder-v20261109.webp':[1536,960],
-  'thundercloud-v20261109.webp':[1536,768]
+  'thundercloud-v20261109.webp':[1536,768],
+  'ramjwi-current-v20261114b.png':[576,448]
  };
  class Image{
   constructor(){this.naturalWidth=this.naturalHeight=0;requests.push(this);}
@@ -36,7 +37,7 @@ const actor=(type,id=1)=>({id,type,team:0,x:1000,y:6000,face:Math.PI/2,hp:100,ma
 test('otter, turtle and squirrel atlases render eight directions and their articulated actions with shared assets',()=>{
  const h=viewHarness(),g={time:1},otter=actor('toyDecoyMaker'),turtle=actor('toyTurtle',2),squirrel=actor('toyStunner',3);
  h.view.draw(h.ctx,otter,g);h.view.draw(h.ctx,turtle,g);h.view.draw(h.ctx,squirrel,g);assert.equal(h.draws.length,0);
- assert.equal(h.requests.length,10);for(const image of h.requests)image.load();
+ assert.equal(h.requests.length,11);for(const image of h.requests)image.load();
  for(const u of [otter,turtle,squirrel])for(let direction=0;direction<8;direction++){
   u.face=Math.PI/2+direction*Math.PI/4;g.time+=.2;h.view.draw(h.ctx,u,g);h.check();assert.equal(h.view.motionPose(u).spriteDirection,direction);
  }
@@ -45,7 +46,7 @@ test('otter, turtle and squirrel atlases render eight directions and their artic
  g.time+=.2;h.view.draw(h.ctx,otter,g);assert.equal(h.view.motionPose(otter).spriteFrame,7);
  g.time+=1;delete otter.toyActionUntil;otter.x+=9;h.view.draw(h.ctx,otter,g);assert.ok(h.view.motionPose(otter).spriteFrame<4);
  squirrel.toyActionUntil=g.time+1;squirrel.toyActionFace=0;squirrel.toyProcTier=2;h.view.draw(h.ctx,squirrel,g);assert.equal(h.view.motionPose(squirrel).spriteFrame,7);
- assert.equal(h.requests.length,10);
+ assert.equal(h.requests.length,11);
 });
 
 test('shark, megalodon, stronger jets, tsunami and drum bursts render finite frames without mutating combat state',()=>{
@@ -100,4 +101,19 @@ test('tsunami selects all forty-eight directional animation cells while keeping 
   const [file,x,y,w,height]=h.draws.at(-1);assert.ok(file.includes('tsunami-directions'));assert.equal(x,frame*181);assert.equal(y,direction*181);assert.equal(w,181);assert.equal(height,181);cells.add(x+','+y);h.check();
  }
  assert.equal(cells.size,48);
+});
+
+test('jackpot cloud stays planted when its struck enemies move and never mutates the combat event',()=>{
+ const h=viewHarness(),source=actor('toyStunner'),g={time:.3};h.view.draw(h.ctx,source,g);h.requests.forEach(im=>im.load());
+ const targets=Array.from({length:8},(_,i)=>({id:i+20,type:i%2?'rifle':'ant',x:1090+i*22,y:6000+i%3*20,hp:100})),e={kind:'toyThunder',source,x:1170,y:6030,targets,tier:2,max:1.2,t:.9};
+ h.draws.length=0;h.view.event(h.ctx,e,g);const first=h.draws.find(([name])=>name.includes('thundercloud')).slice(5);
+ for(const t of targets)t.x+=t.id%2?110:-70;const before=JSON.stringify(e);h.draws.length=0;h.view.event(h.ctx,e,g);assert.deepEqual(h.draws.find(([name])=>name.includes('thundercloud')).slice(5),first);assert.equal(JSON.stringify(e),before);assert.ok(first[2]<=540);h.check();
+});
+test('residual current follows the struck unit with bounded shared texture frames through pause and rewind',()=>{
+ const h=viewHarness(),source=actor('toyStunner'),target={id:7,type:'rifle',x:1180,y:6000,hp:100},g={time:.4};h.view.draw(h.ctx,source,g);h.requests.forEach(im=>im.load());
+ const e={kind:'toyZap',source,from:source,target,tier:1,hop:0,max:1,t:.6};h.draws.length=0;h.view.event(h.ctx,e,g);const first=h.draws.find(([name])=>name.includes('ramjwi-current'));assert.ok(first);assert.ok(first[1]+first[3]<=576&&first[2]+first[4]<=448);h.draws.length=0;h.view.event(h.ctx,e,g);assert.deepEqual(h.draws.find(([name])=>name.includes('ramjwi-current')),first);
+ target.x+=90;h.draws.length=0;const before=JSON.stringify(e);h.view.event(h.ctx,e,g);assert.equal(h.draws.find(([name])=>name.includes('ramjwi-current'))[5]-first[5],90);assert.equal(JSON.stringify(e),before);e.t=.96;h.draws.length=0;h.view.event(h.ctx,e,g);assert.ok(!h.draws.some(([name])=>name.includes('ramjwi-current')));h.check();
+});
+test('reduced motion omits animated residual current and dead victims never receive another zap display',()=>{
+ const h=viewHarness(),source=actor('toyStunner'),target={id:7,type:'rifle',x:1180,y:6000,hp:100},g={time:.4,reducedMotion:true};h.view.draw(h.ctx,source,g);h.requests.forEach(im=>im.load());const e={kind:'toyZap',source,from:source,target,tier:1,max:1,t:.6};h.draws.length=0;h.view.event(h.ctx,e,g);assert.ok(!h.draws.some(([name])=>name.includes('ramjwi-current')));target.hp=0;h.draws.length=0;h.view.event(h.ctx,e,g);assert.equal(h.draws.length,0);h.check();
 });
