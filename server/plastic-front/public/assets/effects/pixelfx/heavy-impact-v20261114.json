@@ -1,0 +1,675 @@
+{
+ "frames": [
+  {
+   "filename": "heavy-impact-v20261114 0",
+   "frame": {
+    "x": 0,
+    "y": 0,
+    "w": 216,
+    "h": 136
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 216,
+    "h": 136
+   },
+   "sourceSize": {
+    "w": 216,
+    "h": 136
+   },
+   "duration": 33
+  },
+  {
+   "filename": "heavy-impact-v20261114 1",
+   "frame": {
+    "x": 216,
+    "y": 0,
+    "w": 216,
+    "h": 136
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 216,
+    "h": 136
+   },
+   "sourceSize": {
+    "w": 216,
+    "h": 136
+   },
+   "duration": 33
+  },
+  {
+   "filename": "heavy-impact-v20261114 2",
+   "frame": {
+    "x": 432,
+    "y": 0,
+    "w": 216,
+    "h": 136
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 216,
+    "h": 136
+   },
+   "sourceSize": {
+    "w": 216,
+    "h": 136
+   },
+   "duration": 33
+  },
+  {
+   "filename": "heavy-impact-v20261114 3",
+   "frame": {
+    "x": 648,
+    "y": 0,
+    "w": 216,
+    "h": 136
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 216,
+    "h": 136
+   },
+   "sourceSize": {
+    "w": 216,
+    "h": 136
+   },
+   "duration": 33
+  },
+  {
+   "filename": "heavy-impact-v20261114 4",
+   "frame": {
+    "x": 864,
+    "y": 0,
+    "w": 216,
+    "h": 136
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 216,
+    "h": 136
+   },
+   "sourceSize": {
+    "w": 216,
+    "h": 136
+   },
+   "duration": 33
+  },
+  {
+   "filename": "heavy-impact-v20261114 5",
+   "frame": {
+    "x": 0,
+    "y": 136,
+    "w": 216,
+    "h": 136
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 216,
+    "h": 136
+   },
+   "sourceSize": {
+    "w": 216,
+    "h": 136
+   },
+   "duration": 33
+  },
+  {
+   "filename": "heavy-impact-v20261114 6",
+   "frame": {
+    "x": 216,
+    "y": 136,
+    "w": 216,
+    "h": 136
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 216,
+    "h": 136
+   },
+   "sourceSize": {
+    "w": 216,
+    "h": 136
+   },
+   "duration": 33
+  },
+  {
+   "filename": "heavy-impact-v20261114 7",
+   "frame": {
+    "x": 432,
+    "y": 136,
+    "w": 216,
+    "h": 136
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 216,
+    "h": 136
+   },
+   "sourceSize": {
+    "w": 216,
+    "h": 136
+   },
+   "duration": 33
+  },
+  {
+   "filename": "heavy-impact-v20261114 8",
+   "frame": {
+    "x": 648,
+    "y": 136,
+    "w": 216,
+    "h": 136
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 216,
+    "h": 136
+   },
+   "sourceSize": {
+    "w": 216,
+    "h": 136
+   },
+   "duration": 33
+  },
+  {
+   "filename": "heavy-impact-v20261114 9",
+   "frame": {
+    "x": 864,
+    "y": 136,
+    "w": 216,
+    "h": 136
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 216,
+    "h": 136
+   },
+   "sourceSize": {
+    "w": 216,
+    "h": 136
+   },
+   "duration": 33
+  },
+  {
+   "filename": "heavy-impact-v20261114 10",
+   "frame": {
+    "x": 0,
+    "y": 272,
+    "w": 216,
+    "h": 136
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 216,
+    "h": 136
+   },
+   "sourceSize": {
+    "w": 216,
+    "h": 136
+   },
+   "duration": 33
+  },
+  {
+   "filename": "heavy-impact-v20261114 11",
+   "frame": {
+    "x": 216,
+    "y": 272,
+    "w": 216,
+    "h": 136
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 216,
+    "h": 136
+   },
+   "sourceSize": {
+    "w": 216,
+    "h": 136
+   },
+   "duration": 33
+  },
+  {
+   "filename": "heavy-impact-v20261114 12",
+   "frame": {
+    "x": 432,
+    "y": 272,
+    "w": 216,
+    "h": 136
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 216,
+    "h": 136
+   },
+   "sourceSize": {
+    "w": 216,
+    "h": 136
+   },
+   "duration": 33
+  },
+  {
+   "filename": "heavy-impact-v20261114 13",
+   "frame": {
+    "x": 648,
+    "y": 272,
+    "w": 216,
+    "h": 136
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 216,
+    "h": 136
+   },
+   "sourceSize": {
+    "w": 216,
+    "h": 136
+   },
+   "duration": 33
+  },
+  {
+   "filename": "heavy-impact-v20261114 14",
+   "frame": {
+    "x": 864,
+    "y": 272,
+    "w": 216,
+    "h": 136
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 216,
+    "h": 136
+   },
+   "sourceSize": {
+    "w": 216,
+    "h": 136
+   },
+   "duration": 33
+  },
+  {
+   "filename": "heavy-impact-v20261114 15",
+   "frame": {
+    "x": 0,
+    "y": 408,
+    "w": 216,
+    "h": 136
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 216,
+    "h": 136
+   },
+   "sourceSize": {
+    "w": 216,
+    "h": 136
+   },
+   "duration": 33
+  },
+  {
+   "filename": "heavy-impact-v20261114 16",
+   "frame": {
+    "x": 216,
+    "y": 408,
+    "w": 216,
+    "h": 136
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 216,
+    "h": 136
+   },
+   "sourceSize": {
+    "w": 216,
+    "h": 136
+   },
+   "duration": 33
+  },
+  {
+   "filename": "heavy-impact-v20261114 17",
+   "frame": {
+    "x": 432,
+    "y": 408,
+    "w": 216,
+    "h": 136
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 216,
+    "h": 136
+   },
+   "sourceSize": {
+    "w": 216,
+    "h": 136
+   },
+   "duration": 33
+  },
+  {
+   "filename": "heavy-impact-v20261114 18",
+   "frame": {
+    "x": 648,
+    "y": 408,
+    "w": 216,
+    "h": 136
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 216,
+    "h": 136
+   },
+   "sourceSize": {
+    "w": 216,
+    "h": 136
+   },
+   "duration": 33
+  },
+  {
+   "filename": "heavy-impact-v20261114 19",
+   "frame": {
+    "x": 864,
+    "y": 408,
+    "w": 216,
+    "h": 136
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 216,
+    "h": 136
+   },
+   "sourceSize": {
+    "w": 216,
+    "h": 136
+   },
+   "duration": 33
+  },
+  {
+   "filename": "heavy-impact-v20261114 20",
+   "frame": {
+    "x": 0,
+    "y": 544,
+    "w": 216,
+    "h": 136
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 216,
+    "h": 136
+   },
+   "sourceSize": {
+    "w": 216,
+    "h": 136
+   },
+   "duration": 33
+  },
+  {
+   "filename": "heavy-impact-v20261114 21",
+   "frame": {
+    "x": 216,
+    "y": 544,
+    "w": 216,
+    "h": 136
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 216,
+    "h": 136
+   },
+   "sourceSize": {
+    "w": 216,
+    "h": 136
+   },
+   "duration": 33
+  },
+  {
+   "filename": "heavy-impact-v20261114 22",
+   "frame": {
+    "x": 432,
+    "y": 544,
+    "w": 216,
+    "h": 136
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 216,
+    "h": 136
+   },
+   "sourceSize": {
+    "w": 216,
+    "h": 136
+   },
+   "duration": 33
+  },
+  {
+   "filename": "heavy-impact-v20261114 23",
+   "frame": {
+    "x": 648,
+    "y": 544,
+    "w": 216,
+    "h": 136
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 216,
+    "h": 136
+   },
+   "sourceSize": {
+    "w": 216,
+    "h": 136
+   },
+   "duration": 33
+  },
+  {
+   "filename": "heavy-impact-v20261114 24",
+   "frame": {
+    "x": 864,
+    "y": 544,
+    "w": 216,
+    "h": 136
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 216,
+    "h": 136
+   },
+   "sourceSize": {
+    "w": 216,
+    "h": 136
+   },
+   "duration": 33
+  },
+  {
+   "filename": "heavy-impact-v20261114 25",
+   "frame": {
+    "x": 0,
+    "y": 680,
+    "w": 216,
+    "h": 136
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 216,
+    "h": 136
+   },
+   "sourceSize": {
+    "w": 216,
+    "h": 136
+   },
+   "duration": 33
+  },
+  {
+   "filename": "heavy-impact-v20261114 26",
+   "frame": {
+    "x": 216,
+    "y": 680,
+    "w": 216,
+    "h": 136
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 216,
+    "h": 136
+   },
+   "sourceSize": {
+    "w": 216,
+    "h": 136
+   },
+   "duration": 33
+  },
+  {
+   "filename": "heavy-impact-v20261114 27",
+   "frame": {
+    "x": 432,
+    "y": 680,
+    "w": 216,
+    "h": 136
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 216,
+    "h": 136
+   },
+   "sourceSize": {
+    "w": 216,
+    "h": 136
+   },
+   "duration": 33
+  }
+ ],
+ "meta": {
+  "app": "https://github.com/patch-gg/pixelfx",
+  "version": "1",
+  "image": "heavy-impact-v20261114.png",
+  "format": "RGBA8888",
+  "size": {
+   "w": 1080,
+   "h": 816
+  },
+  "scale": "1",
+  "frameTags": [
+   {
+    "name": "heavy-impact-v20261114",
+    "from": 0,
+    "to": 27,
+    "direction": "forward"
+   }
+  ],
+  "pixelfx": {
+   "id": "impacts/crit-hit",
+   "name": "Critical hit",
+   "fps": 30,
+   "loop": false,
+   "frames": 28,
+   "frameSize": [
+    216,
+    136
+   ],
+   "pivot": [
+    84,
+    106
+   ],
+   "columns": 5
+  },
+  "source": {
+   "repository": "https://github.com/patch-gg/pixelfx",
+   "commit": "5294518ce7c72e48b6100a744596e0acf57f2826",
+   "effect": "impacts/crit-hit",
+   "options": {
+    "height": 20,
+    "seed": 4,
+    "light": 0.25,
+    "palette": [
+     "#58432b",
+     "#987044",
+     "#c39453",
+     "#dcb069",
+     "#ead294",
+     "#fff0c3",
+     "#fff9df",
+     "#ffffff"
+    ]
+   }
+  }
+ }
+}

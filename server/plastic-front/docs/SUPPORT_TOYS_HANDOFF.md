@@ -154,3 +154,11 @@ support-toys-view.js만 전투 표현을 변경합니다. sharkPose 키 0/.08/.1
 PixelFX 0.3.1, upstream commit 5294518ce7c72e48b6100a744596e0acf57f2826의 water/splash를 stone=false, 청록 팔레트·약한 발광으로 export했습니다. public/assets/support-toys/pixelfx에 1232×1100 PNG(176×100, 7열, 76프레임), JSON, LICENSE.txt, NOTICE.txt가 있습니다. gallery 폰트는 포함하지 않습니다.
 
 회사 PC 재생성: 게임 저장소 옆에 공식 patch-gg/pixelfx를 clone하고 위 커밋을 checkout한 뒤 저장소 루트에서 node server/plastic-front/tools/build-shark-water.mjs 실행. 다른 checkout 위치는 첫 인자로 전달합니다. PixelFX와 npm은 실제 서버/게임 런타임 의존성이 아닙니다. 새 물보라는 수달이 처음 그려질 때 preload하며 같은 이미지를 공유합니다. 전체 410개 회귀 테스트 및 실제 렌더러 단계별 시각 검증 통과.
+
+## 2026-11-14 공통 전투 피드백
+
+public/combat-feedback.js를 commander-effects.js 뒤에 일반 게임과 보스 연습에 로드합니다. FrontEffects.drawEvent의 hit/heal 표시를 교체하고 explosion은 기존 렌더러를 한 번 호출한 뒤 jackpot/bossKiller만 보조 표현을 더합니다. evoBossImpact는 중복 처리하지 않습니다. 엔진·치료·피격 0.5초 모션 간격·파티클 예산·저장/협동 상태를 바꾸지 않습니다.
+
+PixelFX 0.3.1 commit 5294518ce7c72e48b6100a744596e0acf57f2826: impacts/hit-spark(16f, 544×320, 4열)와 impacts/crit-hit(28f,1080×816,5열)을 height=20·약한 발광·장난감 금속 팔레트로 export합니다. source JSON의 원래 pivot에서 height 20을 뺀 위치가 실제 접촉 앵커입니다. assets/effects/pixelfx의 PNG 두 장은 총 100442 bytes이며 LICENSE.txt/NOTICE.txt를 포함합니다.
+
+재생성: 게임 저장소 옆 pixelfx checkout을 위 커밋에 맞춘 뒤 node server/plastic-front/tools/build-combat-feedback.mjs 실행. 다른 checkout은 첫 인자로 전달합니다. 신규 combat-feedback.test.cjs 4개 및 전체 414개 테스트 통과. 임시 미리보기 페이지는 배포에 포함하지 않습니다.

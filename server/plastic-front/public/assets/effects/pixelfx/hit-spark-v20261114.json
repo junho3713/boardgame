@@ -1,0 +1,411 @@
+{
+ "frames": [
+  {
+   "filename": "hit-spark-v20261114 0",
+   "frame": {
+    "x": 0,
+    "y": 0,
+    "w": 136,
+    "h": 80
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 136,
+    "h": 80
+   },
+   "sourceSize": {
+    "w": 136,
+    "h": 80
+   },
+   "duration": 33
+  },
+  {
+   "filename": "hit-spark-v20261114 1",
+   "frame": {
+    "x": 136,
+    "y": 0,
+    "w": 136,
+    "h": 80
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 136,
+    "h": 80
+   },
+   "sourceSize": {
+    "w": 136,
+    "h": 80
+   },
+   "duration": 33
+  },
+  {
+   "filename": "hit-spark-v20261114 2",
+   "frame": {
+    "x": 272,
+    "y": 0,
+    "w": 136,
+    "h": 80
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 136,
+    "h": 80
+   },
+   "sourceSize": {
+    "w": 136,
+    "h": 80
+   },
+   "duration": 33
+  },
+  {
+   "filename": "hit-spark-v20261114 3",
+   "frame": {
+    "x": 408,
+    "y": 0,
+    "w": 136,
+    "h": 80
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 136,
+    "h": 80
+   },
+   "sourceSize": {
+    "w": 136,
+    "h": 80
+   },
+   "duration": 33
+  },
+  {
+   "filename": "hit-spark-v20261114 4",
+   "frame": {
+    "x": 0,
+    "y": 80,
+    "w": 136,
+    "h": 80
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 136,
+    "h": 80
+   },
+   "sourceSize": {
+    "w": 136,
+    "h": 80
+   },
+   "duration": 33
+  },
+  {
+   "filename": "hit-spark-v20261114 5",
+   "frame": {
+    "x": 136,
+    "y": 80,
+    "w": 136,
+    "h": 80
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 136,
+    "h": 80
+   },
+   "sourceSize": {
+    "w": 136,
+    "h": 80
+   },
+   "duration": 33
+  },
+  {
+   "filename": "hit-spark-v20261114 6",
+   "frame": {
+    "x": 272,
+    "y": 80,
+    "w": 136,
+    "h": 80
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 136,
+    "h": 80
+   },
+   "sourceSize": {
+    "w": 136,
+    "h": 80
+   },
+   "duration": 33
+  },
+  {
+   "filename": "hit-spark-v20261114 7",
+   "frame": {
+    "x": 408,
+    "y": 80,
+    "w": 136,
+    "h": 80
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 136,
+    "h": 80
+   },
+   "sourceSize": {
+    "w": 136,
+    "h": 80
+   },
+   "duration": 33
+  },
+  {
+   "filename": "hit-spark-v20261114 8",
+   "frame": {
+    "x": 0,
+    "y": 160,
+    "w": 136,
+    "h": 80
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 136,
+    "h": 80
+   },
+   "sourceSize": {
+    "w": 136,
+    "h": 80
+   },
+   "duration": 33
+  },
+  {
+   "filename": "hit-spark-v20261114 9",
+   "frame": {
+    "x": 136,
+    "y": 160,
+    "w": 136,
+    "h": 80
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 136,
+    "h": 80
+   },
+   "sourceSize": {
+    "w": 136,
+    "h": 80
+   },
+   "duration": 33
+  },
+  {
+   "filename": "hit-spark-v20261114 10",
+   "frame": {
+    "x": 272,
+    "y": 160,
+    "w": 136,
+    "h": 80
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 136,
+    "h": 80
+   },
+   "sourceSize": {
+    "w": 136,
+    "h": 80
+   },
+   "duration": 33
+  },
+  {
+   "filename": "hit-spark-v20261114 11",
+   "frame": {
+    "x": 408,
+    "y": 160,
+    "w": 136,
+    "h": 80
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 136,
+    "h": 80
+   },
+   "sourceSize": {
+    "w": 136,
+    "h": 80
+   },
+   "duration": 33
+  },
+  {
+   "filename": "hit-spark-v20261114 12",
+   "frame": {
+    "x": 0,
+    "y": 240,
+    "w": 136,
+    "h": 80
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 136,
+    "h": 80
+   },
+   "sourceSize": {
+    "w": 136,
+    "h": 80
+   },
+   "duration": 33
+  },
+  {
+   "filename": "hit-spark-v20261114 13",
+   "frame": {
+    "x": 136,
+    "y": 240,
+    "w": 136,
+    "h": 80
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 136,
+    "h": 80
+   },
+   "sourceSize": {
+    "w": 136,
+    "h": 80
+   },
+   "duration": 33
+  },
+  {
+   "filename": "hit-spark-v20261114 14",
+   "frame": {
+    "x": 272,
+    "y": 240,
+    "w": 136,
+    "h": 80
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 136,
+    "h": 80
+   },
+   "sourceSize": {
+    "w": 136,
+    "h": 80
+   },
+   "duration": 33
+  },
+  {
+   "filename": "hit-spark-v20261114 15",
+   "frame": {
+    "x": 408,
+    "y": 240,
+    "w": 136,
+    "h": 80
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 136,
+    "h": 80
+   },
+   "sourceSize": {
+    "w": 136,
+    "h": 80
+   },
+   "duration": 33
+  }
+ ],
+ "meta": {
+  "app": "https://github.com/patch-gg/pixelfx",
+  "version": "1",
+  "image": "hit-spark-v20261114.png",
+  "format": "RGBA8888",
+  "size": {
+   "w": 544,
+   "h": 320
+  },
+  "scale": "1",
+  "frameTags": [
+   {
+    "name": "hit-spark-v20261114",
+    "from": 0,
+    "to": 15,
+    "direction": "forward"
+   }
+  ],
+  "pixelfx": {
+   "id": "impacts/hit-spark",
+   "name": "Hit spark",
+   "fps": 30,
+   "loop": false,
+   "frames": 16,
+   "frameSize": [
+    136,
+    80
+   ],
+   "pivot": [
+    44,
+    64
+   ],
+   "columns": 4
+  },
+  "source": {
+   "repository": "https://github.com/patch-gg/pixelfx",
+   "commit": "5294518ce7c72e48b6100a744596e0acf57f2826",
+   "effect": "impacts/hit-spark",
+   "options": {
+    "height": 20,
+    "seed": 4,
+    "light": 0.25,
+    "palette": [
+     "#58432b",
+     "#987044",
+     "#c39453",
+     "#dcb069",
+     "#ead294",
+     "#fff0c3",
+     "#fff9df",
+     "#ffffff"
+    ]
+   }
+  }
+ }
+}
