@@ -146,3 +146,11 @@ node --test server/plastic-front/*.test.cjs
 278개 회귀 테스트: 25% 경계·2슬롯·중복·보류 보급·협동 소유권과 실제 HTTP 명령·저장·AI·제어 면역·수리·보행 정지·발사 방향·이동 차량 위 대기·정확한 적중·대기 중 보스 교체·구형 미사일 호환을 확인했습니다. 실제 브라우저에서도 렌더링·교체 UI·물대포/전기·미사일을 확인했습니다. 임시 검증 페이지는 배포하지 않습니다.
 
 추가 진화 배율 3.3배나 새로운 연계 단계 등은 논의만 했으며 적용하지 않았습니다. 적 수·보스 체력·7분대 완화·기존 연계 13종은 이번 패치에서 조정하지 않았습니다. 이후 밸런스는 이 수치표와 동일 시드 기준으로 비교하세요. 회사 PC에서 중단된 영웅 대장 이펙트 작업은 별도로 이어가면 됩니다.
+
+## 2026-11-14 상어 매복 연출
+
+support-toys-view.js만 전투 표현을 변경합니다. sharkPose 키 0/.08/.18/.30/.40/.48/.70/.94초 → 0..7 프레임. .48초 frame 5가 실제 support-toys.js의 impactAt=breachAt+.48과 일치합니다. 시작 시각으로 자세·물방울을 계산하므로 pause/rewind에서 상태를 변경하지 않습니다. 낚싯줄은 보간한 입 앵커를 따릅니다.
+
+PixelFX 0.3.1, upstream commit 5294518ce7c72e48b6100a744596e0acf57f2826의 water/splash를 stone=false, 청록 팔레트·약한 발광으로 export했습니다. public/assets/support-toys/pixelfx에 1232×1100 PNG(176×100, 7열, 76프레임), JSON, LICENSE.txt, NOTICE.txt가 있습니다. gallery 폰트는 포함하지 않습니다.
+
+회사 PC 재생성: 게임 저장소 옆에 공식 patch-gg/pixelfx를 clone하고 위 커밋을 checkout한 뒤 저장소 루트에서 node server/plastic-front/tools/build-shark-water.mjs 실행. 다른 checkout 위치는 첫 인자로 전달합니다. PixelFX와 npm은 실제 서버/게임 런타임 의존성이 아닙니다. 새 물보라는 수달이 처음 그려질 때 preload하며 같은 이미지를 공유합니다. 전체 410개 회귀 테스트 및 실제 렌더러 단계별 시각 검증 통과.

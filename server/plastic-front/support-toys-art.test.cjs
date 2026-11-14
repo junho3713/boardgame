@@ -8,6 +8,7 @@ function viewHarness(){
   'water-turtle-v20261109.webp':[1344,1120],
   'water-jet-v20261109.webp':[1536,768],
   'shark-breach-v20261109.webp':[1216,1216],
+  'shark-water-v20261114.png':[1232,1100],
   'shark-fin-v20261109.png':[1254,1254],
   'fishing-bait-v20261110.png':[256,256],
   'tsunami-directions-v20261109.png':[1086,1448],
@@ -35,7 +36,7 @@ const actor=(type,id=1)=>({id,type,team:0,x:1000,y:6000,face:Math.PI/2,hp:100,ma
 test('otter, turtle and squirrel atlases render eight directions and their articulated actions with shared assets',()=>{
  const h=viewHarness(),g={time:1},otter=actor('toyDecoyMaker'),turtle=actor('toyTurtle',2),squirrel=actor('toyStunner',3);
  h.view.draw(h.ctx,otter,g);h.view.draw(h.ctx,turtle,g);h.view.draw(h.ctx,squirrel,g);assert.equal(h.draws.length,0);
- assert.equal(h.requests.length,9);for(const image of h.requests)image.load();
+ assert.equal(h.requests.length,10);for(const image of h.requests)image.load();
  for(const u of [otter,turtle,squirrel])for(let direction=0;direction<8;direction++){
   u.face=Math.PI/2+direction*Math.PI/4;g.time+=.2;h.view.draw(h.ctx,u,g);h.check();assert.equal(h.view.motionPose(u).spriteDirection,direction);
  }
@@ -44,7 +45,7 @@ test('otter, turtle and squirrel atlases render eight directions and their artic
  g.time+=.2;h.view.draw(h.ctx,otter,g);assert.equal(h.view.motionPose(otter).spriteFrame,7);
  g.time+=1;delete otter.toyActionUntil;otter.x+=9;h.view.draw(h.ctx,otter,g);assert.ok(h.view.motionPose(otter).spriteFrame<4);
  squirrel.toyActionUntil=g.time+1;squirrel.toyActionFace=0;squirrel.toyProcTier=2;h.view.draw(h.ctx,squirrel,g);assert.equal(h.view.motionPose(squirrel).spriteFrame,7);
- assert.equal(h.requests.length,9);
+ assert.equal(h.requests.length,10);
 });
 
 test('shark, megalodon, stronger jets, tsunami and drum bursts render finite frames without mutating combat state',()=>{
@@ -73,6 +74,15 @@ test('circling fins use real directional art after bait lands and stop before th
  for(const tier of [1,2])for(let i=0;i<12;i++){g.time=.4+i*.18;h.view.event(h.ctx,{kind:'toySharkFin',source:u,bait,tier,startedAt:.35,t:2,max:3},g);h.check();}
  assert.ok(h.draws.filter(([name])=>name.includes('shark-fin')).length>=24);
  const count=h.draws.length;bait.toySharkTriggeredAt=2.5;g.time=2.5;h.view.event(h.ctx,{kind:'toySharkFin',source:u,bait,tier:2,startedAt:.35,t:1,max:3},g);assert.equal(h.draws.length,count);
+});
+
+test('shark bite matches the 0.48-second combat hit and water frames stay bounded across pause and rewind',()=>{
+ const h=viewHarness(),u=actor('toyDecoyMaker'),g={time:0};h.view.draw(h.ctx,u,g);for(const image of h.requests)image.load();
+ for(const tier of [1,2]){const e={kind:'toyShark',source:u,x:1120,y:6000,angle:0,tier,range:tier===2?240:140,startedAt:0,t:1.25,max:1.25},before=JSON.stringify(e);
+  g.time=.48;h.draws.length=0;h.view.event(h.ctx,e,g);const bite=h.draws.find(([name])=>name.includes('shark-breach'));const frame=5+(tier===2?8:0);assert.equal(bite[1],frame%4*304);assert.equal(bite[2],Math.floor(frame/4)*304);
+  for(const time of [.56,.56,.01,.70,1.24]){g.time=time;h.draws.length=0;h.view.event(h.ctx,e,g);for(const [name,x,y,w,height]of h.draws.filter(([name])=>name.includes('shark-water'))){assert.ok(x>=0&&y>=0&&x+w<=1232&&y+height<=1100);assert.equal(w,176);assert.equal(height,100);}h.check();}
+  assert.equal(JSON.stringify(e),before);
+ }
 });
 
 test('failed skill textures settle once and retain a drawable fallback',()=>{
