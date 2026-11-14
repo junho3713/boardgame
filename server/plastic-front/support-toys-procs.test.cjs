@@ -8,9 +8,9 @@ const {applySnapshot}=require('./public/coop-state.js');
 const wave=require('./public/wave-test.js');
 const rolls=[.99,.15,.02];
 
-test('jackpot thunder reaches eight targets out to 500 while ordinary and chain casts keep their 310 range',()=>{
- for(const tier of [0,1,2]){const g=scene(),u=ready(g,'toyStunner',tier);const nearTarget=enemy(g,u.x+120,u.y);const far=Array.from({length:8},(_,i)=>enemy(g,u.x+340+i*20,u.y));const outside=enemy(g,u.x+501,u.y);far[0].boss=true;
-  assert.equal(g.useSupportToy(u),true);assert.equal(nearTarget.toyStunUntil,tier+1);assert.equal(far.filter(t=>t.toyStunUntil===3).length,tier===2?7:0);assert.equal(outside.toyStunUntil,undefined);const fill=g.effects.filter(e=>e.kind==='bossGroggy');assert.ok(fill.every(e=>e.max===tier+1));
+test('jackpot thunder covers a circle around its primary target while ordinary and chain casts keep their 310 range',()=>{
+ for(const tier of [0,1,2]){const g=scene(),u=ready(g,'toyStunner',tier);const nearTarget=enemy(g,u.x+120,u.y);const far=Array.from({length:8},(_,i)=>enemy(g,u.x+340+i*20,u.y));const outside=enemy(g,u.x+490,u.y);far[0].boss=true;
+  assert.equal(g.useSupportToy(u),true);assert.equal(nearTarget.toyStunUntil,tier+1);assert.equal(far.filter(t=>t.toyStunUntil===3).length,tier===2?8:0);assert.equal(outside.toyStunUntil,undefined);const fill=g.effects.filter(e=>e.kind==='bossGroggy');assert.ok(fill.every(e=>e.max===tier+1));
  }
  const g=scene(),u=ready(g,'toyStunner',0);enemy(g,u.x+450,u.y);assert.equal(g.useSupportToy(u),false);assert.equal(u.toyNextAt,10);g.random=()=>.02;assert.equal(g.useSupportToy(u),false);assert.equal(g.effects.some(e=>e.kind==='toyThunder'),false);
 });
@@ -75,7 +75,7 @@ test('fishing bait takes aggro only after landing and never redirects an existin
  const g=scene(),u=ready(g,'toyDecoyMaker'),targets=Array.from({length:4},(_,i)=>enemy(g,1600+i*20,6000)),shot={target:g.commander(0)};g.shots=[shot];
  assert.equal(g.useSupportToy(u),true);const bait=g.units.find(t=>t.type==='toyDecoy');
  assert.equal(g.supportDecoyTarget(targets[0]),null);assert.equal(g.canTarget(targets[0],bait),false);
- g.time=.35;Object.assign(bait,{x:1550,y:6000});assert.equal(targets.filter(t=>g.supportDecoyTarget(t)===bait).length,2);assert.equal(shot.target,g.commander(0));assert.equal(bait.toyExpires,30.35);
+ g.time=.35;Object.assign(bait,{x:1550,y:6000});assert.equal(targets.filter(t=>g.supportDecoyTarget(t)===bait).length,3);assert.equal(shot.target,g.commander(0));assert.equal(bait.toyExpires,30.35);
 });
 
 test('sharks circle a landed bait without attacking and breach only after an enemy reaches the eighty-pixel trigger',()=>{
@@ -103,7 +103,7 @@ test('an approaching enemy walks into an on-route bait and receives visible shar
 test('shark and megalodon use the approved damage and radii, and their delayed impacts happen once',()=>{
  for(const tier of [1,2]){
   const g=scene(),u=ready(g,'toyDecoyMaker',tier);enemy(g,1600,6000);assert.equal(g.useSupportToy(u),true);
-  const burst=g.supportBursts[0];assert.equal(burst.radius,[0,140,240][tier]);near(burst.damage,g.stats(g.commander(0)).damage*[0,2,4][tier]);
+  const burst=g.supportBursts[0];assert.equal(burst.radius,[110,170,360][tier]);near(burst.damage,g.stats(g.commander(0)).damage*[0,2,4][tier]);
   const victim=enemy(g,burst.x+40,burst.y),outside=enemy(g,burst.x+burst.radius+TYPES.ant.r+10,burst.y),friendly=g.addUnit(0,'rifle',burst.x,burst.y),hp=victim.hp,allyHp=friendly.hp,x=victim.x;
   g.time=.35;g.updateSupportBursts();assert.equal(burst.state,'breaching');
   g.time=burst.impactAt-.001;g.updateSupportBursts();assert.equal(victim.hp,hp);
@@ -133,8 +133,8 @@ test('a launched shark survives source retirement and cooperative snapshots with
  const after=restored.units.find(t=>t.id===victim.id),afterHp=after.hp;restored.updateSupportBursts();assert.equal(after.hp,afterHp);
 });
 
-test('electric tiers stun at most one, three and eight valid targets for one, two and three seconds respectively',()=>{
- for(const [tier,count]of [[0,1],[1,3],[2,8]]){
+test('electric tiers stun three, five and all valid targets for one, two and three seconds respectively',()=>{
+ for(const [tier,count]of [[0,3],[1,5],[2,11]]){
   const g=scene(),u=ready(g,'toyStunner',tier),targets=Array.from({length:10},(_,i)=>enemy(g,u.x+80+i*8,u.y)),boss=enemy(g,u.x+70,u.y,'rhinoBeetle');boss.boss=true;
   assert.equal(g.useSupportToy(u),true);assert.equal(targets.filter(t=>t.toyStunUntil===tier+1).length,count-1);assert.equal(boss.toyStunUntil,tier+1);assert.equal(g.effects.filter(e=>e.kind==='toyZap').length,count);assert.equal(u.toyNextAt,10);
   const links=g.effects.filter(e=>e.kind==='toyZap');for(let i=1;i<links.length;i++)assert.equal(links[i].from,links[i-1].target);
@@ -143,20 +143,20 @@ test('electric tiers stun at most one, three and eight valid targets for one, tw
  }
 });
 
-test('Ramjwi Thunder keeps eight target references and a one-time stun through a saved cooperative storm',()=>{
+test('Ramjwi Thunder keeps all target references and a one-time stun through a saved cooperative storm',()=>{
  const g=scene(true),u=g.withOwner(1,()=>ready(g,'toyStunner',2));
  const targets=Array.from({length:9},(_,i)=>enemy(g,u.x+100+i*10,u.y));g.withOwner(1,()=>g.useSupportToy(u));
  assert.equal(TYPES.toyStunner.name,'람쥐썬더');assert.equal(u.toyActionUntil,1.2);
  const copy=unpack(scene(true),JSON.parse(JSON.stringify(pack(g)))),storm=copy.effects.find(e=>e.kind==='toyThunder');
- assert.equal(storm.source.coopOwner,1);assert.equal(storm.targets.length,8);
+ assert.equal(storm.source.coopOwner,1);assert.equal(storm.targets.length,9);
  for(const target of storm.targets){assert.equal(copy.units.find(t=>t.id===target.id),target);assert.equal(target.toyStunUntil,3);}
  const hp=copy.units.filter(t=>targets.some(v=>v.id===t.id)).map(t=>t.hp);copy.time=.5;copy.updateSupportToys(0);
  assert.deepEqual(copy.units.filter(t=>targets.some(v=>v.id===t.id)).map(t=>t.hp),hp);
  assert.equal(copy.effects.filter(e=>e.kind==='toyThunder').length,1);
 });
 
-test('water tiers push three, five and eight targets with progressively broader reach and force',()=>{
- for(const [tier,count,push]of [[0,3,144],[1,5,192],[2,8,288]]){
+test('water tiers push three, five and all targets with progressively broader reach and force',()=>{
+ for(const [tier,count,push]of [[0,3,144],[1,5,192],[2,10,288]]){
   const g=scene(),u=ready(g,'toyTurtle',tier),targets=Array.from({length:10},(_,i)=>enemy(g,u.x+100+i*10,u.y)),positions=targets.map(t=>t.x);
   assert.equal(g.useSupportToy(u),true);for(let i=1;i<=80;i++){g.time=i*.02;g.updateSupportWaves();for(const t of targets)g.updateSupportKnockback(t);}assert.equal(targets.filter((t,i)=>t.x>positions[i]).length,count);
   near(targets[0].x-positions[0],push);assert.equal(g.effects.some(e=>e.kind==='toyTsunami'),tier===2);

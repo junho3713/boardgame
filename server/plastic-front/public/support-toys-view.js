@@ -155,10 +155,10 @@ function draw(c,u,g){if(u.type==='toyDecoy'&&(u.hp<=0||g.time<(u.toyArrivesAt||0
  if(!hasArt||!character(c,u,g.time,m,facing)){
   c.translate(0,-24+Math.sin((u.walk||0)*.8)*1.5*m.weight);if(u.type==='toyTurtle'){c.scale(1,.8);c.rotate(facing+Math.PI/2);}else{const profile=.78+.22*Math.abs(Math.sin(facing)),flip=Math.cos(facing)<-.15?-1:1;c.scale(flip*profile,.95);}body(c,u,g.time,m.weight,u.type!=='toyTurtle'&&Math.sin(facing)<-.35);
  }c.restore();
- if(data){const top=hasArt?-88:-80;label(c,data.name,0,top-6,down?'#c2bbb0':'#f0e8b6');box(c,-21,top,42,4,2,'#213c37');box(c,-21,top,42*clamp(u.hp/Math.max(1,u.maxHp),0,1),4,2,'#9de4cb');
+ if(data){const top=hasArt?-88:-80,rank=clamp(Math.floor(u.toyUpgradeLevel||0),0,2),stars='★'.repeat(rank+1);label(c,data.name+' '+stars,0,top-6,down?'#c2bbb0':rank?'#ffe28a':'#f0e8b6');box(c,-21,top,42,4,2,'#213c37');box(c,-21,top,42*clamp(u.hp/Math.max(1,u.maxHp),0,1),4,2,'#9de4cb');
   if(down)label(c,'수리 '+Math.max(0,Math.ceil(u.toyDownUntil-g.time))+'초',0,-67,'#ffd5a0');
   else{
-   const remaining=Math.max(0,(u.toyNextAt||0)-g.time);box(c,-16,15,32,3,1,'#213c37');box(c,-16,15,32*(1-clamp(remaining/data.cooldown,0,1)),3,1,'#e5ce86');
+   const remaining=Math.max(0,(u.toyNextAt||0)-g.time),cooldown=g.supportToyCooldown?.(u)||data.cooldown*(1-rank*.1);box(c,-16,15,32,3,1,'#213c37');box(c,-16,15,32*(1-clamp(remaining/cooldown,0,1)),3,1,'#e5ce86');
    if(u.type==='toyDrum'){
     const tier=g.time<(u.toyBoostUntil||0)?u.toyProcTier||0:0,color=tier===2?'#ffe075':tier===1?'#9be9f4':'#e7d691',period=tier ? .8 : 1.5,beat=(g.time%period)/period;
     c.globalAlpha=(1-beat)*(tier ? .65 : .4);oval(c,0,-8,30+beat*(tier?50:25),12+beat*(tier?20:10),'#e7cf710a',color);c.globalAlpha=1;
@@ -216,7 +216,7 @@ function shark(c,e,g){
  waterRing(c,e.x,e.y+9,e.range*1.05,impact,color,large?1:.8);
  waterRing(c,e.x,e.y+9,e.range*.88,(age-.57)/.65,'#eafff3',.7);
  if(age>=.48&&age<.64){c.save();c.globalAlpha*=(1-(age-.48)/.16)*.65;oval(c,e.x,e.y+3,size*.13,size*.045,'#eaffed55','#f3fff4');c.restore();}
- label(c,large?'메갈로돈!':'상어!',e.x,e.y-size*.82-Math.sin(Math.min(1,age/.48)*Math.PI)*5,color);c.restore();
+ label(c,large?'메갈로돈!':e.tier===0?'꼬마 상어!':'상어!',e.x,e.y-size*.82-Math.sin(Math.min(1,age/.48)*Math.PI)*5,color);c.restore();
  // Keep the fisher in front when its feet are at the same or nearer depth.
  if(e.source?.hp>0&&!e.source.toyRetired&&e.source.y>=e.y-12)draw(c,e.source,g);
  return true;
@@ -236,6 +236,7 @@ function tsunami(c,e,g){
  const q=clamp(1-e.t/e.max,0,.999),direction=((Math.round(e.angle/(Math.PI/4))%8)+8)%8,frame=direction*6+Math.min(5,Math.floor(q*6));
  const width=e.range*(.76+.12*Math.sin(q*Math.PI)),motion=root.FrontSupportToys.waveMotion(e,g.time),distance=Math.max(0,motion.front-width*.42*Math.abs(Math.cos(e.angle))),x=e.x+Math.cos(e.angle)*distance,y=e.y+Math.sin(e.angle)*distance;
  c.save();c.globalAlpha=clamp((1-q)*5);
+ if(e.range>=560){const front=Math.min(e.range,motion.front);c.save();c.translate(e.x,e.y);c.rotate(e.angle);const wash=c.createRadialGradient(0,0,0,0,0,e.range);wash.addColorStop(0,'#7edce509');wash.addColorStop(.7,'#83e8ef1c');wash.addColorStop(1,'#e0fff029');c.fillStyle=wash;c.beginPath();c.moveTo(0,0);c.arc(0,0,front,-e.arc/2,e.arc/2);c.closePath();c.fill();c.strokeStyle='#bcf9f04d';c.lineWidth=1.2;c.stroke();c.restore();}
  // The upright crest has its own camera-relative view. A ground-cone clip cuts
  // off its height when firing toward the camera, so bound the sprite itself.
  if(!sheet(c,waveArt,frame,x,y,width,width*.85)){oval(c,x,y,width*.45,30,'#63dfed66','#e1ffff');}
@@ -498,12 +499,13 @@ function thunder(c,e,g){
  const groups=groupThunderTargets(e),targets=groups.flat().filter(t=>t.hp>0);
  if(!targets.length)return true;
  const age=e.max-e.t,gentle=gentleElectric(g),q=clamp(age/e.max),xs=targets.map(t=>t.x);
- let layout=stormLayouts.get(e);if(!layout){const width=clamp((Math.max(...xs)-Math.min(...xs))*.95+190,280,540),height=width*.60;layout={width,height,x:e.x,y:Math.min(e.y-95,...targets.map(t=>electricPoint(t).y-36),e.source?.hp>0?e.source.y-91:Infinity)};stormLayouts.set(e,layout);}
+ let layout=stormLayouts.get(e);if(!layout){const width=e.areaRadius?e.areaRadius*1.8:clamp((Math.max(...xs)-Math.min(...xs))*.95+190,280,540),height=width*.60;layout={width,height,x:e.x,y:Math.min(e.y-95,...targets.map(t=>electricPoint(t).y-36),e.source?.hp>0?e.source.y-91:Infinity)};stormLayouts.set(e,layout);}
  const {width,height}=layout,cloudY=layout.y,cloudX=layout.x,base=cloudY-height*.24;
  const frame=gentle?3:Math.min(7,Math.floor(q*8));
  const castSeed=(e.source?.id||1)*11+Math.round((g.time-age)*16);
  const sockets=[];
  c.save();c.globalAlpha*=clamp(age/.06)*clamp((1-q)*4.2);
+ if(e.areaRadius){const r=e.areaRadius;c.save();c.globalAlpha*=1-q;const glow=c.createRadialGradient(e.x,e.y,0,e.x,e.y,r);glow.addColorStop(0,'#ffe1a114');glow.addColorStop(.8,'#ffeab91c');glow.addColorStop(1,'#ffeab900');c.fillStyle=glow;c.fillRect(e.x-r,e.y-r,r*2,r*2);c.strokeStyle='#ffe2a050';c.lineWidth=1.4;c.beginPath();c.arc(e.x,e.y,r,0,TAU);c.stroke();c.restore();}
  // The cloud dims only its footprint; contact light then plays against both
  // the floor texture and the toys without a full-screen flash.
  c.save();c.translate(cloudX,e.y-14);c.scale(1,.74);
@@ -528,7 +530,7 @@ function thunder(c,e,g){
    const split=route.points[Math.min(6,Math.max(1,Math.round(portion*(route.points.length-1))))];
    const branchSeed=seed+17*(j+1),branchAge=local-(gentle?0:.018+j*.012);
    electricStroke(c,electricRoute(split,end,branchSeed),branchAge,4.6,gentle);
-   electricContact(c,t,end,branchAge-(gentle?0:.045),branchSeed,.98,gentle);
+   electricContact(c,t,end,branchAge-(gentle?0:.045),branchSeed,.98,gentle||targets.length>12);
   }
   electricStroke(c,route,local,body,gentle);
   electricContact(c,lead,point,local-(gentle?0:.045),seed,1.22,gentle);

@@ -3,25 +3,27 @@
 function install({FrontGame:Game,TYPES}){
  const p=Game.prototype;if(p.supportToyVersion)return;p.supportToyVersion=1;
  const rules={
-  slots:2,range:300,move:1.05,haste:1.03,repair:20,controlResistance:3,duplicateMax:2,duplicateReduction:.05,
+  slots:2,range:300,move:1.05,haste:1.03,repair:20,controlResistance:3,duplicateMax:2,duplicateReduction:.10,
   odds:{toyDrum:.25,toyDecoyMaker:.25,toyTurtle:.25,toyStunner:.25},
   procOdds:{normal:.70,enhanced:.25,jackpot:.05},
   drum:{interval:30,duration:10,move:[1.05,1.15,1.30],haste:[1.03,1.10,1.25]},
-  fishing:{arrival:.35,lifetime:30,interval:20,maxBaits:3,triggerRange:80,windup:.12,radius:[0,140,240],damage:[0,2,4],push:[0,2,10/3]},
-  water:{range:[350,400,500],targets:[3,5,8],push:[2,8/3,4],duration:[.32,.38,.48],waveDuration:1.35,waveStart:60,recovery:.15,arc:[Math.PI/2,Math.PI/2,Math.PI*.78]},
-  electric:{targets:[1,3,8],range:[310,310,500],duration:[1,2,3]}
+  // Fixed world geometry: about half of the default 1080×720 view, independent of zoom/device/host.
+  jackpot:{radius:360,waveRange:560},
+  fishing:{arrival:.35,lifetime:30,interval:20,maxBaits:3,triggerRange:80,windup:.12,radius:[110,170,360],targets:[3,5,Infinity],lures:[3,5,5],damage:[1.2,2,4],push:[1,2,10/3]},
+  water:{range:[350,400,560],targets:[3,5,Infinity],push:[2,8/3,4],duration:[.32,.38,.48],waveDuration:1.35,waveStart:60,recovery:.15,arc:[Math.PI/2,Math.PI/2,Math.PI*.78]},
+  electric:{targets:[3,5,Infinity],range:[310,310,500],duration:[1,2,3]}
  };
  const toys={
   toyDrum:{name:'태엽 북 토이',icon:'♫',hp:200,speed:145,cooldown:30,detail:'주변 이동 +5%·공속 +3% · 30초마다 추첨 · 강화 25%·대박 5%, 10초 지속'},
-  toyDecoyMaker:{name:'미끼 토이',icon:'◇',hp:180,speed:145,cooldown:rules.fishing.interval,detail:'20초마다 설치 · 각 미끼 착지 후 30초 유지 · 최대 3개·경로 근처 적 2명 유도 · 보스 타격 2회에 파괴 · 상어 25%·메갈로돈 5%'},
-  toyTurtle:{name:'물대포 거북이',icon:'≈',hp:480,speed:TYPES.rifle.speed*.9,cooldown:5,detail:'5초마다 전방 넉백 · 기본 144 / 강화 192 / 쓰나미 288 · 강화 25%·쓰나미 5%'},
-  toyStunner:{name:'람쥐썬더',icon:'ϟ',hp:180,speed:140,cooldown:10,detail:'기본 1명·1초 · 연쇄 25%: 3명·2초 · 벼락 5%: 범위 500·8명·3초 · 기본 주기 10초'}
+  toyDecoyMaker:{name:'미끼 토이',icon:'◇',hp:180,speed:145,cooldown:rules.fishing.interval,detail:'20초마다 미끼 · 기본 작은 상어 3명 / 강화 25% 상어 5명 / 대박 5% 메갈로돈 범위 전체 · 미끼 30초·최대 3개'},
+  toyTurtle:{name:'물대포 거북이',icon:'≈',hp:480,speed:TYPES.rifle.speed*.9,cooldown:5,detail:'5초마다 넉백 · 기본 3명 / 강화 25% 5명 / 대박 5% 대형 해일 범위 전체 · 일반 물대포는 곤충 보스만 밀침'},
+  toyStunner:{name:'람쥐썬더',icon:'ϟ',hp:180,speed:140,cooldown:10,detail:'10초마다 전격 · 기본 3명·1초 / 강화 25% 5명·2초 / 대박 5% 넓은 범위 전체·3초'}
  };
  const insects=new Set(['ant','soldierAnt','beetle','bruteBeetle','stagBeetle','rhinoBeetle','honeybee','hornet','butterfly','bombBug','acidBeetle']);
  const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y),clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
  const reset=p.reset,stats=p.stats,damage=p.damage,canTarget=p.canTarget,pursuit=p.pursuitTarget,refresh=p.refreshCommanderHealth;
  for(const [type,t]of Object.entries(toys))TYPES[type]={name:t.name,icon:t.icon,hp:t.hp,speed:t.speed,damage:0,rate:100,range:0,r:type==='toyTurtle'?20:15,cost:0,role:t.detail};
- TYPES.toyDecoy={name:'낚시 미끼',icon:'◇',hp:75,speed:0,damage:0,rate:100,range:0,r:13,cost:0,stationary:true,role:'경로 근처 적 최대 2명 유도 · 최대 30초 · 보스 타격 2회에 파괴'};
+ TYPES.toyDecoy={name:'낚시 미끼',icon:'◇',hp:75,speed:0,damage:0,rate:100,range:0,r:13,cost:0,stationary:true,role:'경로 근처 적 기본 3명·강화 5명 유도 · 최대 30초 · 보스 타격 2회에 파괴'};
  p.reset=function(){reset.call(this);this.supportBursts=[];this.supportWaves=[];};
  p.isSupportToy=function(u){return Object.hasOwn(toys,typeof u==='string'?u:u?.type);};
  p.isSupportEntity=function(u){return this.isSupportToy(u)||u?.type==='toyDecoy';};
@@ -30,8 +32,14 @@ function install({FrontGame:Game,TYPES}){
  p.supportBaits=function(owner=this.coopOwner||0){return this.units.filter(u=>u.type==='toyDecoy'&&u.hp>0&&u.toyExpires>this.time&&(!this.coop||u.coopOwner===owner));};
  p.supportBait=function(owner=this.coopOwner||0){return this.supportBaits(owner)[0]||null;};
  p.supportToyUpgrades=function(u){return clamp(Math.floor(Number(u.toyUpgradeLevel)||0),0,rules.duplicateMax);};
+ p.supportToyStars=function(u){return 1+this.supportToyUpgrades(u);};
  p.supportToyCooldown=function(u){return toys[u.type].cooldown*(1-rules.duplicateReduction*this.supportToyUpgrades(u));};
  p.refreshSupportToyCooldown=function(u){const next=this.supportToyCooldown(u),old=u.toyCooldown??(u.type==='toyDecoyMaker'?30.35:toys[u.type].cooldown);if(old!==next&&u.toyNextAt>this.time)u.toyNextAt=this.time+(u.toyNextAt-this.time)*next/old;u.toyCooldown=next;return next;};
+ p.upgradeSupportToy=function(u){
+  this.refreshSupportToyCooldown(u);const before=this.supportToyUpgrades(u);u.toyUpgradeLevel=Math.min(rules.duplicateMax,before+1);this.refreshSupportToyCooldown(u);
+  u.toyDownUntil=0;u.diedAt=undefined;u.hp=u.maxHp=this.stats(u).hp;
+  this.notify('toast',toys[u.type].name+' '+ '★'.repeat(this.supportToyStars(u))+(before<rules.duplicateMax?' · 쿨타임 −'+this.supportToyUpgrades(u)*10+'%':' · 최대 강화 / 완전 수리'));return before<rules.duplicateMax;
+ };
  p.damage=function(target,amount,source){
   if(target?.type==='toyDecoy'&&target.hp>0&&this.time<target.toyExpires){
    if(amount>0&&this.time>=(target.toyArrivesAt||0)&&source?.team!==0&&(source?.boss||source?.roadCaptain||source?.finalBoss)){
@@ -60,14 +68,14 @@ function install({FrontGame:Game,TYPES}){
  p.collectSupportToy=function(pickup,type){
   const state=this.supplyState();if(state.toyOffer){if(this.time>=(pickup.nextToyHint||0)){pickup.nextToyHint=this.time+2;this.notify('toast','서포토이 교체를 먼저 선택하세요 · 희귀 보급은 유지됩니다');}return false;}
   const own=this.supportToys(),same=own.find(u=>u.type===type);pickup.active=false;pickup.supplyKind=type;state.collected++;this.gainXP(18);this.awardGold(5);
-  if(same){const before=this.supportToyUpgrades(same);same.toyUpgradeLevel=Math.min(rules.duplicateMax,before+1);this.refreshSupportToyCooldown(same);same.toyDownUntil=0;same.diedAt=undefined;same.hp=same.maxHp=this.stats(same).hp;}
+  if(same){this.upgradeSupportToy(same);}
   else if(own.length<rules.slots){this.addSupportToy(type);}
   else{state.toyOffer={type,at:this.time};if(this.coop)this.coopInvulnerable[this.coopOwner]=Math.max(this.coopInvulnerable[this.coopOwner]||0,this.time+5);this.notify('toast','새 서포토이 · '+toys[type].name+' · 교체할 슬롯 또는 현재 편성 유지 선택');}
   this.effects.push({kind:'fieldSupply',x:pickup.x,y:pickup.y,reward:'supportToy',t:1.2,max:1.2,team:0});this.notify('change');return true;
  };
  p.resolveSupportToyOffer=function(id){
   const state=this.supplyState(),offer=state.toyOffer;if(this.phase!=='playing'||!offer||this.commander(0).hp<=0)return false;
-  if(id==='keep'){state.toyOffer=null;this.notify('change');return true;}
+  if(id==='keep'){const candidates=this.supportToys().filter(t=>this.supportToyUpgrades(t)<rules.duplicateMax);state.toyOffer=null;if(candidates.length)this.upgradeSupportToy(candidates[Math.min(candidates.length-1,Math.floor(this.random()*candidates.length))]);else this.notify('toast','모든 서포토이 ★★★ · 현재 편성 유지');this.notify('change');return true;}
   if(!Number.isInteger(id))return false;const old=this.supportToys().find(t=>t.id===id);if(!old)return false;
   const slot=old.toySlot;old.toyRetired=true;old.hp=0;old.diedAt=this.time;this.units=this.units.filter(t=>t!==old);state.toyOffer=null;this.addSupportToy(offer.type,slot);this.notify('toast','서포토이 교체 · '+toys[offer.type].name);this.notify('change');return true;
  };
@@ -186,9 +194,11 @@ function install({FrontGame:Game,TYPES}){
    if(!burst.hit&&this.time>=burst.impactAt){
     // Record completion before applying combat so snapshots and retries cannot hit twice.
     burst.hit=true;
-    const hit=()=>{for(const target of [...this.units]){
+    const hit=()=>{let count=0;const limit=rules.fishing.targets[burst.tier]??Infinity;for(const target of [...this.units].sort((a,b)=>distance(a,burst)-distance(b,burst)||a.id-b.id)){
+     if(count>=limit)break;
      if(target.team===0||target.hp<=0||distance(target,burst)>burst.radius+(TYPES[target.type]?.r||0)||!this.visible(target)||!this.lineClear(burst,target,0,{fireTeam:0}))continue;
      const hp=target.hp;this.damage(target,burst.damage,burst.source);
+     if(target.hp<hp)count++;
      if(target.hp<hp&&target.hp>0&&this.pushSupportTarget(burst,target,burst.strength,{duration:burst.tier===2?.55:.42,pop:burst.tier===2?44:28})){
       const duration=target.toyKnockback.until-this.time+rules.water.recovery;
       this.effects.push({kind:'toyWaterCarry',x:target.x,y:target.y,source:burst.source,target,angle:Math.atan2(target.y-burst.y,target.x-burst.x),startedAt:this.time,t:duration,max:duration,team:0});
@@ -217,9 +227,9 @@ function install({FrontGame:Game,TYPES}){
    const c=this.commander(0),a=Math.atan2(threats[0].y-c.y,threats[0].x-c.x);let point=null;
    for(const r of [150,120,90]){for(const offset of [0,.35,-.35,.7,-.7]){const q={x:c.x+Math.cos(a+offset)*r,y:c.y+Math.sin(a+offset)*r};if(this.freePosition(q.x,q.y,15)&&existing.every(d=>distance(d,q)>=35)){point=q;break;}}if(point)break;}if(!point)return false;
    const tier=this.rollSupportToyTier(u);
-   const d=this.addUnit(0,'toyDecoy',point.x,point.y,true);d.toyArrivesAt=this.time+rules.fishing.arrival;d.toyExpires=d.toyArrivesAt+rules.fishing.lifetime;d.toyLifetimeVersion=2;d.toyLuredIds=threats.slice(0,2).map(t=>t.id);d.toyMakerId=u.id;
+   const d=this.addUnit(0,'toyDecoy',point.x,point.y,true);d.toyArrivesAt=this.time+rules.fishing.arrival;d.toyExpires=d.toyArrivesAt+rules.fishing.lifetime;d.toyLifetimeVersion=2;d.toyLureLimit=rules.fishing.lures[tier];d.toyLuredIds=threats.slice(0,d.toyLureLimit).map(t=>t.id);d.toyMakerId=u.id;
    u.face=a;this.effects.push({kind:'toyDecoyDrop',x:d.x,y:d.y,source:u,angle:a,tier,t:.7,max:.7,team:0});
-   if(tier){
+   {
     this.supportBursts??=[];
     this.supportBursts.push({source:u,owner:this.coopOwner||0,bait:d,state:'circling',x:d.x,y:d.y,angle:a,tier,damage:this.stats(c).damage*rules.fishing.damage[tier],radius:rules.fishing.radius[tier],strength:rules.fishing.push[tier],shown:false,hit:false});
    }
@@ -235,7 +245,7 @@ function install({FrontGame:Game,TYPES}){
   }else if(type==='toyStunner'){
    const nearby=this.toyThreats(u,Math.max(...rules.electric.range)).filter(t=>this.supportControlAllowed(t,'stun'));if(!nearby.length)return false;
    const tier=this.rollSupportToyTier(u),duration=rules.electric.duration[tier],threats=nearby.filter(t=>distance(u,t)<=rules.electric.range[tier]);if(!threats.length){u.toyNextAt=this.time+this.supportToyCooldown(u);return false;}
-   const targets=threats.slice(0,rules.electric.targets[tier]);let previous=u;
+   const center=threats[0],targets=tier===2?this.toyThreats(center,rules.jackpot.radius).filter(t=>this.supportControlAllowed(t,'stun')):threats.slice(0,rules.electric.targets[tier]);let previous=u;
    u.face=Math.atan2(targets[0].y-u.y,targets[0].x-u.x);
    for(const [hop,t] of targets.entries()){
     t.toyStunUntil=this.time+duration;t.toyControlReadyAt=t.toyStunUntil+rules.controlResistance;t.sniperAim=t.bayonetAttack=null;
@@ -243,8 +253,7 @@ function install({FrontGame:Game,TYPES}){
     this.effects.push({kind:'toyZap',x:previous.x,y:previous.y,from:previous,target:t,source:u,tier,hop,storm:tier===2,t:1,max:1,team:0});previous=t;
    }
    if(tier===2){
-    const x=targets.reduce((sum,t)=>sum+t.x,0)/targets.length,y=targets.reduce((sum,t)=>sum+t.y,0)/targets.length;
-    this.effects.push({kind:'toyThunder',source:u,x,y,targets:[...targets],tier,t:1.2,max:1.2,team:0});
+    this.effects.push({kind:'toyThunder',source:u,x:center.x,y:center.y,areaRadius:rules.jackpot.radius,targets:[...targets],tier,t:1.2,max:1.2,team:0});
    }
   }else return false;
   const duration=type==='toyDecoyMaker' ? .7 : type==='toyStunner'&&u.toyProcTier===2 ? 1.2 : .5;
@@ -256,7 +265,7 @@ function install({FrontGame:Game,TYPES}){
    if(this.time>=d.toyExpires||this.time<(d.toyArrivesAt||0))continue;
    const refill=()=>{const others=new Set(this.units.filter(t=>t!==d&&t.type==='toyDecoy'&&t.hp>0&&this.time<t.toyExpires).flatMap(t=>t.toyLuredIds||[]));
     d.toyLuredIds=(d.toyLuredIds||[]).filter(id=>!others.has(id)&&this.units.some(t=>t.id===id&&this.supportDecoyOnRoute(t,d)));
-    for(const t of this.toyThreats(d,180)){if(d.toyLuredIds.length>=2)break;if((!this.isStationary(t)||t.boss||t.roadCaptain||t.finalBoss)&&!others.has(t.id)&&!d.toyLuredIds.includes(t.id)&&this.supportDecoyOnRoute(t,d))d.toyLuredIds.push(t.id);}
+    for(const t of this.toyThreats(d,180)){if(d.toyLuredIds.length>=(d.toyLureLimit||3))break;if((!this.isStationary(t)||t.boss||t.roadCaptain||t.finalBoss)&&!others.has(t.id)&&!d.toyLuredIds.includes(t.id)&&this.supportDecoyOnRoute(t,d))d.toyLuredIds.push(t.id);}
    };if(this.coop)this.withOwner(d.coopOwner,refill);else refill();
   }
   this.updateSupportBursts();this.updateSupportWaves();

@@ -5,9 +5,9 @@ root.FrontSupplyUI={create({getGame,toast,clearInput}){
  const frame=document.getElementById('battleFrame');frame.append(bar);
  const toyPanel=document.createElement('div');toyPanel.className='support-toy-panel';toyPanel.setAttribute('aria-label','서포토이 편성');bar.prepend(toyPanel);let toyKey='';
  function updateToys(g){
-  const own=g.supportToys(),offer=g.supportToyOffer(),defs=root.FrontSupportToys.toys,key=own.map(t=>t.id+':'+t.type).join(',')+'|'+(offer?.type||'');
+  const own=g.supportToys(),offer=g.supportToyOffer(),defs=root.FrontSupportToys.toys,key=own.map(t=>t.id+':'+t.type+':'+g.supportToyStars(t)).join(',')+'|'+(offer?.type||'');
   toyPanel.hidden=!offer;
-  if(key!==toyKey){toyKey=key;toyPanel.innerHTML=offer?'<div class="support-toy-offer"><strong>새 서포토이 · '+defs[offer.type].name+'</strong><p>'+defs[offer.type].detail+'</p>'+own.map(t=>'<button type="button" data-toy-replace="'+t.id+'">'+defs[t.type].name+' 교체</button>').join('')+'<button type="button" data-toy-replace="keep">현재 편성 유지</button></div>':'';}
+  if(key!==toyKey){toyKey=key;const upgradeable=own.some(t=>g.supportToyStars(t)<3);toyPanel.innerHTML=offer?'<div class="support-toy-offer"><strong>새 서포토이 · '+defs[offer.type].name+'</strong><p>'+defs[offer.type].detail+'</p>'+own.map(t=>'<button type="button" data-toy-replace="'+t.id+'">'+defs[t.type].name+' '+ '★'.repeat(g.supportToyStars(t))+' 교체</button>').join('')+'<button type="button" data-toy-replace="keep">현재 편성 유지'+(upgradeable?' · 무작위 강화':' · 모두 ★★★')+'</button><p>중복 획득마다 쿨타임 −10% · ★★★ 최대 −20%. '+(upgradeable?'유지를 선택하면 보유 토이 중 강화 가능한 하나가 무작위로 강화됩니다.':'모두 최대 강화 상태라 유지 시 추가 강화는 없습니다.')+'</p></div>':'';}
  }
  toyPanel.addEventListener('click',e=>{const b=e.target.closest('[data-toy-replace]');if(!b)return;const id=b.dataset.toyReplace;if(!getGame().resolveSupportToyOffer(id==='keep'?'keep':Number(id)))toast('전투 중에 자신의 서포토이 슬롯을 선택하세요.');});
  const heal=bar.querySelector('.supply-medkit'),strike=bar.querySelector('.supply-artillery'),buff=bar.querySelector('.supply-buffs'),hint=bar.querySelector('.supply-hint');
