@@ -1,10 +1,11 @@
 /* Short visual impacts. Unit positions, movement speed and simulation timing never change. */
 (function(root){'use strict';
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n)),TAU=Math.PI*2;
+function airborne(u,time){const k=u.toyKnockback;return !!(u.hp>0&&k?.popHeight&&!k.surf&&time>=k.startedAt&&time<k.until);}
 function pose(u,time){
  const surf=u.toyKnockback;
  if(surf?.surf&&time>=surf.startedAt&&time<surf.until){const q=clamp((time-surf.startedAt)/(surf.until-surf.startedAt),0,1),lift=Math.sin(q*Math.PI),rigid=u.boss||['tank','crimsonAce','guntruck','lucky','titan'].includes(u.type);return{x:Math.sin(q*Math.PI*5)*lift*1.5,y:-lift*(rigid?3:10),angle:Math.cos(Math.atan2(surf.dy,surf.dx))*lift*(rigid?.045:.22)+Math.sin(q*Math.PI*5)*lift*.025,scaleX:1,scaleY:1,flash:0};}
- if(surf?.popHeight&&time>=surf.startedAt&&time<surf.until){const q=clamp((time-surf.startedAt)/(surf.until-surf.startedAt),0,1),lift=Math.sin(q*Math.PI),rigid=u.boss||['tank','crimsonAce','guntruck','lucky','titan'].includes(u.type);return{x:0,y:-lift*Math.min(surf.popHeight,rigid?7:48),angle:Math.cos(Math.atan2(surf.dy,surf.dx))*lift*(rigid?.055:.32),scaleX:1+lift*.04,scaleY:1-lift*.03,flash:0};}
+ if(surf?.popHeight&&time>=surf.startedAt&&time<surf.until){const q=clamp((time-surf.startedAt)/(surf.until-surf.startedAt),0,1),peak=clamp(surf.popPeak??.5,.1,.9),lift=q<peak?Math.sin(q/peak*Math.PI/2):Math.cos((q-peak)/(1-peak)*Math.PI/2),rigid=u.boss||['tank','crimsonAce','guntruck','lucky','titan'].includes(u.type);return{x:0,y:-lift*Math.min(surf.popHeight,rigid?7:48),angle:Math.cos(Math.atan2(surf.dy,surf.dx))*lift*(rigid?.055:.32),scaleX:1+lift*.04,scaleY:1-lift*.03,flash:0};}
  const stunUntil=Math.max(u.toyStunUntil||0,u.groggyUntil||0);
  if(u.hp>0&&time<stunUntil){const rigid=u.boss||['tank','crimsonAce','guntruck','lucky','titan'].includes(u.type),fade=Math.min(1,(stunUntil-time)*7);return{x:Math.sin(time*19)*fade*(rigid?.6:1.1),y:0,angle:Math.sin(time*11)*fade*(rigid?.014:.045),scaleX:1,scaleY:1,flash:0};}
  const h=u.hitReaction;if(!h)return null;const age=time-h.at,duration=h.heavy?.28:.24;if(age<0||age>=duration)return null;const k=1-age/duration,pulse=Math.sin(Math.min(1,age/.075)*Math.PI)*k,rigid=u.boss||['tank','crimsonAce','guntruck','lucky','titan'].includes(u.type),distance=(rigid?1.8:7)*h.power*pulse;return{x:Math.cos(h.angle)*distance,y:Math.sin(h.angle)*distance*.65,angle:Math.sin(age*45)*k*(rigid?.012:.085)*h.power,scaleX:1+.055*pulse,scaleY:1-.055*pulse,flash:age<.065?1-age/.065:0};
@@ -22,5 +23,5 @@ function install(Effects){const p=Effects.prototype,draw=p.drawEvent,emit=p.emit
   return draw.call(this,c,e);
  };
 }
-root.FrontHitFeedback={pose,transform,shake,install};if(root.FrontEffects)install(root.FrontEffects);if(typeof module!=='undefined'&&module.exports)module.exports={pose,transform,shake,install};
+root.FrontHitFeedback={pose,transform,shake,airborne,install};if(root.FrontEffects)install(root.FrontEffects);if(typeof module!=='undefined'&&module.exports)module.exports={pose,transform,shake,airborne,install};
 })(typeof window==='undefined'?globalThis:window);

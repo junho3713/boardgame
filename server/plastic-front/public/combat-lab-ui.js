@@ -57,9 +57,9 @@
   if(floor.complete&&floor.naturalWidth){const tw=1080,th=tw*floor.naturalHeight/floor.naturalWidth;for(let x=Math.floor((game.camera.x-halfW)/tw)*tw;x<game.camera.x+halfW;x+=tw)for(let y=Math.floor((game.camera.y-halfH)/th)*th;y<game.camera.y+halfH;y+=th)c.drawImage(floor,x,y,tw,th);}
   fx.ground(c);fx.luckyGround(c,game);c.strokeStyle='#d3f5a5';c.lineWidth=2;c.beginPath();c.ellipse(leader.x,leader.y,25,15,0,0,Math.PI*2);c.stroke();if(game.moveOrder){c.beginPath();c.arc(game.moveOrder.x,game.moveOrder.y,16,0,Math.PI*2);c.stroke();}
   if(game.actor.type==='leader'&&game.ultimateStatus().active)fx.drawUltimateArea?.(c,game.actor,game.ultimate,game.time);
-  for(const u of [...game.units].sort((a,b)=>a.y-b.y||a.id-b.id)){unit(u);if(u.type==='lucky')fx.luckyReels(c,u,game);}
+  for(const u of [...game.units].sort((a,b)=>a.y-b.y||a.id-b.id)){if(FrontHitFeedback.airborne(u,game.time))continue;unit(u);if(u.type==='lucky')fx.luckyReels(c,u,game);}
   fx.drawLuckySprays(c,game);for(const p of game.mortarShells)fx.drawMortar(c,p,game.time);for(const p of game.shots)fx.drawShot(c,p,game.evolved[p.source.type]);
-  for(const e of game.effects)if(!FrontSupportToyView.event(c,e,game))fx.drawEvent(c,e);fx.drawParticles(c);c.restore();
+  for(const e of game.effects)if(!FrontSupportToyView.event(c,e,game))fx.drawEvent(c,e);for(const u of game.units.filter(u=>FrontHitFeedback.airborne(u,game.time)).sort((a,b)=>a.y-b.y||a.id-b.id))unit(u);fx.drawParticles(c);c.restore();
  }
  function clearControls(){keys.clear();stick={x:0,y:0};if(game)game.input={x:0,y:0};$('joy').querySelector('i').style.transform='';}
  document.addEventListener('visibilitychange',()=>{if(document.hidden&&game){game.phase='paused';clearControls();acc=0;hud();}});window.addEventListener('blur',clearControls);

@@ -407,7 +407,8 @@ function drawMortarShell(p){
 }
 // Presentation-only interpolation leaves combat, saves and AI on the fixed simulation clock.
 const aiVisualPositions=new WeakMap();
-function drawUnit(u){
+function drawUnit(u,airbornePass=false){
+ if(window.FrontHitFeedback.airborne(u,game.time)&&!airbornePass)return;
  if(COOP?.active){COOP.drawUnit(ctx,u,drawUnitRaw);return;}
  if(selectedMode!=='idle'||game.phase!=='playing'){aiVisualPositions.delete(u);drawUnitRaw(u);return;}
  const now=performance.now();let s=aiVisualPositions.get(u);
@@ -568,6 +569,8 @@ function draw(dt){
   ctx.restore();
  }
 
+ // Launched enemies stay visible above the shark rather than appearing after it submerges.
+ for(const u of game.units.filter(u=>window.FrontHitFeedback.airborne(u,game.time)).sort((a,b)=>a.y-b.y||a.id-b.id))drawUnit(u,true);
  battleFx.drawHealingStatuses(ctx,game,fxVisible);battleFx.drawParticles(ctx,fxVisible);swordView.health(ctx,game);if(game.isRoomCampaign())window.FrontPortal.health(ctx,game.bases[1]);drawFog();ctx.setTransform(DPR,0,0,DPR,0,0);
  swordView.hud(ctx,game,W);
  if(game.time<game.scoutUntil){ctx.strokeStyle='#f0db98';ctx.lineWidth=2;ctx.strokeRect(4,4,W-8,H-8);}

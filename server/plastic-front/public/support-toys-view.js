@@ -206,16 +206,16 @@ function shark(c,e,g){
  if(art?.ready){const alpha=c.globalAlpha;c.globalAlpha=alpha*(1-mix);sheet(c,sharkArt,frame+(large?8:0),0,0,size,size);if(mix>0){c.globalAlpha=alpha*mix;sheet(c,sharkArt,Math.min(7,frame+1)+(large?8:0),0,0,size,size);}}
  else{oval(c,0,0,e.range*.7,26,'#5ad7e73b','#b6f7ff');lure(c,g.time);}c.restore();
  c.restore();
- const impact=(age-.48)/.72;
+ const hitAge=Number.isFinite(e.impactAt)?e.impactAt-(e.startedAt??0):(root.FrontSupportToys?.rules?.fishing?.hitDelay??.18),impact=(age-hitAge)/.72;
  sharkWater(c,e.x,e.y+9,size*(large?1.65:1.45),impact,large?.8:.62);
  if(impact>=0&&impact<.8)for(let i=0;i<(large?16:11);i++){
-  const a=i*2.39996,delay=(i%4)*.025,t=age-.48-delay;if(t<0)continue;
+  const a=i*2.39996,delay=(i%4)*.025,t=age-hitAge-delay;if(t<0)continue;
   const speed=size*(.55+(i%3)*.14),x=e.x+Math.cos(a)*speed*t,y=e.y+9+Math.sin(a)*speed*t*.35-size*.65*t+size*1.2*t*t,fade=clamp((.62-t)/.22),r=(large?3.5:2.8)*(1-t*.8);
   if(r<=0||fade<=0)continue;c.save();c.globalAlpha*=fade*.85;oval(c,x,y,r,r*1.25,plastic(c,x-1,y-1,r*1.2,'#edfff3','#51bbc0'),'#9ae1db');c.restore();
  }
  waterRing(c,e.x,e.y+9,e.range*1.05,impact,color,large?1:.8);
- waterRing(c,e.x,e.y+9,e.range*.88,(age-.57)/.65,'#eafff3',.7);
- if(age>=.48&&age<.64){c.save();c.globalAlpha*=(1-(age-.48)/.16)*.65;oval(c,e.x,e.y+3,size*.13,size*.045,'#eaffed55','#f3fff4');c.restore();}
+ waterRing(c,e.x,e.y+9,e.range*.88,(age-hitAge-.09)/.65,'#eafff3',.7);
+ if(age>=hitAge&&age<hitAge+.16){c.save();c.globalAlpha*=(1-(age-hitAge)/.16)*.65;oval(c,e.x,e.y+3,size*.13,size*.045,'#eaffed55','#f3fff4');c.restore();}
  label(c,large?'메갈로돈!':e.tier===0?'꼬마 상어!':'상어!',e.x,e.y-size*.82-Math.sin(Math.min(1,age/.48)*Math.PI)*5,color);c.restore();
  // Keep the fisher in front when its feet are at the same or nearer depth.
  if(e.source?.hp>0&&!e.source.toyRetired&&e.source.y>=e.y-12)draw(c,e.source,g);

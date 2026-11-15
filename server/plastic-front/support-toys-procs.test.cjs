@@ -83,9 +83,9 @@ test('sharks circle a landed bait without attacking and breach only after an ene
  g.time=.34;g.updateSupportBursts();assert.equal(g.effects.some(e=>e.kind==='toySharkFin'),false);
  g.time=.35;g.updateSupportBursts();assert.equal(g.effects.filter(e=>e.kind==='toySharkFin').length,1);assert.equal(burst.state,'circling');assert.equal(burst.impactAt,undefined);
  g.time=1.8;g.updateSupportBursts();assert.equal(burst.state,'circling');assert.equal(t.hp,hp);assert.equal(g.effects.some(e=>e.kind==='toyShark'),false);
- t.x=burst.x+70;t.y=burst.y;g.updateSupportBursts();assert.equal(burst.state,'breaching');near(burst.breachAt,1.92);near(burst.impactAt,2.4);
- g.time=2.399;g.updateSupportBursts();assert.equal(t.hp,hp);g.time=2.4;g.updateSupportBursts();assert.ok(t.hp<hp);assert.equal(t.toyKnockback.popHeight,28);
- g.time=2.82;g.updateSupportKnockback(t);near(t.x,burst.x+70+144);
+ t.x=burst.x+70;t.y=burst.y;g.updateSupportBursts();assert.equal(burst.state,'breaching');near(burst.breachAt,1.92);near(burst.impactAt,2.1);
+ g.time=2.099;g.updateSupportBursts();assert.equal(t.hp,hp);g.time=2.1;g.updateSupportBursts();assert.ok(t.hp<hp);assert.equal(t.toyKnockback.popHeight,28);
+ g.time=2.52;g.updateSupportKnockback(t);near(t.x,burst.x+70+144);
 });
 
 test('an expired or broken bait cancels a waiting shark without a remote attack',()=>{

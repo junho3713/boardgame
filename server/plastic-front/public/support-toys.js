@@ -9,7 +9,7 @@ function install({FrontGame:Game,TYPES}){
   drum:{interval:30,duration:10,move:[1.05,1.15,1.30],haste:[1.03,1.10,1.25]},
   // Fixed world geometry: about half of the default 1080×720 view, independent of zoom/device/host.
   jackpot:{radius:360,waveRange:560},
-  fishing:{arrival:.35,lifetime:30,interval:20,maxBaits:3,triggerRange:80,windup:.12,radius:[110,170,360],targets:[3,5,Infinity],lures:[3,5,5],damage:[1.2,2,4],push:[1,2,10/3]},
+  fishing:{arrival:.35,lifetime:30,interval:20,maxBaits:3,triggerRange:80,windup:.12,hitDelay:.18,popPeak:.22,radius:[110,170,360],targets:[3,5,Infinity],lures:[3,5,5],damage:[1.2,2,4],push:[1,2,10/3]},
   water:{range:[350,400,560],targets:[3,5,Infinity],push:[2,8/3,4],duration:[.32,.38,.48],waveDuration:1.35,waveStart:60,recovery:.15,arc:[Math.PI/2,Math.PI/2,Math.PI*.78]},
   electric:{targets:[3,5,Infinity],range:[310,310,500],duration:[1,2,3]}
  };
@@ -103,13 +103,13 @@ function install({FrontGame:Game,TYPES}){
   if(t.team===0||t.hp<=0||this.bossInvulnerable(t)||this.time<(t.toyControlReadyAt||0)||this.time<(t.toyStunUntil||0))return false;
   const boss=t.boss||t.roadCaptain||t.finalBoss;return !boss||kind==='stun'||kind==='wave'||kind==='push'&&insects.has(t.type);
  };
- p.pushSupportTarget=function(u,t,strength=1,{duration=0,surf=false,pop=0,angle=null,speed=0}={}){
+ p.pushSupportTarget=function(u,t,strength=1,{duration=0,surf=false,pop=0,popPeak=.5,angle=null,speed=0}={}){
   if(!this.supportControlAllowed(t,surf?'wave':'push'))return false;const a=angle??Math.atan2(t.y-u.y,t.x-u.x),n=(t.boss?40:72)*strength,b=this.bounds();let x=t.x,y=t.y;
   for(let d=8;d<=n;d+=8){const q={x:clamp(t.x+Math.cos(a)*d,45,b.width-45),y:clamp(t.y+Math.sin(a)*d,70,b.height-70)};if(!this.isFlying(t)&&!this.freePosition(q.x,q.y,this.collisionRadius(t)))break;x=q.x;y=q.y;}
   if(Math.hypot(x-t.x,y-t.y)<.1)return false;
   if(speed>0)duration=Math.hypot(x-t.x,y-t.y)/speed;
   if(duration>0){
-   t.toyKnockback={dx:x-t.x,dy:y-t.y,applied:0,startedAt:this.time,until:this.time+duration,recoverUntil:this.time+duration+rules.water.recovery,surf,popHeight:pop};
+   t.toyKnockback={dx:x-t.x,dy:y-t.y,applied:0,startedAt:this.time,until:this.time+duration,recoverUntil:this.time+duration+rules.water.recovery,surf,popHeight:pop,popPeak};
    t.bayonetAttack=t.sniperAim=t.bikeAttack=null;t.bikeRecoverUntil=Math.max(t.bikeRecoverUntil||0,t.toyKnockback.recoverUntil);
   }else{t.x=x;t.y=y;if(t.bikeAttack?.origin){t.bikeAttack.origin.x=x;t.bikeAttack.origin.y=y;}}
   t.hitReaction={at:this.time,angle:a,power:1,heavy:true};t.route=t.routeGoal=null;t.toyControlReadyAt=this.time+rules.controlResistance;return true;
@@ -185,11 +185,11 @@ function install({FrontGame:Game,TYPES}){
     else{fin.t=Math.max(fin.t,bait.toyExpires-this.time);fin.max=rules.fishing.lifetime;}
     const arrived=this.units.some(t=>t.team!==0&&t.hp>0&&distance(t,bait)<=rules.fishing.triggerRange);
     if(!arrived){pending.push(burst);continue;}
-    burst.state='breaching';burst.breachAt=this.time+rules.fishing.windup;burst.impactAt=burst.breachAt+.48;burst.expiresAt=burst.breachAt+1.25;bait.toySharkTriggeredAt=burst.breachAt;
+    burst.state='breaching';burst.breachAt=this.time+rules.fishing.windup;burst.impactAt=burst.breachAt+rules.fishing.hitDelay;burst.expiresAt=burst.breachAt+1.25;bait.toySharkTriggeredAt=burst.breachAt;
    }
    if(!burst.shown&&this.time>=burst.breachAt){
     burst.shown=true;const life=Math.max(.02,burst.expiresAt-this.time);
-    this.effects.push({kind:'toyShark',source:burst.source,x:burst.x,y:burst.y,angle:burst.angle,tier:burst.tier,range:burst.radius,startedAt:burst.breachAt,t:life,max:burst.expiresAt-burst.breachAt,team:0});
+    this.effects.push({kind:'toyShark',source:burst.source,x:burst.x,y:burst.y,angle:burst.angle,tier:burst.tier,range:burst.radius,startedAt:burst.breachAt,impactAt:burst.impactAt,t:life,max:burst.expiresAt-burst.breachAt,team:0});
    }
    if(!burst.hit&&this.time>=burst.impactAt){
     // Record completion before applying combat so snapshots and retries cannot hit twice.
@@ -199,7 +199,7 @@ function install({FrontGame:Game,TYPES}){
      if(target.team===0||target.hp<=0||distance(target,burst)>burst.radius+(TYPES[target.type]?.r||0)||!this.visible(target)||!this.lineClear(burst,target,0,{fireTeam:0}))continue;
      const hp=target.hp;this.damage(target,burst.damage,burst.source);
      if(target.hp<hp)count++;
-     if(target.hp<hp&&target.hp>0&&this.pushSupportTarget(burst,target,burst.strength,{duration:burst.tier===2?.55:.42,pop:burst.tier===2?44:28})){
+     if(target.hp<hp&&target.hp>0&&this.pushSupportTarget(burst,target,burst.strength,{duration:burst.tier===2?.55:.42,pop:burst.tier===2?44:28,popPeak:rules.fishing.popPeak})){
       const duration=target.toyKnockback.until-this.time+rules.water.recovery;
       this.effects.push({kind:'toyWaterCarry',x:target.x,y:target.y,source:burst.source,target,angle:Math.atan2(target.y-burst.y,target.x-burst.x),startedAt:this.time,t:duration,max:duration,team:0});
      }

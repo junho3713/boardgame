@@ -77,10 +77,10 @@ test('circling fins use real directional art after bait lands and stop before th
  const count=h.draws.length;bait.toySharkTriggeredAt=2.5;g.time=2.5;h.view.event(h.ctx,{kind:'toySharkFin',source:u,bait,tier:2,startedAt:.35,t:1,max:3},g);assert.equal(h.draws.length,count);
 });
 
-test('shark bite matches the 0.48-second combat hit and water frames stay bounded across pause and rewind',()=>{
+test('shark emergence matches the 0.18-second combat hit and water frames stay bounded across pause and rewind',()=>{
  const h=viewHarness(),u=actor('toyDecoyMaker'),g={time:0};h.view.draw(h.ctx,u,g);for(const image of h.requests)image.load();
  for(const tier of [1,2]){const e={kind:'toyShark',source:u,x:1120,y:6000,angle:0,tier,range:tier===2?240:140,startedAt:0,t:1.25,max:1.25},before=JSON.stringify(e);
-  g.time=.48;h.draws.length=0;h.view.event(h.ctx,e,g);const bite=h.draws.find(([name])=>name.includes('shark-breach'));const frame=5+(tier===2?8:0);assert.equal(bite[1],frame%4*304);assert.equal(bite[2],Math.floor(frame/4)*304);
+  g.time=.18;h.draws.length=0;h.view.event(h.ctx,e,g);const bite=h.draws.find(([name])=>name.includes('shark-breach'));const frame=2+(tier===2?8:0);assert.equal(bite[1],frame%4*304);assert.equal(bite[2],Math.floor(frame/4)*304);
   for(const time of [.56,.56,.01,.70,1.24]){g.time=time;h.draws.length=0;h.view.event(h.ctx,e,g);for(const [name,x,y,w,height]of h.draws.filter(([name])=>name.includes('shark-water'))){assert.ok(x>=0&&y>=0&&x+w<=1232&&y+height<=1100);assert.equal(w,176);assert.equal(height,100);}h.check();}
   assert.equal(JSON.stringify(e),before);
  }
