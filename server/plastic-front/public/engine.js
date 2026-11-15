@@ -32,6 +32,7 @@ function collisionState(game){
  const all=[...c.static,...c.solid.map(b=>b.body)];c.views.set(null,all);c.signature=all.map(o=>`${o.x},${o.y},${o.w},${o.h}`).join(';');collisionCaches.set(game,c);return c;
 }
 const ROOM_CAMPAIGN=typeof module!=='undefined'&&module.exports?require('./room-campaign.js'):root.FrontRoomCampaign;
+const DESKTOP_STAR=typeof module!=='undefined'&&module.exports?require('./desktop-star.js'):root.FrontDesktopStar;
 const WAVE_CONFIGS=typeof module!=='undefined'&&module.exports?{survival:require('./waves-survival.js'),defense:require('./waves-defense.js')}:root.FrontWaveConfigs;
 if(!WAVE_CONFIGS?.survival||!WAVE_CONFIGS?.defense)throw Error('웨이브 설정 파일을 engine.js보다 먼저 불러오세요.');
 function waveValue(rule,tier=0,wave=0){if(rule===null)return Infinity;if(typeof rule==='number')return rule;let n=rule.base+(rule.perTier||0)*tier+(rule.perWave||0)*wave+(rule.add||0)*Math.floor(tier/(rule.every||1));if(rule.round==='floor')n=Math.floor(n);return Math.max(rule.min??-Infinity,Math.min(rule.max??Infinity,n));}
@@ -156,7 +157,7 @@ class FrontProfile{
  save(storage,key='plastic-front-profile-v1'){storage.setItem(key,JSON.stringify(this.snapshot()));}
 }
 class FrontGame{
- constructor(events={},profile=new FrontProfile(),settings={}){this.starExperiment=['livingroom-star','livingroom-star3'].includes(settings.map);this.starMax=settings.map==='livingroom-star3'?3:2;this.mapId=this.starExperiment?'livingroom':['livingroom','desktop'].includes(settings.map)?settings.map:'backyard';this.commanderId=['shino','blaze','shion'].includes(settings.commander)?settings.commander:'sarge';this.flameSkinId=settings.flameSkin==='hwarin'?'hwarin':'classic';this.sniperSkinId=['kayla','hayeon'].includes(settings.sniperSkin)?'kayla':'classic';this.medicSkinId=settings.medicSkin==='rina'?'rina':'classic';this.events=events;this.profile=profile instanceof FrontProfile?profile:new FrontProfile(profile);this.reset();}
+ constructor(events={},profile=new FrontProfile(),settings={}){this.desktopStar=settings.map==='desktop-star';this.starExperiment=['livingroom-star','livingroom-star3','desktop-star'].includes(settings.map);this.starMax=settings.map==='livingroom-star3'?3:2;this.mapId=this.desktopStar?'desktop':this.starExperiment?'livingroom':['livingroom','desktop'].includes(settings.map)?settings.map:'backyard';this.commanderId=['shino','blaze','shion'].includes(settings.commander)?settings.commander:'sarge';this.flameSkinId=settings.flameSkin==='hwarin'?'hwarin':'classic';this.sniperSkinId=['kayla','hayeon'].includes(settings.sniperSkin)?'kayla':'classic';this.medicSkinId=settings.medicSkin==='rina'?'rina':'classic';this.events=events;this.profile=profile instanceof FrontProfile?profile:new FrontProfile(profile);this.reset();}
  setCommander(id){if(!['sarge','shino','blaze','shion'].includes(id)||this.phase!=='ready')return false;this.commanderId=id;const c=this.commander(0);if(c){c.appearance=id;c.flameSkin=this.flameSkinId;this.refreshCommanderHealth();for(const u of this.alive(0).filter(u=>u.type!=='leader')){Object.assign(u,this.formationPoint(u,c));this.resolvePosition(u);}}return true;}
  setFlameSkin(id){if(!['classic','hwarin'].includes(id)||this.phase!=='ready')return false;this.flameSkinId=id;const c=this.commander(0);if(c?.type==='leader')c.flameSkin=id;return true;}
  setSniperSkin(id){if(id==='hayeon')id='kayla';if(!['classic','kayla'].includes(id)||this.phase!=='ready')return false;this.sniperSkinId=id;for(const u of this.units)if(u.type==='sniper'&&u.team===0)u.appearance=id;return true;}
@@ -211,6 +212,7 @@ class FrontGame{
  isDesktopDefense(){return this.mode==='pve'&&this.bounds().id==='desktop';}
  hasInvulnerableHQ(){return this.mode==='pve'&&!this.isDesktopDefense();}
  setupDesktop(){
+  if(this.desktopStar){this.setupDesktopStar();return;}
   this.world={id:'desktop',width:DESKTOP_RULES.width,height:DESKTOP_RULES.height,scale:1,layoutVersion:7};
   this.bases=[{x:1200,y:2110,hp:900,maxHp:900,team:0,base:true,r:85},{x:1200,y:100,hp:0,maxHp:900,team:1,base:true,r:85,hidden:true}];
   this.structures=[];this.defenses=[];this.units=[];this.crisis.phase='disabled';
@@ -221,6 +223,14 @@ class FrontGame{
   this.pickups=[{x:1020,y:1670,active:true},{x:1430,y:1690,active:true},{x:1230,y:1330,active:true}];
   this.addUnit(0,'leader',1200,1760);this.addUnit(0,'rifle',1140,1700);this.addUnit(0,'rifle',1260,1700);
   for(const x of [1060,1340]){const spec=BUILDINGS.barricade;this.buildings.push({id:'built-'+(++this.buildSerial),...spec,kind:'barricade',x,y:1600,team:0,built:true,structure:true,r:spec.w/2,maxHp:spec.hp,buildAt:-ROOM_RULES.assembly,buildUntil:0,cooldown:0,face:-Math.PI/2,walk:0,starter:true});}
+ }
+ setupDesktopStar(){
+  const cfg=DESKTOP_STAR.config;this.world={id:'desktop',variant:'desktop-star',width:cfg.width,height:cfg.height,scale:1,layoutVersion:7};
+  this.bases=[{...cfg.hq,maxHp:cfg.hq.hp,team:0,base:true,r:85},{x:cfg.width/2,y:100,hp:0,maxHp:900,team:1,base:true,r:85,hidden:true}];
+  this.structures=[];this.defenses=[];this.units=[];this.buildings=[];this.pickups=cfg.supplies.slice(0,3).map(p=>({...p,active:true}));this.crisis.phase='disabled';
+  this.mission={stage:1,wave:0,totalWaves:0,nextWave:Infinity,nextAssault:this.waveRules().assault.firstAt,stageStarted:0};this.desktop={nextSupply:75,entries:0,stage:0};this.camera={x:cfg.start.x,y:cfg.start.y-168};this.obstacles=DESKTOP_STAR.obstacles();
+  this.addUnit(0,'leader',cfg.start.x,cfg.start.y);this.addUnit(0,'rifle',cfg.start.x-45,cfg.start.y+60);this.addUnit(0,'rifle',cfg.start.x+45,cfg.start.y+60);
+  for(const [kind,x,y]of cfg.starters){const spec=BUILDINGS[kind];this.buildings.push({id:'built-'+(++this.buildSerial),...spec,kind,x,y,team:0,built:true,structure:true,r:spec.w/2,maxHp:spec.hp,buildAt:-ROOM_RULES.assembly,buildUntil:0,cooldown:0,face:-Math.PI/2,walk:0,starter:true});}
  }
  desktopCovers(){return [[650,1390,180,70],[1510,1390,180,70],[1060,1200,260,65],[1500,1780,180,70],[600,2010,220,60],[1110,2250,180,55]].map(([x,y,w,h],i)=>({x:x-w*.25,y:y-h*.25,w:w*1.5,h:h*1.5,kind:'deskCover',label:'멀티탭 '+(i+1),cover:true}));}
  desktopDecorations(){return [{kind:'smileMug',label:'스마일 머그컵',x:1720,y:1530,w:160,h:105},{kind:'toiletRoll',label:'세운 두루마리 휴지',x:2010,y:1720,w:155,h:100}];}
@@ -273,6 +283,7 @@ class FrontGame{
   }return null;
  }
  desktopEntry(index=++this.desktop.entries){
+  if(this.desktopStar){const spawn=this.roomEntry(index,50,(index-1)%4);if(spawn)this.desktop.entries=Math.max(this.desktop.entries,index);return spawn;}
   // Fixed approaches on the far edge, never a spawn on top of the defending squad.
   const lanes=[{x:590,y:470},{x:1180,y:470},{x:1740,y:470},{x:170,y:470},{x:2300,y:470}],p=lanes[(index-1)%lanes.length],n=Math.floor((index-1)/lanes.length)%5;
   return this.northernSpawn(index,50,this.resolvePosition({x:p.x+(n-2)*(p.x>2250?8:32),y:p.y+(n%2)*45},50));
@@ -282,7 +293,7 @@ class FrontGame{
   const rules=this.waveRules(),stage=this.time>=rules.assault.finalStageAt?3:this.time>=rules.assault.firstAt?2:1;
   if(stage!==this.mission.stage){this.mission.stage=stage;this.mission.stageStarted=this.time;this.notify('toast',stage===2?`${rules.assault.firstAt}초 경과 · 장난감 병정 돌격대 합류`:'최종 방어 구간 / 20분까지 기지를 지키세요.');}
   if(this.time>=this.mission.nextAssault){this.mission.nextAssault=this.time+this.pressure().assaultInterval;this.spawnAssault();}
-  if(this.time>=this.desktop.nextSupply){this.desktop.nextSupply=this.time+75;const points=[{x:960,y:1600},{x:1450,y:1580},{x:1200,y:1410},{x:1000,y:1890},{x:1440,y:1900}],live=this.pickups.filter(p=>p.active);if(live.length<5){const p=points.find(p=>!live.some(q=>dist(p,q)<90));if(p)this.pickups.push({...p,active:true});}}
+  if(this.time>=this.desktop.nextSupply){this.desktop.nextSupply=this.time+75;const points=this.desktopStar?DESKTOP_STAR.config.supplies:[{x:960,y:1600},{x:1450,y:1580},{x:1200,y:1410},{x:1000,y:1890},{x:1440,y:1900}],live=this.pickups.filter(p=>p.active);if(live.length<5){const p=points.find(p=>!live.some(q=>dist(p,q)<90));if(p)this.pickups.push({...p,active:true});}}
  }
  setupLivingRoom(){
   this.world={id:'livingroom',width:ROOM_RULES.width,height:ROOM_RULES.height,scale:1.5};
@@ -445,7 +456,7 @@ class FrontGame{
  notify(type,data){if(this.events[type])this.events[type](data);}
  start(){this.phase='playing';this.notify('change');}
  neededXP(){return (18+this.level*5)*(this.isRoomCampaign()?2:1);}
- waveRules(){if(this.isRoomCampaign())return ROOM_WAVES;return this.mode==='pve'&&(this.mapId==='desktop'||this.world?.id==='desktop')?WAVE_CONFIGS.defense:WAVE_CONFIGS.survival;}
+ waveRules(){if(this.desktopStar&&this.mode==='pve')return DESKTOP_STAR.waves(WAVE_CONFIGS.defense);if(this.isRoomCampaign())return ROOM_WAVES;return this.mode==='pve'&&(this.mapId==='desktop'||this.world?.id==='desktop')?WAVE_CONFIGS.defense:WAVE_CONFIGS.survival;}
  flyingStart(){const state={};for(const [type,r]of Object.entries(this.waveRules().flying)){state[type+'Next']=r.at;state[type+'Spawned']=0;}return state;}
  waveType(rule,n,wave=0,count=0){const pick=rule.mix.find(r=>{const pace=this.isDesktopDefense()?this.evolutionPace().progress:0,every=r.every===undefined?null:Math.max(1,Math.round(r.every/(1+(ROOM_CAMPAIGN.config.evolutionPacing.eliteTypes.includes(r.type)?ROOM_CAMPAIGN.config.evolutionPacing.eliteWeight*pace:0))));return this.time>=(r.at||0)&&wave>=(r.wave||0)&&(every===null||n%every===0)&&(r.firstFraction===undefined||n<Math.floor(count*r.firstFraction))&&(r.maxAlive===undefined||this.units.filter(u=>u.team!==0&&u.hp>0&&u.type===r.type).length<r.maxAlive);});return pick?.type||rule.fallback;}
  pressure(){if(this.isRoomCampaign())return this.roomPressure();const rules=this.waveRules(),tier=Math.max(0,Math.floor(this.time/60)),late=this.mode==='pve'&&this.time>=rules.lateAt,step=Math.max(0,tier-Math.floor(rules.lateAt/60)),phase=rules.pressure[late?'late':'early'],out={tier,late,hp:1+.12*tier,damage:1.25*(1+.10*tier),defense:3*tier};for(const [key,value]of Object.entries(phase))out[key]=waveValue(value,late&&!value?.absolute?step:tier);const pace=this.evolutionPace(),boss=!!this.activeBoss(),paceDensity=this.isDesktopDefense()&&!boss?(pace.relief?ROOM_CAMPAIGN.config.evolutionPacing.reliefDensity:pace.spawnScale):1,density=(this.mode==='pve'?(rules.crowdScale??1)*(boss?(rules.bossCrowdScale??1):1):1)*paceDensity;for(const k of ['swarmInterval','assaultInterval','postInterval','baseInterval'])out[k]/=density;for(const k of ['combatCap','soldierCap','swarmCap','postCap','baseCap'])out[k]=Math.max(1,Math.floor(out[k]*density));if(this.isDesktopDefense()&&!boss)for(const k of ['combatCap','soldierCap','swarmCap'])out[k]+=pace.capExtra;return out;}
@@ -886,7 +897,9 @@ class FrontGame{
   const radius=roomGuard?ROOM_CAMPAIGN.config.fortifications.engage:u.assault?650:265,protect=u.team!==0?this.buildings.filter(b=>b.hp>0&&this.targetDistance(u,b)<radius):[];
   const troops=hqDefense?this.alive(0).filter(a=>dist(a,this.bases[1])<1250):u.assault?this.alive(0):this.units.filter(a=>dist(u,a)<radius);
   const candidates=[...troops,...protect,...((TYPES[u.type]?.stab||this.isDesktopDefense())&&u.team!==0&&dist(u,this.bases[0])<radius?[this.bases[0]]:[])].filter(a=>this.canTarget(u,a));
-  const target=this.supportDecoyTarget?.(u)||candidates.sort((a,b)=>this.targetDistance(u,a)-this.targetDistance(u,b))[0];
+  // At the central outpost, a defending squad can intercept enemies before they commit to the HQ.
+  const intercept=this.desktopStar&&this.isDesktopDefense()&&u.team!==0?candidates.filter(a=>!a.base&&!a.structure&&a.team===0&&dist(u,a)<400):[];
+  const target=this.supportDecoyTarget?.(u)||(intercept.length?intercept:candidates).sort((a,b)=>this.targetDistance(u,a)-this.targetDistance(u,b))[0];
   return target?(this.screeningUnit(u,target)||target):this.isDesktopDefense()&&u.team!==0?this.bases[0]:{x:u.homeX,y:u.homeY};
  }
  pursuitPoint(u,target){
@@ -1653,7 +1666,7 @@ class FrontGame{
  objective(){
   if(this.isDesktopDefense()){
    const left=Math.max(0,Math.ceil(DESKTOP_RULES.duration-this.time)),boss=this.activeBoss(),home=this.bases[0],threat=this.units.filter(u=>u.team!==0&&u.hp>0).sort((a,b)=>dist(a,home)-dist(b,home))[0];
-   return{title:'책상 디펜스 / 20분 동안 버티세요',progress:`남은 시간 ${String(Math.floor(left/60)).padStart(2,'0')}:${String(left%60).padStart(2,'0')} · 기지 ${Math.ceil(home.hp)}/${home.maxHp}${boss?' · 보스 '+boss.bossName:''}`,target:threat||{x:home.x,y:home.y-370},targetName:threat?'접근 중인 적':'방어선 유지',showMarker:!!threat};
+   return{title:this.desktopStar?'책상 전초기지 · 2성 / 중앙 기지 방어':'책상 디펜스 / 20분 동안 버티세요',progress:`남은 시간 ${String(Math.floor(left/60)).padStart(2,'0')}:${String(left%60).padStart(2,'0')} · 기지 ${Math.ceil(home.hp)}/${home.maxHp}${boss?' · 보스 '+boss.bossName:''}`,target:threat||{x:home.x,y:home.y-370},targetName:threat?'접근 중인 적':'방어선 유지',showMarker:!!threat};
   }
   if(this.crisis.phase==='active'){
    const player=this.commander(0),guns=this.artilleryUnits().sort((a,b)=>dist(a,player)-dist(b,player));
@@ -1803,7 +1816,7 @@ class FrontGame{
     if(u.team!==0&&u.type==='mortar'&&u.roomWave)target=this.selectEnemyMortarTarget(u,s)||target;
     const decoy=this.supportDecoyTarget?.(u);if(decoy)target=this.canTarget(u,decoy)&&dist(u,decoy)<=Math.min(65,s.range*.85)?decoy:null;
     if(target&&target.type!=='toyDecoy'&&u.team!==0&&u.type!=='mortar'&&!tankLocked){const screen=this.screeningUnit(u,target);if(screen&&dist(u,screen)<s.range)target=screen;}
-    const b=(u.team===1||u.team!==0&&(this.isDesktopDefense()||TYPES[u.type]?.stab))?this.bases[0]:null;if(!target&&b&&this.canTarget(u,b)&&(TYPES[u.type]?.stab||this.isDesktopDefense()&&MELEE.has(u.type)?this.targetDistance(u,b)<s.range:dist(u,b)>=(s.minRange||0)&&dist(u,b)<s.range+45))target=b;
+    const b=(u.team===1||u.team!==0&&(this.isDesktopDefense()||TYPES[u.type]?.stab))?this.bases[0]:null;if(!target&&b&&this.canTarget(u,b)&&(!this.desktopStar||!this.isDesktopDefense()||this.pursuitTarget(u)===b)&&(TYPES[u.type]?.stab||this.isDesktopDefense()&&MELEE.has(u.type)?this.targetDistance(u,b)<s.range:dist(u,b)>=(s.minRange||0)&&dist(u,b)<s.range+45))target=b;
     if(u.team===0&&this.focusTarget&&!this.focusAutomatic&&dist(u,this.focusTarget)>=(s.minRange||0)&&dist(u,this.focusTarget)<s.range+(this.focusTarget.base||this.focusTarget.structure?35:0))target=this.focusTarget;
     if(u.team!==0&&u.type==='tank'){u.tankAimTargetId=target?.id??null;if(!target||u.cooldown>0)u.tankReadyAimAt=null;else u.tankReadyAimAt??=this.time;}
     if(u.type==='sniper'){const windup=Math.min(ROOM_RULES.sniperAim,s.rate*.7);if(!target)u.sniperAim=null;else if(u.cooldown<=windup&&(!u.sniperAim||u.sniperAim.target!==target)){u.sniperAim={target,started:this.time,fireAt:this.time+windup};u.cooldown=Math.max(u.cooldown,windup);}}
