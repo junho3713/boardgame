@@ -65,5 +65,51 @@
   resolveSupportToyOffer(id){const phase=this.phase,old=this.actor;this.phase='playing';try{const ok=super.resolveSupportToyOffer(id);if(ok&&old.toyRetired){this.actor=this.supportToys().find(t=>t.toySlot===old.toySlot);Object.assign(this.actor,{x:1260,y:6000});this.lab.toy=this.actor.type;}return ok;}finally{this.phase=phase;}}
   offer(){if(!this.isSupportToy(this.actor)||this.supportToyOffer())return false;if(this.supportToys().length<2){const t=this.addSupportToy(this.actor.type==='toyTurtle'?'toyStunner':'toyTurtle');Object.assign(t,{x:1320,y:6160});}const type=TOYS.find(type=>!this.supportToys().some(t=>t.type===type));return this.collectSupportToy({active:true,x:1300,y:6000},type);}
  }
- const result={Lab,clean,MODES,TOYS,ENEMIES,OUTCOMES,COMMANDERS};if(typeof module!=='undefined'&&module.exports)module.exports=result;else root.FrontCombatLab=result;
+ class PlayLab extends Lab{
+  constructor(options={},events={}){
+   super({...options,count:options.count??8,highHealth:options.highHealth===true},events);
+   this.lab.skillInterval=num(options.skillInterval,5,15,5);this.autoSkills=options.autoSkills!==false;
+   this.units=this.units.filter(u=>u.team===0);this.labTargets=[];this.labStats.spawned=0;this.labStats.killed=0;this.labStats.waves=0;
+   this.world={id:'livingroom',width:8000,height:8000,scale:1};const leader=this.commander(0),dx=4000-leader.x,dy=4000-leader.y;for(const u of this.units){u.x+=dx;u.y+=dy;u.cooldown=0;}
+   this.camera={x:leader.x,y:leader.y};this.viewport={width:1080,height:720};this.nextSkillAt=.6;this.nextWaveAt=3;this.waveSides=[];this.spawnWave(true);
+  }
+  move(...args){return Game.prototype.move.apply(this,args);}
+  navigate(...args){return Game.prototype.navigate.apply(this,args);}
+  separateCrowd(...args){return Game.prototype.separateCrowd.apply(this,args);}
+  damage(t,amount,source){if(t.team===0){if(amount>0){t.flash=.13;if(this.time>=(t.labHitAt||0)){t.labHitAt=this.time+.5;this.effects.push({kind:'hit',x:t.x,y:t.y-15,t:.13,max:.13,team:0});}}return;}const before=t.hp;super.damage(t,amount,source);if(before>0&&t.hp<=0)this.labStats.killed++;}
+  spawnWave(initial=false){
+   const leader=this.commander(0),boss=BOSSES.has(this.lab.enemy),room=80-this.units.filter(u=>u.team!==0&&u.hp>0).length,n=Math.min(room,boss?Math.min(4,this.lab.count):this.lab.count);if(n<=0)return;
+   const hw=Math.max(300,(this.viewport?.width||1080)/2),hh=Math.max(240,(this.viewport?.height||720)/2),b=this.bounds();
+   for(let i=0;i<n;i++){
+    const side=(i+this.labStats.waves)%4,lane=(Math.floor(i/4)-(Math.ceil(n/4)-1)/2)*75,center=this.camera||leader;
+    let x,y;if(initial){x=leader.x+([1,0,-1,0][side])*285+([0,1,0,1][side])*lane;y=leader.y+([0,1,0,-1][side])*285+([1,0,1,0][side])*lane;}
+    else{x=center.x+([1,0,-1,0][side])*(hw+55)+([0,1,0,1][side])*lane;y=center.y+([0,1,0,-1][side])*(hh+55)+([1,0,1,0][side])*lane;}
+    x=Math.max(80,Math.min(b.width-80,x));y=Math.max(80,Math.min(b.height-80,y));const t=this.addUnit(2,this.lab.enemy,x,y,true);t.boss=boss;t.assault=true;t.cooldown=.8;t.labEntrySide=side;t.hp=t.maxHp=this.lab.highHealth?1e6:this.stats(t).hp;this.labTargets.push(t);this.waveSides.push(side);this.labStats.spawned++;this.effects.push({kind:'drop',x,y,t:.5,max:.5,team:2});
+   }this.labStats.waves++;
+  }
+  cast(){
+   if(this.phase!=='playing')return false;const c=this.lab,u=this.actor;
+   if(c.mode==='lucky'&&c.outcome==='bossKiller'&&!this.bossKillerTarget(u))return false;
+   if(c.mode==='support'&&u.type==='toyDecoyMaker'&&this.supportBaits().length>=3){const oldest=this.supportBaits()[0];oldest.hp=0;oldest.toyExpires=this.time;}
+   if(c.mode==='evolution'&&c.troop!=='lucky'&&c.troop!=='medic'){this.labFireUntil=Infinity;this.labStats.casts++;return true;}
+   if(c.mode==='evolution'&&c.troop==='medic')for(const t of this.units)if(t.team===0&&t.type==='rifle'){t.hp=Math.min(t.hp,t.maxHp*.4);t.poisonUntil=this.time+12;}
+   return super.cast();
+  }
+  update(dt){
+   if(this.phase!=='playing')return;dt=Math.min(.05,Math.max(0,dt));
+   if(this.time+1e-8>=this.nextWaveAt){this.spawnWave();this.nextWaveAt=this.time+3;}
+   if(this.autoSkills&&this.time+1e-8>=this.nextSkillAt){const ok=this.cast();this.nextSkillAt=this.time+(ok?this.lab.skillInterval:.25);}
+   const continuous=this.lab.mode==='evolution'&&!['lucky','medic'].includes(this.actor.type);
+   for(const u of this.units)if(u.team===0){if(u===this.actor&&continuous)u.cooldown=Math.min(u.cooldown,this.stats(u).rate);else if(u.type!=='medic')u.cooldown=1e6;}
+   Game.prototype.update.call(this,dt);
+   for(const t of this.labTargets)if(t.toyKnockback||this.time<(t.toyStunUntil||0)||this.time<(t.luckySlowUntil||0))this.labStats.affected.add(t.id);
+   this.labTargets=this.labTargets.filter(t=>t.hp>0);
+   // Stragglers cannot consume the cap after the player crosses the arena.
+   const leader=this.commander(0);for(const t of this.units)if(t.team!==0&&Math.hypot(t.x-leader.x,t.y-leader.y)>1600)t.hp=0;
+  }
+  resolveSupportToyOffer(id){const old=this.actor,point={x:old.x,y:old.y},ok=super.resolveSupportToyOffer(id);if(ok&&old!==this.actor)Object.assign(this.actor,point);return ok;}
+  offer(){const leader=this.commander(0),ok=super.offer();for(const t of this.supportToys())if(t!==this.actor&&Math.hypot(t.x-leader.x,t.y-leader.y)>500)Object.assign(t,{x:leader.x+70,y:leader.y+80});return ok;}
+  result(){return{...super.result(),nextSkill:Math.max(0,this.nextSkillAt-this.time),x:this.commander(0).x,y:this.commander(0).y};}
+ }
+ const result={Lab,PlayLab,clean,MODES,TOYS,ENEMIES,OUTCOMES,COMMANDERS};if(typeof module!=='undefined'&&module.exports)module.exports=result;else root.FrontCombatLab=result;
 })(typeof window==='undefined'?globalThis:window);
