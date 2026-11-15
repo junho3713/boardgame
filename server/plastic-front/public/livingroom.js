@@ -71,12 +71,16 @@ function windowLight(c,w,y,length){
  rr(c,w-28,y-35,23,length+70,3,'#d6c6a5','#f8e7c6');rr(c,w-24,y-20,8,length+40,2,'#8a9b93');
  for(let i=0;i<4;i++){c.fillStyle='#efe0be';c.fillRect(w-30,y+i*length/3-8,26,12);}c.restore();
 }
-function terrain(c,game){
+function floorSurface(c,game){
  const {width:w,height:h}=game.bounds();let seed=42;const rand=()=>{seed=seed*16807%2147483647;return seed/2147483647;};
  c.fillStyle='#c6a276';c.fillRect(0,0,w,h);
  const plankW=670,plankH=178,colors=['#dfbd91','#e4c59b','#d9b68a','#e8cba3','#ddba90'];
  if(floorWoodLoaded){const pattern=c.createPattern(floorWoodTile,'repeat');if(pattern){const sx=1600/floorWood.naturalWidth,sy=1060/floorWood.naturalHeight;let sourceY=0;c.fillStyle=pattern;for(let y=0;y<h;y+=8){const depth=.9+.2*y/h,band=Math.min(8,h-y);pattern.setTransform(new DOMMatrix([sx*depth,0,0,sy*depth,w/2*(1-depth),y-sourceY*sy*depth]));c.fillRect(0,y,w,band);sourceY+=band/(sy*depth);}}}
  else for(let y=0,row=0;y<h;y+=plankH,row++)for(let x=-(row%3)*plankW/3;x<w;x+=plankW)toyFloorboard(c,x,y,plankW,plankH,colors[Math.floor(rand()*colors.length)],rand);
+ return{w,h,rand};
+}
+function terrain(c,game){
+ const {w,h,rand}=floorSurface(c,game);
  wovenRug(c,{x:900*w/2400,y:2990*h/4200,w:1030,h:850,color:'#86aaa3',shade:'#71958f',trim:'#ead8b3'},rand);
  wovenRug(c,{x:650*w/2400,y:920*h/4200,w:1450,h:1050,color:'#a4b8b9',shade:'#8ca7aa',trim:'#ebddbe'},rand);
  // Flat paper and the mechanical pencil are traversable details beside the reading area.
@@ -131,5 +135,5 @@ function building(c,b,time){if(b.hp<=0&&b.kind==='missileBase')return missileWre
  else if(b.kind==='missileBase'){ellipse(c,0,0,30,22,'#334b3b');c.save();c.rotate(b.face+Math.PI/2);rr(c,-25,-42,50,55,4,'#769060','#bec7a2');for(const x of [-13,13]){rr(c,x-8,-46,16,43,3,'#304638');ellipse(c,x,-44,7,5,'#c9d0b3');}c.restore();}
  else{rr(c,-27,-25,54,48,6,'#78935e','#afbe91');ellipse(c,0,-4,19,15,'#405d42');c.save();c.rotate(b.face+Math.PI/2);for(const x of [-9,9])rr(c,x-3,-46,6,46,2,'#344c38');rr(c,-11,-13,22,20,4,'#92aa70');c.restore();}
  c.globalAlpha=1;c.fillStyle='#23372a';c.fillRect(-b.w/2,-b.h/2-48,b.w,5);c.fillStyle=assembling?'#8fe39c':'#a4dfa3';c.fillRect(-b.w/2,-b.h/2-48,b.w*(assembling?progress:b.hp/b.maxHp),5);if(assembling){c.font='11px sans-serif';c.textAlign='center';c.fillStyle='#c5f3ba';c.fillText('조립 중',0,b.h/2+17);}c.restore();}
-window.FrontLivingRoom={terrain,gardenTerrain,furniture,building,missileWreck,field,projectile,depth,furnitureOpacity,furnitureVisible,ready:Promise.all([ready,fieldReady,floorPencilReady,floorWoodReady]),diagnostics:()=>({loaded:assets.size,field:fieldAssets.size,floor:floorWoodLoaded,failures})};
+window.FrontLivingRoom={floorSurface,wovenRug,windowLight,terrain,gardenTerrain,furniture,building,missileWreck,field,projectile,depth,furnitureOpacity,furnitureVisible,ready:Promise.all([ready,fieldReady,floorPencilReady,floorWoodReady]),diagnostics:()=>({loaded:assets.size,field:fieldAssets.size,floor:floorWoodLoaded,failures})};
 })();
