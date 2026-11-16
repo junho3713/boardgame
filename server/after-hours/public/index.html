@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#101716"><title>AFTER HOURS — 316호의 비밀</title><link rel="stylesheet" href="style.css"></head>
+<body>
+<canvas id="world" aria-label="3D 호텔 방탈출"></canvas>
+<div class="grain"></div><div class="vignette"></div>
+<header><a class="brand" href="#" aria-label="시작 화면">AH<span>AFTER HOURS</span></a><div class="topright"><span class="build">CHAPTER 01 / THE HOTEL</span><button id="sound" title="소리 켜기/끄기">소리 OFF</button><button id="help" title="조작 안내">?</button></div></header>
+<section id="landing" class="screen">
+ <div class="eyebrow"><i></i> HOTEL EXPLORATION · MAP PROTOTYPE 01</div>
+ <h1>AFTER<br><em>HOURS</em><span>316호의 비밀</span></h1>
+ <p class="intro">새벽 3시 16분. 영업이 끝난 호텔.<br>불이 남아 있는 방과, 길게 뻗은 복도.<br><strong>지금은 잠긴 문 없이, 공간부터 둘러보세요.</strong></p>
+ <button class="primary" id="start">호텔 둘러보기 <span>↗</span></button>
+ <button class="textbutton" id="puzzleStart">방탈출 초안도 플레이하기 →</button>
+ <div class="specs"><span>01 <b>3D 자유 탐색</b></span><span>02 <b>6개의 공간</b></span><span>03 <b>조명 전환</b></span></div>
+ <div class="landingfoot">HEADPHONES RECOMMENDED<span>큰 놀람보다, 작은 불안.</span></div>
+</section>
+<div id="hud" hidden><aside class="mission"><span class="eyebrow">YOUR NEXT MOVE</span><h2 id="objective"></h2><p id="objectiveSub"></p></aside><div class="roomlabel"><span id="room">LOBBY</span><small>03:16 AM</small></div><div id="crosshair"></div><div id="prompt" hidden><kbd>E</kbd> <span></span></div><div class="bottomhud"><span><kbd>W A S D</kbd> 이동 <kbd>마우스 / ← →</kbd> 시점</span><span><kbd>F</kbd> 손전등 <kbd>M</kbd> 지도 <kbd>L</kbd> 호텔 조명 <kbd>ESC</kbd> 일시정지</span></div><div class="inventory"><span id="inventoryLabel">소지품</span><b id="inventory">비어 있음</b></div></div>
+<div id="toast" role="status" aria-live="polite"></div>
+<div id="modal" class="overlay" hidden><article><button class="close" id="close" aria-label="닫기">×</button><div id="modalBody"></div></article></div>
+<div id="pause" class="overlay" hidden><article><div class="eyebrow">TAKE A BREATH</div><h2>잠시, 숨 고르기.</h2><p>호텔은 어디 가지 않습니다.</p><button class="primary" id="resume">계속 탐색하기 <span>→</span></button><button class="textbutton" id="journalPause">수집한 기록 보기</button><p class="muted">WASD 이동 · 마우스 드래그 또는 방향키로 시점<br>E 상호작용 · F 손전등 · J 기록<br>화면 클릭 시 마우스 시점 잠금 · ESC 해제</p></article></div>
+<div id="ending" class="screen" hidden><div class="eyebrow">CHECK-OUT COMPLETE</div><h1>YOU MADE<br><em>IT OUT.</em><span>아직은, 혼자서.</span></h1><p class="intro">문밖의 공기는 차갑고, 익숙하다.<br>등 뒤에서 엘리베이터가 도착하는 소리가 들린다.</p><p id="result"></p><button class="primary" id="restart">다시 체크인 <span>↻</span></button></div>
+<div id="loading">호텔 문을 여는 중<span>AFTER HOURS</span></div>
+<script type="module" src="game.js"></script>
+</body></html>
