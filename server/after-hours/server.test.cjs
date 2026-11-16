@@ -14,12 +14,13 @@ test('hotel assets load under their prefix alongside existing games', async () =
     const page = await fetch(origin + '/after-hours/');
     assert.equal(page.status, 200);
     const html = await page.text();
-    assert.match(html, /호텔 둘러보기/);
-    for (const name of ['style.css', 'game.js', 'three.module.js', 'THREE-LICENSE.txt']) {
+    assert.match(html, /316호에서 눈뜨기/);
+    for (const name of ['style.css', 'game.js', 'room-state.js', 'room-scene.js', 'Reflector.js', 'three.module.js', 'THREE-LICENSE.txt','assets/hotel-photo.jpg','assets/herringbone_parquet_Diffuse.jpg']) {
       const r = await fetch(origin + '/after-hours/' + name);
       assert.equal(r.status, 200, name);
       assert.ok(Number(r.headers.get('content-length')) > 100, name);
       assert.equal(r.headers.get('x-content-type-options'), 'nosniff');
+      await r.arrayBuffer();
     }
     const head = await fetch(origin + '/after-hours/game.js', {method:'HEAD'});
     assert.equal(head.status, 200);

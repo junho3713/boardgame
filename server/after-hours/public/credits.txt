@@ -1,0 +1,15 @@
+AFTER HOURS / ROOM 316 — visual assets
+
+PBR materials: Poly Haven, CC0. Downloaded from the official Poly Haven asset API.
+https://polyhaven.com/a/herringbone_parquet
+https://polyhaven.com/a/decrepit_wallpaper
+https://polyhaven.com/a/quatrefoil_jacquard_fabric
+https://polyhaven.com/license
+
+Original framed hotel photograph: OpenAI built-in imagegen, 2026-11-16.
+Saved project asset: server/after-hours/public/assets/hotel-photo.jpg
+Generation prompt:
+Use case: historical-scene. Asset type: a fictional photographic print used inside a 3D psychological escape-room game, mapped onto a small wooden picture frame. Create ONLY the flat rectangular photograph itself, no frame, no room around it, no borders or lettering. A slightly faded 1980s color film snapshot of a modest seaside Korean hotel on a rainy evening: weathered three-story cream stucco facade, dark windows, one warm amber window on the second floor, wet pavement, a lone parked dark sedan, distant dim coastline. Thoughtful architectural composition, lived-in details, authentic grain and subtle fading, restrained warm gray and moss green tones, melancholic mystery, realistic analog photography, rich fine details, almost mundane and unsettling only through absence. Landscape photograph. No people, no blood, no ghost, no monster, no logos, no visible readable signs or numbers, no watermarks. This must be a usable straight-on photograph texture, without perspective skew, without paper curls or cast shadows.
+
+Three.js 0.170.0 and the Reflector addon: Three.js Authors, MIT; see THREE-LICENSE.txt.
+Furniture meshes, material composition, rain, environmental lighting, sound synthesis, puzzles and interface: original project code.
