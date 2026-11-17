@@ -228,7 +228,7 @@ export function buildRoom(renderer,state){
  sign('EXIT',.32,.15,2.65,2.15,11.6,Math.PI);const hallLight=new T.PointLight('#dfd4b2',8,5,1.8);hallLight.position.set(2.65,2.7,13.4);scene.add(hallLight);
  shiftSince(nextRoomStart,nextRoomSolids,3,9);
  const dustGeo=new T.BufferGeometry(),dustPos=new Float32Array(90*3);for(let i=0;i<90;i++)dustPos.set([(Math.random()-.5)*6,Math.random()*2.8,(Math.random()-.5)*8],i*3);dustGeo.setAttribute('position',new T.BufferAttribute(dustPos,3));const dust=new T.Points(dustGeo,new T.PointsMaterial({color:'#b6b6a5',size:.013,transparent:true,opacity:.26,depthWrite:false}));scene.add(dust);
- let lastFrameTaken=false;
+ const frameHomePosition=frame.position.clone(),frameHomeRotation=frame.rotation.clone();let lastFrameTaken=false;
  function update(dt,time){
    const mix=(o,k,target,speed=4)=>o[k]+=(target-o[k])*Math.min(1,dt*speed);
    mix(mainLight,'intensity',state.lightOn?26:0);ceilingLamp.children[1].material.emissiveIntensity=state.lightOn?.45:0;
@@ -238,7 +238,7 @@ export function buildRoom(renderer,state){
    for(const {hinge,side}of wardrobeDoors)mix(hinge.rotation,'y',state.wardrobeOpen?side*1.5:0,2.5);mix(suitcaseLid.rotation,'x',state.suitcaseOpen?1.7:0,3);if(!domestic.bathLoaded)mix(drawer.position,'x',state.drawerOpen?-.64:0,4);bulb.visible=state.drawerOpen&&!state.bulbTaken;
    filmA.visible=!state.inventory.includes('filmA')&&!state.filmJoined;
    frame.traverse(o=>{if(o.userData.filmBack)o.visible=!state.inventory.includes('filmB')&&!state.filmJoined;});
-   if(state.frameTaken&&!lastFrameTaken){frame.position.set(-3.43,.6,7.6);frame.rotation.set(.09,Math.PI/2-.1,-.04);lastFrameTaken=true;}
+   if(state.frameTaken!==lastFrameTaken){if(state.frameTaken){frame.position.set(-3.43,.6,7.6);frame.rotation.set(.09,Math.PI/2-.1,-.04);}else{frame.position.copy(frameHomePosition);frame.rotation.copy(frameHomeRotation);}lastFrameTaken=state.frameTaken;}
    uvInk.material.opacity=0;
    mix(lampLight,'intensity',state.lampOn?(state.uvInstalled?11:17):0);lampLight.color.set(state.uvInstalled?'#9f75eb':'#ffc47c');shadeMat.emissive.set(state.uvInstalled?'#623d91':'#e6bc73');lightbulb.material.emissive.set(state.uvInstalled?'#9956ee':'#ffe1a0');
    door.userData.label=state.doorOpen?'316호 출입문 · 복도로':'316호 출입문 · 세 겹의 잠금';mix(door.rotation,'y',state.doorOpen?-Math.PI*.52:0,2.2);for(let i=0;i<3;i++)rings[i].rotation.z=-state.rings[i]*Math.PI/4;

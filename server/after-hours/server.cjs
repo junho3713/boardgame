@@ -12,6 +12,7 @@ const FILES = new Map([
   ['room-state.js', 'text/javascript; charset=utf-8'],
   ['room-layout.js', 'text/javascript; charset=utf-8'],
   ['domestic-models.js', 'text/javascript; charset=utf-8'],
+  ['test-starts.js', 'text/javascript; charset=utf-8'],
   ['Reflector.js', 'text/javascript; charset=utf-8'],
   ['GLTFLoader.js', 'text/javascript; charset=utf-8'],
   ['BufferGeometryUtils.js', 'text/javascript; charset=utf-8'],
