@@ -1,3 +1,4 @@
+import {SAFE_BEATS} from './puzzle-evidence.js?v=20261117-puzzles2';
 import * as T from './three.module.js';
 import {GLTFLoader} from './GLTFLoader.js';
 import {Reflector} from './Reflector.js';
@@ -34,6 +35,7 @@ export function buildRoomDetails({scene,renderer,manager,state,solids,legacy,can
   const caseRoot=required(model,'Luggage317_ROOT'),safe=required(model,'Safe317_ROOT'),music=required(model,'MusicBox317_ROOT');
   interactive(caseRoot,'luggage317','다이얼이 달린 가죽 여행가방');interactive(safe,'safe317','네 문양의 객실 금고');interactive(music,'musicBox','태엽 구멍이 있는 오르골');
   numberFaces=[0,1,2].map(i=>face(required(model,'Luggage317_Number_'+i),numbers[0],.022,.033));symbolFaces=[0,1,2,3].map(i=>face(required(model,'Safe317_Symbol_'+i),symbols[0],.092,.103));setPuzzleDials();
+  for(let i=0;i<4;i++){const tally=canvasTexture((a,w,h)=>{a.clearRect(0,0,w,h);a.strokeStyle='#dccb9c';a.lineWidth=5;for(let n=0;n<SAFE_BEATS[i];n++){const x=w/2+(n-(SAFE_BEATS[i]-1)/2)*14;a.beginPath();a.moveTo(x,10);a.lineTo(x,h-10);a.stroke();}},128,64);const marks=face(required(model,'Safe317_Symbol_'+i),tally,.07,.035);marks.position.y=.075;}
   legacy.guest.forEach(o=>o.visible=false);
   solids.push({x:5.12,z:16.92,w:.58,d:.59,yaw:Math.PI/2},{x:9.38,z:19.51,w:.55,d:.50},{x:7.12,z:17.18,w:.67,d:.58},safeDoorSolid);
   const reflection=new Reflector(new T.CircleGeometry(.435,64),{color:0xc9d1cd,textureWidth:512,textureHeight:512,clipBias:.003});reflection.position.set(9,1.75,20.545);reflection.rotation.y=Math.PI;scene.add(reflection);registerRoomMirror(scene,reflection);

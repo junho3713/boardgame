@@ -1,13 +1,14 @@
+import {buildPuzzleProps} from './puzzle-props.js?v=20261117-puzzles2';
 import * as T from './three.module.js';
 import {Reflector} from './Reflector.js';
 import {GLTFLoader} from './GLTFLoader.js';
 import {buildExterior} from './exterior-scene.js?v=20261117-environment2';
-import {uvVisible} from './room-state.js?v=20261117-stairs1';
-import {buildHotelExtension} from './hotel-extension.js?v=20261117-stairs1';
+import {uvVisible} from './room-state.js?v=20261117-puzzles2';
+import {buildHotelExtension} from './hotel-extension.js?v=20261117-puzzles2';
 import {canWalk} from './room-layout.js?v=20261117-stairs1';
 import {buildDomesticModels} from './domestic-models.js?v=20261117-stairs1';
-import {buildTwinRoom} from './twin-room.js?v=20261117-stairs1';
-import {buildRoomDetails} from './room-details.js?v=20261117-stairs1';
+import {buildTwinRoom} from './twin-room.js?v=20261117-puzzles2';
+import {buildRoomDetails} from './room-details.js?v=20261117-puzzles2';
 
 export function buildRoom(renderer,state){
  const scene=new T.Scene();scene.background=new T.Color('#121616');scene.fog=new T.FogExp2('#121616',.014);
@@ -214,8 +215,8 @@ export function buildRoom(renderer,state){
  // A compact writing table leaves a clear walking route from the connecting door.
  const guestFurnitureStart=scene.children.length;
  const table317=group(1.24,0,8.2);rb(.95,.08,1.65,0,.76,0,wood,table317);for(const x of[-.35,.35])for(const z of[-.65,.65])rod([x,0,z],[x,.72,z],.035,darkwood,table317);solid(1.24,8.2,1,1.7);shadow(1.24,8.2,1.4,2.1);
- const receipt317=interactive(box(.31,.012,.48,1.25,.815,7.9,paper),'receipt317','접힌 룸서비스 영수증');receipt317.rotation.y=-.15;
- for(const [sheet,title]of [[receipt317,'ROOM SERVICE'],[tag317,'HOTEL / 317']]){const print=canvasTexture((a,w,h)=>{a.fillStyle='#cbb58c';a.fillRect(0,0,w,h);a.strokeStyle='#61513b';a.lineWidth=3;a.strokeRect(16,16,w-32,h-32);a.fillStyle='#443e30';a.textAlign='center';a.font='24px serif';a.fillText(title,w/2,60);a.font='46px serif';a.fillText('317',w/2,130);for(let y=180;y<330;y+=24){a.fillStyle='#78684d';a.fillRect(40,y,w-80,2);}},256,384);const ink=mesh(new T.PlaneGeometry(sheet===tag317?.22:.3,sheet===tag317?.34:.47),new T.MeshStandardMaterial({map:print,roughness:1}),sheet);ink.rotation.x=-Math.PI/2;ink.position.y=.009;}
+ const receipt317=interactive(box(.31,.012,.48,1.25,.815,7.9,paper),'receipt317','접힌 호텔 영수증');receipt317.rotation.y=-.15;
+ for(const [sheet,title]of [[receipt317,'HOTEL FOLIO'],[tag317,'HOTEL / 317']]){const print=canvasTexture((a,w,h)=>{a.fillStyle='#cbb58c';a.fillRect(0,0,w,h);a.strokeStyle='#61513b';a.lineWidth=3;a.strokeRect(16,16,w-32,h-32);a.fillStyle='#443e30';a.textAlign='center';a.font='24px serif';a.fillText(title,w/2,60);a.font='46px serif';a.fillText('317',w/2,130);for(let y=180;y<330;y+=24){a.fillStyle='#78684d';a.fillRect(40,y,w-80,2);}},256,384);const ink=mesh(new T.PlaneGeometry(sheet===tag317?.22:.3,sheet===tag317?.34:.47),new T.MeshStandardMaterial({map:print,roughness:1}),sheet);ink.rotation.x=-Math.PI/2;ink.position.y=.009;}
  const cup317=cyl(.065,.05,.11,1.2,1.08,8.65,ivory);cyl(.1,.1,.015,1.2,1.025,8.65,ivory);const cupHandle=mesh(new T.TorusGeometry(.035,.008,8,20),ivory);cupHandle.position.set(1.28,1.09,8.65);cupHandle.rotation.y=Math.PI/2;
  // A suitcase on a luggage rack, with independent hinged lid and three brass dials.
  const luggage317=interactive(group(5.7,.65,9.6),'luggage317','다이얼이 달린 여행가방');rb(1.35,.34,.8,0,0,0,leather,luggage317,.04);const luggageLid=group(0,.18,.4,luggage317);rb(1.35,.1,.8,0,0,-.4,leather,luggageLid,.035);for(const x of[-.44,.44])box(.08,.38,.84,x,.01,0,darkwood,luggage317);for(const x of[-.1,0,.1]){const d=cyl(.048,.048,.06,x,.08,-.43,brass,luggage317);d.rotation.x=Math.PI/2;}rod([-.18,.1,-.46],[.18,.1,-.46],.012,brass,luggage317);for(const x of[5.1,6.3])for(const z of[9.3,9.9])rod([x,0,z],[x,.48,z],.028,darkwood);box(1.4,.05,.9,5.7,.45,9.6,darkwood);solid(5.7,9.6,1.5,1);shadow(5.7,9.6,1.8,1.5);
@@ -237,16 +238,14 @@ export function buildRoom(renderer,state){
 
  const innerDoors=[];
  function partitionDoor(x,z,w,yaw,field,id,label){const g=interactive(group(x,0,z),id,label);g.rotation.y=yaw;rb(w,2.64,.07,w/2,1.32,0,wood,g);for(const y of[.68,1.9])rb(w-.2,.83,.025,w/2,y,-.045,darkwood,g);rod([w-.27,1.07,-.09],[w-.1,1.07,-.09],.018,brass,g);const plate=box(.10,.23,.016,w-.2,1.06,-.065,brass,g);const collider={x,z,w,d:.07,yaw};solids.push(collider);innerDoors.push({g,yaw,field,label,collider,x,z,w});return g;}
- partitionDoor(3.6,8.4,1.5,Math.PI/2,'kitchenOpen','kitchenDoor','주방 문 · 서비스 순서');
+ partitionDoor(3.6,8.4,1.5,Math.PI/2,'kitchenOpen','kitchenDoor','주방 문 · 열쇠 잠금');
  partitionDoor(-3.6,6.3,1.4,-Math.PI/2,'twinOpen','twinDoor','트윈 침실 문 · 잠김');
  partitionDoor(1.46,10.5,1.32,0,'doorOpen','suiteDoor','316호 출입문 · 복도로');
- const teaBox=interactive(group(-2.92,1.01,9.50),'teaTin','꽃무늬 자물쇠가 달린 차 상자');box(.42,.018,.30,0,0,0,wood,teaBox);for(const x of[-.20,.20])box(.02,.18,.30,x,.09,0,wood,teaBox);for(const z of[-.14,.14])box(.42,.18,.02,0,.09,z,wood,teaBox);const teaLid=group(0,.18,.15,teaBox);rb(.44,.025,.32,0,0,-.15,darkwood,teaLid);box(.045,.055,.022,0,.10,-.162,brass,teaBox);const flowerPlate=sign('✿',.05,.05,0,0,0);teaBox.add(flowerPlate);flowerPlate.position.set(0,.10,-.175);flowerPlate.rotation.y=Math.PI;const shackle=mesh(new T.TorusGeometry(.018,.004,8,20),brass,teaBox);shackle.position.set(0,.139,-.165);const teaPaper=interactive(box(.30,.006,.20,0,.025,0,paper,teaBox),'teaNote','차 상자 안의 서비스 카드');
+ const teaBox=interactive(group(-2.92,1.01,9.50),'teaTin','꽃무늬 자물쇠가 달린 차 상자');box(.42,.018,.30,0,0,0,wood,teaBox);for(const x of[-.20,.20])box(.02,.18,.30,x,.09,0,wood,teaBox);for(const z of[-.14,.14])box(.42,.18,.02,0,.09,z,wood,teaBox);const teaLid=group(0,.18,.15,teaBox);rb(.44,.025,.32,0,0,-.15,darkwood,teaLid);box(.045,.055,.022,0,.10,-.162,brass,teaBox);const flowerPlate=sign('✿',.05,.05,0,0,0);teaBox.add(flowerPlate);flowerPlate.position.set(0,.10,-.175);flowerPlate.rotation.y=Math.PI;const shackle=mesh(new T.TorusGeometry(.018,.004,8,20),brass,teaBox);shackle.position.set(0,.139,-.165);const teaPaper=interactive(box(.30,.006,.20,0,.025,0,paper,teaBox),'teaNote','차 상자 안의 편지와 조각');
  interactive(sign('물방울 · 욕실',.35,.16,3.49,1.7,.6,-Math.PI/2),'bathDoor','욕실 문 · 물방울 표식');
- const jugRoots=[];const jugGlass=new T.MeshPhysicalMaterial({color:'#d7e5d9',transparent:true,opacity:.24,roughness:.13,side:T.DoubleSide,depthWrite:false});
- for(const [i,x]of[6.08,6.4].entries()){const g=interactive(group(x,.975,5.22),'waterStation','3L / 5L 계량 잠금 장치');const h=i?.385:.28,r=i?.0665:.0615;const shell=mesh(new T.CylinderGeometry(r,r,h,32,1,true),jugGlass,g);shell.position.y=h/2;cyl(r+.01,r+.01,.018,0,0,0,brass,g);const rim=mesh(new T.TorusGeometry(r,.005,8,32),brass,g);rim.rotation.x=Math.PI/2;rim.position.y=h;const handle=mesh(new T.TorusGeometry(.045,.006,8,24),brass,g);handle.scale.set(.65,1.5,1);handle.position.set(r+.023,h*.54,0);if(i){const mark=mesh(new T.TorusGeometry(r+.001,.0018,6,32),brass,g);mark.rotation.x=Math.PI/2;mark.position.y=.012+(h-.025)*.8;}const water=cyl(r-.003,r-.003,.01,0,.018,0,mat('#497f91'),g);jugRoots.push({water,h,max:i?5:3,field:i?'jugLarge':'jugSmall'});}
- interactive(sign('3L     5L / 4L = KEY',.70,.18,6.24,1.48,4.72),'waterStation','계량 장치 사용 안내');
-
- const jugBox=interactive(group(4.65,.98,5.21),'waterStation','계량 장치의 열쇠 보관함');box(.32,.018,.26,0,0,0,darkwood,jugBox);for(const x of[-.15,.15])box(.02,.12,.26,x,.06,0,wood,jugBox);for(const z of[-.12,.12])box(.32,.12,.02,0,.06,z,wood,jugBox);const jugLid=group(0,.12,-.13,jugBox);rb(.34,.025,.28,0,0,.13,wood,jugLid);const jugKey=interactive(group(0,.028,0,jugBox),'jugKey','보관함 안의 트윈 침실 열쇠');const keyRing=mesh(new T.TorusGeometry(.028,.006,8,24),brass,jugKey);keyRing.rotation.x=Math.PI/2;rod([0,0,.025],[0,0,.095],.006,brass,jugKey);box(.025,.008,.012,.01,0,.08,brass,jugKey);
+ const jugBox=interactive(group(4.65,.98,5.21),'waterStation','주방 열쇠 보관함');box(.32,.018,.26,0,0,0,darkwood,jugBox);for(const x of[-.15,.15])box(.02,.12,.26,x,.06,0,wood,jugBox);for(const z of[-.12,.12])box(.32,.12,.02,0,.06,z,wood,jugBox);const jugLid=group(0,.12,-.13,jugBox);rb(.34,.025,.28,0,0,.13,wood,jugLid);const jugKey=interactive(group(0,.028,0,jugBox),'jugKey','보관함 안의 트윈 침실 열쇠');const keyRing=mesh(new T.TorusGeometry(.028,.006,8,24),brass,jugKey);keyRing.rotation.x=Math.PI/2;rod([0,0,.025],[0,0,.095],.006,brass,jugKey);box(.025,.008,.012,.01,0,.08,brass,jugKey);
+ const puzzleProps=buildPuzzleProps({T,state,canvasTexture,helpers:{box,rb,rod,cyl,mesh,group,sign,interactive},materials:{wood,darkwood,brass}});
+ for(const [i,label]of ['홍차','커피','설탕'].entries()){const f=sign(label,.078,.04,0,0,0);jugBox.add(f);f.position.set(-.1+i*.1,.065,.132);}
  const extension=buildHotelExtension({T,scene,state,roots,solids,helpers:{box,rb,rod,cyl,mesh,group,sign,interactive},materials:{wood,darkwood,brass,ivory,paper,floorMat,wallpaper},partitionDoor});
  solids.push(...extension.solids);
  const dustGeo=new T.BufferGeometry(),dustPos=new Float32Array(90*3);for(let i=0;i<90;i++)dustPos.set([(Math.random()-.5)*6,Math.random()*2.8,(Math.random()-.5)*8],i*3);dustGeo.setAttribute('position',new T.BufferAttribute(dustPos,3));const dust=new T.Points(dustGeo,new T.PointsMaterial({color:'#b6b6a5',size:.013,transparent:true,opacity:.26,depthWrite:false}));scene.add(dust);
@@ -270,9 +269,9 @@ export function buildRoom(renderer,state){
    receipt317.visible=!state.inventory.includes('receipt');tag317.visible=!state.inventory.includes('tag');
    mix(luggageLid.rotation,'x',state.luggageOpen?-1.6:0,3);mix(safeDoor.rotation,'y',state.safeOpen?-1.4:0,3);mix(exit317.rotation,'y',state.exitOpen?-1.6:0,2.5);
    if(state.musicWound)musicDrum.rotation.y=time*.65;
-   mix(teaLid.rotation,'x',state.teaTinOpen?1.8:0);teaPaper.visible=state.teaTinOpen;mix(jugLid.rotation,'x',state.jugSolved?-1.8:0);jugKey.visible=state.jugSolved&&!state.jugKeyTaken;jugBox.userData.interactId=jugKey.visible?'jugKey':'waterStation';jugBox.userData.label=jugKey.visible?'열린 보관함 · 트윈 침실 열쇠 꺼내기':'계량 장치의 열쇠 보관함';
-   for(const d of innerDoors){mix(d.g.rotation,'y',d.yaw+(state[d.field]?1.65:0),3);d.g.userData.label=d.label+(state[d.field]?' · 열림':' · 잠김');const a=d.g.rotation.y;Object.assign(d.collider,{x:d.x+Math.cos(a)*d.w/2,z:d.z-Math.sin(a)*d.w/2,yaw:a});}for(const j of jugRoots){const h=Math.max(.002,state[j.field]/j.max*(j.h-.025));j.water.visible=state[j.field]>0;j.water.scale.y=h/.01;j.water.position.y=h/2+.012;}
-   extension.update();domestic.update(dt);details.update(dt,time);twin.update(dt);for(const light of fixtureLights)light.intensity=state.lightOn?2.4:0;
+   mix(teaLid.rotation,'x',state.teaTinOpen?1.8:0);teaPaper.visible=state.teaTinOpen;mix(jugLid.rotation,'x',state.stockSolved?-1.8:0);jugKey.visible=state.stockSolved&&!state.stockKeyTaken;jugBox.userData.interactId=jugKey.visible?'jugKey':'waterStation';jugBox.userData.label=jugKey.visible?'열린 보관함 · 트윈 침실 열쇠 꺼내기':'주방 열쇠 보관함';
+   for(const d of innerDoors){mix(d.g.rotation,'y',d.yaw+(state[d.field]?1.65:0),3);d.g.userData.label=d.label+(state[d.field]?' · 열림':' · 잠김');const a=d.g.rotation.y;Object.assign(d.collider,{x:d.x+Math.cos(a)*d.w/2,z:d.z-Math.sin(a)*d.w/2,yaw:a});}
+   puzzleProps.update(dt);extension.update();domestic.update(dt);details.update(dt,time);twin.update(dt);for(const light of fixtureLights)light.intensity=state.lightOn?2.4:0;
    exterior.update(dt,time);dust.rotation.y=Math.sin(time*.04)*.025;
  }
  function clockHands(hour,minute){domestic.clockHands(hour,minute);if(domestic.clockLoaded)return;const ha=hour/12*Math.PI*2+minute/60*Math.PI/6,ma=minute/60*Math.PI*2;hr.position.set(Math.sin(ha)*.045,.3+Math.cos(ha)*.045,.111);hr.rotation.z=-ha;mn.position.set(Math.sin(ma)*.065,.3+Math.cos(ma)*.065,.12);mn.rotation.z=-ma;}

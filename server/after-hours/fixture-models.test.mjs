@@ -13,6 +13,12 @@ function model(name){
  const nodes=g.nodes.map(n=>{const root=new T.Group();root.name=n.name;if(n.translation)root.position.fromArray(n.translation);if(n.rotation)root.quaternion.fromArray(n.rotation);if(n.scale)root.scale.fromArray(n.scale);if(n.matrix){root.matrix.fromArray(n.matrix);root.matrix.decompose(root.position,root.quaternion,root.scale);}if(n.mesh!==undefined)for(const p of g.meshes[n.mesh].primitives){const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(accessor(p.attributes.POSITION),3));if(p.indices!==undefined)geo.setIndex(accessor(p.indices));root.add(new T.Mesh(geo,new T.MeshBasicMaterial({side:T.DoubleSide})));}return root;});g.nodes.forEach((n,i)=>n.children?.forEach(c=>nodes[i].add(nodes[c])));const scene=new T.Group();for(const id of g.scenes[g.scene||0].nodes)scene.add(nodes[id]);scene.updateMatrixWorld(true);return{g,scene,nodes,bytes:b.length};
 }
 const height=(scene,x,z,startY=3)=>new T.Raycaster(new T.Vector3(x,startY,z),new T.Vector3(0,-1,0)).intersectObject(scene,true)[0]?.point.y;
+test('new story props rest on solid counters and the 317 note is not obscured by the music box',()=>{
+ const kitchen=model('kitchen-316.glb');for(const x of[4.99,6,6.23,6.46]){const y=height(kitchen.scene,x,5.22);assert.ok(y>.955&&y<.98,'solid countertop under '+x);}
+ const guest=model('guestroom-317.glb');assert.ok(Math.abs(height(guest.scene,9.35,19.93)-.7925)<.002);
+ const start=new T.Vector3(7.5,1.62,19.1),target=new T.Vector3(9.35,.805,19.93),delta=target.clone().sub(start);
+ const hit=new T.Raycaster(start,delta.clone().normalize()).intersectObject(guest.scene,true)[0];assert.ok(!hit||hit.distance>=delta.length()-.005,'unobstructed line of sight to note');
+});
 test('clock marks point radially and its tapered hands have short tails',()=>{
  const m=model('wall-clock-316.glb'),points=[];
  m.scene.traverse(o=>{if(!o.isMesh)return;const a=o.geometry.attributes.position;for(let i=0;i<a.count;i++){const p=new T.Vector3().fromBufferAttribute(a,i).applyMatrix4(o.matrixWorld),r=Math.hypot(p.x,p.y);if(r>.249*.65&&r<.278*.65&&p.z>.058*.65)points.push(p);}});
@@ -49,7 +55,7 @@ test('317 luggage and safe expose real cavities when their separated doors open'
 });
 
 test('new furniture keeps every administrator start clear and blocks walking through chairs',()=>{
- const added=[{x:5.12,z:16.92,w:.58,d:.59,yaw:Math.PI/2},{x:9.38,z:19.51,w:.55,d:.50},{x:7.12,z:17.18,w:.67,d:.58},{x:4.24,z:19.18,w:.84,d:.07}];
+ const added=[{x:8.7,z:18.6,w:1.5,d:1},{x:8.7,z:15.9,w:2.14,d:3.38},{x:4.24,z:17.2,w:1,d:1.7},{x:8.9,z:20.16,w:2.05,d:.8},{x:5.12,z:16.92,w:.58,d:.59,yaw:Math.PI/2},{x:9.38,z:19.51,w:.55,d:.50},{x:7.12,z:17.18,w:.67,d:.58},{x:4.24,z:19.18,w:.84,d:.07}];
  for(const p of TEST_STARTS)assert.ok(canWalk(createTestStart(p.id).state,p.position[0],p.position[2],added),p.id);
  assert.equal(canWalk(createTestStart('room317').state,5.12,16.92,added),false);
 });

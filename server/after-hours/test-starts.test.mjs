@@ -5,7 +5,7 @@ import {phase,uvVisible,useItem} from './public/room-state.js';
 import {canWalk} from './public/room-layout.js';
 
 test('each test start is reachable and has the intended next puzzle',()=>{
- const phases={shower:'low',teaBox:'tea',teaDoor:'tea',water:'jugs',waterKey:'jugKey',towels:'low',cups:'tea',kettle:'jugs',twin:'neighborKey',companion:'neighborKey',bedroom:'low',living:'tea',kitchen:'jugs',bath:'low',hall:'enter317',room317:'luggage',clock:'clock',vanity:'drawer',uv:'mirror',music:'music',safe:'safe',exit:'lastRoom',stairs:'stairs',downstairs:'descend'};
+ const phases={postcards:'neighborKey',desk317:'luggage',evacuationBox:'lastRoom',shower:'low',teaBox:'tea',teaDoor:'tea',water:'stock',waterKey:'stockKey',towels:'low',cups:'tea',kettle:'stock',twin:'neighborKey',companion:'neighborKey',bedroom:'low',living:'tea',kitchen:'stock',bath:'low',hall:'enter317',room317:'luggage',clock:'clock',vanity:'drawer',uv:'mirror',music:'music',safe:'safe',exit:'lastRoom',stairs:'stairs',downstairs:'descend'};
  for(const point of TEST_STARTS){
   const {state}=createTestStart(point.id);
   assert.equal(phase(state),phases[point.id],point.id);
@@ -31,6 +31,7 @@ test('free exploration opens gates and starts never share mutable state',()=>{
 
 test('checkpoint roundtrip preserves progress, camera and usable items',()=>{
  const setup=createTestStart('vanity');setup.state.selected='key';setup.state.notes=[{title:'관찰',text:'수납장'}];setup.state.seconds=73;setup.state.wardrobeOpen=true;setup.state.suitcaseOpen=true;
+ Object.assign(setup.state,{trayTurns:[1,2,3,0],stockDigits:[3,1,4],companionArrows:[1,6,0],evacArrows:[2,0,3],stockWeights:[true,false,true],stockBottoms:[false,true,false],inlayInstalled:true,tagRubbed:true});
  const value={...setup,pointId:'vanity',position:[6.3,1.62,-.3],yaw:-1.5,pitch:-.5,luggageDigits:[2,8,4],safeSymbols:[1,0,2,3]};
  const saved=readCheckpoint(writeCheckpoint(value));
  assert.deepEqual(saved.state,setup.state);assert.deepEqual(saved.position,value.position);
@@ -40,7 +41,7 @@ test('checkpoint roundtrip preserves progress, camera and usable items',()=>{
 });
 
 test('corrupt or incompatible checkpoints are ignored and unknown fields filtered',()=>{
- for(const raw of [null,'{','null','{}',JSON.stringify({version:2}),JSON.stringify({version:1,state:{},position:[0,1,2],yaw:null,pitch:0})])assert.equal(readCheckpoint(raw),null);
+ for(const raw of [null,'{','null','{}',JSON.stringify({version:2}),JSON.stringify({version:2,state:{},position:[0,1,2],yaw:null,pitch:0})])assert.equal(readCheckpoint(raw),null);
  const raw=JSON.parse(writeCheckpoint({...createTestStart('bedroom'),pointId:'old-map',position:[0,1.62,2.7],yaw:0,pitch:9}));
  raw.state.inventory=['key','unknown','key'];raw.state.selected='unknown';raw.state.untrusted=true;raw.state.complete=true;raw.state.rings=[100,0,0];raw.state.notes=[null,{title:'valid',text:'text'}];
  const result=readCheckpoint(JSON.stringify(raw));

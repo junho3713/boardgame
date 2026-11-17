@@ -17,11 +17,15 @@ export function buildHotelExtension({T,scene,state,helpers:h,materials:m,partiti
  // The extension receives shared solids through its caller, avoiding invisible blockers.
  const notice=interactive(group(7.5,.832,23.94),'evacuationPlan','테이블 위 접힌 대피 안내');
  const sheet=box(.35,.008,.27,0,0,0,m.paper,notice);
- const print=sign('3F → STAIRS\n317 → 복도 왼쪽',.33,.25,0,0,0);notice.add(print);print.position.set(0,.006,0);print.rotation.set(-Math.PI/2,0,Math.PI);
- const key=interactive(group(7.5,.834,23.94),'stairKey','안내지 아래 3층 계단문 열쇠');
+ const print=sign('대피 안내\n317 → STAIRS',.33,.25,0,0,0);notice.add(print);print.position.set(0,.006,0);print.rotation.set(-Math.PI/2,0,Math.PI);
+ const key=interactive(group(7.5,.834,23.94),'stairKey','열쇠함 안 3층 계단문 열쇠');
  const ring=mesh(new T.TorusGeometry(.032,.007,10,32),m.brass,key);ring.rotation.x=Math.PI/2;
  rod([0,0,.028],[0,0,.12],.007,m.brass,key);box(.028,.012,.015,.01,0,.096,m.brass,key);
  const tag=sign('3F STAIRS',.15,.07,0,0,0);key.add(tag);tag.rotation.set(-Math.PI/2,0,Math.PI);tag.position.set(.10,.002,.025);
+ const emergency=interactive(group(7.05,.83,23.94),'evacuationBox','계단 열쇠함 · 방향 잠금');
+ box(.44,.018,.32,0,.009,0,m.darkwood,emergency);for(const x of[-.21,.21])box(.02,.16,.32,x,.08,0,m.wood,emergency);for(const z of[-.15,.15])box(.44,.16,.02,0,.08,z,m.wood,emergency);
+ const emergencyLid=group(0,.16,-.16,emergency);rb(.46,.028,.34,0,0,.16,m.wood,emergencyLid);for(const x of[-.12,0,.12])box(.06,.012,.06,x,.02,.16,m.brass,emergencyLid);
+ emergency.add(key);key.position.set(0,.03,0);notice.position.x=7.75;
  const cabinet=group(4.4,0,23.9);rb(1.1,1.1,.62,0,.55,0,m.darkwood,cabinet);for(const y of[.3,.8]){rb(.98,.45,.04,0,y,-.33,m.wood,cabinet);rod([-.10,y,-.36],[.10,y,-.36],.012,m.brass,cabinet);}
  sign('대피 안내 · 3층',.75,.2,7.5,1.5,24.56,Math.PI);
  const roomLight=new T.PointLight('#efdbaf',13,7,1.8);roomLight.position.set(7.0,2.7,22.7);scene.add(roomLight);
@@ -51,5 +55,5 @@ export function buildHotelExtension({T,scene,state,helpers:h,materials:m,partiti
  sign('2F\n계단 로비',.9,.55,-14.18,-1.55,12,Math.PI/2);sign('3F ↑',.55,.23,-7.2,.10,13.48,Math.PI);
  const diffuser=new T.MeshStandardMaterial({color:'#d8e3d9',emissive:'#a7c7b4',emissiveIntensity:.5});
  for(const [x,y,z]of[[-4.3,2.4,13.47],[-7.1,.6,13.47],[-10,-1.1,13.47],[-12.6,-.6,15.95]]){const light=new T.PointLight('#c7ddce',7,5,1.7);light.position.set(x,y,z-.18);scene.add(light);box(.46,.20,.09,x,y,z,steel);box(.40,.13,.025,x,y,z-.06,diffuser);}
- return{solids:[tableSolid,{x:4.4,z:23.9,w:1.1,d:.62}],update(){key.visible=state.evacuationRead&&!state.stairKeyTaken;notice.position.x=state.evacuationRead?7.95:7.5;}};
+ return{solids:[tableSolid,{x:4.4,z:23.9,w:1.1,d:.62}],update(){key.visible=state.evacuationBoxOpen&&!state.stairKeyTaken;emergencyLid.rotation.x=state.evacuationBoxOpen?-1.8:0;}};
 }
