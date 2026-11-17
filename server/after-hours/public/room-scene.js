@@ -108,9 +108,7 @@ export function buildRoom(renderer,state){
    bed.add(model);fallback.visible=false;bed.userData.modelState='loaded';
  },undefined,()=>{bed.userData.modelState='fallback';});
  shadow(-2,-1.45,2.65,3.8);solid(-2,-1.45,2.14,3.38);
- // A paper corner is visible only below the bed rail.
- const filmA=interactive(box(.29,.012,.21,-1.18,.085,-.65,paper),'filmA','종이 모서리');filmA.rotation.y=.25;
- box(.08,.008,.12,-1.03,.091,-.62,mat('#6f5943'));
+ // The film is found by crouching to search the bed; no loose placeholder blocks.
  const lampStart=scene.children.length,lampSolids=solids.length;
  // Living-room side table and UV lamp.
  const bedside=group(-2.95,0,-3.65);rb(.75,.65,.64,0,.4,0,wood,bedside);rb(.84,.07,.72,0,.77,0,wood,bedside);for(const x of [-.25,.25])for(const z of [-.2,.2])rod([x,0,z],[x,.2,z],.035,darkwood,bedside);solid(-2.95,-3.65,.85,.75);shadow(-2.95,-3.65,1.2,1.1);
@@ -196,7 +194,7 @@ export function buildRoom(renderer,state){
  rb(.055,1.22,1.43,8.05,1.94,-1.5,brass);box(.025,1.12,1.32,8.01,1.94,-1.5,new T.MeshStandardMaterial({color:'#a4b3ae',metalness:.9,roughness:.18}));
  rb(1.85,.1,1.28,4.95,.08,-3.68,porcelain);const showerGlass=box(.025,1.95,1.27,5.93,1.14,-3.68,new T.MeshPhysicalMaterial({color:'#91a6a0',transparent:true,opacity:.18,roughness:.1,metalness:.1,depthWrite:false}));showerGlass.castShadow=false;solid(5.93,-3.68,.04,1.27);rod([4.9,1.02,-4.2],[4.9,2.45,-4.2],.025,sinkSteel);rod([4.9,2.45,-4.2],[4.9,2.45,-3.95],.025,sinkSteel);cyl(.13,.13,.035,4.9,2.43,-3.95,sinkSteel);rb(.12,.2,.07,4.9,1.1,-4.16,sinkSteel);
  const toilet=group(4.45,0,.75);ball(.27,.19,.34,0,.33,0,porcelain,toilet);cyl(.14,.19,.3,0,.17,.07,porcelain,toilet);rb(.52,.64,.22,0,.67,.31,porcelain,toilet);const seat=mesh(new T.TorusGeometry(.22,.035,10,40),ivory,toilet);seat.rotation.x=Math.PI/2;seat.scale.y=1.3;seat.position.set(0,.48,-.02);solid(4.45,.75,.65,.95);
- for(const y of[1.1,1.45])rod([5.55,y,1.3],[6.25,y,1.3],.015,brass);rb(.55,.38,.035,5.9,1.26,1.27,linen);const bathNote=interactive(sign('LAUNDRY / 365',.3,.21,7.15,1.45,1.37,Math.PI,'#484435','#cdbb96'),'bathNote','욕실 세탁 안내표');
+ for(const y of[1.1,1.45])rod([5.55,y,1.3],[6.25,y,1.3],.015,brass);rb(.55,.38,.035,5.9,1.26,1.27,linen);const bathNote=interactive(sign('LAUNDRY / 316',.3,.21,7.15,1.45,1.37,Math.PI,'#484435','#cdbb96'),'bathNote','욕실 세탁 안내표');
  const bathFixture=group(5.8,3.03,-1.4);cyl(.2,.25,.06,0,0,0,ivory,bathFixture);ball(.23,.08,.23,0,-.08,0,new T.MeshStandardMaterial({color:'#e0e8dc',emissive:'#c8d5ce',emissiveIntensity:.5}),bathFixture);const bathLight=new T.PointLight('#cfdbd2',24,7,1.7);bathLight.position.set(5.8,2.7,-1.4);scene.add(bathLight);suiteLights.push({fixture:bathFixture,light:bathLight,base:bathLight.intensity});
 
  const legacyBath=scene.children.slice(bathStart).filter(o=>![bathNote,bathFixture,bathLight].includes(o));for(const b of solids.slice(bathSolids))b.bathLegacy=true;
@@ -260,7 +258,7 @@ export function buildRoom(renderer,state){
    for(const {g,side}of curtains){mix(g.position,'x',side*(state.curtainsClosed?.8:1.7),3);mix(g.scale,'x',state.curtainsClosed?1.7:1,3);}
    for(const {g}of curtains)g.children[0].rotation.y=Math.sin(time*.6)*.008;
    for(const {hinge,side}of wardrobeDoors)mix(hinge.rotation,'y',state.wardrobeOpen?side*1.5:0,2.5);mix(suitcaseLid.rotation,'x',state.suitcaseOpen?1.7:0,3);if(!domestic.bathLoaded)mix(drawer.position,'x',state.drawerOpen?-.64:0,4);bulb.visible=state.drawerOpen&&!state.bulbTaken;
-   filmA.visible=!state.inventory.includes('filmA')&&!state.filmJoined;
+   bed.userData.label=!state.inventory.includes('filmA')&&!state.filmJoined?'침대 · 아래 살펴보기':'침대';
    frame.traverse(o=>{if(o.userData.filmBack)o.visible=!state.inventory.includes('filmB')&&!state.filmJoined;});
    if(state.frameTaken!==lastFrameTaken){if(state.frameTaken){frame.position.set(-3.43,.6,1.15);frame.rotation.set(.09,Math.PI/2-.1,-.04);}else{frame.position.copy(frameHomePosition);frame.rotation.copy(frameHomeRotation);}lastFrameTaken=state.frameTaken;}
    uvInk.material.opacity=0;

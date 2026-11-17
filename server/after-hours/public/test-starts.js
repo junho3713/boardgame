@@ -2,6 +2,7 @@ import {createState,ITEMS,addItem,combineFilms,alignFilm,setClock,useItem,unlock
 
 export const TEST_STARTS=[
  {id:'bedroom',group:'공간으로 이동',label:'316호 · 침실',step:0,position:[0,1.62,2.7],look:[0,1.4,-1],description:'처음 상태로 침실에서 시작합니다.'},
+ {id:'shower',group:'소품 모델 확인',label:'욕실 · 샤워기 가까이 보기',step:0,position:[7.0,1.62,-2.8],look:[7.36,1.35,-4.29],description:'샤워기 손잡이·호스 양 끝·벽 고정부의 연결을 확인합니다.'},
  {id:'towels',group:'소품 모델 확인',label:'욕실 · 수건 가까이 보기',step:0,position:[5.85,1.63,.75],look:[6.38,1.42,1.36],description:'Blender에서 다시 만든 수건의 접힘·두께·직물 표면을 확인합니다.'},
  {id:'cups',group:'소품 모델 확인',label:'거실 · 찻잔 가까이 보기',step:0,position:[-.80,1.62,5.85],look:[-1.0,.61,6.91],description:'찻잔 내부와 손잡이, 받침 접시를 확인합니다.'},
  {id:'kettle',group:'소품 모델 확인',label:'주방 · 주전자 가까이 보기',step:0,position:[7.80,1.62,5.95],look:[7.79,1.12,5.04],description:'전기 주전자의 주둥이·뚜껑·손잡이 연결부를 확인합니다.'},
@@ -48,7 +49,8 @@ export function createTestStart(id,free=false){
  if(['living','cups','kitchen','kettle','twin'].includes(zone)){s.bedroomOpen=true;s.bathUnlocked=true;s.bathDoorOpen=true;}
  if(['kitchen','kettle','twin'].includes(zone))s.kitchenOpen=true;
  if(zone==='twin'){s.jugSolved=true;s.twinOpen=true;}
- if(['bath','towels'].includes(zone)){s.bathUnlocked=true;s.bathDoorOpen=true;}
+ if(zone==='shower')s.showerOpen=true;
+ if(['bath','towels','shower'].includes(zone)){s.bathUnlocked=true;s.bathDoorOpen=true;}
  if(free){s.bedroomOpen=true;s.kitchenOpen=true;s.twinOpen=true;s.bathUnlocked=true;s.explore=true;s.doorOpen=true;s.room317Open=true;s.exitOpen=true;s.stairsOpen=true;s.bathDoorOpen=true;s.showerOpen=true;}
  return{state:s,point,clockHour:point.step>=2?5:11,clockMinute:point.step>=2?40:10};
 }

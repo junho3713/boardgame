@@ -34,7 +34,7 @@ test('animated cabinet doors, shower door, privacy door and clock hands remain s
  const bath=model('bathroom-316.glb');for(const name of ['Vanity_ROOT','Vanity_Door_Left_Pivot','Vanity_Door_Right_Pivot','Shower_Door_Pivot','Bath_Entry_Pivot'])assert.ok(bath.nodes.some(n=>n.name===name),name);
  const clock=model('wall-clock-316.glb');for(const name of ['WallClock316_ROOT','Clock_Hour_Hand','Clock_Minute_Hand','Clock_Key_Cover'])assert.ok(clock.nodes.some(n=>n.name===name),name);
  const bedroom=model('bedroom-fixtures-316.glb');for(const name of ['Wardrobe_Door_Left_Pivot','Wardrobe_Door_Right_Pivot','Wire_Hanger_0','Wire_Hanger_1','Wire_Hanger_2','Suitcase_Lid_Pivot'])assert.ok(bedroom.nodes.some(n=>n.name===name),name);
- for(const filename of ['bathroom-316.glb','kitchen-316.glb','wall-clock-316.glb','lounge-316.glb','bedroom-fixtures-316.glb']){const m=model(filename);assert.ok(m.bytes<(filename==='bathroom-316.glb'?4500000:3500000));assert.ok((m.g.images||[]).every(image=>image.bufferView!==undefined&&!image.uri));assert.equal(m.g.cameras,undefined);}
+ for(const filename of ['bathroom-316.glb','kitchen-316.glb','wall-clock-316.glb','lounge-316.glb','bedroom-fixtures-316.glb']){const m=model(filename);assert.ok(m.bytes<(filename==='bathroom-316.glb'?4700000:3500000));assert.ok((m.g.images||[]).every(image=>image.bufferView!==undefined&&!image.uri));assert.equal(m.g.cameras,undefined);}
 });
 
 test('317 luggage and safe expose real cavities when their separated doors open',()=>{
@@ -87,4 +87,12 @@ test('ceramic cups have deep interiors and finger clearance, and the kettle has 
  const hit=new T.Raycaster(new T.Vector3(7.651,1.218,5.04),new T.Vector3(.588,-.809,0).normalize()).intersectObject(kettle,true)[0];assert.ok(hit&&hit.distance>.032,'open spout does not have a solid cap');
  const bath=model('bathroom-316.glb');assert.ok(bath.g.materials.some(m=>/Hotel terry/.test(m.name)&&m.normalTexture),'packed terry pile surface');
  for(const name of['Hand towel 6.22','Hand towel 6.54']){const bounds=new T.Box3().setFromObject(bath.scene.getObjectByName(name));assert.ok(bounds.max.y>1.49&&bounds.max.y<1.53);assert.ok(bounds.min.y<1.08&&bounds.min.y>.95);assert.ok(bounds.max.z-bounds.min.z<.12,'drape folds around the rail');}
+});
+
+test('the shower hose reaches both fittings and its rail has wall supports and a handset cradle',()=>{
+ const {scene}=model('bathroom-316.glb');
+ const probe=(x,y,z,direction)=>new T.Raycaster(new T.Vector3(x,y,z),new T.Vector3(...direction)).intersectObject(scene,true)[0]?.distance;
+ for(const [x,y,z]of[[7.63,1.57,-4.1],[7.14,.98,-4.1],[7.45,.64,-4.0]])assert.ok(probe(x,y,z,[0,0,-1])<.19,'hose and threaded union at '+[x,y,z]);
+ assert.ok(probe(7.58,1.97,-4.38,[1,0,0])<.06,'upper rail mount bridges wall gap');
+ assert.ok(probe(7.58,1.69,-4.275,[1,0,0])<.06,'cradle bridges rail and handset');
 });

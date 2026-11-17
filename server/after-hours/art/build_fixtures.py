@@ -177,10 +177,41 @@ cyl('Rain shower head',(6.95,2.40,-3.93),.18,.035,chrome)
 for j in range(4):
  for i in range(12):
   a=2*pi*i/12;r=.035+j*.037;cyl('Rain head rubber nozzle',(6.95+r*cos(a),2.377,-3.93+r*sin(a)),.004,.006,dark,vertices=8)
-cube('Shower | mixer plate',(6.95,1.12,-4.34),(.24,.19,.028),chrome,.015);cyl('Shower | mixer knob',(6.95,1.12,-4.30),.045,.06,chrome,'z')
+cube('Shower | mixer plate',(6.95,1.12,-4.445),(.24,.19,.028),chrome,.015)
+cyl('Shower | mixer wall connection',(6.95,1.12,-4.371),.033,.15,chrome,'z')
+cyl('Shower | mixer knob',(6.95,1.12,-4.30),.045,.06,chrome,'z')
+for y in [1.24,2.27]:
+ cyl('Shower riser | wall rosette',(6.95,y,-4.452),.034,.025,chrome,'z')
+ tube('Shower riser | wall stand-off',[(6.95,y,-4.44),(6.95,y,-4.30)],.014,chrome)
 tube('Handshower rail',[(7.63,1.1,-4.31),(7.63,2.03,-4.31)],.012,chrome)
-head=cyl('Handshower head',(7.63,1.83,-4.24),.065,.025,chrome,'z');tube('Handshower handle',[(7.63,1.78,-4.24),(7.63,1.60,-4.24)],.018,chrome)
-tube('Flexible shower hose',[(7.63+.16*sin(i*pi/36),1.6-.85*sin(i*pi/72),-4.2+.06*sin(i*pi/24)) for i in range(73)],.009,chrome)
+for y in [1.17,1.97]:
+ cyl('Handshower | wall rosette',(7.63,y,-4.452),.030,.025,chrome,'z')
+ tube('Handshower | rail stand-off',[(7.63,y,-4.44),(7.63,y,-4.31)],.012,chrome)
+cyl('Handshower | sliding rail collar',(7.63,1.69,-4.31),.023,.065,chrome)
+tube('Handshower | cradle arm',[(7.63,1.69,-4.31),(7.63,1.69,-4.24)],.014,chrome)
+cyl('Handshower | cradle sleeve',(7.63,1.69,-4.24),.024,.052,chrome)
+head=cyl('Handshower head',(7.63,1.83,-4.24),.065,.025,chrome,'z')
+cyl('Handshower | spray insert',(7.63,1.83,-4.225),.056,.005,dark,'z')
+for j in range(3):
+ for i in range(8+j*4):
+  a=i*2*pi/(8+j*4);r=.014+j*.017
+  cyl('Handshower | rubber jet',(7.63+r*cos(a),1.83+r*sin(a),-4.221),.0023,.004,linen,'z',vertices=8)
+tube('Handshower handle',[(7.63,1.78,-4.24),(7.63,1.60,-4.24)],.018,chrome)
+cyl('Hose | handset threaded union',(7.63,1.584,-4.24),.021,.04,chrome)
+cyl('Hose | outlet wall rosette',(7.14,1.04,-4.452),.034,.025,chrome,'z')
+tube('Hose | wall outlet elbow',[(7.14,1.04,-4.44),(7.14,1.04,-4.28),(7.14,1.005,-4.28)],.018,chrome)
+cyl('Hose | outlet threaded union',(7.14,.993,-4.28),.021,.04,chrome)
+# Two cubic curves form one hanging hose. Both ends terminate inside threaded unions.
+def hose_curve(a,b,c,d,n=48):
+ return [tuple((1-t)**3*a[k]+3*(1-t)**2*t*b[k]+3*(1-t)*t*t*c[k]+t**3*d[k] for k in range(3)) for t in [i/n for i in range(n+1)]]
+hose= hose_curve((7.63,1.57,-4.24),(7.64,1.18,-4.17),(7.76,.64,-4.16),(7.45,.64,-4.16))
+hose+=hose_curve((7.45,.64,-4.16),(7.16,.64,-4.16),(7.14,.83,-4.23),(7.14,.98,-4.28))[1:]
+tube('Flexible shower hose',hose,.009,chrome)
+for i in range(1,len(hose)-1,3):
+ p=Vector(W(hose[i]));direction=(Vector(W(hose[i+1]))-Vector(W(hose[i-1]))).normalized()
+ bpy.ops.mesh.primitive_torus_add(major_segments=8,minor_segments=4,location=p,major_radius=.0093,minor_radius=.0011)
+ rib=reg(bpy.context.object,'Hose | flexible metal rib',chrome)
+ rib.rotation_euler=Vector((0,0,1)).rotation_difference(direction).to_euler()
 cube('Shower niche dark recess',(4.65,1.4,-4.34),(1.12,.56,.045),dark,.005)
 for y in [1.09,1.71]:cube('Shower niche stone shelf',(4.65,y,-4.23),(1.22,.04,.24),stone,.004)
 for x in [4.06,5.24]:cube('Shower niche side',(x,1.4,-4.23),(.04,.64,.24),stone,.004)
