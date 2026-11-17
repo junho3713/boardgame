@@ -33,7 +33,10 @@ def material(name,color,rough=.5,metal=0,alpha=1):
  return m
 def textured(name,color,kind,rough=.5):
  m=material(name,color,rough);n=512;y,x=np.mgrid[0:n,0:n].astype(np.float32)/n;rng=np.random.default_rng(316)
- if kind=='wood':v=.88+.08*np.sin(x*170+np.sin(y*6)*2)+.035*np.sin(x*510+y*5)+.025*rng.random((n,n))
+ if kind=='wood':
+  # Restrained, irregular pores instead of strongly periodic orange stripes.
+  phase=x*110+np.sin(y*8)*1.7+np.sin(y*21+x*4)*.22
+  v=.96+.018*np.sin(phase)+.012*np.sin(phase*2.37)+.008*rng.random((n,n))
  elif kind=='stone':v=.97+.02*rng.random((n,n))+.018*np.sin(x*18+y*11)+.012*np.sin(x*35-y*22)
  else:v=.97+.008*np.sin(x*96)*np.cos(y*96)+.008*rng.random((n,n))
  a=np.ones((n,n,4),dtype=np.float32);a[:,:,:3]=np.asarray(color)[None,None,:]*v[:,:,None]
@@ -146,13 +149,7 @@ def lathe(name,loc,profile,mat,p=None,n=64):
  faces=[(j*n+i,j*n+(i+1)%n,((j+1)%len(profile))*n+(i+1)%n,((j+1)%len(profile))*n+i) for j in range(len(profile)) for i in range(n)]
  return mesh(name,verts,faces,mat,p)
 
-def teacup(name,loc,p=None):
- g=empty(name,loc,p or parent)
- lathe('Fine porcelain | open teacup',(0,0,0),[(.032,.012),(.043,.024),(.063,.098),(.064,.105),(.060,.107),(.057,.10),(.039,.027),(.025,.023),(.025,.012)],ceramic,g)
- lathe('Porcelain saucer',(0,0,0),[(.02,0),(.09,0),(.102,.012),(.104,.021),(.098,.024),(.06,.009),(.02,.006)],ceramic,g)
- tube('Cup curved handle',[(.06+.035*sin(pi*i/24),.063+.033*cos(pi*i/24),0)for i in range(25)],.006,ceramic,g)
- cyl('Tea visible below rim',(0,.074,0),.051,.002,material('Cold tea',(.055,.027,.009),.18),p=g)
- return g
+def teacup(name,loc,p=None):return props['cup'](name,loc,p)
 
 def chair_at(name,loc,yaw=0):
  g=empty(name,loc,parent);g.rotation_euler[2]=yaw
@@ -173,19 +170,23 @@ def drawered_table(name,loc,w,d,h=.93):
  cube(name+' | softly rounded top',(0,h,0),(w,.065,d),walnut,.025,g)
  for x in [-w/2+.09,w/2-.09]:
   for z in [-d/2+.09,d/2-.09]:tube(name+' | tapered leg',[(x*1.04,.035,z*1.02),(x,h-.06,z)],.028,walnut,g);cyl(name+' | foot ferrule',(x*1.04,.055,z*1.02),.030,.07,brass,p=g)
- cube(name+' | drawer apron',(0,h-.15,0),(w-.12,.22,d-.12),walnut,.012,g)
+ cube(name+' | drawer apron',(0,h-.08,0),(w-.12,.09,d-.12),walnut,.009,g)
  for x in [-w*.245,w*.245]:
-  cube(name+' | separate drawer front',(x,h-.15,-d/2-.008),(w*.465,.19,.025),walnut,.012,g)
-  tube(name+' | brass bail pull',[(x-.055,h-.145,-d/2-.035),(x-.055,h-.17,-d/2-.065),(x+.055,h-.17,-d/2-.065),(x+.055,h-.145,-d/2-.035)],.0065,brass,g)
+  cube(name+' | separate drawer front',(x,h-.08,-d/2-.008),(w*.465,.085,.025),walnut,.006,g)
+  tube(name+' | brass bail pull',[(x-.055,h-.075,-d/2-.035),(x-.055,h-.10,-d/2-.065),(x+.055,h-.10,-d/2-.065),(x+.055,h-.075,-d/2-.035)],.005,brass,g)
  return g
+
+sys.path.insert(0,os.path.dirname(os.path.abspath(__file__)))
+from hotel_props import make_props
+props=make_props(globals())
 
 # 317: the existing bed stays, while furnishings are replaced with fully built objects.
 guest=begin('Guestroom317');parent=guest
-desk=drawered_table('WritingTable317',(4.24,0,17.2),.94,1.65,.99)
+desk=drawered_table('WritingTable317',(4.24,0,17.2),1.65,.94,.76);desk.rotation_euler[2]=-pi/2
 chair_at('DeskChair317',(5.12,0,16.92),pi/2)
-teacup('TeaService317',(4.2,1.029,17.65),guest)
-cube('Desk leather writing pad',(4.23,1.029,16.9),(.68,.009,.63),leather,.02)
-vanity=drawered_table('Vanity317',(8.9,0,20.16),2,.72,.91)
+teacup('TeaService317',(4.2,.799,17.65),guest)
+cube('Desk leather writing pad',(4.23,.799,16.9),(.68,.009,.63),leather,.02)
+vanity=drawered_table('Vanity317',(8.9,0,20.16),2,.72,.76)
 stool=empty('VanityStool317',(9.38,0,19.51),guest)
 for x in [-.21,.21]:
  for z in [-.18,.18]:tube('Vanity stool | frame',[(x,.02,z),(x*.9,.44,z*.9)],.023,walnut,stool)
@@ -205,7 +206,7 @@ for x in [-.54,.54]:cube('Wardrobe317 | side',(x,1.25,0),(.045,2.4,.72),walnut)
 cube('Wardrobe317 | back',(0,1.25,.34),(1.07,2.4,.035),walnut)
 for y in [.12,1.13,2.44]:cube('Wardrobe317 | shelf',(0,y,0),(1.10,.055,.74),walnut)
 for x in [-.273,.273]:
- cube('Wardrobe317 | upper recessed door',(x,1.78,-.38),(.531,1.24,.045),walnut,.015)
+ cube('Wardrobe317 | upper recessed door',(x,1.78,-.38),(.542,1.24,.045),walnut,.008)
  cube('Wardrobe317 | inset shadow',(x,1.78,-.407),(.425,1.09,.008),dark,.014)
  cube('Wardrobe317 | raised inner panel',(x,1.78,-.414),(.405,1.07,.015),walnut,.012)
  tube('Wardrobe317 | pull',[(x*.35,1.61,-.44),(x*.35,1.61,-.48),(x*.35,1.83,-.48),(x*.35,1.83,-.44)],.008,brass)
@@ -266,7 +267,7 @@ for i in range(2):
 cube('Luggage | inner leather pocket',(.30,-.06,.24),(.37,.17,.025),lining,.02)
 
 # Mechanical music box: recessed mechanism, cylinder pins, comb, gears and an open lined lid.
-music=empty('MusicBox317_ROOT',(8.5,.97,20.06),guest);parent=music
+music=empty('MusicBox317_ROOT',(8.5,.82,20.06),guest);parent=music
 case_shell('Music box | wooden case',.64,.43,0,.18,walnut)
 cube('Music box | brass mounting plate',(0,.045,0),(.55,.012,.34),brass,.009)
 ml=empty('MusicBox317_Lid',(0,.18,.20),music)
@@ -294,17 +295,18 @@ for x in [-.23,.23]:
 
 # 316 kitchen furniture that was still made of placeholder boxes.
 suite=begin('SuiteDetails316');parent=suite
-fridge=empty('Fridge316_ROOT',(4.15,0,5.14),suite)
-cube('Fridge | rounded steel cabinet',(0,1.0,0),(.78,1.94,.82),cream,.038,fridge)
+for i,x in enumerate([-3.14,-2.70]):props['cup']('MinibarCup_'+str(i),(x,.995,9.7),suite,False)
+fridge=empty('Fridge316_ROOT',(4.0,0,5.14),suite)
+cube('Fridge | rounded steel cabinet',(0,1.0,0),(.64,1.94,.82),cream,.038,fridge)
 for cy,h in [(1.60,.65),(.66,1.19)]:
- cube('Fridge | door gasket',(0,cy,.42),(.735,h,.026),dark,.018,fridge)
- cube('Fridge | formed enamel door',(0,cy,.455),(.75,h-.017,.07),cream,.029,fridge)
- tube('Fridge | curved nickel handle',[(.24,cy-.14,.50),(.24,cy-.14,.55),(.24,cy+.14,.55),(.24,cy+.14,.50)],.012,chrome,fridge)
-for x in [-.28,.28]:
+ cube('Fridge | door gasket',(0,cy,.42),(.595,h,.026),dark,.018,fridge)
+ cube('Fridge | formed enamel door',(0,cy,.455),(.61,h-.017,.07),cream,.029,fridge)
+ tube('Fridge | curved nickel handle',[(.19,cy-.14,.50),(.19,cy-.14,.55),(.19,cy+.14,.55),(.19,cy+.14,.50)],.012,chrome,fridge)
+for x in [-.23,.23]:
  for z in [-.28,.28]:cyl('Fridge | adjustable foot',(x,.039,z),.033,.065,dark,p=fridge)
-for i in range(9):cube('Fridge | ventilation slit',(-.27+i*.067,.095,.435),(.04,.022,.01),dark,.003,fridge)
+for i in range(9):cube('Fridge | ventilation slit',(-.24+i*.060,.095,.435),(.04,.022,.01),dark,.003,fridge)
 label('Fridge | maker badge','A H',(0,1.84,.496),.035,chrome,fridge).rotation_euler=(pi/2,0,0)
-table=drawered_table('DiningTable316',(8.98,0,6.85),.95,2.02,1.02)
+table=drawered_table('DiningTable316',(8.98,0,6.85),2.02,.95,.76);table.rotation_euler[2]=pi/2
 chair_at('DiningChair316',(7.83,0,6.85),-pi/2)
 trolley=empty('ServiceTrolley316',(5.2,0,9.3),suite)
 for y in [.25,.78]:
@@ -319,18 +321,93 @@ tube('Trolley | push handle',[(-.55,.82,-.24),(-.55,.96,-.24),(-.55,.96,.24),(-.
 for i in range(4):lathe('Trolley | stacked porcelain',(0,.81+i*.016,0),[(.02,0),(.105,0),(.12,.01),(.118,.018),(.08,.012),(.02,.01)],ceramic,trolley)
 teacup('Trolley | spare cup',(.32,.802,0),trolley)
 
+# The second bedroom belongs to suite 316. All furniture uses real metre dimensions.
+twin=begin('TwinRoom316');parent=twin
+bedding=textured('Twin room | ivory cotton percale',(.72,.70,.64),'fabric',.94)
+throw=textured('Twin room | slate woven throw',(.16,.23,.25),'fabric',.96)
+headcloth=textured('Twin room | moss headboard linen',(.24,.29,.25),'fabric',.92)
+
+def quilt(loc):
+ # A continuous duvet drapes past the mattress sides and foot; a turned top edge reads as cloth.
+ xs=[-.64,-.61,-.56]+[-.53+i*1.06/30 for i in range(31)]+[.56,.61,.64]
+ zs=[-1.15,-1.11,-1.06]+[-1.03+i*1.67/42 for i in range(43)]
+ verts=[];faces=[]
+ for iz,z in enumerate(zs):
+  for ix,x in enumerate(xs):
+   side=max(0,abs(x)-.54)/.10;foot=max(0,-z-1.03)/.12
+   y=.635-max(side,foot)*.27+.009*sin(x*24+z*11)+.006*sin(x*47-z*7)
+   y+=.019*math.exp(-((z-.55)/.075)**2)
+   verts.append((loc[0]+x,y,loc[2]+z))
+ for j in range(len(zs)-1):
+  for i in range(len(xs)-1):
+   a=j*len(xs)+i;faces.append((a,a+1,a+len(xs)+1,a+len(xs)))
+ ob=mesh('Twin bed | draped cotton duvet',verts,faces,bedding);ob.modifiers.new('Duvet thickness','SOLIDIFY').thickness=.009
+ ob.modifiers.new('Soft fabric subdivisions','SUBSURF').levels=1
+ # A separate wool runner at the foot, with short combed fringes.
+ pts=[]
+ for z in [-.95,-.49]:
+  for x in xs:
+   y=.657-max(0,abs(x)-.54)/.10*.27+.006*sin(x*24+z*11)
+   pts.append((loc[0]+x,y,loc[2]+z))
+ ob=mesh('Twin bed | woven foot runner',pts,[(i,i+1,len(xs)+i+1,len(xs)+i)for i in range(len(xs)-1)],throw);ob.modifiers.new('Runner hem','SOLIDIFY').thickness=.006
+ for x in [-.50+i*.04 for i in range(26)]:tube('Runner | short fringe',[(loc[0]+x,.657,loc[2]-.95),(loc[0]+x,.648,loc[2]-.98)],.0015,throw)
+
+for i,x in enumerate([-7.75,-5.25]):
+ bedroot=empty('TwinBed_'+str(i),(0,0,0),twin);parent=bedroot
+ # 110 x 210 cm mattress with a 49 cm base and gently rounded upholstered headboard.
+ for dx in [-.43,.43]:
+  for z in [8.0,9.6]:cyl('Twin bed | recessed foot',(x+dx,.10,z),.035,.20,walnut)
+ cube('Twin bed | upholstered divan',(x,.27,8.85),(1.13,.30,2.14),headcloth,.045)
+ cube('Twin bed | mattress core',(x,.50,8.85),(1.10,.22,2.10),bedding,.075)
+ piping('Twin bed | mattress tape',1.10,2.10,.51,bedding,bedroot,(x,8.85),.07)
+ cube('Twin bed | padded headboard',(x,.78,10.01),(1.24,1.28,.10),headcloth,.045)
+ for dx in [-.40,0,.40]:cube('Twin bed | upholstered headboard channel',(x+dx,.89,9.946),(.378,.91,.055),headcloth,.04)
+ quilt((x,0,8.85))
+ cushion('Twin bed | pillow',(x,.735,9.62),.68,.39,.17,bedding)
+ cube('Twin bed | pillow folded flange',(x,.677,9.62),(.72,.01,.43),bedding,.025)
+parent=twin
+night=drawered_table('TwinNightstand',(-6.5,0,9.72),.66,.51,.57)
+lathe('Twin lamp | weighted ceramic base',(-6.5,.607,9.72),[(.01,0),(.11,0),(.12,.025),(.085,.05),(.055,.18),(.045,.21),(.01,.21)],ceramic)
+cyl('Twin lamp | stem',(-6.5,.90,9.72),.012,.22,brass)
+lathe('Twin lamp | linen shade',(-6.5,.95,9.72),[(.18,0),(.12,.24),(.115,.24),(.175,0)],bedding)
+cyl('Twin lamp | bulb',(-6.5,1.02,9.72),.03,.06,amber)
+
+console=drawered_table('TwinConsole',(-6.55,0,4.99),1.65,.62,.76);console.rotation_euler[2]=pi
+for i,x in enumerate([-7.06,-6.55,-6.04]):
+ cube('Postcard | maple frame',(x,1.62,4.66),(.44,.34,.025),walnut,.008)
+ empty('TwinPostcard_'+str(i),(x,1.62,4.681),twin)
+case=empty('CompanionCase_ROOT',(-6.55,.795,5.0),twin);parent=case
+case_shell('Companion | lined keepsake case',.60,.37,0,.18,walnut)
+cube('Companion | felt inner floor',(0,.043,0),(.51,.012,.28),lining,.009)
+lid=empty('CompanionCase_Lid',(0,.18,-.185),case)
+cube('Companion | bookmatched hinged lid',(0,.016,.185),(.61,.045,.38),walnut,.012,lid)
+cube('Companion | lid inner lining',(0,-.012,.185),(.54,.009,.31),lining,.01,lid)
+for x in [-.21,.21]:cyl('Companion | barrel hinge',(x,0,0),.012,.07,brass,'x',lid)
+for i,x in enumerate([-.17,0,.17]):
+ cube('Companion | inset symbol bezel',(x,.105,.193),(.12,.105,.012),brass,.008)
+ empty('CompanionCase_Symbol_'+str(i),(x,.105,.202),case)
+label('Companion | key label','317  /  SPARE',(0,.18,.125),.023,brass,case,False)
+for x in [-.23,.23]:
+ for z in [-.12,.12]:cyl('Companion | felt feet',(x,-.01,z),.02,.02,dark)
+parent=twin
+# A hollow, correctly scaled water carafe and a tumbler on the console.
+lathe('Twin | porcelain water carafe',(-7.12,.799,4.98),[(.01,0),(.065,0),(.069,.035),(.055,.15),(.032,.22),(.031,.27),(.025,.27),(.027,.22),(.047,.145),(.058,.035),(.01,.015)],ceramic)
+lathe('Twin | open tumbler',(-7.27,.799,5.09),[(.01,0),(.036,0),(.042,.09),(.037,.09),(.031,.012),(.01,.012)],ceramic)
+cube('Twin | bedside journal',(-6.36,.61,9.72),(.16,.022,.23),lining,.006)
+
+
 # Apply geometry, create UVs for authored meshes, and merge only within material/pivot boundaries.
 for coll in collections.values():
  for ob in list(coll.objects):
   if ob.type in {'CURVE','FONT','MESH'}:
    bpy.ops.object.select_all(action='DESELECT');ob.select_set(True);bpy.context.view_layer.objects.active=ob;bpy.ops.object.convert(target='MESH')
    bm=bmesh.new();bm.from_mesh(ob.data);bmesh.ops.recalc_face_normals(bm,faces=list(bm.faces));bm.to_mesh(ob.data);bm.free()
-   if not ob.data.uv_layers:
-    uv=ob.data.uv_layers.new(name='UVMap')
+   if not ob.get('preserve_uv'):
+    uv=ob.data.uv_layers.active or ob.data.uv_layers.new(name='UVMap')
     for poly in ob.data.polygons:
      normal=poly.normal;drop=max(range(3),key=lambda k:abs(normal[k]));axes=[k for k in range(3)if k!=drop]
      for li in poly.loop_indices:
-      co=ob.data.vertices[ob.data.loops[li].vertex_index].co;uv.data[li].uv=(co[axes[0]]*2,co[axes[1]]*2)
+      co=ob.data.vertices[ob.data.loops[li].vertex_index].co;uv.data[li].uv=(co[axes[0]],co[axes[1]])
  groups={}
  for ob in list(coll.objects):
   if ob.type=='MESH':groups.setdefault((ob.parent.name if ob.parent else '',ob.active_material.name if ob.active_material else ''),[]).append(ob)
@@ -343,7 +420,7 @@ stats={}
 for name,coll in collections.items():
  bpy.ops.object.select_all(action='DESELECT')
  for ob in coll.objects:ob.select_set(True)
- file={'Guestroom317':'guestroom-317.glb','SuiteDetails316':'suite-details-316.glb'}[name]
+ file={'Guestroom317':'guestroom-317.glb','SuiteDetails316':'suite-details-316.glb','TwinRoom316':'twin-room-316.glb'}[name]
  bpy.ops.export_scene.gltf(filepath=os.path.join(OUT,file),export_format='GLB',use_selection=True,export_apply=True,export_yup=True,export_extras=True,export_cameras=False,export_lights=False)
  stats[file]={'bytes':os.path.getsize(os.path.join(OUT,file)),'objects':len(coll.objects),'triangles':sum(len(p.vertices)-2 for o in coll.objects if o.type=='MESH'for p in o.data.polygons)}
 bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT,'room-details.blend'))

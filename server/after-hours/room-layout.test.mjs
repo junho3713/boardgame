@@ -8,8 +8,8 @@ function reachable(s,from,to){
   for(const [dx,dz]of[[1,0],[-1,0],[0,1],[0,-1]]){const nx=x+dx,nz=z+dz,key=nx+','+nz;if(!seen.has(key)&&canWalk(s,nx/10,nz/10)){seen.add(key);queue.push([nx,nz]);}}
  }return false;
 }
-test('all four interiors of 316 are accessible before its exit is solved',()=>{
- const s=createState(),spawn=[0,27];for(const target of [[0,0],[0,75],[65,75],[58,-15]])assert.equal(reachable(s,spawn,target),true,target.join(','));
+test('all five interiors of 316 are accessible before its exit is solved',()=>{
+ const s=createState(),spawn=[0,27];for(const target of [[0,0],[0,75],[65,75],[58,-15],[-65,70]])assert.equal(reachable(s,spawn,target),true,target.join(','));
  assert.equal(reachable(s,spawn,[21,120]),false);assert.equal(reachable(s,spawn,[65,170]),false);
 });
 test('316 opens into a hotel corridor while 317 retains an independent locked entrance',()=>{
@@ -23,7 +23,7 @@ test('walls, door jambs, furniture and the outer building boundary cannot be cro
  assert.equal(canWalk(s,0,7.5,[{x:0,z:7.5,w:1,d:1}]),false);assert.equal(canWalk(s,.6,7.5,[{x:0,z:7.5,w:1,d:1}]),false);
 });
 test('HUD zones distinguish the suite rooms from the corridor and 317',()=>{
- for(const [p,zone]of[[[0,0],'bedroom'],[[0,7.5],'living'],[[6.5,7.5],'kitchen'],[[5.8,-1.5],'bath'],[[2.1,12],'hall'],[[6.5,17],'room317'],[[5.6,23],'exitHall']])assert.equal(zoneAt(...p),zone);
+ for(const [p,zone]of[[[-6.5,7],'twin'],[[0,0],'bedroom'],[[0,7.5],'living'],[[6.5,7.5],'kitchen'],[[5.8,-1.5],'bath'],[[2.1,12],'hall'],[[6.5,17],'room317'],[[5.6,23],'exitHall']])assert.equal(zoneAt(...p),zone);
  assert.equal(zoneAt(-10,0),null);
 });
 test('rotated furniture and hinged door leaves use their rotated collision footprint',()=>{

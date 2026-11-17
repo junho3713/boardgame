@@ -33,7 +33,10 @@ def material(name,color,rough=.5,metal=0,alpha=1):
  return m
 def textured(name,color,kind,rough=.5):
  m=material(name,color,rough);n=512;y,x=np.mgrid[0:n,0:n].astype(np.float32)/n;rng=np.random.default_rng(316)
- if kind=='wood':v=.88+.08*np.sin(x*170+np.sin(y*6)*2)+.035*np.sin(x*510+y*5)+.025*rng.random((n,n))
+ if kind=='wood':
+  # Restrained, irregular pores instead of strongly periodic orange stripes.
+  phase=x*110+np.sin(y*8)*1.7+np.sin(y*21+x*4)*.22
+  v=.96+.018*np.sin(phase)+.012*np.sin(phase*2.37)+.008*rng.random((n,n))
  elif kind=='stone':v=.97+.02*rng.random((n,n))+.018*np.sin(x*18+y*11)+.012*np.sin(x*35-y*22)
  else:v=.97+.008*np.sin(x*96)*np.cos(y*96)+.008*rng.random((n,n))
  a=np.ones((n,n,4),dtype=np.float32);a[:,:,:3]=np.asarray(color)[None,None,:]*v[:,:,None]
@@ -89,32 +92,9 @@ def drain(name,center,p=None,r=.029):
   a=2*pi*i/10;cyl(name+' perforation',(center[0]+cos(a)*r*.47,center[1]+.007,center[2]+sin(a)*r*.47),.002,.003,chrome,p=p,vertices=10)
 def rounded_path(name,points,r,mat,p=None):return tube(name,points,r,mat,p)
 
-def draped_towel(x,top,z,width,length):
- # A continuous cloth surface folds around the rail, with shallow longitudinal pleats.
- profile=[(top-.40+.40*i/15,z+.027)for i in range(16)]
- profile += [(top+.027*sin(pi*i/16),z+.027*cos(pi*i/16))for i in range(1,17)]
- profile += [(top-length*i/24,z-.027)for i in range(1,25)]
- verts=[];nx=24
- for j,(y,zz) in enumerate(profile):
-  drop=max(0,top-y)
-  for i in range(nx+1):
-   u=i/nx;wave=sin(u*pi*5+.3)*.008*min(1,drop*6)
-   verts.append((x+(u-.5)*width,y+.004*sin(u*11)*min(1,drop*4),zz+wave))
- faces=[(j*(nx+1)+i,j*(nx+1)+i+1,(j+1)*(nx+1)+i+1,(j+1)*(nx+1)+i)for j in range(len(profile)-1)for i in range(nx)]
- o=mesh('Bath towel | cloth folded over rail',verts,faces,linen);o.modifiers.new('Terry cloth thickness','SOLIDIFY').thickness=.003
- for i in [0,nx]:tube('Bath towel | stitched edge',[verts[j*(nx+1)+i]for j in range(len(profile))],.0018,linen)
- for j in [len(profile)-1,len(profile)-3]:tube('Bath towel | woven hem',[verts[j*(nx+1)+i]for i in range(nx+1)],.002,linen)
+def draped_towel(x,top,z,width,length):return props['hanging_towel']('Hand towel '+str(x),x,top,z,width,length)
 
-def spun_kettle(loc):
- rings=[(.045,0),(.103,.014),(.118,.08),(.113,.16),(.087,.215),(.063,.225),(.062,.21),(.078,.198),(.102,.151),(.106,.08),(.09,.025),(.045,.02)];n=64
- verts=[(loc[0]+r*cos(i*2*pi/n),loc[1]+y,loc[2]+r*sin(i*2*pi/n))for r,y in rings for i in range(n)]
- faces=[(j*n+i,j*n+(i+1)%n,((j+1)%len(rings))*n+(i+1)%n,((j+1)%len(rings))*n+i)for j in range(len(rings))for i in range(n)]
- o=mesh('Kettle | spun rounded body',verts,faces,chrome);bm=bmesh.new();bm.from_mesh(o.data);bmesh.ops.recalc_face_normals(bm,faces=list(bm.faces));bm.to_mesh(o.data);bm.free()
- cyl('Kettle | fitted lid',(loc[0],loc[1]+.228,loc[2]),.071,.014,chrome)
- cyl('Kettle | lid knob',(loc[0],loc[1]+.248,loc[2]),.023,.031,dark)
- tube('Kettle | arched handle',[(loc[0],loc[1]+.20+.14*sin(pi*i/32),loc[2]+.105*cos(pi*i/32))for i in range(33)],.014,dark)
- tube('Kettle | swept spout',[(loc[0]-.095,loc[1]+.07,loc[2]),(loc[0]-.14,loc[1]+.10,loc[2]),(loc[0]-.17,loc[1]+.18,loc[2]),(loc[0]-.18,loc[1]+.22,loc[2])],.018,chrome)
- cyl('Kettle | open spout tip',(loc[0]-.18,loc[1]+.223,loc[2]),.013,.002,dark)
+def spun_kettle(loc):return props['kettle']('HotelKettle_ROOT',loc)
 def faucet(name,x,z,y,p=None,metal=chrome):
  cyl(name+' escutcheon',(x,y+.009,z),.035,.018,metal,p=p)
  pts=[(x,y,z),(x,y+.21,z),(x,y+.24,z)]
@@ -125,6 +105,10 @@ def faucet(name,x,z,y,p=None,metal=chrome):
  tube(name+' bent spout',pts,.017,metal,p);cyl(name+' aerator',(x-.18,y+.249,z),.019,.018,metal,p=p)
  cyl(name+' lever hub',(x,y+.23,z+.036),.024,.04,metal,'z',p);tube(name+' lever',[(x,y+.245,z+.058),(x-.065,y+.29,z+.058)],.009,metal,p)
 
+sys.path.insert(0,os.path.dirname(os.path.abspath(__file__)))
+from hotel_props import make_props
+props=make_props(globals())
+
 # Bathroom: dry vanity / WC zone and a full-width, separately screened wet zone.
 bath=begin('Bathroom316');parent=bath
 vanity=empty('Vanity_ROOT',(7.77,0,-.2),bath);parent=vanity
@@ -133,18 +117,21 @@ cube('Vanity | right side',(0,.56,.885),(.61,.61,.03),oak)
 cube('Vanity | recessed rear',(.28,.56,0),(.035,.61,1.78),oak)
 cube('Vanity | shelf',(0,.36,0),(.58,.035,1.76),oak)
 cube('Vanity | back shadow',(.30,.56,0),(.025,.61,1.76),dark)
+# A fixed upper rail closes the gap above the doors and conceals the basin underside.
+cube('Vanity | upper face rail',(-.313,.856,0),(.045,.045,1.79),oak,.006)
+cube('Vanity | bottom face rail',(-.313,.259,0),(.045,.035,1.79),oak,.005)
 counter=cube('Vanity | stone counter with cutout',(0,.91,0),(.74,.065,1.92),stone,.018);cut_oval(counter,(-.05,.91,0),.245,.345)
 cube('Vanity | backsplash',(.345,1.0,0),(.035,.16,1.92),stone,.009)
 oval_shell('Vanity | genuinely recessed ceramic basin',(-.05,0,0),[(.245,.345,.949),(.24,.34,.958),(.226,.326,.952),(.212,.312,.93),(.2,.295,.89),(.165,.25,.82),(.105,.17,.755),(.029,.029,.73),(.029,.029,.71),(.1,.16,.723),(.19,.28,.79),(.23,.33,.90)],ceramic)
 drain('Vanity drain',(-.05,.727,0));faucet('Vanity faucet',.235,0,.948)
 for side in [-1,1]:
  pivot=empty('Vanity_Door_Left_Pivot' if side<0 else 'Vanity_Door_Right_Pivot',(-.324,.255,side*.9),vanity)
- dz=-side*.444
- cube('Vanity door | framed oak',(0,.291,dz),(.035,.572,.875),oak,.01,pivot)
- cube('Vanity door | recessed panel',(-.022,.291,dz),(.008,.45,.75),oak,.005,pivot)
+ dz=-side*.45
+ cube('Vanity door | framed oak',(0,.309,dz),(.035,.612,.895),oak,.006,pivot)
+ cube('Vanity door | recessed panel',(-.022,.309,dz),(.008,.49,.75),oak,.005,pivot)
  tube('Vanity door | bar pull',[(-.05,.47,dz-side*.28),(-.075,.47,dz-side*.28),(-.075,.31,dz-side*.28),(-.05,.31,dz-side*.28)],.009,brass,pivot)
  cyl('Vanity door | lock barrel',(-.025,.48,dz),.017,.014,brass,'x',pivot)
-for i in range(3):cube('Folded spare towels',(.08,.405+i*.052,.49),(.34,.048,.44),linen,.018)
+for i in range(3):props['folded_towel']('Folded spare towel '+str(i),(.08,.38+i*.055,.49),.34,.42,vanity)
 cube('UV bulb carton',(-.03,.402,-.43),(.30,.04,.43),stone,.005)
 for z in [-.68,.68]:cube('Cabinet wall bracket',(.24,.25,z),(.14,.05,.04),dark)
 # Mirror trim and toiletries remain independent of the in-game planar reflection.
@@ -199,8 +186,9 @@ for y in [1.09,1.71]:cube('Shower niche stone shelf',(4.65,y,-4.23),(1.22,.04,.2
 for x in [4.06,5.24]:cube('Shower niche side',(x,1.4,-4.23),(.04,.64,.24),stone,.004)
 for i in range(3):
  cyl('Shower amenity bottle',(4.35+i*.29,1.25,-4.21),.043,.26,material('Amber amenity '+str(i),(.18,.11+.025*i,.045),.25));cyl('Amenity pump',(4.35+i*.29,1.4,-4.21),.026,.04,brass)
-for y in [1.06,1.48]:tube('Towel rail',[(6.05,y,1.32),(6.05,y,1.22),(6.70,y,1.22),(6.70,y,1.32)],.012,brass)
-for x in [6.24,6.51]:draped_towel(x,1.48,1.22,.25,.55)
+tube('Towel rail | mounted to tiled wall',[(6.05,1.48,1.45),(6.05,1.48,1.36),(6.70,1.48,1.36),(6.70,1.48,1.45)],.012,brass)
+for x in [6.05,6.70]:cyl('Towel rail | wall rosette',(x,1.48,1.455),.026,.018,brass,'z')
+for x in [6.22,6.54]:draped_towel(x,1.48,1.36,.28,.50 if x<6.4 else .46)
 # Privacy door: framed frosted pane above a solid lower panel, hinged into the dry zone.
 entry=empty('Bath_Entry_Pivot',(3.76,0,-1),bath)
 cube('Bathroom door lower panel',(0,.77,.675),(.045,1.5,1.35),oak,.015,entry)
@@ -219,7 +207,7 @@ cube('Kitchen | toe kick',(0,.10,0),(3.62,.15,.57),dark)
 cube('Kitchen | bottom shelf',(0,.20,0),(3.68,.04,.65),oak)
 for x in [-1.82,-1.30,0,.91,1.82]:cube('Kitchen | cabinet partition',(x,.54,0),(.035,.69,.67),oak)
 for x in [-1.35,-.45,.45,1.35]:
- cube('Kitchen | door framed front',(x,.54,.355),(.87,.67,.035),oak,.014)
+ cube('Kitchen | door framed front',(x,.54,.355),(.895,.67,.035),oak,.006)
  cube('Kitchen | door inset panel',(x,.54,.377),(.73,.52,.012),oak,.006)
  tube('Kitchen | brass pull',[(x-.13,.76,.39),(x-.13,.76,.43),(x+.13,.76,.43),(x+.13,.76,.39)],.009,brass)
 top=cube('Kitchen | stone counter with real sink opening',(0,.93,0),(3.83,.07,.81),stone,.016);cut_oval(top,(-.8,.93,0),.365,.275)
@@ -239,7 +227,7 @@ for x in [.68,1.08]:
  for rr in [.065,.092,.12]:
   tube('Hob ceramic ring',[(x+rr*cos(2*pi*i/64),.992,rr*sin(2*pi*i/64)) for i in range(65)],.0025,chrome)
  for z in [-.18]:cyl('Hob control',(x,.999,z),.022,.012,brass)
-cyl('Kettle | base',(1.49,.993,0),.105,.025,dark);spun_kettle((1.49,1.005,0))
+spun_kettle((1.49,.970,0))
 
 # A round enamel wall clock, with independent hour/minute hand pivots.
 clock=begin('WallClock316');parent=clock
@@ -284,10 +272,7 @@ for x in [-.65,.65]:
  for z in [-.25,.25]:cyl('Coffee table | leg',(x,.23,z),.025,.44,brass)
 cube('Coffee table | lower shelf',(0,.16,0),(1.45,.035,.59),oak,.014)
 cube('Hotel magazine pages',(-.38,.558,-.02),(.34,.025,.43),linen,.003);cube('Hotel magazine cover',(-.38,.573,-.02),(.35,.006,.44),material('Magazine muted ink',(.18,.23,.2),.72),.003)
-for x in [.22,.53]:
- cyl('Coffee cup saucer',(x,.555,.06),.09,.014,ceramic)
- oval_shell('Coffee cup',(x,0,.06),[(.05,.05,.57),(.054,.054,.68),(.048,.048,.685),(.043,.043,.588)],ceramic,n=32)
- tube('Coffee cup handle',[(x+.05+.035*cos(a),.63+.035*sin(a),.06) for a in np.linspace(-pi/2,pi/2,25)],.007,ceramic)
+for i,x in enumerate([.22,.53]):props['cup']('LoungeCup_'+str(i),(x,.544,.06),table)
 
 # Bedroom: framed wardrobe, believable wire hangers, and an actually hollow travel case.
 bedroom=begin('Bedroom316');parent=bedroom
@@ -308,8 +293,8 @@ for i,x in enumerate([-.54,0,.54]):
  tube('Hanger | curved open hook',hook,.0045,chrome,h)
 for side in [-1,1]:
  p=empty('Wardrobe_Door_Left_Pivot' if side<0 else 'Wardrobe_Door_Right_Pivot',(side*.93,0,-.4),wardrobe)
- x=-side*.454
- cube('Wardrobe door | frame',(x,1.32,0),(.90,2.18,.055),oak,.014,p)
+ x=-side*.465
+ cube('Wardrobe door | frame',(x,1.32,0),(.924,2.18,.055),oak,.008,p)
  cube('Wardrobe door | upper inset',(x,1.77,-.035),(.72,.97,.018),oak,.006,p)
  cube('Wardrobe door | lower inset',(x,.70,-.035),(.72,.84,.018),oak,.006,p)
  tube('Wardrobe door | brass pull',[(x-side*.3,1.11,-.055),(x-side*.3,1.11,-.10),(x-side*.3,1.31,-.10),(x-side*.3,1.31,-.055)],.011,brass,p)
@@ -348,6 +333,13 @@ for coll in collections.values():
  for ob in list(coll.objects):
   if ob.type in {'CURVE','FONT','MESH'}:
    bpy.ops.object.select_all(action='DESELECT');ob.select_set(True);bpy.context.view_layer.objects.active=ob;bpy.ops.object.convert(target='MESH')
+   bm=bmesh.new();bm.from_mesh(ob.data);bmesh.ops.recalc_face_normals(bm,faces=list(bm.faces));bm.to_mesh(ob.data);bm.free()
+   if not ob.get('preserve_uv'):
+    uv=ob.data.uv_layers.active or ob.data.uv_layers.new(name='UVMap')
+    for poly in ob.data.polygons:
+     drop=max(range(3),key=lambda k:abs(poly.normal[k]));axes=[k for k in range(3)if k!=drop]
+     for li in poly.loop_indices:
+      co=ob.data.vertices[ob.data.loops[li].vertex_index].co;uv.data[li].uv=(co[axes[0]],co[axes[1]])
  groups={}
  for ob in list(coll.objects):
   if ob.type=='MESH':groups.setdefault((ob.parent.name if ob.parent else '',ob.active_material.name if ob.active_material else ''),[]).append(ob)

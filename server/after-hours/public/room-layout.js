@@ -1,6 +1,7 @@
 // Walkable interiors and door channels share one layout with the scene and tests.
 export const ZONES={
  bedroom:{x0:-3.6,x1:3.6,z0:-4.5,z1:4.5,label:'316호 · 침실'},
+ twin:{x0:-9.2,x1:-3.6,z0:4.5,z1:10.5,label:'316호 · 트윈 침실'},
  living:{x0:-3.6,x1:3.6,z0:4.5,z1:10.5,label:'316호 · 거실'},
  kitchen:{x0:3.6,x1:9.6,z0:4.5,z1:10.5,label:'316호 · 간이주방'},
  bath:{x0:3.6,x1:8.2,z0:-4.5,z1:1.5,label:'316호 · 욕실'},
@@ -9,6 +10,7 @@ export const ZONES={
  exitHall:{x0:4.81,x1:6.49,z0:20.7,z1:23.65,label:'3층 · 비상구 앞',gate:'exitOpen'},
 };
 export const PASSAGES=[
+ {axis:'x',at:-3.6,low:6.3,high:7.7},
  {axis:'z',at:4.5,low:1.46,high:2.78},
  {axis:'x',at:3.6,low:6.9,high:8.4},
  {axis:'x',at:3.6,low:-1,high:.4},

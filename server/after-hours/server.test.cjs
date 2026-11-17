@@ -16,7 +16,7 @@ test('hotel assets load under their prefix alongside existing games', async () =
     assert.match(page.headers.get('content-security-policy'), /connect-src 'self' blob:/);
     const html = await page.text();
     assert.match(html, /316호에서 눈뜨기/);
-    for (const name of ['style.css', 'game.js', 'test-starts.js', 'room-state.js', 'room-layout.js', 'room-scene.js', 'domestic-models.js', 'room-details.js', 'exterior-scene.js', 'Reflector.js', 'GLTFLoader.js', 'BufferGeometryUtils.js', 'three.module.js', 'THREE-LICENSE.txt','assets/hotel-photo.jpg','assets/rainy-town-night.jpg','assets/herringbone_parquet_Diffuse.jpg']) {
+    for (const name of ['style.css', 'game.js', 'test-starts.js', 'room-state.js', 'room-layout.js', 'room-scene.js', 'domestic-models.js', 'room-details.js', 'twin-room.js', 'exterior-scene.js', 'Reflector.js', 'GLTFLoader.js', 'BufferGeometryUtils.js', 'three.module.js', 'THREE-LICENSE.txt','assets/hotel-photo.jpg','assets/rainy-town-night.jpg','assets/herringbone_parquet_Diffuse.jpg']) {
       const r = await fetch(origin + '/after-hours/' + name);
       assert.equal(r.status, 200, name);
       assert.ok(Number(r.headers.get('content-length')) > 100, name);
@@ -35,7 +35,7 @@ test('hotel assets load under their prefix alongside existing games', async () =
     assert.equal(gltf.images.length, 15);
     assert.ok(gltf.images.every(image => image.bufferView !== undefined && !image.uri));
     assert.equal(gltf.cameras, undefined);
-    for(const name of ['bathroom-316.glb','kitchen-316.glb','wall-clock-316.glb','lounge-316.glb','bedroom-fixtures-316.glb','guestroom-317.glb','suite-details-316.glb']){
+    for(const name of ['bathroom-316.glb','kitchen-316.glb','wall-clock-316.glb','lounge-316.glb','bedroom-fixtures-316.glb','guestroom-317.glb','suite-details-316.glb','twin-room-316.glb']){
       const response=await fetch(origin+'/after-hours/assets/models/'+name);assert.equal(response.status,200,name);assert.equal(response.headers.get('content-type'),'model/gltf-binary');const data=Buffer.from(await response.arrayBuffer());assert.equal(data.toString('ascii',0,4),'glTF');assert.equal(data.readUInt32LE(8),data.length);
     }
     const modelHead = await fetch(origin + '/after-hours/assets/models/bed-316.glb', {method:'HEAD'});

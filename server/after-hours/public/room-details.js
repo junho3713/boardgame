@@ -2,6 +2,9 @@ import * as T from './three.module.js';
 import {GLTFLoader} from './GLTFLoader.js';
 import {Reflector} from './Reflector.js';
 
+// GLTFLoader replaces spaces and punctuation in Blender node names.
+export function getModelNode(root,name){return root.getObjectByName(name)||root.getObjectByName(T.PropertyBinding.sanitizeNodeName(name));}
+
 // Mirrors share a visibility guard, preserving the lounge's reflection-only puzzle ink.
 const mirrorSets=new WeakMap();
 export function registerRoomMirror(scene,mirror){
@@ -14,9 +17,9 @@ export function buildRoomDetails({scene,renderer,manager,state,solids,legacy,can
  const loader=new GLTFLoader(manager);let lid,safeDoor,drum,numberFaces=[],symbolFaces=[];
  const result={guestLoaded:false,suiteLoaded:false,update,setPuzzleDials};
  const safeDoorSolid={x:4.24,z:19.18,w:.84,d:.07,yaw:0};
- const required=(root,name)=>{const o=root.getObjectByName(name);if(!o)throw Error('Missing room detail '+name);return o;};
+ const required=(root,name)=>{const o=getModelNode(root,name);if(!o)throw Error('Missing room detail '+name);return o;};
  function interactive(o,id,label){Object.assign(o.userData,{interactId:id,label});}
- function load(file,apply){loader.load('./assets/models/'+file+'?v=20261117-details2',gltf=>{
+ function load(file,apply){loader.load('./assets/models/'+file+'?v=20261117-suite7',gltf=>{
   const model=gltf.scene;model.name=file;model.traverse(o=>{if(!o.isMesh)return;o.castShadow=true;o.receiveShadow=true;for(const m of Array.isArray(o.material)?o.material:[o.material])if(m.map)m.map.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());});
   try{apply(model);scene.add(model);model.updateMatrixWorld(true);}catch(e){console.error('Room detail model validation failed',file,e);model.removeFromParent();}
  },undefined,()=>{});}
@@ -35,9 +38,9 @@ export function buildRoomDetails({scene,renderer,manager,state,solids,legacy,can
   solids.push({x:5.12,z:16.92,w:.58,d:.59,yaw:Math.PI/2},{x:9.38,z:19.51,w:.55,d:.50},{x:7.12,z:17.18,w:.67,d:.58},safeDoorSolid);
   const reflection=new Reflector(new T.CircleGeometry(.435,64),{color:0xc9d1cd,textureWidth:512,textureHeight:512,clipBias:.003});reflection.position.set(9,1.75,20.545);reflection.rotation.y=Math.PI;scene.add(reflection);registerRoomMirror(scene,reflection);
   const light=new T.PointLight('#f9d9a9',2.7,3.6,1.8);light.position.set(7.12,1.15,17.18);scene.add(light);
-  result.guestLoaded=true;update(1,0);
+  interactive(required(model,'TeaService317'),'cup','도자기 찻잔');result.guestLoaded=true;update(1,0);
  });
- load('suite-details-316.glb',()=>{legacy.suite.forEach(o=>o.visible=false);result.suiteLoaded=true;});
+ load('suite-details-316.glb',model=>{for(const name of ['MinibarCup_0','MinibarCup_1','Trolley | spare cup'])interactive(required(model,name),'cup','도자기 찻잔');legacy.suite.forEach(o=>o.visible=false);(legacy.minibar||[]).forEach(o=>o.visible=false);result.suiteLoaded=true;});
  function update(dt,time=0){if(!result.guestLoaded)return;const k=Math.min(1,dt*4);
   lid.rotation.x+=( (state.luggageOpen?1.82:0)-lid.rotation.x)*k;
   safeDoor.rotation.y+=( (state.safeOpen?1.52:0)-safeDoor.rotation.y)*k;

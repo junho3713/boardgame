@@ -2,10 +2,11 @@ import * as T from './three.module.js';
 import {Reflector} from './Reflector.js';
 import {GLTFLoader} from './GLTFLoader.js';
 import {buildExterior} from './exterior-scene.js?v=20261117-environment2';
-import {uvVisible} from './room-state.js?v=20261117-fixtures1';
-import {canWalk} from './room-layout.js?v=20261117-fixtures1';
-import {buildDomesticModels} from './domestic-models.js?v=20261117-details2';
-import {buildRoomDetails} from './room-details.js?v=20261117-details2';
+import {uvVisible} from './room-state.js?v=20261117-suite7';
+import {canWalk} from './room-layout.js?v=20261117-suite7';
+import {buildDomesticModels} from './domestic-models.js?v=20261117-suite7';
+import {buildTwinRoom} from './twin-room.js?v=20261117-suite7';
+import {buildRoomDetails} from './room-details.js?v=20261117-suite7';
 
 export function buildRoom(renderer,state){
  const scene=new T.Scene();scene.background=new T.Color('#121616');scene.fog=new T.FogExp2('#121616',.014);
@@ -54,7 +55,7 @@ export function buildRoom(renderer,state){
  box(2.15,3.2,.16,-2.525,1.6,-4.58,wallpaper);box(2.15,3.2,.16,2.525,1.6,-4.58,wallpaper);box(2.9,.65,.16,0,2.875,-4.58,wallpaper);box(2.9,.7,.16,0,.35,-4.58,wallpaper);
  // Open bedroom doorway. The suite's locked front door is in the living room.
  for(const z of[4.58,10.58]){box(5.05,3.2,.16,-1.075,1.6,z,wallpaper);box(.8,3.2,.16,3.2,1.6,z,wallpaper);box(1.35,.5,.16,2.125,2.95,z,wallpaper);}
- box(.16,3.2,6,-3.68,1.6,7.5,wallpaper);box(.16,3.2,6,9.68,1.6,7.5,wallpaper);
+ for(const [z,d]of[[5.4,1.8],[9.1,2.8]])box(.16,3.2,d,-3.68,1.6,z,wallpaper);box(.16,.5,1.4,-3.68,2.95,7.0,wallpaper);box(.16,3.2,6,9.68,1.6,7.5,wallpaper);
  for(const [z,d]of[[5.7,2.4],[9.45,2.1]])box(.16,3.2,d,3.68,1.6,z,wallpaper);box(.16,.5,1.5,3.68,2.95,7.65,wallpaper);
  for(const z of[4.58,10.58])box(6,3.2,.16,6.6,1.6,z,wallpaper);
  for(const [x,z,w,d]of[[0,0,7.4,9.2],[0,7.5,7.4,6],[6.6,7.5,6,6]])box(w,.12,d,x,3.27,z,mat('#827b68'));
@@ -73,7 +74,8 @@ export function buildRoom(renderer,state){
  // Suite wainscot and trim follow the openings instead of covering them.
  for(const [x,z,d]of[[-3.58,0,9],[3.58,-2.75,3.5],[3.58,2.45,4.1]]){box(.08,.78,d,x,.39,z,darkwood);box(.11,.065,d,x,.82,z,brass);box(.12,.09,d,x,.09,z,wood);for(const y of[3.03,3.12,3.18])box(.15,.055,d,x,y,z,ivory);}
  for(const z of[-4.49,4.49,4.68,10.49])for(const [x,w]of(z<0?[[0,7.2]]:[[-1.075,5.05],[3.2,.8]])){box(w,.78,.07,x,.39,z,darkwood);box(w,.06,.09,x,.82,z,brass);box(w,.09,.1,x,.09,z,wood);for(const y of[3.03,3.12,3.18])box(w,.055,.15,x,y,z,ivory);}
- for(const x of[-3.58,9.58]){box(.08,.78,6,x,.39,7.5,darkwood);box(.11,.065,6,x,.82,7.5,brass);box(.12,.09,6,x,.09,7.5,wood);box(.15,.055,6,x,3.12,7.5,ivory);}
+ for(const [z,d]of[[5.4,1.8],[9.1,2.8]]){box(.08,.78,d,-3.58,.39,z,darkwood);box(.11,.065,d,-3.58,.82,z,brass);box(.12,.09,d,-3.58,.09,z,wood);}box(.15,.055,6,-3.58,3.12,7.5,ivory);
+ for(const x of[9.58]){box(.08,.78,6,x,.39,7.5,darkwood);box(.11,.065,6,x,.82,7.5,brass);box(.12,.09,6,x,.09,7.5,wood);box(.15,.055,6,x,3.12,7.5,ivory);}
  for(const [z,d]of[[5.7,2.4],[9.45,2.1]]){box(.08,.78,d,3.58,.39,z,darkwood);box(.11,.065,d,3.58,.82,z,brass);}
  for(const z of[4.68,10.49]){box(6,.78,.07,6.6,.39,z,darkwood);box(6,.06,.09,6.6,.82,z,brass);box(6,.06,.12,6.6,3.12,z,ivory);}
  for(const [x,z,r]of[[2.12,4.4,Math.PI],[2.12,4.76,0]])sign(z<4.5?'거실 · LIVING':'침실 · BEDROOM',.92,.18,x,2.85,z,r);
@@ -126,9 +128,9 @@ export function buildRoom(renderer,state){
  shiftSince(vanityStart,vanitySolids,4.5,.65);const legacyVanity=scene.children.slice(vanityStart);for(const b of solids.slice(vanitySolids))b.bathLegacy=true;
  const diningStart=scene.children.length,diningSolids=solids.length;
  // Ledger and stationery. The worksheet texture is shared with the movable overlay puzzle.
- const ledger=interactive(box(.62,.025,.72,2.9,1.08,-2.05,paper),'ledger','인화 작업표');const blotter=box(.76,.015,1.12,2.98,1.059,-2.03,leather);ledger.position.y=1.076;
- const ledgerPrint=canvasTexture((a,w,h)=>{a.fillStyle='#bda680';a.fillRect(0,0,w,h);a.fillStyle='#514738';a.font='28px serif';a.fillText('CONTACT  /  316',55,80);a.strokeStyle='#5b503b';for(let x=50;x<600;x+=80){a.beginPath();a.moveTo(x,140);a.lineTo(x,700);a.stroke();}for(let y=140;y<740;y+=80){a.beginPath();a.moveTo(50,y);a.lineTo(570,y);a.stroke();}a.font='30px monospace';for(let y=0;y<6;y++)for(let x=0;x<6;x++)a.fillText(String((x*7+y*3)%10),70+x*80,190+y*80);},640,800);const lp=mesh(new T.PlaneGeometry(.6,.7),new T.MeshStandardMaterial({map:ledgerPrint,roughness:1}));lp.rotation.x=-Math.PI/2;lp.position.set(2.9,1.091,-2.05);interactive(lp,'ledger','인화 작업표');
- for(const x of [2.7,3.0]){const pen=cyl(.009,.009,.25,x,1.078,-1.48,brass);pen.rotation.z=Math.PI/2;}
+ const ledger=interactive(box(.62,.025,.72,2.9,1.08,-2.05,paper),'ledger','인화 작업표');const blotter=box(.76,.015,1.12,2.98,.799,-2.03,leather);ledger.position.y=.816;
+ const ledgerPrint=canvasTexture((a,w,h)=>{a.fillStyle='#bda680';a.fillRect(0,0,w,h);a.fillStyle='#514738';a.font='28px serif';a.fillText('CONTACT  /  316',55,80);a.strokeStyle='#5b503b';for(let x=50;x<600;x+=80){a.beginPath();a.moveTo(x,140);a.lineTo(x,700);a.stroke();}for(let y=140;y<740;y+=80){a.beginPath();a.moveTo(50,y);a.lineTo(570,y);a.stroke();}a.font='30px monospace';for(let y=0;y<6;y++)for(let x=0;x<6;x++)a.fillText(String((x*7+y*3)%10),70+x*80,190+y*80);},640,800);const lp=mesh(new T.PlaneGeometry(.6,.7),new T.MeshStandardMaterial({map:ledgerPrint,roughness:1}));lp.rotation.x=-Math.PI/2;lp.position.set(2.9,.831,-2.05);interactive(lp,'ledger','인화 작업표');
+ for(const x of [2.7,3.0]){const pen=cyl(.009,.009,.25,x,.818,-1.48,brass);pen.rotation.z=Math.PI/2;}
  const chair=group(1.83,0,-2.15);rb(.53,.08,.56,0,.51,0,darkwood,chair);rb(.49,.07,.52,0,.57,0,leather,chair);for(const x of [-.21,.21])for(const z of [-.22,.22])rod([x,0,z],[x,.52,z],.026,darkwood,chair);for(const z of [-.22,.22])rod([-.22,.5,z],[-.22,1.14,z],.025,darkwood,chair);rb(.055,.44,.48,-.23,.94,0,darkwood,chair);solid(1.83,-2.15,.56,.6);shadow(1.83,-2.15,.9,.9);
  // Mantel clock: glass, hands, minute marks and a spring-loaded compartment.
  const clock=interactive(group(2.96,1.09,-2.87),'clock','멈춘 탁상시계');clock.rotation.y=-Math.PI/2;rb(.47,.1,.22,0,.03,0,darkwood,clock);rb(.37,.45,.18,0,.29,0,darkwood,clock,.035);const clockface=canvasTexture((a,w,h)=>{a.fillStyle='#d1c6a5';a.fillRect(0,0,w,h);a.translate(w/2,h/2);a.strokeStyle='#514737';a.lineWidth=5;a.beginPath();a.arc(0,0,235,0,Math.PI*2);a.stroke();for(let i=0;i<60;i++){a.save();a.rotate(i*Math.PI/30);a.lineWidth=i%5?2:5;a.beginPath();a.moveTo(0,-205);a.lineTo(0,i%5?-215:-225);a.stroke();a.restore();}a.fillStyle='#3a352c';a.textAlign='center';a.textBaseline='middle';a.font='48px serif';for(let i=1;i<=12;i++)a.fillText(String(i),Math.sin(i*Math.PI/6)*166,-Math.cos(i*Math.PI/6)*166);},512);const face=mesh(new T.CircleGeometry(.17,64),new T.MeshStandardMaterial({map:clockface,roughness:.65}),clock);face.position.set(0,.3,.101);const hr=box(.014,.1,.006,0,.33,.111,black,clock);const mn=box(.009,.14,.007,0,.35,.12,black,clock);ball(.015,.015,.008,0,.3,.13,brass,clock);const glassface=mesh(new T.CircleGeometry(.172,64),new T.MeshPhysicalMaterial({transparent:true,opacity:.11,roughness:.12,color:'#b9c8ce',depthWrite:false}),clock);glassface.position.set(0,.3,.14);glassface.castShadow=false;
@@ -158,11 +160,12 @@ export function buildRoom(renderer,state){
  const coffee=group(-1.35,0,6.85);rb(1.7,.08,.8,0,.49,0,wood,coffee);for(const x of[-.68,.68])for(const z of[-.27,.27])rod([x,0,z],[x,.45,z],.03,brass,coffee);const magazine=box(.36,.025,.45,-.2,.55,0,paper,coffee);solid(-1.35,6.85,1.75,.85);shadow(-1.35,6.85,2.2,1.3);
  const legacyLounge=scene.children.slice(loungeStart);
  const loungeRug=rug.clone();loungeRug.position.set(-1.35,.022,7.5);loungeRug.scale.set(1.45,1.05,1);scene.add(loungeRug);
- const minibar=interactive(group(-2.92,0,9.7),'minibar','거실 미니바');rb(.93,.9,.65,0,.48,0,wood,minibar);rb(1.02,.06,.73,0,.96,0,darkwood,minibar);for(const x of[-.22,.22])cyl(.065,.045,.12,x,1.06,0,ivory,minibar);solid(-2.92,9.7,1,.75);shadow(-2.92,9.7,1.3,1.1);
+ const minibarCups=[];
+ const minibar=interactive(group(-2.92,0,9.7),'minibar','거실 미니바');rb(.93,.9,.65,0,.48,0,wood,minibar);rb(1.02,.06,.73,0,.96,0,darkwood,minibar);for(const x of[-.22,.22])minibarCups.push(cyl(.065,.045,.12,x,1.06,0,ivory,minibar));solid(-2.92,9.7,1,.75);shadow(-2.92,9.7,1.3,1.1);
  for(const [x,z,id]of[[0,7.35,'living'],[6.5,7.3,'kitchen']]){const fixture=group(x,3.05,z);cyl(.34,.4,.07,0,0,0,brass,fixture);ball(.3,.13,.3,0,-.13,0,new T.MeshStandardMaterial({color:'#e3d7b9',emissive:'#edc79a',emissiveIntensity:.4}),fixture);const light=new T.PointLight('#f2c69b',id==='living'?23:26,9,1.7);light.position.set(x,2.7,z);scene.add(light);suiteLights.push({fixture,light,base:light.intensity});}
  // A suite directory and the companion guest's spare key belong inside 316.
- const directory=sign('316 · SUITE\n침실 / 거실 / 간이주방 / 욕실',.65,.42,.65,1.7,4.4,Math.PI);interactive(directory,'suiteDirectory','316호 객실 안내');
- const keyRack=interactive(rb(.42,.32,.045,.8,1.55,10.39,darkwood),'passKey','317호 예비 열쇠 걸이');const passKey=interactive(group(.8,1.5,10.32),'passKey','317호 예비 열쇠');const passRing=mesh(new T.TorusGeometry(.045,.008,8,20),brass,passKey);rod([0,-.04,0],[0,-.17,0],.009,brass,passKey);box(.045,.02,.02,.012,-.14,0,brass,passKey);box(.12,.15,.018,.11,-.06,0,paper,passKey);sign('317 · 동행인 보관',.42,.1,.8,1.83,10.35,Math.PI);
+ const directory=sign('316 · SUITE\n침실 2 / 거실 / 주방 / 욕실',.65,.42,.65,1.7,4.4,Math.PI);interactive(directory,'suiteDirectory','316호 객실 안내');
+ sign('동행인 · 트윈 침실 ←',.65,.16,.8,1.83,10.35,Math.PI);
  const livingSwitch=interactive(group(.25,1.35,10.38),'switch','316호 조명 스위치');rb(.13,.22,.025,0,0,0,ivory,livingSwitch,.008);rb(.055,.1,.025,0,0,-.022,black,livingSwitch,.008);
  // The corridor has a runner, sconces, room numbers and a separate 317 entrance.
  const runner=mesh(new T.PlaneGeometry(13.4,1.45),new T.MeshStandardMaterial({map:fabricMap,color:'#673f35',roughness:1}));runner.rotation.x=-Math.PI/2;runner.position.set(3.3,.025,12);
@@ -182,8 +185,8 @@ export function buildRoom(renderer,state){
  rb(.84,.035,.58,7.18,.99,5.04,black);for(const x of[6.98,7.38]){cyl(.15,.15,.018,x,1.02,5.04,brass);cyl(.115,.115,.025,x,1.032,5.04,black);}cyl(.11,.13,.19,7.8,1.09,5.03,sinkSteel);rod([7.7,1.22,5.03],[7.91,1.22,5.03],.018,black);
  const legacyKitchen=scene.children.slice(kitchenStart).filter(o=>o!==kitchenBacksplash);
  const suiteDetailsStart=scene.children.length;
- const fridge=group(4.15,0,5.14);rb(.78,1.94,.88,0,.99,0,mat('#a8aba0',.4,.18),fridge,.035);box(.73,.025,.025,0,1.32,.46,black,fridge);for(const y of[.9,1.56])rod([.25,y-.13,.49],[.25,y+.13,.49],.018,brass,fridge);solid(4.15,5.14,.83,.92);shadow(4.15,5.14,1.1,1.2);
- const diningTable=group(8.98,0,6.85);rb(.95,.08,2.02,0,1.02,0,wood,diningTable);for(const x of[-.34,.34])for(const z of[-.82,.82])rod([x,0,z],[x,.98,z],.035,darkwood,diningTable);solid(8.98,6.85,1.0,2.05);shadow(8.98,6.85,1.5,2.6);
+ const fridge=group(4.0,0,5.14);rb(.64,1.94,.88,0,.99,0,mat('#a8aba0',.4,.18),fridge,.035);box(.73,.025,.025,0,1.32,.46,black,fridge);for(const y of[.9,1.56])rod([.25,y-.13,.49],[.25,y+.13,.49],.018,brass,fridge);solid(4.0,5.14,.66,.92);shadow(4.15,5.14,1.1,1.2);
+ const diningTable=group(8.98,0,6.85);rb(.95,.08,2.02,0,.76,0,wood,diningTable);for(const x of[-.34,.34])for(const z of[-.82,.82])rod([x,0,z],[x,.72,z],.035,darkwood,diningTable);solid(8.98,6.85,1.0,2.05);shadow(8.98,6.85,1.5,2.6);
  const trolley=group(5.2,0,9.3);for(const y of[.25,.78])rb(1.25,.05,.62,0,y,0,darkwood,trolley);for(const x of[-.55,.55])for(const z of[-.25,.25])rod([x,.1,z],[x,.9,z],.015,brass,trolley);for(const x of[-.5,.5])for(const z of[-.22,.22])ball(.06,.06,.025,x,.07,z,black,trolley);for(let i=0;i<5;i++)cyl(.12,.12,.015,5.1,.83+i*.016,9.3,ivory);solid(5.2,9.3,1.3,.7);shadow(5.2,9.3,1.6,1.0);
  // A separate tiled bathroom contains the locked vanity and its UV bulb.
  const legacySuiteDetails=[chair,...scene.children.slice(suiteDetailsStart)];
@@ -213,16 +216,16 @@ export function buildRoom(renderer,state){
  const blanketNote=box(.23,.015,.35,5.1,.94,6.4,paper);const tag317=interactive(blanketNote,'tag317','침대 위 수하물표');tag317.rotation.y=.15;
  // A compact writing table leaves a clear walking route from the connecting door.
  const guestFurnitureStart=scene.children.length;
- const table317=group(1.24,0,8.2);rb(.95,.08,1.65,0,.99,0,wood,table317);for(const x of[-.35,.35])for(const z of[-.65,.65])rod([x,0,z],[x,.95,z],.035,darkwood,table317);solid(1.24,8.2,1,1.7);shadow(1.24,8.2,1.4,2.1);
- const receipt317=interactive(box(.31,.012,.48,1.25,1.045,7.9,paper),'receipt317','접힌 룸서비스 영수증');receipt317.rotation.y=-.15;
+ const table317=group(1.24,0,8.2);rb(.95,.08,1.65,0,.76,0,wood,table317);for(const x of[-.35,.35])for(const z of[-.65,.65])rod([x,0,z],[x,.72,z],.035,darkwood,table317);solid(1.24,8.2,1,1.7);shadow(1.24,8.2,1.4,2.1);
+ const receipt317=interactive(box(.31,.012,.48,1.25,.815,7.9,paper),'receipt317','접힌 룸서비스 영수증');receipt317.rotation.y=-.15;
  for(const [sheet,title]of [[receipt317,'ROOM SERVICE'],[tag317,'HOTEL / 317']]){const print=canvasTexture((a,w,h)=>{a.fillStyle='#cbb58c';a.fillRect(0,0,w,h);a.strokeStyle='#61513b';a.lineWidth=3;a.strokeRect(16,16,w-32,h-32);a.fillStyle='#443e30';a.textAlign='center';a.font='24px serif';a.fillText(title,w/2,60);a.font='46px serif';a.fillText('317',w/2,130);for(let y=180;y<330;y+=24){a.fillStyle='#78684d';a.fillRect(40,y,w-80,2);}},256,384);const ink=mesh(new T.PlaneGeometry(sheet===tag317?.22:.3,sheet===tag317?.34:.47),new T.MeshStandardMaterial({map:print,roughness:1}),sheet);ink.rotation.x=-Math.PI/2;ink.position.y=.009;}
  const cup317=cyl(.065,.05,.11,1.2,1.08,8.65,ivory);cyl(.1,.1,.015,1.2,1.025,8.65,ivory);const cupHandle=mesh(new T.TorusGeometry(.035,.008,8,20),ivory);cupHandle.position.set(1.28,1.09,8.65);cupHandle.rotation.y=Math.PI/2;
  // A suitcase on a luggage rack, with independent hinged lid and three brass dials.
  const luggage317=interactive(group(5.7,.65,9.6),'luggage317','다이얼이 달린 여행가방');rb(1.35,.34,.8,0,0,0,leather,luggage317,.04);const luggageLid=group(0,.18,.4,luggage317);rb(1.35,.1,.8,0,0,-.4,leather,luggageLid,.035);for(const x of[-.44,.44])box(.08,.38,.84,x,.01,0,darkwood,luggage317);for(const x of[-.1,0,.1]){const d=cyl(.048,.048,.06,x,.08,-.43,brass,luggage317);d.rotation.x=Math.PI/2;}rod([-.18,.1,-.46],[.18,.1,-.46],.012,brass,luggage317);for(const x of[5.1,6.3])for(const z of[9.3,9.9])rod([x,0,z],[x,.48,z],.028,darkwood);box(1.4,.05,.9,5.7,.45,9.6,darkwood);solid(5.7,9.6,1.5,1);shadow(5.7,9.6,1.8,1.5);
  // Vanity, small round mirror and music box with visible brass drum and winding socket.
- const vanity=group(5.9,0,11.16);rb(2,.09,.72,0,.91,0,wood,vanity);for(const x of[-.84,.84])for(const z of[-.22,.22])rod([x,0,z],[x,.86,z],.04,darkwood,vanity);solid(5.9,11.16,2.05,.8);shadow(5.9,11.16,2.4,1.2);
+ const vanity=group(5.9,0,11.16);rb(2,.09,.72,0,.76,0,wood,vanity);for(const x of[-.84,.84])for(const z of[-.22,.22])rod([x,0,z],[x,.71,z],.04,darkwood,vanity);solid(5.9,11.16,2.05,.8);shadow(5.9,11.16,2.4,1.2);
  const vm=mesh(new T.CircleGeometry(.44,48),new T.MeshStandardMaterial({color:'#8b9690',metalness:.8,roughness:.16}));vm.position.set(6,1.75,11.57);vm.rotation.y=Math.PI;const vr=mesh(new T.TorusGeometry(.46,.025,10,48),brass);vr.position.copy(vm.position);
- const musicBox=interactive(group(5.5,.97,11.06),'musicBox','태엽 구멍이 있는 오르골');rb(.61,.2,.42,0,.08,0,darkwood,musicBox);rb(.65,.035,.46,0,.2,0,brass,musicBox);const musicDrum=group(0,.29,0,musicBox);const md=cyl(.11,.11,.25,0,0,0,brass,musicDrum);md.rotation.z=Math.PI/2;for(let i=0;i<12;i++)ball(.012,.012,.012,Math.sin(i*2)*.1,.04,Math.cos(i*2)*.1,ivory,musicDrum);cyl(.025,.025,.03,-.32,.08,0,black,musicBox);sign('317 · NOCTURNE',.48,.08,5.5,1.02,10.835,Math.PI);
+ const musicBox=interactive(group(5.5,.82,11.06),'musicBox','태엽 구멍이 있는 오르골');rb(.61,.2,.42,0,.08,0,darkwood,musicBox);rb(.65,.035,.46,0,.2,0,brass,musicBox);const musicDrum=group(0,.29,0,musicBox);const md=cyl(.11,.11,.25,0,0,0,brass,musicDrum);md.rotation.z=Math.PI/2;for(let i=0;i<12;i++)ball(.012,.012,.012,Math.sin(i*2)*.1,.04,Math.cos(i*2)*.1,ivory,musicDrum);cyl(.025,.025,.03,-.32,.08,0,black,musicBox);sign('317 · NOCTURNE',.48,.08,5.5,.87,10.835,Math.PI);
  // Wardrobe above a recessed safe; door really opens after the symbol puzzle.
  const wardrobe317=group(1.24,0,10.75);box(1.1,2.4,.72,0,1.2,0,darkwood,wardrobe317);for(const x of[-.3,.3])rb(.48,1.05,.05,x,1.82,-.39,wood,wardrobe317);solid(1.24,10.75,1.15,.82);shadow(1.24,10.75,1.5,1.2);
  const safe317=interactive(group(1.24,.66,10.32),'safe317','네 문양의 객실 금고');box(.86,.7,.16,0,0,.05,black,safe317);const safeDoor=group(-.43,0,-.06,safe317);rb(.86,.7,.08,.43,0,0,black,safeDoor);for(let i=0;i<4;i++)box(.09,.1,.025,.19+i*.16,.08,-.055,brass,safeDoor);rod([.62,-.15,-.09],[.75,-.15,-.09],.02,brass,safeDoor);
@@ -232,7 +235,8 @@ export function buildRoom(renderer,state){
  const exit317=interactive(group(2,0,11.7),'exit317','317호 안쪽 비상문 · 열쇠 구멍');rb(1.3,2.65,.12,.65,1.325,0,darkwood,exit317);for(const y of[.65,1.95])rb(1.07,.85,.04,.65,y,-.075,wood,exit317);box(.08,.24,.04,1.08,1.15,-.09,brass,exit317);rod([.92,1.15,-.14],[1.13,1.15,-.14],.025,brass,exit317);ball(.015,.022,.01,1.08,1.05,-.12,black,exit317);
  sign('EXIT',.32,.15,2.65,2.15,11.6,Math.PI);const hallLight=new T.PointLight('#dfd4b2',8,5,1.8);hallLight.position.set(2.65,2.7,13.4);scene.add(hallLight);
  shiftSince(nextRoomStart,nextRoomSolids,3,9);
- const details=buildRoomDetails({scene,renderer,manager,state,solids,canvasTexture,legacy:{guest:legacyGuestFurniture,suite:legacySuiteDetails}});
+ const details=buildRoomDetails({scene,renderer,manager,state,solids,canvasTexture,legacy:{guest:legacyGuestFurniture,suite:legacySuiteDetails,minibar:minibarCups}});
+ const twin=buildTwinRoom({scene,renderer,manager,state,solids,canvasTexture,helpers:{box,rb,group,cyl,ball,sign},materials:{wood,darkwood,brass,ivory,floorMat}});
  const dustGeo=new T.BufferGeometry(),dustPos=new Float32Array(90*3);for(let i=0;i<90;i++)dustPos.set([(Math.random()-.5)*6,Math.random()*2.8,(Math.random()-.5)*8],i*3);dustGeo.setAttribute('position',new T.BufferAttribute(dustPos,3));const dust=new T.Points(dustGeo,new T.PointsMaterial({color:'#b6b6a5',size:.013,transparent:true,opacity:.26,depthWrite:false}));scene.add(dust);
  const frameHomePosition=frame.position.clone(),frameHomeRotation=frame.rotation.clone();let lastFrameTaken=false;
  function update(dt,time){
@@ -244,21 +248,21 @@ export function buildRoom(renderer,state){
    for(const {hinge,side}of wardrobeDoors)mix(hinge.rotation,'y',state.wardrobeOpen?side*1.5:0,2.5);mix(suitcaseLid.rotation,'x',state.suitcaseOpen?1.7:0,3);if(!domestic.bathLoaded)mix(drawer.position,'x',state.drawerOpen?-.64:0,4);bulb.visible=state.drawerOpen&&!state.bulbTaken;
    filmA.visible=!state.inventory.includes('filmA')&&!state.filmJoined;
    frame.traverse(o=>{if(o.userData.filmBack)o.visible=!state.inventory.includes('filmB')&&!state.filmJoined;});
-   if(state.frameTaken!==lastFrameTaken){if(state.frameTaken){frame.position.set(-3.43,.6,7.6);frame.rotation.set(.09,Math.PI/2-.1,-.04);}else{frame.position.copy(frameHomePosition);frame.rotation.copy(frameHomeRotation);}lastFrameTaken=state.frameTaken;}
+   if(state.frameTaken!==lastFrameTaken){if(state.frameTaken){frame.position.set(-3.43,.6,5.45);frame.rotation.set(.09,Math.PI/2-.1,-.04);}else{frame.position.copy(frameHomePosition);frame.rotation.copy(frameHomeRotation);}lastFrameTaken=state.frameTaken;}
    uvInk.material.opacity=0;
    mix(lampLight,'intensity',state.lampOn?(state.uvInstalled?11:17):0);lampLight.color.set(state.uvInstalled?'#9f75eb':'#ffc47c');shadeMat.emissive.set(state.uvInstalled?'#623d91':'#e6bc73');lightbulb.material.emissive.set(state.uvInstalled?'#9956ee':'#ffe1a0');
    door.userData.label=state.doorOpen?'316호 출입문 · 복도로':'316호 출입문 · 세 겹의 잠금';mix(door.rotation,'y',state.doorOpen?-Math.PI*.52:0,2.2);for(let i=0;i<3;i++)rings[i].rotation.z=-state.rings[i]*Math.PI/4;
-   entry317.userData.label=state.room317Open?'열린 317호 출입문':'317호 출입문 · 잠김';mix(entry317.rotation,'y',state.room317Open?-Math.PI*.52:0,2.2);passKey.visible=!state.passTaken;keyRack.userData.label=state.passTaken?'빈 열쇠 걸이':'317호 예비 열쇠 걸이';
+   entry317.userData.label=state.room317Open?'열린 317호 출입문':'317호 출입문 · 잠김';mix(entry317.rotation,'y',state.room317Open?-Math.PI*.52:0,2.2);
    for(const {fixture,light,base}of suiteLights){mix(light,'intensity',state.lightOn?base:0);fixture.children[1].material.emissiveIntensity=state.lightOn?.4:0;}
    mix(clockFlap.position,'z',state.clockSolved?.18:.02);clockKey.visible=false;
    receipt317.visible=!state.inventory.includes('receipt');tag317.visible=!state.inventory.includes('tag');
    mix(luggageLid.rotation,'x',state.luggageOpen?-1.6:0,3);mix(safeDoor.rotation,'y',state.safeOpen?-1.4:0,3);mix(exit317.rotation,'y',state.exitOpen?-1.6:0,2.5);
    if(state.musicWound)musicDrum.rotation.y=time*.65;
-   domestic.update(dt);details.update(dt,time);for(const light of fixtureLights)light.intensity=state.lightOn?2.4:0;
+   domestic.update(dt);details.update(dt,time);twin.update(dt);for(const light of fixtureLights)light.intensity=state.lightOn?2.4:0;
    exterior.update(dt,time);dust.rotation.y=Math.sin(time*.04)*.025;
  }
  function clockHands(hour,minute){domestic.clockHands(hour,minute);if(domestic.clockLoaded)return;const ha=hour/12*Math.PI*2+minute/60*Math.PI/6,ma=minute/60*Math.PI*2;hr.position.set(Math.sin(ha)*.045,.3+Math.cos(ha)*.045,.111);hr.rotation.z=-ha;mn.position.set(Math.sin(ma)*.065,.3+Math.cos(ma)*.065,.12);mn.rotation.z=-ma;}
  clockHands(11,10);const clockMark=canvasTexture((a,w,h)=>{a.fillStyle='#c6ab75';a.beginPath();a.moveTo(w*.2,h*.8);a.lineTo(w*.8,h*.8);a.lineTo(w*.8,h*.2);a.closePath();a.fill();},128);const markMesh=mesh(new T.PlaneGeometry(.1,.1),new T.MeshStandardMaterial({map:clockMark,transparent:true,roughness:.8}),clock);markMesh.position.set(0,.29,-.102);markMesh.rotation.y=Math.PI;
  function canMove(x,z){return canWalk(state,x,z,solids);}
- return{scene,roots,solids,ready,assetsFailed,update,canMove,clockHands,setPuzzleDials:details.setPuzzleDials,frame,clock,mirror,lamp,drawer,lock,photo,canvasTexture,materials:{wood,darkwood,brass,paper,black,ivory},helpers:{group,box,rb,rod,cyl,ball,mesh,sign},uvInk};
+ return{scene,roots,solids,ready,assetsFailed,update,canMove,clockHands,setPuzzleDials:details.setPuzzleDials,setCompanionDials:twin.setDials,frame,clock,mirror,lamp,drawer,lock,photo,canvasTexture,materials:{wood,darkwood,brass,paper,black,ivory},helpers:{group,box,rb,rod,cyl,ball,mesh,sign},uvInk};
 }

@@ -5,7 +5,7 @@ import {phase,uvVisible,useItem} from './public/room-state.js';
 import {canWalk} from './public/room-layout.js';
 
 test('each test start is reachable and has the intended next puzzle',()=>{
- const phases={bedroom:'low',living:'low',kitchen:'low',bath:'low',hall:'enter317',room317:'luggage',clock:'clock',vanity:'drawer',uv:'mirror',music:'music',safe:'safe',exit:'corridor'};
+ const phases={towels:'low',cups:'low',kettle:'low',twin:'low',companion:'neighborKey',bedroom:'low',living:'low',kitchen:'low',bath:'low',hall:'enter317',room317:'luggage',clock:'clock',vanity:'drawer',uv:'mirror',music:'music',safe:'safe',exit:'corridor'};
  for(const point of TEST_STARTS){
   const {state}=createTestStart(point.id);
   assert.equal(phase(state),phases[point.id],point.id);
@@ -45,4 +45,10 @@ test('corrupt or incompatible checkpoints are ignored and unknown fields filtere
  raw.state.inventory=['key','unknown','key'];raw.state.selected='unknown';raw.state.untrusted=true;raw.state.complete=true;raw.state.rings=[100,0,0];raw.state.notes=[null,{title:'valid',text:'text'}];
  const result=readCheckpoint(JSON.stringify(raw));
  assert.deepEqual(result.state.inventory,['key']);assert.equal(result.state.selected,null);assert.equal(result.state.untrusted,undefined);assert.equal(result.state.complete,false);assert.deepEqual(result.state.rings,[2,6,1]);assert.equal(result.state.notes.length,1);assert.equal(result.pitch,1.3);assert.equal(result.pointId,'bedroom');
+});
+
+test('old saved games that already took the spare key do not regenerate it in the new bedroom',()=>{
+ const setup=createTestStart('room317'),raw=JSON.parse(writeCheckpoint({...setup,pointId:'room317',position:setup.point.position,yaw:0,pitch:0}));
+ delete raw.state.companionSolved;delete raw.state.travelPostcardsSeen;
+ const restored=readCheckpoint(JSON.stringify(raw));assert.equal(restored.state.companionSolved,true);assert.equal(restored.state.inventory.includes('passKey'),false);assert.equal(restored.state.room317Open,true);
 });

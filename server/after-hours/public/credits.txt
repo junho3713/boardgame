@@ -28,3 +28,5 @@ Use case: lighting-weather / environment projection repair. Input image: visual 
 Hotel fixture models (bathroom, kitchenette, wall clock, lounge and bedroom fittings): original Blender 4.4 assets authored for AFTER HOURS, 2026-11-17. Source: server/after-hours/art/build_fixtures.py. Original procedural oak, linen and limestone textures; no third-party meshes or texture dependencies. All maps are embedded in GLB files.
 
 Guest room 317 and additional suite furniture (2026-11-17): original Blender 4.4 geometry and embedded procedural textures, source art/build_room_details.py. Leather luggage shell, fabric lining, mechanical music box, steel safe, walnut casework, upholstered chairs, porcelain and enamel refrigerator are authored for this project. Bathroom towel drape and spun kitchen kettle revised in art/build_fixtures.py. No external meshes used.
+
+2026-11-17: Original Blender twin bedroom (twin-room-316.glb), bedding, keepsake box and travel postcard artwork. Furniture proportions and metric wood UVs revised. No third-party mesh sources.
