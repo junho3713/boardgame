@@ -1,5 +1,6 @@
 import * as T from './three.module.js';
 import {Reflector} from './Reflector.js';
+import {GLTFLoader} from './GLTFLoader.js';
 import {uvVisible} from './room-state.js';
 
 export function buildRoom(renderer,state){
@@ -63,16 +64,24 @@ export function buildRoom(renderer,state){
  const curtainFabric=new T.MeshStandardMaterial({map:fabricMap,normalMap:fabricNormal,color:'#666758',roughness:1,side:T.DoubleSide});
  const curtains=[];for(const side of [-1,1]){const g=group(side*1.7,0,-4.3);const geo=new T.PlaneGeometry(.95,2.55,40,24),p=geo.attributes.position;for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i);p.setZ(i,Math.sin((x+.5)*Math.PI*12)*.09+(1-Math.abs(y)/1.28)*.025);p.setY(i,y+Math.cos(x*20)*.025);}geo.computeVertexNormals();const cloth=mesh(geo,curtainFabric,g);cloth.position.y=1.56;interactive(cloth,'curtains','커튼');curtains.push({g,side});}
  rod([-2.25,2.96,-4.15],[2.25,2.96,-4.15],.035,brass);for(let i=0;i<18;i++){const tor=mesh(new T.TorusGeometry(.055,.009,8,16),brass);tor.position.set(-2.1+i*.247,2.96,-4.15);tor.rotation.y=Math.PI/2;}
- // Bed: rounded upholstered headboard, quilted cover, rolled seams and a gap beneath the frame.
- const bed=interactive(group(-2,0,-1.3),'bed','침대');rb(2.14,.24,3.75,0,.37,0,darkwood,bed,.04);rb(2.04,.28,3.64,0,.62,0,linen,bed,.08);rb(2.3,1.35,.14,0,1.05,-1.89,darkwood,bed,.035);rb(2.05,1.12,.09,0,1.08,-1.8,fabric,bed,.05);
- for(const x of [-.9,.9])for(const z of [-1.6,1.6]){cyl(.055,.08,.36,x,.18,z,darkwood,bed);ball(.08,.05,.08,x,.055,z,brass,bed);}
- for(const x of [-.65,0,.65])for(const y of [.75,1.08,1.4])ball(.035,.035,.016,x,y,-1.743,brass,bed);
- const blanketGeo=new T.PlaneGeometry(2.24,2.8,32,40),bp=blanketGeo.attributes.position;for(let i=0;i<bp.count;i++){const x=bp.getX(i),y=bp.getY(i);const drop=Math.max(0,Math.abs(x)-.94)*2.1;bp.setZ(i,Math.sin(y*9+x*2)*.014+Math.cos(x*12)*.012-drop);}blanketGeo.computeVertexNormals();const blanket=mesh(blanketGeo,fabric,bed);blanket.rotation.x=-Math.PI/2;blanket.position.set(0,.81,.4);
- for(const x of [-.5,.5]){const pillow=rb(.89,.18,.55,x,.86,-1.2,linen,bed,.07);pillow.rotation.y=x*.08;}
- shadow(-2,-1.3,2.9,4.3);solid(-2,-1.3,2.15,3.75);
+ // Blender-authored bed. Keep a local fallback if the optional binary cannot load.
+ // Its loading manager includes GLB parsing and embedded textures in room.ready.
+ const bed=interactive(group(-2,0,-1.5),'bed','침대');bed.name='bed-316';bed.userData.modelState='loading';
+ const fallback=group(0,0,0,bed);fallback.name='bed-fallback';fallback.scale.z=.9;
+ rb(2.14,.24,3.75,0,.37,0,darkwood,fallback,.04);rb(2.04,.28,3.64,0,.62,0,linen,fallback,.08);rb(2.3,1.35,.14,0,1.05,-1.89,darkwood,fallback,.035);rb(2.05,1.12,.09,0,1.08,-1.8,fabric,fallback,.05);
+ for(const x of [-.9,.9])for(const z of [-1.6,1.6]){cyl(.055,.08,.36,x,.18,z,darkwood,fallback);ball(.08,.05,.08,x,.055,z,brass,fallback);}
+ for(const x of [-.65,0,.65])for(const y of [.75,1.08,1.4])ball(.035,.035,.016,x,y,-1.743,brass,fallback);
+ const blanketGeo=new T.PlaneGeometry(2.24,2.8,32,40),bp=blanketGeo.attributes.position;for(let i=0;i<bp.count;i++){const x=bp.getX(i),y=bp.getY(i);const drop=Math.max(0,Math.abs(x)-.94)*2.1;bp.setZ(i,Math.sin(y*9+x*2)*.014+Math.cos(x*12)*.012-drop);}blanketGeo.computeVertexNormals();const blanket=mesh(blanketGeo,fabric,fallback);blanket.rotation.x=-Math.PI/2;blanket.position.set(0,.81,.4);
+ for(const x of [-.5,.5]){const pillow=rb(.89,.18,.55,x,.86,-1.2,linen,fallback,.07);pillow.rotation.y=x*.08;}
+ new GLTFLoader(manager).load('./assets/models/bed-316.glb?v=20261117-long-tuft',gltf=>{
+   const model=gltf.scene;model.name='bed-316-model';model.rotation.y=Math.PI;model.scale.setScalar(1.08);
+   model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
+   bed.add(model);fallback.visible=false;bed.userData.modelState='loaded';
+ },undefined,()=>{bed.userData.modelState='fallback';});
+ shadow(-2,-1.45,2.65,3.8);solid(-2,-1.45,2.14,3.38);
  // A paper corner is visible only below the bed rail.
- const filmA=interactive(box(.29,.012,.21,-1.2,.085,-.65,paper),'filmA','종이 모서리');filmA.rotation.y=.25;
- box(.08,.008,.12,-1.05,.091,-.62,mat('#6f5943'));
+ const filmA=interactive(box(.29,.012,.21,-1.18,.085,-.65,paper),'filmA','종이 모서리');filmA.rotation.y=.25;
+ box(.08,.008,.12,-1.03,.091,-.62,mat('#6f5943'));
  // Nightstand and physically modeled lamp.
  const bedside=group(-2.95,0,-3.65);rb(.75,.65,.64,0,.4,0,wood,bedside);rb(.84,.07,.72,0,.77,0,wood,bedside);for(const x of [-.25,.25])for(const z of [-.2,.2])rod([x,0,z],[x,.2,z],.035,darkwood,bedside);solid(-2.95,-3.65,.85,.75);shadow(-2.95,-3.65,1.2,1.1);
  const lamp=interactive(group(-2.95,.82,-3.65),'lamp','침대 옆 스탠드');cyl(.16,.19,.06,0,.02,0,brass,lamp);cyl(.035,.055,.5,0,.3,0,brass,lamp);const shadeMat=new T.MeshStandardMaterial({color:'#c8b995',side:T.DoubleSide,roughness:1,emissive:'#e6bc73',emissiveIntensity:.2});const shade=mesh(new T.CylinderGeometry(.22,.34,.4,40,1,true),shadeMat,lamp);shade.position.y=.68;const lightbulb=ball(.065,.1,.065,0,.65,0,new T.MeshStandardMaterial({color:'#fff3ca',emissive:'#ffe1a0',emissiveIntensity:1.5}),lamp);cyl(.012,.012,.1,0,.93,0,brass,lamp);

@@ -13,15 +13,32 @@ test('hotel assets load under their prefix alongside existing games', async () =
     assert.equal(redirect.headers.get('location'), '/after-hours/?mode=explore');
     const page = await fetch(origin + '/after-hours/');
     assert.equal(page.status, 200);
+    assert.match(page.headers.get('content-security-policy'), /connect-src 'self' blob:/);
     const html = await page.text();
     assert.match(html, /316호에서 눈뜨기/);
-    for (const name of ['style.css', 'game.js', 'room-state.js', 'room-scene.js', 'Reflector.js', 'three.module.js', 'THREE-LICENSE.txt','assets/hotel-photo.jpg','assets/herringbone_parquet_Diffuse.jpg']) {
+    for (const name of ['style.css', 'game.js', 'room-state.js', 'room-scene.js', 'Reflector.js', 'GLTFLoader.js', 'BufferGeometryUtils.js', 'three.module.js', 'THREE-LICENSE.txt','assets/hotel-photo.jpg','assets/herringbone_parquet_Diffuse.jpg']) {
       const r = await fetch(origin + '/after-hours/' + name);
       assert.equal(r.status, 200, name);
       assert.ok(Number(r.headers.get('content-length')) > 100, name);
       assert.equal(r.headers.get('x-content-type-options'), 'nosniff');
       await r.arrayBuffer();
     }
+    const model = await fetch(origin + '/after-hours/assets/models/bed-316.glb?v=20261117-long-tuft');
+    assert.equal(model.status, 200);
+    assert.equal(model.headers.get('content-type'), 'model/gltf-binary');
+    const bytes = Buffer.from(await model.arrayBuffer());
+    assert.equal(bytes.toString('ascii', 0, 4), 'glTF');
+    assert.equal(bytes.readUInt32LE(4), 2);
+    assert.equal(bytes.readUInt32LE(8), bytes.length);
+    const gltf = JSON.parse(bytes.toString('utf8', 20, 20 + bytes.readUInt32LE(12)));
+    assert.ok(gltf.nodes.some(node => node.name === 'Bed316_ROOT'));
+    assert.equal(gltf.images.length, 15);
+    assert.ok(gltf.images.every(image => image.bufferView !== undefined && !image.uri));
+    assert.equal(gltf.cameras, undefined);
+    const modelHead = await fetch(origin + '/after-hours/assets/models/bed-316.glb', {method:'HEAD'});
+    assert.equal(modelHead.status, 200);
+    assert.equal(Number(modelHead.headers.get('content-length')), bytes.length);
+    assert.equal((await modelHead.arrayBuffer()).byteLength, 0);
     const head = await fetch(origin + '/after-hours/game.js', {method:'HEAD'});
     assert.equal(head.status, 200);
     assert.equal(await head.text(), '');

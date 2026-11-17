@@ -10,6 +10,9 @@ const FILES = new Map([
   ['room-scene.js', 'text/javascript; charset=utf-8'],
   ['room-state.js', 'text/javascript; charset=utf-8'],
   ['Reflector.js', 'text/javascript; charset=utf-8'],
+  ['GLTFLoader.js', 'text/javascript; charset=utf-8'],
+  ['BufferGeometryUtils.js', 'text/javascript; charset=utf-8'],
+  ['assets/models/bed-316.glb', 'model/gltf-binary'],
   ['assets/herringbone_parquet_Diffuse.jpg', 'image/jpeg'],
   ['assets/herringbone_parquet_nor_gl.jpg', 'image/jpeg'],
   ['assets/herringbone_parquet_Rough.jpg', 'image/jpeg'],
@@ -52,7 +55,7 @@ function createHandler() {
       'Cache-Control': relative === 'three.module.js' ? 'public, max-age=86400' : 'no-store',
       'X-Content-Type-Options': 'nosniff',
       'Referrer-Policy': 'strict-origin-when-cross-origin',
-      'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; base-uri 'none'; frame-ancestors 'self'",
+      'Content-Security-Policy': "default-src 'self'; script-src 'self'; connect-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; base-uri 'none'; frame-ancestors 'self'",
     });
     if (req.method === 'HEAD') return res.end();
     pipeline(fs.createReadStream(file), res, () => {});

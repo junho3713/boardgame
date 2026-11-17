@@ -13,3 +13,6 @@ Use case: historical-scene. Asset type: a fictional photographic print used insi
 
 Three.js 0.170.0 and the Reflector addon: Three.js Authors, MIT; see THREE-LICENSE.txt.
 Furniture meshes, material composition, rain, environmental lighting, sound synthesis, puzzles and interface: original project code.
+
+Bed 316 (2026-11-17): original Blender 4.4 geometry and generated embedded fabric/wood PBR maps. Lengthened mattress and sculpted upholstered tufts, authored for this project.
+GLTFLoader and BufferGeometryUtils: Three.js 0.170.0, MIT, same authors/license as three.module.js.
