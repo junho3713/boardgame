@@ -4,7 +4,11 @@ Render 주소: `/after-hours/`. PC 키보드와 마우스로 플레이하는 3D 
 
 ## 구조
 
-호텔 316호 → 객실 연결문 → 317호 → 3층 복도로 이어지는 두 객실 탈출입니다. 316호에서는 필름과 빛을 관찰하고, 317호에서는 영수증·수하물표로 여행가방을 열고 태엽 열쇠를 오르골에 사용한 뒤 문양 금고를 풉니다. 금고의 객실 열쇠로 출입문을 열고 복도로 걸어 나가야 첫 장이 완료됩니다. 연결문을 통과하거나 물건을 조사하는 것만으로 종료되지 않습니다. 자유 탐색은 별도 시작 버튼으로 제공합니다.
+316호는 침실·거실·간이주방·욕실이 분리된 스위트룸입니다. 침실의 필름, 거실의 액자, 간이주방 식탁의 작업표·탁상시계, 욕실의 잠긴 수납장과 UV 전구, 거실의 스탠드·거울을 오가며 연결해 출입문을 엽니다. 욕실 세탁 안내표에도 빛과 거울에 관한 단서가 있습니다.
+
+거실 출입문 밖은 호텔 3층 복도입니다. 316호에 맡겨진 동행인의 예비 열쇠로 복도 건너편 317호에 들어갑니다. 317호에서는 영수증·수하물표·여행가방·오르골·문양 금고 퍼즐이 이어집니다. 317호 비상문을 열고 나가야 첫 장이 끝납니다.
+
+공간별 경계와 문 통과 조건은 public/room-layout.js를 공유합니다. 자유 탐색은 별도 시작 버튼으로 제공합니다.
 
 ## 조작과 표현
 
@@ -23,7 +27,7 @@ Poly Haven CC0 벽지·헤링본 바닥·직물의 컬러/노멀/거칠기 맵, 
 
 ## 검증
 
-`node --test server/after-hours/room-state.test.mjs server/after-hours/server.test.cjs server/girl-lobby/server.test.cjs`
+`node --test server/after-hours/room-layout.test.mjs server/after-hours/room-state.test.mjs server/after-hours/server.test.cjs server/girl-lobby/server.test.cjs`
 
 인벤토리: 상시 I 버튼, 획득 안내, 물건별 조사하기·손에 들기·선택 해제, 조합과 대상 앞 E 사용 안내를 제공합니다.
 

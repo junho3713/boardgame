@@ -16,7 +16,7 @@ test('hotel assets load under their prefix alongside existing games', async () =
     assert.match(page.headers.get('content-security-policy'), /connect-src 'self' blob:/);
     const html = await page.text();
     assert.match(html, /316호에서 눈뜨기/);
-    for (const name of ['style.css', 'game.js', 'room-state.js', 'room-scene.js', 'exterior-scene.js', 'Reflector.js', 'GLTFLoader.js', 'BufferGeometryUtils.js', 'three.module.js', 'THREE-LICENSE.txt','assets/hotel-photo.jpg','assets/rainy-town-night.jpg','assets/herringbone_parquet_Diffuse.jpg']) {
+    for (const name of ['style.css', 'game.js', 'room-state.js', 'room-layout.js', 'room-scene.js', 'exterior-scene.js', 'Reflector.js', 'GLTFLoader.js', 'BufferGeometryUtils.js', 'three.module.js', 'THREE-LICENSE.txt','assets/hotel-photo.jpg','assets/rainy-town-night.jpg','assets/herringbone_parquet_Diffuse.jpg']) {
       const r = await fetch(origin + '/after-hours/' + name);
       assert.equal(r.status, 200, name);
       assert.ok(Number(r.headers.get('content-length')) > 100, name);
