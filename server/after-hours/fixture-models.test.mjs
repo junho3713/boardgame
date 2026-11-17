@@ -13,6 +13,14 @@ function model(name){
  const nodes=g.nodes.map(n=>{const root=new T.Group();root.name=n.name;if(n.translation)root.position.fromArray(n.translation);if(n.rotation)root.quaternion.fromArray(n.rotation);if(n.scale)root.scale.fromArray(n.scale);if(n.matrix){root.matrix.fromArray(n.matrix);root.matrix.decompose(root.position,root.quaternion,root.scale);}if(n.mesh!==undefined)for(const p of g.meshes[n.mesh].primitives){const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(accessor(p.attributes.POSITION),3));if(p.indices!==undefined)geo.setIndex(accessor(p.indices));root.add(new T.Mesh(geo,new T.MeshBasicMaterial({side:T.DoubleSide})));}return root;});g.nodes.forEach((n,i)=>n.children?.forEach(c=>nodes[i].add(nodes[c])));const scene=new T.Group();for(const id of g.scenes[g.scene||0].nodes)scene.add(nodes[id]);scene.updateMatrixWorld(true);return{g,scene,nodes,bytes:b.length};
 }
 const height=(scene,x,z,startY=3)=>new T.Raycaster(new T.Vector3(x,startY,z),new T.Vector3(0,-1,0)).intersectObject(scene,true)[0]?.point.y;
+test('basin water starts at the aerator and its animated lever stays attached to the mixer',()=>{
+ const bath=model('bathroom-316.glb'),lever=bath.scene.getObjectByName('Vanity_Faucet_Lever_Pivot');assert.ok(lever);assert.ok(lever.children.length);
+ const before=lever.getWorldPosition(new T.Vector3());assert.ok(before.distanceTo(new T.Vector3(8.005,1.178,-.142))<.001);
+ lever.rotation.z=-.55;bath.scene.updateMatrixWorld(true);assert.ok(before.distanceTo(lever.getWorldPosition(new T.Vector3()))<1e-6);
+ const splash=height(bath.scene,7.825,-.2,1.0);assert.ok(splash>.74&&splash<.77,'water strikes inside the bowl, below its rim');
+ const twin=model('twin-room-316.glb');const desk=height(twin.scene,-7.16,5.08,1.0);assert.ok(.795-desk>=0&&.795-desk<.004,'repair note rests on the dressing table: '+desk);
+ const start=new T.Vector3(-7.1,1.62,6.05),end=new T.Vector3(-7.16,.798,5.08),delta=end.clone().sub(start),hit=new T.Raycaster(start,delta.clone().normalize()).intersectObject(twin.scene,true)[0];assert.ok(!hit||hit.distance>=delta.length()-.008,'repair note can be read without furniture obscuring it');
+});
 test('new searchable objects have a clear approach through the real room furniture',()=>{
  const fixed=[{x:-1.35,z:8.35,w:2.5,d:1.1},{x:-1.35,z:6.85,w:1.75,d:.85},{x:-2.92,z:9.7,w:1,d:.75},{x:.8,z:9.4,w:.8,d:.6},{x:6.3,z:5.04,w:3.8,d:.82},{x:6.2,z:22.8,w:.48,d:.48},{x:-3.28,z:8.88,w:.45,d:.32}];
  for(const point of TEST_STARTS.filter(p=>p.id.startsWith('search')))assert.ok(canWalk(createTestStart(point.id).state,point.position[0],point.position[2],fixed),point.id+' must not fall back to another room');

@@ -19,6 +19,7 @@ const FILES = new Map([
   ['room-state.js', 'text/javascript; charset=utf-8'],
   ['room-layout.js', 'text/javascript; charset=utf-8'],
   ['domestic-models.js', 'text/javascript; charset=utf-8'],
+  ['basin-flow.js', 'text/javascript; charset=utf-8'],
   ['room-details.js', 'text/javascript; charset=utf-8'],
   ['twin-room.js', 'text/javascript; charset=utf-8'],
   ['test-starts.js', 'text/javascript; charset=utf-8'],

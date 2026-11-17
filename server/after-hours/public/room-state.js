@@ -1,4 +1,4 @@
-import {SEARCH_DEFAULTS,SEARCH_ITEMS,useSearchItem,scalePowered} from './search-state.js?v=20261117-search1';
+import {SEARCH_DEFAULTS,SEARCH_ITEMS,useSearchItem,scalePowered} from './search-state.js?v=20261117-water1';
 import {trayFits,STOCK_CODE,MAP_TARGET,LUGGAGE_IMPRINT,SAFE_TARGET,EVAC_TARGET,LINEN_CODE,WEIGHABLES} from './puzzle-evidence.js?v=20261117-search1';
 export const CLOCK_TARGET={hour:5,minute:40};
 export const RING_TARGET=[5,0,3]; // clockwise eighth-turns from twelve o'clock

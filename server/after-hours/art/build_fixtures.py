@@ -103,7 +103,9 @@ def faucet(name,x,z,y,p=None,metal=chrome):
   a=pi/2*i/12;pts.append((x-.055*(1-cos(a)),y+.24+.055*sin(a),z))
  pts.extend([(x-.15,y+.295,z),(x-.18,y+.28,z),(x-.18,y+.255,z)])
  tube(name+' bent spout',pts,.017,metal,p);cyl(name+' aerator',(x-.18,y+.249,z),.019,.018,metal,p=p)
- cyl(name+' lever hub',(x,y+.23,z+.036),.024,.04,metal,'z',p);tube(name+' lever',[(x,y+.245,z+.058),(x-.065,y+.29,z+.058)],.009,metal,p)
+ cyl(name+' lever hub',(x,y+.23,z+.036),.024,.04,metal,'z',p)
+ lever=empty('Vanity_Faucet_Lever_Pivot',(x,y+.23,z+.058),p if p is not None else parent)
+ tube(name+' moving lever',[(0,0,0),(0,.015,0),(-.065,.06,0)],.009,metal,lever)
 
 sys.path.insert(0,os.path.dirname(os.path.abspath(__file__)))
 from hotel_props import make_props

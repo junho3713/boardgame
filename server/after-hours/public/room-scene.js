@@ -1,15 +1,15 @@
-import {buildSearchProps} from './room-search.js?v=20261117-search1';
-import {buildPuzzleProps} from './puzzle-props.js?v=20261117-search1';
+import {buildSearchProps} from './room-search.js?v=20261117-water1';
+import {buildPuzzleProps} from './puzzle-props.js?v=20261117-water1';
 import * as T from './three.module.js';
 import {Reflector} from './Reflector.js';
 import {GLTFLoader} from './GLTFLoader.js';
 import {buildExterior} from './exterior-scene.js?v=20261117-environment2';
-import {uvVisible} from './room-state.js?v=20261117-search1';
-import {buildHotelExtension} from './hotel-extension.js?v=20261117-search1';
+import {uvVisible} from './room-state.js?v=20261117-water1';
+import {buildHotelExtension} from './hotel-extension.js?v=20261117-water1';
 import {canWalk} from './room-layout.js?v=20261117-stairs1';
-import {buildDomesticModels} from './domestic-models.js?v=20261117-search1';
-import {buildTwinRoom} from './twin-room.js?v=20261117-search1';
-import {buildRoomDetails} from './room-details.js?v=20261117-search1';
+import {buildDomesticModels} from './domestic-models.js?v=20261117-water1';
+import {buildTwinRoom} from './twin-room.js?v=20261117-water1';
+import {buildRoomDetails} from './room-details.js?v=20261117-water1';
 
 export function buildRoom(renderer,state){
  const scene=new T.Scene();scene.background=new T.Color('#121616');scene.fog=new T.FogExp2('#121616',.014);

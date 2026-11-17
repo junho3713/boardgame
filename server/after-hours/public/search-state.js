@@ -1,4 +1,4 @@
-export const SEARCH_DEFAULTS={coinTaken:false,caseLiningLifted:false,frameReleased:false,clothTaken:false,clothWet:false,tagWiped:false,wipePatches:[false,false,false,false,false,false],sofaLifted:false,bookLifted:false,inlayFound:[false,false],inlayMounted:[false,false],batteryDrawerOpen:false,batteriesTaken:[false,false],batteriesInstalled:[false,false],wheelDrawerOpen:false,wheelSliders:[0,0,0],wheelTaken:false,wheelInstalled:false,postcardFound:[false,false,false],magnetTaken:false,cylinderTaken:false,cylinderInstalled:false,routeFound:[false,false,false],routeMounted:[false,false,false],routeOrder:[2,0,1],routeRestored:false,innerDrawerOpen:false};
+export const SEARCH_DEFAULTS={faucetOn:false,basinWetting:false,coinTaken:false,caseLiningLifted:false,frameReleased:false,clothTaken:false,clothWet:false,tagWiped:false,wipePatches:[false,false,false,false,false,false],sofaLifted:false,bookLifted:false,inlayFound:[false,false],inlayMounted:[false,false],batteryDrawerOpen:false,batteriesTaken:[false,false],batteriesInstalled:[false,false],wheelDrawerOpen:false,wheelSliders:[0,0,0],wheelTaken:false,wheelInstalled:false,postcardFound:[false,false,false],magnetTaken:false,cylinderTaken:false,cylinderInstalled:false,routeFound:[false,false,false],routeMounted:[false,false,false],routeOrder:[2,0,1],routeRestored:false,innerDrawerOpen:false};
 export const SEARCH_ITEMS={coin:'넓은 홈에 맞는 동전',cloth:'극세사 천',inlayA:'상감 조각 · 왼쪽 아래',inlayB:'상감 조각 · 오른쪽 위',batteryA:'AA 전지 · A',batteryB:'AA 전지 · B',compassWheel:'북쪽 표식의 방향판',postcard0:'여행 엽서 · 시계탑',postcard1:'여행 엽서 · 풍차',postcard2:'여행 엽서 · 등대',magnet:'끈 달린 자석',musicCylinder:'오르골 문양 실린더',route0:'대피도 조각 · 객실',route1:'대피도 조각 · 복도',route2:'대피도 조각 · 계단'};
 const give=(s,id)=>{if(!s.inventory.includes(id))s.inventory.push(id);};
 const consume=(s,id)=>{s.inventory=s.inventory.filter(v=>v!==id);if(s.selected===id)s.selected=null;};
@@ -14,7 +14,7 @@ export function useSearchItem(s,id,target){
  const known=(id==='coin'&&target==='frame')||(id==='cloth'&&['basin','linenTag2'].includes(target))||(/^inlay[AB]$/.test(id)&&target==='teaTray')||(/^battery[AB]$/.test(id)&&target==='kitchenScale')||(id==='compassWheel'&&target==='companionCase')||(id==='magnet'&&target==='cylinderGap')||(id==='musicCylinder'&&target==='musicBox')||(/^route[0-2]$/.test(id)&&target==='evacuationPlan');
  if(!known)return null;if(!s.inventory.includes(id))return false;
  if(id==='coin'){s.frameReleased=true;return true;}
- if(id==='cloth'){if(target==='basin'){s.clothWet=true;return true;}return s.clothWet;}
+ if(id==='cloth'){if(target==='basin'){s.faucetOn=true;s.basinWetting=true;return true;}return s.clothWet;}
  if(id==='magnet')return collectSearchItem(s,'musicCylinder');
  if(id==='musicCylinder'){s.cylinderInstalled=true;consume(s,id);return true;}
  if(id==='compassWheel'){s.wheelInstalled=true;consume(s,id);return true;}

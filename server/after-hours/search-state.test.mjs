@@ -3,9 +3,20 @@ import assert from 'node:assert/strict';
 import {createState,addItem,useItem,solveTray,unlockCompanionCase,COMPANION_TARGET,hearTune} from './public/room-state.js';
 import {collectSearchItem,useSearchItem,scalePowered,openWheelDrawer,wipeTag,restoreRoute} from './public/search-state.js';
 import {createTestStart,writeCheckpoint,readCheckpoint} from './public/test-starts.js';
+import {createSearchPuzzles} from './public/room-search.js';
+test('running water wets the cloth after the visible action and stops safely on interruption',()=>{
+ const s=createState();s.bathUnlocked=true;collectSearchItem(s,'cloth');let refreshed=0;
+ const puzzle=createSearchPuzzles({state:s,inventory:()=>refreshed++,sound:()=>{},caption:()=>{}});
+ assert.ok(puzzle.interact('basin'));assert.ok(s.faucetOn);puzzle.interact('basin');assert.equal(s.faucetOn,false);
+ s.selected='cloth';puzzle.interact('basin');assert.ok(s.faucetOn);assert.ok(s.basinWetting);
+ puzzle.update(.7);assert.equal(s.clothWet,false);puzzle.update(.71);assert.ok(s.clothWet);assert.equal(s.basinWetting,false);assert.ok(refreshed>=2);
+ s.clothWet=false;puzzle.interact('basin');s.faucetOn=false;puzzle.update(2);assert.equal(s.clothWet,false);assert.equal(s.basinWetting,false);
+ const setup=createTestStart('basinFlow');setup.state.basinWetting=true;setup.state.faucetOn=true;
+ const restored=readCheckpoint(writeCheckpoint({...setup,pointId:'basinFlow',position:setup.point.position,yaw:0,pitch:0}));assert.ok(restored.state.faucetOn);assert.equal(restored.state.basinWetting,false);assert.equal(restored.state.clothWet,false);
+});
 test('tools and parts require a physical search and cannot be collected repeatedly',()=>{
  const s=createState();assert.equal(collectSearchItem(s,'coin'),false);s.caseLiningLifted=true;assert.ok(collectSearchItem(s,'coin'));assert.equal(collectSearchItem(s,'coin'),false);assert.equal(useSearchItem(s,'cloth','frame'),null);assert.ok(useItem(s,'coin','frame'));assert.ok(s.frameReleased);assert.ok(s.inventory.includes('coin'));
- s.bathUnlocked=true;collectSearchItem(s,'cloth');assert.equal(useItem(s,'cloth','linenTag2'),false);assert.equal(wipeTag(s,0),false);assert.ok(useItem(s,'cloth','basin'));for(let i=0;i<5;i++)assert.ok(wipeTag(s,i));assert.equal(s.tagWiped,false);wipeTag(s,5);assert.ok(s.tagWiped);assert.equal(wipeTag(s,9),false);
+ s.bathUnlocked=true;collectSearchItem(s,'cloth');assert.equal(useItem(s,'cloth','linenTag2'),false);assert.equal(wipeTag(s,0),false);assert.ok(useItem(s,'cloth','basin'));assert.ok(s.faucetOn);assert.ok(s.basinWetting);assert.equal(s.clothWet,false);s.clothWet=true;s.basinWetting=false;for(let i=0;i<5;i++)assert.ok(wipeTag(s,i));assert.equal(s.tagWiped,false);wipeTag(s,5);assert.ok(s.tagWiped);assert.equal(wipeTag(s,9),false);
  s.bedroomOpen=true;assert.equal(collectSearchItem(s,'inlayA'),false);s.sofaLifted=true;s.bookLifted=true;collectSearchItem(s,'inlayA');collectSearchItem(s,'inlayB');s.inlayInstalled=true;assert.equal(solveTray(s,[1,3,2,0]),false);useItem(s,'inlayA','teaTray');assert.equal(solveTray(s,[1,3,2,0]),false);useItem(s,'inlayB','teaTray');assert.ok(solveTray(s,[1,3,2,0]));assert.ok(!s.inventory.includes('inlayA'));
 });
 test('power and missing mechanical parts are installed independently of clue read flags',()=>{

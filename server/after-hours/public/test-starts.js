@@ -1,7 +1,9 @@
-import {LUGGAGE_CODE,takeWindingKey,takeInnerKey,takeCompanionKeys} from './room-state.js?v=20261117-search1';
-import {createState,ITEMS,addItem,combineFilms,alignFilm,setClock,useItem,unlockDoor,RING_TARGET,unlockLuggage,hearTune,unlockSafe,takeStairKey,MUSIC_SEQUENCE,unlockCompanionCase,COMPANION_TARGET} from './room-state.js?v=20261117-search1';
+import {LUGGAGE_CODE,takeWindingKey,takeInnerKey,takeCompanionKeys} from './room-state.js?v=20261117-water1';
+import {createState,ITEMS,addItem,combineFilms,alignFilm,setClock,useItem,unlockDoor,RING_TARGET,unlockLuggage,hearTune,unlockSafe,takeStairKey,MUSIC_SEQUENCE,unlockCompanionCase,COMPANION_TARGET} from './room-state.js?v=20261117-water1';
 
 export const TEST_STARTS=[
+ {id:'basinFlow',group:'소품 모델 확인',label:'욕실 · 수도와 천 적시기',step:0,position:[6.63,1.62,-.2],look:[7.81,1.01,-.2],description:'E로 수도를 켜고 끕니다. I에서 천을 선택해 세면대에 사용하면 물줄기 아래에서 적십니다.'},
+ {id:'latchNote',group:'이야기 단서 확인',label:'트윈 침실 · 협탁 수리 메모',step:4,position:[-7.1,1.62,6.05],look:[-7.16,.798,5.08],description:'화장대의 접힌 수리 메모를 읽고 협탁 걸쇠에 적용해 보세요.'},
  {id:'searchBathWipe',group:'탐색 확장',label:'욕실 · 얼룩 닦기부터',step:0,position:[5.3,1.62,.05],look:[3.81,1.43,.80],description:'물을 적신 천을 가지고 있습니다. 문 옆 의뢰표에 사용해 닦으세요.'},
  {id:'searchRouteReady',group:'탐색 확장',label:'마지막 방 · 대피도 조각 맞추기',step:8,position:[7.6,1.62,22.9],look:[7.75,.84,23.94],description:'세 조각을 테이블에 끼운 상태입니다. 끊긴 경로선을 이어 주세요.'},
  {id:'searchBook',group:'탐색 확장',label:'거실 · 장부 아래 조각',step:0,position:[-2.04,1.62,9.25],look:[-3.28,.928,8.88],description:'미니바 옆 작은 선반의 장부를 들어 보세요.'},
@@ -9,7 +11,7 @@ export const TEST_STARTS=[
  {id:'searchBath',group:'탐색 확장',label:'욕실 · 젖은 천으로 의뢰표 닦기',step:0,position:[5.85,1.62,.75],look:[6.74,1.02,1.30],description:'청소용 천을 찾아 세면대에서 적신 뒤 문 옆 의뢰표를 닦으세요.'},
  {id:'searchLiving',group:'탐색 확장',label:'거실 · 흩어진 상감 조각',step:0,position:[.3,1.62,7.1],look:[-.45,.43,7.80],description:'소파 아래 천과 미니바 장부 밑을 살펴 세 조각을 모두 찾으세요.'},
  {id:'searchKitchen',group:'탐색 확장',label:'주방 · 서비스 서랍의 전지',step:0,position:[7.5,1.62,6.3],look:[7.64,.63,5.48],description:'서랍 잠금 탭을 올려 AA 전지 두 개를 꺼내 저울에 넣으세요.'},
- {id:'searchTwin',group:'탐색 확장',label:'트윈 침실 · 슬라이드 서랍과 엽서',step:4,position:[-6.50,1.62,8.75],look:[-6.50,.69,9.465],description:'세 핀을 홈 끝에 맞춰 협탁 서랍을 열고 빠진 방향판을 찾으세요.'},
+ {id:'searchTwin',group:'탐색 확장',label:'트윈 침실 · 슬라이드 서랍과 엽서',step:4,position:[-6.50,1.62,8.75],look:[-6.50,.69,9.465],description:'방 안에서 수리 기록을 찾아 협탁의 세 핀을 맞추세요.'},
  {id:'search317',group:'탐색 확장',label:'317호 · 자석과 실린더 회수',step:6,position:[5.4,1.62,18.05],look:[4.48,.13,17.65],description:'열린 가방에서 끈 달린 자석을 꺼내 협탁 아래 실린더를 회수하세요.'},
  {id:'searchInner',group:'탐색 확장',label:'마지막 방 · 찢긴 대피도 복원',step:8,position:[5.6,1.62,22.8],look:[4.4,.81,23.56],description:'서랍, 의자 아래, 휴지통을 찾아 대피도 조각을 테이블에 끼워 복원하세요.'},
  {id:'scale',group:'퍼즐 단계부터 시작',label:'주방 · 통 집기와 저울',step:0,position:[5.65,1.62,6.12],look:[5.7,1.08,5.22],description:'빈 예비 통과 재료 통을 집어 저울 위에 올려 측정하세요.'},
@@ -53,7 +55,7 @@ export function createTestStart(id,free=false){
  if(point.step>=2)setClock(s,5,40);
 
  if(point.step>=3){useItem(s,'key','drawer');addItem(s,'bulb');s.bulbTaken=true;useItem(s,'bulb','lamp');s.lightOn=false;s.curtainsClosed=true;}
- if(point.step>=4){s.inlayMounted=[true,true];s.inlayFound=[true,true];s.batteriesInstalled=[true,true];s.batteriesTaken=[true,true];s.tagWiped=true;s.wheelInstalled=true;s.bathUnlocked=true;s.bathKeyTaken=true;s.linenSolved=true;s.linenCabinetOpen=true;s.tinKeyTaken=true;s.rings=[...RING_TARGET];unlockDoor(s);s.twinOpen=true;s.kitchenOpen=true;s.stockSolved=true;s.stockKeyTaken=true;s.suiteEscaped=!['companion','postcards','searchTwin'].includes(point.id);s.doorOpen=s.suiteEscaped;s.lightOn=true;s.curtainsClosed=false;if(s.suiteEscaped){s.travelPostcardsSeen=true;unlockCompanionCase(s,COMPANION_TARGET);takeCompanionKeys(s);useItem(s,'suiteKey','suiteDoor');}}
+ if(point.step>=4){s.inlayMounted=[true,true];s.inlayFound=[true,true];s.batteriesInstalled=[true,true];s.batteriesTaken=[true,true];s.tagWiped=true;s.wheelInstalled=true;s.bathUnlocked=true;s.bathKeyTaken=true;s.linenSolved=true;s.linenCabinetOpen=true;s.tinKeyTaken=true;s.rings=[...RING_TARGET];unlockDoor(s);s.twinOpen=true;s.kitchenOpen=true;s.stockSolved=true;s.stockKeyTaken=true;s.suiteEscaped=!['companion','postcards','searchTwin','latchNote'].includes(point.id);s.doorOpen=s.suiteEscaped;s.lightOn=true;s.curtainsClosed=false;if(s.suiteEscaped){s.travelPostcardsSeen=true;unlockCompanionCase(s,COMPANION_TARGET);takeCompanionKeys(s);useItem(s,'suiteKey','suiteDoor');}}
  if(point.step>=5){useItem(s,'passKey','entry317');s.room317Entered=true;}
  if(point.step>=6){unlockLuggage(s,LUGGAGE_CODE);takeWindingKey(s);}
  if(point.step>=7){s.cylinderInstalled=true;useItem(s,'windingKey','musicBox');hearTune(s);}
@@ -71,12 +73,13 @@ export function createTestStart(id,free=false){
  if(['kitchen','kettle','twin','scale','plates','sink','searchKitchen'].includes(zone))s.kitchenOpen=true;
  if(['twin','companion','postcards','searchTwin'].includes(zone)){s.stockSolved=true;s.stockKeyTaken=true;s.twinOpen=true;addItem(s,'tourMap');}
  if(zone==='desk317'){addItem(s,'receipt');addItem(s,'tag');}
+ if(zone==='basinFlow'){s.clothTaken=true;addItem(s,'cloth');}
  if(zone==='searchBathWipe'){s.clothTaken=true;s.clothWet=true;addItem(s,'cloth');s.selected='cloth';}
  if(zone==='searchRouteReady'){s.routeFound=[true,true,true];s.routeMounted=[true,true,true];}
  if(zone==='search317'){s.magnetTaken=true;addItem(s,'magnet');}
- if(zone==='searchTwin'){s.wheelInstalled=false;s.wheelDrawerOpen=false;s.wheelTaken=false;s.companionSolved=false;s.companionKeysTaken=false;}
+ if(['searchTwin','latchNote'].includes(zone)){s.wheelInstalled=false;s.wheelDrawerOpen=false;s.wheelTaken=false;s.companionSolved=false;s.companionKeysTaken=false;}
  if(zone==='shower')s.showerOpen=true;
- if(['bath','towels','shower','linen','linenLock','searchBath','searchBathWipe'].includes(zone)){s.bedroomOpen=true;s.bathKeyTaken=true;s.bathUnlocked=true;s.bathDoorOpen=true;}
+ if(['bath','towels','shower','linen','linenLock','searchBath','searchBathWipe','basinFlow'].includes(zone)){s.bedroomOpen=true;s.bathKeyTaken=true;s.bathUnlocked=true;s.bathDoorOpen=true;}
  if(free){s.bedroomOpen=true;s.kitchenOpen=true;s.twinOpen=true;s.bathUnlocked=true;s.explore=true;s.doorOpen=true;s.room317Open=true;s.exitOpen=true;s.stairsOpen=true;s.bathDoorOpen=true;s.showerOpen=true;}
  return{state:s,point,clockHour:point.step>=2?5:11,clockMinute:point.step>=2?40:10};
 }
@@ -87,6 +90,7 @@ export const SETTINGS_KEY='after-hours.admin.settings.v1';
 export function readCheckpoint(raw){
  try{const v=JSON.parse(raw);if(v?.version!==2||!v.state||!Array.isArray(v.position)||v.position.length!==3||!v.position.every(Number.isFinite)||!Number.isFinite(v.yaw)||!Number.isFinite(v.pitch))return null;
   const s=createState();for(const key of Object.keys(s))if(typeof s[key]==='boolean'&&typeof v.state[key]==='boolean')s[key]=v.state[key];
+  s.basinWetting=false;
   if(!Object.hasOwn(v.state,'drawerUnlocked')&&s.clockSolved&&(s.drawerOpen||s.bulbTaken||s.uvInstalled))s.drawerUnlocked=true;
   if(!Object.hasOwn(v.state,'linenSolved')&&(s.teaTinOpen||s.inlayTaken||s.kitchenOpen||s.tinKeyTaken)){s.linenSolved=true;s.bathUnlocked=true;s.bathKeyTaken=true;}
   // Saves made before the twin bedroom already obtained the spare key from the old rack.
