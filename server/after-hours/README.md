@@ -23,11 +23,17 @@ WASD 이동, 마우스 드래그 또는 방향키 시점, E/클릭 조사, C 몸
 
 ## 그래픽
 
+욕실·주방·거실·침실 가구와 원형 벽시계는 Blender 4.4에서 만든 별도 GLB 모델입니다. `art/build_fixtures.py`가 원본이며 외부 메시 없이 미터 단위로 생성합니다. 세면볼·싱크볼은 실제 상판 개구부와 안쪽 벽을 갖고, 변기에도 빈 볼과 별도 시트·덮개가 있습니다. 수납장 양문, 샤워부스 문, 욕실 문, 옷장 양문, 여행 가방 뚜껑, 벽시계 바늘은 분리된 노드입니다. 침실 가방은 짐 받침대로 옮겨 옷장 앞 통로를 확보했습니다.
+
+`domestic-models.js`는 모델 로딩, 움직이는 노드와 충돌 영역, 반사 거울, 금속 표면의 환경 반사를 연결합니다. 로딩에 실패하면 기존 가구와 퍼즐 조작이 유지됩니다. 모델별 정적 부품은 부모·재질 단위로 합쳐 렌더링 호출 수를 줄였습니다.
+
+모델 재생성: `blender --background --python server/after-hours/art/build_fixtures.py -- --out work/fixture-build`
+
 Poly Haven CC0 벽지·헤링본 바닥·직물의 컬러/노멀/거칠기 맵, imagegen으로 생성한 호텔 사진, 직접 모델링한 가구와 전화기·탁상시계·스탠드·가방·문 장치, 실제 평면 반사, 그림자, 창밖 빗줄기와 실내 먼지를 사용합니다. `public/credits.txt`에 출처·라이선스·사진 프롬프트를 기록했습니다.
 
 ## 검증
 
-`node --test server/after-hours/room-layout.test.mjs server/after-hours/room-state.test.mjs server/after-hours/server.test.cjs server/girl-lobby/server.test.cjs`
+`node --test server/after-hours/fixture-models.test.mjs server/after-hours/room-layout.test.mjs server/after-hours/room-state.test.mjs server/after-hours/server.test.cjs server/girl-lobby/server.test.cjs`
 
 인벤토리: 상시 I 버튼, 획득 안내, 물건별 조사하기·손에 들기·선택 해제, 조합과 대상 앞 E 사용 안내를 제공합니다.
 

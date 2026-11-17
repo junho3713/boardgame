@@ -2,12 +2,13 @@ import * as T from './three.module.js';
 import {Reflector} from './Reflector.js';
 import {GLTFLoader} from './GLTFLoader.js';
 import {buildExterior} from './exterior-scene.js?v=20261117-environment2';
-import {uvVisible} from './room-state.js?v=20261117-suite316';
-import {canWalk} from './room-layout.js?v=20261117-suite316';
+import {uvVisible} from './room-state.js?v=20261117-fixtures1';
+import {canWalk} from './room-layout.js?v=20261117-fixtures1';
+import {buildDomesticModels} from './domestic-models.js?v=20261117-fixtures1';
 
 export function buildRoom(renderer,state){
  const scene=new T.Scene();scene.background=new T.Color('#121616');scene.fog=new T.FogExp2('#121616',.014);
- const roots=[],solids=[],tweens=[],suiteLights=[];const assetsFailed=[];let resolveReady;
+ const roots=[],solids=[],tweens=[],suiteLights=[],fixtureLights=[];const assetsFailed=[];let resolveReady;
  const ready=new Promise(r=>resolveReady=r);
  const manager=new T.LoadingManager(()=>resolveReady());manager.onError=url=>assetsFailed.push(url);
  const loader=new T.TextureLoader(manager),aniso=Math.min(8,renderer.capabilities.getMaxAnisotropy());
@@ -80,8 +81,8 @@ export function buildRoom(renderer,state){
  box(4.6,.15,6,5.9,-.075,-1.5,floorMat);box(4.6,.12,6,5.9,3.27,-1.5,mat('#b4b4a3'));box(.16,3.2,6,8.28,1.6,-1.5,wallpaper);for(const z of[-4.58,1.58])box(4.6,3.2,.16,5.9,1.6,z,wallpaper);sign('욕실 · BATH',.8,.17,3.47,2.85,-.3,-Math.PI/2);
  const ceilingLamp=group(0,3.06,0);cyl(.35,.4,.08,0,0,0,brass,ceilingLamp);ball(.31,.13,.31,0,-.13,0,new T.MeshStandardMaterial({color:'#eadbbc',emissive:'#e8c392',emissiveIntensity:.45}),ceilingLamp);
  scene.add(new T.HemisphereLight('#b5c3ce','#272018',.25));
- const mainLight=new T.PointLight('#ffd19b',26,10,1.8);mainLight.position.set(0,2.85,0);mainLight.castShadow=true;mainLight.shadow.mapSize.set(1024,1024);mainLight.shadow.bias=-.0003;mainLight.shadow.radius=3;scene.add(mainLight);
- const moon=new T.DirectionalLight('#a1b7d4',1.6);moon.position.set(1,4,-8);moon.target.position.set(-1,.2,1.5);moon.castShadow=true;moon.shadow.mapSize.set(2048,2048);Object.assign(moon.shadow.camera,{left:-6,right:6,top:6,bottom:-6,near:.1,far:25});moon.shadow.bias=-.0003;moon.shadow.radius=4;scene.add(moon,moon.target);
+ const mainLight=new T.PointLight('#ffd19b',26,10,1.8);mainLight.position.set(0,2.85,0);mainLight.castShadow=true;mainLight.shadow.mapSize.set(1024,1024);mainLight.shadow.bias=-.00005;mainLight.shadow.normalBias=.025;mainLight.shadow.radius=3;scene.add(mainLight);
+ const moon=new T.DirectionalLight('#a1b7d4',1.6);moon.position.set(1,4,-8);moon.target.position.set(-1,.2,1.5);moon.castShadow=true;moon.shadow.mapSize.set(2048,2048);Object.assign(moon.shadow.camera,{left:-6,right:6,top:6,bottom:-6,near:.1,far:25});moon.shadow.bias=-.00005;moon.shadow.normalBias=.025;moon.shadow.radius=4;scene.add(moon,moon.target);
  const bounce=new T.PointLight('#8c9db2',2.8,7,2);bounce.position.set(0,1.8,-4.1);scene.add(bounce);
  // Window, rain and pleated curtains.
  const windowGroup=group(0,0,-4.48);for(const x of [-1.5,0,1.5])box(.07,1.95,.12,x,1.65,0,ivory,windowGroup);for(const y of [.68,1.64,2.62])box(3.08,.07,.14,0,y,0,ivory,windowGroup);box(3.2,.12,.32,0,.65,.03,wood,windowGroup);
@@ -112,7 +113,7 @@ export function buildRoom(renderer,state){
  // Living-room side table and UV lamp.
  const bedside=group(-2.95,0,-3.65);rb(.75,.65,.64,0,.4,0,wood,bedside);rb(.84,.07,.72,0,.77,0,wood,bedside);for(const x of [-.25,.25])for(const z of [-.2,.2])rod([x,0,z],[x,.2,z],.035,darkwood,bedside);solid(-2.95,-3.65,.85,.75);shadow(-2.95,-3.65,1.2,1.1);
  const lamp=interactive(group(-2.95,.82,-3.65),'lamp','거실 스탠드');cyl(.16,.19,.06,0,.02,0,brass,lamp);cyl(.035,.055,.5,0,.3,0,brass,lamp);const shadeMat=new T.MeshStandardMaterial({color:'#c8b995',side:T.DoubleSide,roughness:1,emissive:'#e6bc73',emissiveIntensity:.2});const shade=mesh(new T.CylinderGeometry(.22,.34,.4,40,1,true),shadeMat,lamp);shade.position.y=.68;const lightbulb=ball(.065,.1,.065,0,.65,0,new T.MeshStandardMaterial({color:'#fff3ca',emissive:'#ffe1a0',emissiveIntensity:1.5}),lamp);cyl(.012,.012,.1,0,.93,0,brass,lamp);
- const lampLight=new T.PointLight('#ffc47c',17,5,1.6);lampLight.position.set(-2.95,1.47,-3.65);lampLight.castShadow=true;lampLight.shadow.mapSize.set(512,512);lampLight.shadow.bias=-.0004;scene.add(lampLight);rod([-2.92,.84,-3.6],[-3.28,.1,-3.9],.009,black);
+ const lampLight=new T.PointLight('#ffc47c',17,5,1.6);lampLight.position.set(-2.95,1.47,-3.65);lampLight.castShadow=true;lampLight.shadow.mapSize.set(512,512);lampLight.shadow.bias=-.00005;lampLight.shadow.normalBias=.012;scene.add(lampLight);rod([-2.92,.84,-3.6],[-3.28,.1,-3.9],.009,black);
  shiftSince(lampStart,lampSolids,0,10.05);
  // Worn rug: thousands of small geometric knots rather than a flat rectangle.
  const rugTex=canvasTexture((a,w,h)=>{a.fillStyle='#5a3b34';a.fillRect(0,0,w,h);for(let i=0;i<18;i++){a.strokeStyle=['#b19565','#342e2a','#8c664a'][i%3];a.lineWidth=5;a.strokeRect(10+i*5,10+i*5,w-20-i*10,h-20-i*10);}a.translate(w/2,h/2);for(let y=-330;y<=330;y+=90)for(let x=-180;x<=180;x+=90){a.save();a.translate(x,y);a.rotate(Math.PI/4);a.fillStyle='#a38d60';a.fillRect(-24,-24,48,48);a.fillStyle='#423e33';a.fillRect(-17,-17,34,34);a.fillStyle='#c1aa79';a.fillRect(-5,-5,10,10);a.restore();}for(let i=0;i<30000;i++){a.fillStyle=Math.random()>.5?'#dbc9a00b':'#00000010';a.fillRect((Math.random()-.5)*w,(Math.random()-.5)*h,1,2);}},512,1024);const rug=mesh(new T.PlaneGeometry(2.1,3.5),new T.MeshStandardMaterial({map:rugTex,roughness:1,color:'#b0a28d'}));rug.rotation.x=-Math.PI/2;rug.position.set(.35,.025,.3);for(const z of [-1.49,2.09])for(let x=-.7;x<1.4;x+=.035)rod([x,.025,z],[x+Math.sin(x*10)*.01,.025,z+(z>0?.08:-.08)],.004,linen);
@@ -121,7 +122,7 @@ export function buildRoom(renderer,state){
  const desk=group(2.98,0,-2.15);rb(.92,.09,2.0,0,1.02,0,wood,desk);for(const z of [-.8,.8])for(const x of [-.33,.33]){rod([x,.03,z],[x,.97,z],.045,darkwood,desk);ball(.07,.04,.07,x,.04,z,brass,desk);}box(.65,.48,1.65,.08,.72,0,darkwood,desk);solid(2.98,-2.15,.95,2.05);shadow(2.98,-2.15,1.5,2.6);
  const drawer=interactive(group(0,0,0,desk),'drawer','욕실 세면대 아래 수납장');rb(.08,.25,1.48,-.42,.78,0,wood,drawer);box(.6,.04,1.4,-.1,.66,0,darkwood,drawer);box(.62,.16,.05,-.1,.75,-.7,wood,drawer);box(.62,.16,.05,-.1,.75,.7,wood,drawer);const handle=mesh(new T.TorusGeometry(.07,.012,8,24),brass,drawer);handle.position.set(-.48,.77,0);handle.rotation.y=Math.PI/2;ball(.018,.027,.02,-.467,.8,-.35,black,drawer);
  const bulb=interactive(group(-.15,.72,.25,drawer),'bulb','보랏빛 전구');const tube=mesh(new T.CylinderGeometry(.028,.028,.33,16),new T.MeshStandardMaterial({color:'#8573b9',emissive:'#1c1039',roughness:.3}),bulb);tube.rotation.z=Math.PI/2;for(const x of [-.18,.18]){const end=cyl(.034,.034,.055,x,0,0,brass,bulb);end.rotation.z=Math.PI/2;}bulb.visible=false;
- shiftSince(vanityStart,vanitySolids,4.5,.65);
+ shiftSince(vanityStart,vanitySolids,4.5,.65);const legacyVanity=scene.children.slice(vanityStart);for(const b of solids.slice(vanitySolids))b.bathLegacy=true;
  const diningStart=scene.children.length,diningSolids=solids.length;
  // Ledger and stationery. The worksheet texture is shared with the movable overlay puzzle.
  const ledger=interactive(box(.62,.025,.72,2.9,1.08,-2.05,paper),'ledger','인화 작업표');const blotter=box(.76,.015,1.12,2.98,1.075,-2.03,leather);ledger.position.y=1.1;
@@ -140,8 +141,10 @@ export function buildRoom(renderer,state){
  const mirrorGroup=group(3.48,1.83,1.15);mirrorGroup.rotation.y=-Math.PI/2;rb(1.48,1.79,.1,0,0,0,darkwood,mirrorGroup);for(const y of [-.83,.83])rb(1.44,.055,.14,0,y,.03,brass,mirrorGroup);for(const x of [-.69,.69])rb(.055,1.62,.14,x,0,.03,brass,mirrorGroup);const mirror=new Reflector(new T.PlaneGeometry(1.32,1.58),{color:0xb9c2bb,textureWidth:1024,textureHeight:1024,clipBias:.003});mirror.position.z=.065;mirrorGroup.add(mirror);interactive(mirror,'mirror','벽 거울');const reflectRoom=mirror.onBeforeRender;mirror.onBeforeRender=function(...args){const opacity=uvInk.material.opacity;uvInk.material.opacity=uvVisible(state)?1:0;try{reflectRoom.apply(this,args);}finally{uvInk.material.opacity=opacity;}};
  shiftSince(mirrorStart,mirrorSolids,0,4.3);
  // Wardrobe, suitcase, books, rotary telephone and switches provide searchable human detail.
+ const bedroomStart=scene.children.length;
  const wardrobe=interactive(group(-2.4,0,3.91),'wardrobe','옷장');box(1.9,.08,.72,0,.16,0,darkwood,wardrobe);box(1.9,.08,.72,0,2.45,0,darkwood,wardrobe);box(.08,2.3,.72,-.91,1.3,0,darkwood,wardrobe);box(.08,2.3,.72,.91,1.3,0,darkwood,wardrobe);box(1.9,2.3,.06,0,1.3,.33,darkwood,wardrobe);rod([-.8,2.1,0],[.8,2.1,0],.018,brass,wardrobe);rb(2.04,.12,.82,0,2.5,0,wood,wardrobe);const wardrobeDoors=[];for(const side of [-1,1]){const hinge=group(side*.93,0,-.4,wardrobe),x=-side*.46;rb(.91,2.13,.06,x,1.3,0,wood,hinge);rb(.75,1.86,.035,x,1.3,-.042,darkwood,hinge);ball(.025,.08,.022,x-side*.3,1.2,-.08,brass,hinge);wardrobeDoors.push({hinge,side});}for(let i=0;i<3;i++){const x=-.45+i*.42;rod([x,2.13,0],[x-.16,1.96,0],.009,brass,wardrobe);rod([x,2.13,0],[x+.16,1.96,0],.009,brass,wardrobe);rod([x-.16,1.96,0],[x+.16,1.96,0],.009,brass,wardrobe);}box(.3,.01,.2,0,.21,-.1,paper,wardrobe);for(const x of [-.7,.7])for(const z of [-.22,.22])cyl(.055,.075,.2,x,.1,z,darkwood,wardrobe);solid(-2.4,3.91,2.05,.9);shadow(-2.4,3.9,2.5,1.4);
- const suitcase=interactive(group(-2.7,.25,2.55),'suitcase','가죽 여행 가방');rb(1.1,.12,.64,0,-.17,0,leather,suitcase,.035);for(const x of[-.52,.52])box(.07,.32,.64,x,.02,0,leather,suitcase);for(const z of[-.29,.29])box(1.05,.32,.07,0,.02,z,leather,suitcase);const suitcaseLid=group(0,.18,.32,suitcase);rb(1.1,.1,.64,0,0,-.32,leather,suitcaseLid,.035);box(.92,.015,.49,0,-.06,-.32,mat('#6c6551'),suitcaseLid);for(const x of [-.35,.35])box(.075,.47,.66,x,0,0,darkwood,suitcase);rb(.32,.08,.06,0,.28,0,brass,suitcase);for(const x of [-.43,.43])box(.1,.06,.04,x,.08,-.34,brass,suitcase);solid(-2.7,2.55,1.15,.7);shadow(-2.7,2.55,1.6,1);
+ const suitcase=interactive(group(-2.7,.25,2.55),'suitcase','가죽 여행 가방');rb(1.1,.12,.64,0,-.17,0,leather,suitcase,.035);for(const x of[-.52,.52])box(.07,.32,.64,x,.02,0,leather,suitcase);for(const z of[-.29,.29])box(1.05,.32,.07,0,.02,z,leather,suitcase);const suitcaseLid=group(0,.18,.32,suitcase);rb(1.1,.1,.64,0,0,-.32,leather,suitcaseLid,.035);box(.92,.015,.49,0,-.06,-.32,mat('#6c6551'),suitcaseLid);for(const x of [-.35,.35])box(.075,.47,.66,x,0,0,darkwood,suitcase);rb(.32,.08,.06,0,.28,0,brass,suitcase);for(const x of [-.43,.43])box(.1,.06,.04,x,.08,-.34,brass,suitcase);solid(-2.7,2.55,1.15,.7);solids[solids.length-1].suitcaseLegacy=true;shadow(-2.7,2.55,1.6,1);
+ const legacyBedroom=scene.children.slice(bedroomStart);
  const phone=interactive(group(2.8,.5,3.7),'phone','검은 전화기');rb(.69,.67,.5,0,-.1,0,wood,phone);rb(.73,.07,.55,0,.26,0,wood,phone);const body=rb(.44,.12,.3,0,.35,0,black,phone,.04);const dial=cyl(.12,.12,.02,0,.42,0,brass,phone);for(let i=0;i<10;i++){const a=i*Math.PI*2/12-.3;const hole=cyl(.018,.018,.025,Math.sin(a)*.083,.435,Math.cos(a)*.083,black,phone,12);}rod([-.2,.46,-.09],[.2,.46,-.09],.035,black,phone);for(const x of [-.19,.19])ball(.08,.055,.07,x,.46,-.09,black,phone);const cordPoints=[];for(let i=0;i<100;i++){const a=i*.6;cordPoints.push(new T.Vector3(.23+Math.sin(a)*.02,.43-i*.004,-.07+Math.cos(a)*.02));}const cord=mesh(new T.TubeGeometry(new T.CatmullRomCurve3(cordPoints),100,.006,6,false),black,phone);phone.position.set(.8,.5,9.4);solid(.8,9.4,.8,.6);
  const switchGroup=interactive(group(.96,1.35,4.43),'switch','벽 스위치');rb(.13,.22,.025,0,0,0,ivory,switchGroup,.008);rb(.055,.1,.025,0,0,-.022,black,switchGroup,.008);
  // The exit is a heavy mechanical door, with three nested ring dials.
@@ -149,8 +152,10 @@ export function buildRoom(renderer,state){
  const door=interactive(group(1.46,0,10.5),'door','잠긴 문');rb(1.32,2.65,.12,.66,1.325,0,darkwood,door);for(const y of [.65,1.95])rb(1.08,.9,.045,.66,y,-.077,wood,door);box(.11,.1,.07,1.12,1.12,-.13,brass,door);rod([.94,1.12,-.16],[1.15,1.12,-.16],.025,brass,door);for(const y of [.3,1.3,2.3])cyl(.025,.025,.15,0,y,0,brass,door);
  const lock=interactive(group(.82,1.65,-.13,door),'lock','세 겹의 잠금장치');const lockPlate=cyl(.255,.255,.045,0,0,0,brass,lock);lockPlate.rotation.x=Math.PI/2;const rings=[];for(let i=0;i<3;i++){const ring=group(0,0,-.035-i*.008,lock),radius=.21-i*.056;const tor=mesh(new T.TorusGeometry(radius,.018,10,64),darkwood,ring);const notch=box(.028,.045,.015,0,radius,-.01,ivory,ring);rings.push(ring);}ball(.025,.025,.018,0,0,-.08,brass,lock);
  // Living room furniture leaves a clear route along the right side of the suite.
+ const loungeStart=scene.children.length;
  const sofa=group(-1.35,0,8.35);rb(2.4,.28,.95,0,.4,0,darkwood,sofa,.05);rb(2.35,.65,.2,0,.82,.42,fabric,sofa,.06);for(const x of[-1.1,1.1])rb(.23,.5,1.05,x,.65,0,fabric,sofa,.06);for(const x of[-.52,.52])rb(.9,.18,.78,x,.62,-.04,fabric,sofa,.06);for(const x of[-.9,.9])for(const z of[-.33,.33])cyl(.045,.06,.28,x,.14,z,darkwood,sofa);solid(-1.35,8.35,2.5,1.1);shadow(-1.35,8.35,2.9,1.6);
  const coffee=group(-1.35,0,6.85);rb(1.7,.08,.8,0,.49,0,wood,coffee);for(const x of[-.68,.68])for(const z of[-.27,.27])rod([x,0,z],[x,.45,z],.03,brass,coffee);const magazine=box(.36,.025,.45,-.2,.55,0,paper,coffee);solid(-1.35,6.85,1.75,.85);shadow(-1.35,6.85,2.2,1.3);
+ const legacyLounge=scene.children.slice(loungeStart);
  const loungeRug=rug.clone();loungeRug.position.set(-1.35,.022,7.5);loungeRug.scale.set(1.45,1.05,1);scene.add(loungeRug);
  const minibar=interactive(group(-2.92,0,9.7),'minibar','거실 미니바');rb(.93,.9,.65,0,.48,0,wood,minibar);rb(1.02,.06,.73,0,.96,0,darkwood,minibar);for(const x of[-.22,.22])cyl(.065,.045,.12,x,1.06,0,ivory,minibar);solid(-2.92,9.7,1,.75);shadow(-2.92,9.7,1.3,1.1);
  for(const [x,z,id]of[[0,7.35,'living'],[6.5,7.3,'kitchen']]){const fixture=group(x,3.05,z);cyl(.34,.4,.07,0,0,0,brass,fixture);ball(.3,.13,.3,0,-.13,0,new T.MeshStandardMaterial({color:'#e3d7b9',emissive:'#edc79a',emissiveIntensity:.4}),fixture);const light=new T.PointLight('#f2c69b',id==='living'?23:26,9,1.7);light.position.set(x,2.7,z);scene.add(light);suiteLights.push({fixture,light,base:light.intensity});}
@@ -169,14 +174,17 @@ export function buildRoom(renderer,state){
  // Other guest doors are scenery: they cannot bypass the suite or 317 locks.
  for(const x of[-1.9,8.65]){rb(1.23,2.6,.12,x,1.3,13.4,darkwood);for(const side of[-1,1])box(.1,2.72,.17,x+side*.68,1.36,13.38,wood);sign(x<0?'315':'319',.34,.15,x,2.05,13.31,Math.PI);rod([x+.35,1.12,13.29],[x+.52,1.12,13.29],.022,brass);}
  // A residential hotel kitchenette: refrigerator, sink, hob and a dining table.
+ const kitchenStart=scene.children.length;
  const kitchenBase=group(6.3,0,5.04);rb(3.7,.85,.72,0,.47,0,wood,kitchenBase);rb(3.83,.07,.81,0,.93,0,ivory,kitchenBase);for(const x of[-1.35,-.45,.45,1.35]){rb(.84,.7,.04,x,.49,.39,darkwood,kitchenBase);rod([x-.1,.73,.43],[x+.1,.73,.43],.012,brass,kitchenBase);}solid(6.3,5.04,3.8,.82);shadow(6.3,5.04,4.1,1.15);
- const tileMap=canvasTexture((a,w,h)=>{a.fillStyle='#c2c5b9';a.fillRect(0,0,w,h);a.strokeStyle='#777d72';a.lineWidth=3;for(let x=0;x<=w;x+=128){a.beginPath();a.moveTo(x,0);a.lineTo(x,h);a.stroke();}for(let y=0;y<=h;y+=128){a.beginPath();a.moveTo(0,y);a.lineTo(w,y);a.stroke();}},512);box(3.85,.68,.025,6.3,1.31,4.7,new T.MeshStandardMaterial({map:tileMap,roughness:.5}));
+ const tileMap=canvasTexture((a,w,h)=>{a.fillStyle='#c2c5b9';a.fillRect(0,0,w,h);a.strokeStyle='#777d72';a.lineWidth=3;for(let x=0;x<=w;x+=128){a.beginPath();a.moveTo(x,0);a.lineTo(x,h);a.stroke();}for(let y=0;y<=h;y+=128){a.beginPath();a.moveTo(0,y);a.lineTo(w,y);a.stroke();}},512);const kitchenBacksplash=box(3.85,.68,.025,6.3,1.31,4.7,new T.MeshStandardMaterial({map:tileMap,roughness:.5}));
  const sinkSteel=mat('#7c8983',.28,.75);rb(.73,.025,.5,5.5,.98,5.04,sinkSteel);rb(.58,.015,.35,5.5,.994,5.04,mat('#303d3b',.2,.65));rod([5.5,.99,4.8],[5.5,1.3,4.8],.018,sinkSteel);rod([5.5,1.3,4.8],[5.5,1.3,5.02],.018,sinkSteel);rod([5.5,1.3,5.02],[5.5,1.24,5.02],.018,sinkSteel);
  rb(.84,.035,.58,7.18,.99,5.04,black);for(const x of[6.98,7.38]){cyl(.15,.15,.018,x,1.02,5.04,brass);cyl(.115,.115,.025,x,1.032,5.04,black);}cyl(.11,.13,.19,7.8,1.09,5.03,sinkSteel);rod([7.7,1.22,5.03],[7.91,1.22,5.03],.018,black);
+ const legacyKitchen=scene.children.slice(kitchenStart).filter(o=>o!==kitchenBacksplash);
  const fridge=group(4.15,0,5.14);rb(.78,1.94,.88,0,.99,0,mat('#a8aba0',.4,.18),fridge,.035);box(.73,.025,.025,0,1.32,.46,black,fridge);for(const y of[.9,1.56])rod([.25,y-.13,.49],[.25,y+.13,.49],.018,brass,fridge);solid(4.15,5.14,.83,.92);shadow(4.15,5.14,1.1,1.2);
  const diningTable=group(8.98,0,6.85);rb(.95,.08,2.02,0,1.02,0,wood,diningTable);for(const x of[-.34,.34])for(const z of[-.82,.82])rod([x,0,z],[x,.98,z],.035,darkwood,diningTable);solid(8.98,6.85,1.0,2.05);shadow(8.98,6.85,1.5,2.6);
  const trolley=group(5.2,0,9.3);for(const y of[.25,.78])rb(1.25,.05,.62,0,y,0,darkwood,trolley);for(const x of[-.55,.55])for(const z of[-.25,.25])rod([x,.1,z],[x,.9,z],.015,brass,trolley);for(const x of[-.5,.5])for(const z of[-.22,.22])ball(.06,.06,.025,x,.07,z,black,trolley);for(let i=0;i<5;i++)cyl(.12,.12,.015,5.1,.83+i*.016,9.3,ivory);solid(5.2,9.3,1.3,.7);shadow(5.2,9.3,1.6,1.0);
  // A separate tiled bathroom contains the locked vanity and its UV bulb.
+ const bathStart=scene.children.length,bathSolids=solids.length;
  const bathTile=canvasTexture((a,w,h)=>{a.fillStyle='#a5aaa0';a.fillRect(0,0,w,h);a.strokeStyle='#656d65';a.lineWidth=4;for(let x=0;x<=w;x+=128){a.beginPath();a.moveTo(x,0);a.lineTo(x,h);a.stroke();}for(let y=0;y<=h;y+=128){a.beginPath();a.moveTo(0,y);a.lineTo(w,y);a.stroke();}},512);
  const bathMat=new T.MeshStandardMaterial({map:bathTile,color:'#c9c8b8',roughness:.48});box(4.6,.025,6,5.9,.014,-1.5,bathMat);for(const x of[3.78,8.12]){if(x>8)box(.025,2.4,6,x,1.2,-1.5,bathMat);}for(const z of[-4.4,1.4])box(4.6,2.4,.025,5.9,1.2,z,bathMat);
  const porcelain=mat('#e5e2d2',.2);const basin=mesh(new T.TorusGeometry(.27,.06,12,48),porcelain);basin.rotation.x=Math.PI/2;basin.scale.set(1,1.3,.7);basin.position.set(7.48,1.13,-1.5);ball(.23,.025,.3,7.48,1.08,-1.5,porcelain);cyl(.035,.035,.008,7.48,1.111,-1.5,sinkSteel);rod([7.84,1.07,-1.5],[7.84,1.39,-1.5],.018,sinkSteel);rod([7.84,1.39,-1.5],[7.6,1.39,-1.5],.018,sinkSteel);rod([7.6,1.39,-1.5],[7.6,1.34,-1.5],.018,sinkSteel);
@@ -186,6 +194,8 @@ export function buildRoom(renderer,state){
  for(const y of[1.1,1.45])rod([5.55,y,1.3],[6.25,y,1.3],.015,brass);rb(.55,.38,.035,5.9,1.26,1.27,linen);const bathNote=interactive(sign('LAUNDRY / 365',.3,.21,6.7,1.42,1.37,Math.PI,'#484435','#cdbb96'),'bathNote','욕실 세탁 안내표');
  const bathFixture=group(5.8,3.03,-1.4);cyl(.2,.25,.06,0,0,0,ivory,bathFixture);ball(.23,.08,.23,0,-.08,0,new T.MeshStandardMaterial({color:'#e0e8dc',emissive:'#c8d5ce',emissiveIntensity:.5}),bathFixture);const bathLight=new T.PointLight('#cfdbd2',24,7,1.7);bathLight.position.set(5.8,2.7,-1.4);scene.add(bathLight);suiteLights.push({fixture:bathFixture,light:bathLight,base:bathLight.intensity});
 
+ const legacyBath=scene.children.slice(bathStart).filter(o=>![bathNote,bathFixture,bathLight].includes(o));for(const b of solids.slice(bathSolids))b.bathLegacy=true;
+ const domestic=buildDomesticModels({scene,renderer,manager,state,solids,mirror,canvasTexture,legacy:{drawer,bulb,clock,vanity:legacyVanity,bath:legacyBath,kitchen:legacyKitchen,lounge:legacyLounge,bedroom:legacyBedroom,lightExtras:fixtureLights}});
  const nextRoomStart=scene.children.length,nextRoomSolids=solids.length;
  // Room 317: guest belongings, room service and a mechanical music-box puzzle.
  const secondLight=new T.PointLight('#ffd3a0',27,9,1.7);secondLight.position.set(4,2.65,8);scene.add(secondLight);
@@ -225,7 +235,7 @@ export function buildRoom(renderer,state){
    mix(moon,'intensity',state.curtainsClosed?.08:1.6);mix(bounce,'intensity',state.curtainsClosed?.25:2.8);
    for(const {g,side}of curtains){mix(g.position,'x',side*(state.curtainsClosed?.8:1.7),3);mix(g.scale,'x',state.curtainsClosed?1.7:1,3);}
    for(const {g}of curtains)g.children[0].rotation.y=Math.sin(time*.6)*.008;
-   for(const {hinge,side}of wardrobeDoors)mix(hinge.rotation,'y',state.wardrobeOpen?side*1.5:0,2.5);mix(suitcaseLid.rotation,'x',state.suitcaseOpen?1.7:0,3);mix(drawer.position,'x',state.drawerOpen?-.64:0,4);bulb.visible=state.drawerOpen&&!state.bulbTaken;
+   for(const {hinge,side}of wardrobeDoors)mix(hinge.rotation,'y',state.wardrobeOpen?side*1.5:0,2.5);mix(suitcaseLid.rotation,'x',state.suitcaseOpen?1.7:0,3);if(!domestic.bathLoaded)mix(drawer.position,'x',state.drawerOpen?-.64:0,4);bulb.visible=state.drawerOpen&&!state.bulbTaken;
    filmA.visible=!state.inventory.includes('filmA')&&!state.filmJoined;
    frame.traverse(o=>{if(o.userData.filmBack)o.visible=!state.inventory.includes('filmB')&&!state.filmJoined;});
    if(state.frameTaken&&!lastFrameTaken){frame.position.set(-3.43,.6,7.6);frame.rotation.set(.09,Math.PI/2-.1,-.04);lastFrameTaken=true;}
@@ -238,9 +248,10 @@ export function buildRoom(renderer,state){
    receipt317.visible=!state.inventory.includes('receipt');tag317.visible=!state.inventory.includes('tag');
    mix(luggageLid.rotation,'x',state.luggageOpen?-1.6:0,3);mix(safeDoor.rotation,'y',state.safeOpen?-1.4:0,3);mix(exit317.rotation,'y',state.exitOpen?-1.6:0,2.5);
    if(state.musicWound)musicDrum.rotation.y=time*.65;
+   domestic.update(dt);for(const light of fixtureLights)light.intensity=state.lightOn?2.4:0;
    exterior.update(dt,time);dust.rotation.y=Math.sin(time*.04)*.025;
  }
- function clockHands(hour,minute){const ha=hour/12*Math.PI*2+minute/60*Math.PI/6,ma=minute/60*Math.PI*2;hr.position.set(Math.sin(ha)*.045,.3+Math.cos(ha)*.045,.111);hr.rotation.z=-ha;mn.position.set(Math.sin(ma)*.065,.3+Math.cos(ma)*.065,.12);mn.rotation.z=-ma;}
+ function clockHands(hour,minute){domestic.clockHands(hour,minute);if(domestic.clockLoaded)return;const ha=hour/12*Math.PI*2+minute/60*Math.PI/6,ma=minute/60*Math.PI*2;hr.position.set(Math.sin(ha)*.045,.3+Math.cos(ha)*.045,.111);hr.rotation.z=-ha;mn.position.set(Math.sin(ma)*.065,.3+Math.cos(ma)*.065,.12);mn.rotation.z=-ma;}
  clockHands(11,10);const clockMark=canvasTexture((a,w,h)=>{a.fillStyle='#c6ab75';a.beginPath();a.moveTo(w*.2,h*.8);a.lineTo(w*.8,h*.8);a.lineTo(w*.8,h*.2);a.closePath();a.fill();},128);const markMesh=mesh(new T.PlaneGeometry(.1,.1),new T.MeshStandardMaterial({map:clockMark,transparent:true,roughness:.8}),clock);markMesh.position.set(0,.29,-.102);markMesh.rotation.y=Math.PI;
  function canMove(x,z){return canWalk(state,x,z,solids);}
  return{scene,roots,solids,ready,assetsFailed,update,canMove,clockHands,frame,clock,mirror,lamp,drawer,lock,photo,canvasTexture,materials:{wood,darkwood,brass,paper,black,ivory},helpers:{group,box,rb,rod,cyl,ball,mesh,sign},uvInk};

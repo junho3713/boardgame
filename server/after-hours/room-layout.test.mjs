@@ -26,6 +26,9 @@ test('HUD zones distinguish the suite rooms from the corridor and 317',()=>{
  for(const [p,zone]of[[[0,0],'bedroom'],[[0,7.5],'living'],[[6.5,7.5],'kitchen'],[[5.8,-1.5],'bath'],[[2.1,12],'hall'],[[6.5,17],'room317'],[[5.6,23],'exitHall']])assert.equal(zoneAt(...p),zone);
  assert.equal(zoneAt(-10,0),null);
 });
+test('rotated furniture and hinged door leaves use their rotated collision footprint',()=>{
+ const s=createState();const leaf={x:5.7,z:-1,w:1.2,d:.05,yaw:Math.PI/2};assert.equal(canWalk(s,5.7,-1.45,[leaf]),false);assert.equal(canWalk(s,6.15,-1,[leaf]),true);
+});
 test('corridor hints require finding and using the separate guest-room key',()=>{
  const s=createState();s.doorOpen=true;assert.equal(phase(s),'exit');s.suiteEscaped=true;assert.equal(phase(s),'neighborKey');addItem(s,'passKey');assert.equal(phase(s),'enter317');
  assert.equal(useItem(s,'passKey','exit317'),false);assert.equal(useItem(s,'passKey','entry317'),true);assert.equal(phase(s),'enter317');s.room317Entered=true;assert.equal(phase(s),'luggage');

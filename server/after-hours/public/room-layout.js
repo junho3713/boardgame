@@ -22,5 +22,5 @@ export function canWalk(s,x,z,solids=[]){
  const inside=Object.values(ZONES).some(b=>(!b.gate||s[b.gate])&&x>b.x0+r&&x<b.x1-r&&z>b.z0+r&&z<b.z1-r);
  const passage=PASSAGES.some(p=>{if(p.gate&&!s[p.gate])return false;const along=p.axis==='z'?x:z,across=p.axis==='z'?z:x;return along>p.low+r&&along<p.high-r&&Math.abs(across-p.at)<.4;});
  if(!inside&&!passage)return false;
- return !solids.some(b=>Math.abs(x-b.x)<b.w/2+r&&Math.abs(z-b.z)<b.d/2+r);
+ return !solids.some(b=>{const c=Math.cos(b.yaw||0),q=Math.sin(b.yaw||0),dx=x-b.x,dz=z-b.z;return Math.abs(dx*c-dz*q)<b.w/2+r&&Math.abs(dx*q+dz*c)<b.d/2+r;});
 }
