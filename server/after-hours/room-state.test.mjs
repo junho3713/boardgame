@@ -25,7 +25,7 @@ test('the entire post-mirror chain requires physical installation, separate pick
  for(const [fn,key]of[[takeKitchenKey,'kitchenKey'],[takeStockContents,'twinKey'],[takeCompanionKeys,'passKey'],[takeWindingKey,'windingKey'],[takeInnerKey,'exitKey'],[takeStairKey,'stairKey']]){assert.equal(fn(s),false);assert.ok(!s.inventory.includes(key));}
 });
 test('inventory tools have material prerequisites, and a pencil remains usable after rubbing',()=>{
- const s=createState();addItem(s,'pencil');assert.equal(useItem(s,'pencil','tag317'),false);addItem(s,'tag');assert.equal(useItem(s,'pencil','tag317'),false);addItem(s,'receipt');assert.ok(useItem(s,'pencil','tag317'));assert.equal(s.tagRubbed,true);assert.ok(s.inventory.includes('pencil'));assert.ok(s.inventory.includes('receipt'));
+ const s=createState();addItem(s,'pencil');assert.equal(useItem(s,'pencil','tag317'),false);addItem(s,'tag');assert.equal(useItem(s,'pencil','tag317'),false);addItem(s,'receipt');assert.ok(useItem(s,'pencil','tag317'));assert.equal(s.tagRubbed,false);assert.ok(s.rubbingPrepared);assert.ok(s.inventory.includes('pencil'));assert.ok(s.inventory.includes('receipt'));
 });
 test('combination locks do not depend on hidden read flags or claim success for malformed values',()=>{
  const s=createState();s.kitchenOpen=true;s.twinOpen=true;s.wheelInstalled=true;s.room317Entered=true;s.exitOpen=true;

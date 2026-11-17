@@ -1,5 +1,6 @@
-import {SEARCH_DEFAULTS,SEARCH_ITEMS,useSearchItem,scalePowered} from './search-state.js?v=20261117-water1';
-import {trayFits,STOCK_CODE,MAP_TARGET,LUGGAGE_IMPRINT,SAFE_TARGET,EVAC_TARGET,LINEN_CODE,WEIGHABLES} from './puzzle-evidence.js?v=20261117-search1';
+import {prepareRubbing} from './puzzle-tricks.js?v=20261117-tricks1';
+import {SEARCH_DEFAULTS,SEARCH_ITEMS,useSearchItem,scalePowered} from './search-state.js?v=20261117-tricks1';
+import {trayFits,STOCK_CODE,MAP_TARGET,LUGGAGE_IMPRINT,SAFE_TARGET,EVAC_TARGET,LINEN_CODE,WEIGHABLES} from './puzzle-evidence.js?v=20261117-tricks1';
 export const CLOCK_TARGET={hour:5,minute:40};
 export const RING_TARGET=[5,0,3]; // clockwise eighth-turns from twelve o'clock
 export const ITEMS={...SEARCH_ITEMS,filmA:'찢어진 필름 · A',filmB:'찢어진 필름 · B',film:'구멍 난 필름',key:'책상 서랍 열쇠',bathKey:'물방울 표식 열쇠',stock_tea:'홍차 통',stock_coffee:'커피 통',stock_sugar:'설탕 통',stock_empty:'빈 예비 통',bulb:'보랏빛 전구',receipt:'호텔 영수증',tag:'317호 수하물표',windingKey:'오르골 태엽 열쇠',exitKey:'317호 안쪽 방 열쇠',stairKey:'3층 계단문 열쇠',passKey:'317호 예비 열쇠',tinKey:'꽃무늬 작은 열쇠',inlay:'상감 나무 조각',kitchenKey:'간이주방 열쇠',tourMap:'접힌 관광 지도',pencil:'짧은 연필',twinKey:'트윈 침실 열쇠',suiteKey:'316호 출입문 열쇠'};
@@ -9,7 +10,7 @@ export function removeItem(s,id){s.inventory=s.inventory.filter(x=>x!==id);if(s.
 export function combineFilms(s){if(!s.inventory.includes('filmA')||!s.inventory.includes('filmB'))return false;removeItem(s,'filmA');removeItem(s,'filmB');addItem(s,'film');s.filmJoined=true;return true;}
 export function alignFilm(s,x,y,rotation){if(!s.filmJoined)return false;const aligned=Math.abs(x-2)<.16&&Math.abs(y-1)<.16&&((rotation%4)+4)%4===0;if(aligned)s.aligned=true;return aligned;}
 export function setClock(s,hour,minute){if(!s.aligned||hour!==CLOCK_TARGET.hour||minute!==CLOCK_TARGET.minute)return false;s.clockSolved=true;addItem(s,'key');return true;}
-export function useItem(s,item,target){if(!s.inventory.includes(item))return false;const search=useSearchItem(s,item,target);if(search!==null)return search;const jarIndex=WEIGHABLES.findIndex(j=>'stock_'+j.id===item);if(jarIndex>=0&&target==='kitchenScale'){if(!s.kitchenOpen||!scalePowered(s)||s.stockOnScale!==-1)return false;s.stockOnScale=jarIndex;s.stockWeights[jarIndex]=true;removeItem(s,item);return true;}if(item==='inlay'&&target==='teaTray'){s.inlayInstalled=true;removeItem(s,item);return true;}if(item==='kitchenKey'&&target==='kitchenDoor'&&s.traySolved){s.kitchenOpen=true;removeItem(s,item);return true;}if(item==='pencil'&&target==='tag317'&&s.inventory.includes('tag')&&s.inventory.includes('receipt')){s.tagRubbed=true;return true;}if(item==='stairKey'&&target==='stairDoor'&&s.stairKeyTaken&&s.exitOpen){s.stairsOpen=true;removeItem(s,item);return true;}if(item==='tinKey'&&target==='teaTin'){s.teaTinOpen=true;removeItem(s,item);return true;}if(item==='bathKey'&&target==='bathDoor'){s.bathUnlocked=true;s.bathDoorOpen=true;removeItem(s,item);return true;}if(item==='twinKey'&&target==='twinDoor'&&s.stockSolved){s.twinOpen=true;removeItem(s,item);return true;}if(item==='suiteKey'&&target==='suiteDoor'&&s.companionSolved){s.doorOpen=true;removeItem(s,item);return true;}if(item==='passKey'&&target==='entry317'&&s.doorOpen){s.room317Open=true;removeItem(s,'passKey');return true;}if(item==='key'&&target==='drawer'&&s.clockSolved){s.drawerUnlocked=true;s.drawerOpen=true;removeItem(s,'key');return true;}if(item==='windingKey'&&target==='musicBox'&&!s.musicWound){s.musicWound=true;removeItem(s,'windingKey');return true;}if(item==='exitKey'&&target==='exit317'&&s.safeOpen){s.exitOpen=true;removeItem(s,'exitKey');return true;}if(item==='bulb'&&target==='lamp'){s.uvInstalled=true;s.lampOn=true;removeItem(s,'bulb');return true;}return false;}
+export function useItem(s,item,target){if(!s.inventory.includes(item))return false;const search=useSearchItem(s,item,target);if(search!==null)return search;const jarIndex=WEIGHABLES.findIndex(j=>'stock_'+j.id===item);if(jarIndex>=0&&target==='kitchenScale'){if(!s.kitchenOpen||!scalePowered(s)||s.stockOnScale!==-1)return false;s.stockOnScale=jarIndex;s.stockWeights[jarIndex]=true;removeItem(s,item);return true;}if(item==='inlay'&&target==='teaTray'){s.inlayInstalled=true;removeItem(s,item);return true;}if(item==='kitchenKey'&&target==='kitchenDoor'&&s.traySolved){s.kitchenOpen=true;removeItem(s,item);return true;}if(item==='pencil'&&target==='tag317'&&s.inventory.includes('tag')&&s.inventory.includes('receipt')){return prepareRubbing(s);}if(item==='stairKey'&&target==='stairDoor'&&s.stairKeyTaken&&s.exitOpen){s.stairsOpen=true;removeItem(s,item);return true;}if(item==='tinKey'&&target==='teaTin'){s.teaTinOpen=true;removeItem(s,item);return true;}if(item==='bathKey'&&target==='bathDoor'){s.bathUnlocked=true;s.bathDoorOpen=true;removeItem(s,item);return true;}if(item==='twinKey'&&target==='twinDoor'&&s.stockSolved){s.twinOpen=true;removeItem(s,item);return true;}if(item==='suiteKey'&&target==='suiteDoor'&&s.companionSolved){s.doorOpen=true;removeItem(s,item);return true;}if(item==='passKey'&&target==='entry317'&&s.doorOpen){s.room317Open=true;removeItem(s,'passKey');return true;}if(item==='key'&&target==='drawer'&&s.clockSolved){s.drawerUnlocked=true;s.drawerOpen=true;removeItem(s,'key');return true;}if(item==='windingKey'&&target==='musicBox'&&!s.musicWound){s.musicWound=true;removeItem(s,'windingKey');return true;}if(item==='exitKey'&&target==='exit317'&&s.safeOpen){s.exitOpen=true;removeItem(s,'exitKey');return true;}if(item==='bulb'&&target==='lamp'){s.uvInstalled=true;s.lampOn=true;removeItem(s,'bulb');return true;}return false;}
 export function uvVisible(s){return s.uvInstalled&&s.lampOn&&!s.lightOn&&s.curtainsClosed;}
 export function unlockDoor(s){if(!s.uvInstalled||!s.rings.every((x,i)=>x===RING_TARGET[i]))return false;s.bedroomOpen=true;return true;}
 export function phase(s){
@@ -77,7 +78,7 @@ export const HINTS={
  "neighborKey": [
   "풍경을 그린 사람은 어디에 서 있었을까?",
   "엽서 뒷면의 출발 장소와 앞면의 건물을 지도에서 찾아보자. 보관함에는 북쪽 표식이 있다.",
-  "트윈 협탁의 세 핀을 눈에 보이는 통로 끝까지 옮겨 서랍을 열고 방향판을 찾아 보관함에 끼운다. 엽서는 두 침대와 협탁에서 찾는다. 지도를 북쪽이 위로 오게 보고 부두에서 시계탑, 역에서 풍차, 정원에서 등대 방향을 찾는다. 보관함의 화살표는 북동·서·남동이다. 열린 상자에서 두 열쇠를 직접 꺼낸다."
+  "화장대의 접힌 수리 메모를 조사해 협탁의 세 핀을 맞추고 방향판을 찾아 보관함에 끼운다. 엽서는 두 침대와 협탁에서 찾는다. 지도를 북쪽이 위로 오게 보고 부두에서 시계탑, 역에서 풍차, 정원에서 등대 방향을 찾는다. 보관함의 화살표는 북동·서·남동이다. 열린 상자에서 두 열쇠를 직접 꺼낸다."
  ],
  "enter317": [
   "다음 객실은 복도 건너편이다.",
@@ -87,7 +88,7 @@ export const HINTS={
  "luggage": [
   "수하물표 뒷면의 글씨는 잉크가 아니라 눌린 자국이다.",
   "밝은 종이를 대고 연필 옆면으로 문지르면 요철을 옮길 수 있다. 방 안의 영수증과 화장대 연필을 찾아보자.",
-  "수하물표·영수증을 챙기고 연필을 수하물표에 사용하자. 전사된 571을 가방에 맞추고 열린 안감에서 태엽 열쇠를 꺼낸다."
+  "수하물표·영수증을 챙기고 연필을 수하물표에 사용하자. 영수증의 빈 면을 위로 돌리고 꺾인 모서리를 겹쳐 고정한 뒤 가로질러 문지른다. 전사된 571을 가방에 맞추고 열린 안감에서 태엽 열쇠를 꺼낸다."
  ],
  "music": [
   "가방의 잠금을 푼 뒤에도 안감을 살펴볼 수 있다.",
@@ -111,7 +112,7 @@ export const HINTS={
  ],
  "lastRoom": [
   "대피 안내와 열쇠함에 같은 출발·도착 표식이 있다.",
-  "마지막 방의 서랍·의자 아래·휴지통에서 찢긴 대피도를 찾고 테이블에서 경계선을 맞춰 복원하자. 고장 난 엘리베이터는 갈 길이 아니다.",
+  "마지막 방의 서랍·의자 아래·휴지통에서 찢긴 대피도를 찾고 테이블에서 순서와 회전을 바꾸어 찢긴 가장자리와 복도 선을 맞춰 복원하자. 고장 난 엘리베이터는 갈 길이 아니다.",
   "317 → 복도 접점 → 복도 서쪽 → 계단. 지도 기준 아래·왼쪽·왼쪽으로 맞추면 열쇠함이 열린다."
  ],
  "stairs": [
@@ -130,9 +131,9 @@ export const HINTS={
   "받침 뒤의 물방울 열쇠를 꺼내 침실 옆 욕실 문에 사용하자. 시계 열쇠와는 별개다."
  ],
  "linen": [
-  "누가 먼저 맡겼는지는 시각 없이도 알 수 있다.",
-  "세탁 담당자의 글에서 바구니에 이미 있던 것과 마지막에 받은 것을 구별하자. 욕실 세 곳의 의뢰표는 뒤집어 볼 수 있다.",
-  "목도리 → 셔츠 → 손수건 순서다. 의뢰표 뒷면의 보관 번호를 순서대로 읽어 린넨장에 맞추자."
+  "세탁 담당자가 남긴 흔적은 종이뿐 아니라 거울에도 있다.",
+  "세면대 옆 C/H 온도 표시를 H로 돌리고 물을 틀어 보자. 김이 서리면 비누로 남긴 기호가 드러난다.",
+  "거울의 기호 순서를 각 의뢰표 앞면의 옷 기호와 연결한다. 보관 번호는 의뢰표 뒷면에 있다. 흰 손수건 표의 비눗물은 세면대에서 적신 천으로 닦는다. 접수 순서대로 6·2·8이다."
  ],
  "linenReward": ["잠금을 푼 수납장 안쪽을 살펴보자.","꽃무늬 열쇠와 짧은 쪽지가 들어 있다.","린넨장에서 꽃무늬 열쇠를 꺼내 거실의 차 상자에 사용하자."],
  "tea": [

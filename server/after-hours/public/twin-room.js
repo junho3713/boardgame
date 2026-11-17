@@ -1,6 +1,6 @@
 import * as T from './three.module.js';
 import {GLTFLoader} from './GLTFLoader.js';
-import {TRAVEL_STOPS,COMPANION_TARGET} from './room-state.js?v=20261117-puzzles2';
+import {TRAVEL_STOPS,COMPANION_TARGET} from './room-state.js?v=20261117-tricks1';
 
 export const TWIN_SOLIDS=[
  {x:-7.75,z:8.85,w:1.24,d:2.4},{x:-5.25,z:8.85,w:1.24,d:2.4},

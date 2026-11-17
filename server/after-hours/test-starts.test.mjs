@@ -5,7 +5,7 @@ import {phase,uvVisible,useItem} from './public/room-state.js';
 import {canWalk} from './public/room-layout.js';
 
 test('each test start is reachable and has the intended next puzzle',()=>{
- const phases={basinFlow:'linen',latchNote:'neighborKey',searchBathWipe:'linen',searchRouteReady:'lastRoom',searchBook:'bathEntry',searchBedroom:'low',searchBath:'linen',searchLiving:'bathEntry',searchKitchen:'stock',searchTwin:'neighborKey',search317:'music',searchInner:'lastRoom',scale:'stock',plates:'stock',sink:'stock',bathEntry:'bathEntry',linen:'linen',linenLock:'linen',postcards:'neighborKey',desk317:'luggage',evacuationBox:'lastRoom',shower:'linen',teaBox:'tea',teaDoor:'tea',water:'stock',waterKey:'stockKey',towels:'linen',cups:'bathEntry',kettle:'stock',twin:'neighborKey',companion:'neighborKey',bedroom:'low',living:'bathEntry',kitchen:'stock',bath:'linen',hall:'enter317',room317:'luggage',clock:'clock',vanity:'drawer',uv:'mirror',music:'music',safe:'safe',exit:'lastRoom',stairs:'stairs',downstairs:'descend'};
+ const phases={steam:'linen',rubbing:'luggage',basinFlow:'linen',latchNote:'neighborKey',searchBathWipe:'linen',searchRouteReady:'lastRoom',searchBook:'bathEntry',searchBedroom:'low',searchBath:'linen',searchLiving:'bathEntry',searchKitchen:'stock',searchTwin:'neighborKey',search317:'music',searchInner:'lastRoom',scale:'stock',plates:'stock',sink:'stock',bathEntry:'bathEntry',linen:'linen',linenLock:'linen',postcards:'neighborKey',desk317:'luggage',evacuationBox:'lastRoom',shower:'linen',teaBox:'tea',teaDoor:'tea',water:'stock',waterKey:'stockKey',towels:'linen',cups:'bathEntry',kettle:'stock',twin:'neighborKey',companion:'neighborKey',bedroom:'low',living:'bathEntry',kitchen:'stock',bath:'linen',hall:'enter317',room317:'luggage',clock:'clock',vanity:'drawer',uv:'mirror',music:'music',safe:'safe',exit:'lastRoom',stairs:'stairs',downstairs:'descend'};
  for(const point of TEST_STARTS){
   const {state}=createTestStart(point.id);
   assert.equal(phase(state),phases[point.id],point.id);
@@ -31,7 +31,7 @@ test('free exploration opens gates and starts never share mutable state',()=>{
 
 test('checkpoint roundtrip preserves progress, camera and usable items',()=>{
  const setup=createTestStart('vanity');setup.state.selected='key';setup.state.notes=[{title:'관찰',text:'수납장'}];setup.state.seconds=73;setup.state.wardrobeOpen=true;setup.state.suitcaseOpen=true;
- Object.assign(setup.state,{linenDigits:[6,2,0],trayTurns:[1,2,3,0],stockDigits:[3,1,4],companionArrows:[1,6,0],evacArrows:[2,0,3],stockWeights:[true,false,true,true],stockBottoms:[false,true,false],inlayInstalled:true,tagRubbed:true});
+ Object.assign(setup.state,{linenDigits:[6,2,0],trayTurns:[1,2,3,0],stockDigits:[3,1,4],companionArrows:[1,6,0],evacArrows:[2,0,3],stockWeights:[true,false,true,true],stockBottoms:[false,true,false],inlayInstalled:true,tagRubbed:true,rubbingPrepared:true,rubbingAligned:true,rubbingBlank:true,rubbingOffset:[0,0],rubbingTurn:0,rubbingMarks:[3,3,3,3,3,3]});
  const value={...setup,pointId:'vanity',position:[6.3,1.62,-.3],yaw:-1.5,pitch:-.5,luggageDigits:[2,8,4],safeSymbols:[1,0,2,3]};
  const saved=readCheckpoint(writeCheckpoint(value));
  assert.deepEqual(saved.state,setup.state);assert.deepEqual(saved.position,value.position);

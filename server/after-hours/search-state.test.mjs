@@ -27,7 +27,7 @@ test('power and missing mechanical parts are installed independently of clue rea
 test('torn route pieces are found, mounted, and assembled before the full map appears',()=>{
  const s=createState();assert.equal(collectSearchItem(s,'route1'),false);s.exitOpen=true;assert.equal(collectSearchItem(s,'route0'),false);s.innerDrawerOpen=true;
  for(let i=0;i<3;i++){assert.ok(collectSearchItem(s,'route'+i));assert.ok(useItem(s,'route'+i,'evacuationPlan'));assert.equal(collectSearchItem(s,'route'+i),false);}
- assert.equal(restoreRoute(s,[2,0,1]),false);assert.equal(restoreRoute(s,[0,0,0]),false);assert.ok(restoreRoute(s,[0,1,2]));assert.ok(s.routeRestored);
+ assert.equal(restoreRoute(s,[2,0,1]),false);assert.equal(restoreRoute(s,[0,0,0]),false);assert.equal(restoreRoute(s,[0,1,2]),false);s.routeTurns=[0,0,0];assert.ok(restoreRoute(s,[0,1,2]));assert.ok(s.routeRestored);
 });
 test('new searches survive a save, and malformed arrays cannot skip them',()=>{
  const setup=createTestStart('searchKitchen');Object.assign(setup.state,{batteriesTaken:[true,true],batteriesInstalled:[true,false],postcardFound:[true,false,true],wipePatches:[true,false,true,false,true,false],routeOrder:[1,2,0],coinTaken:true});

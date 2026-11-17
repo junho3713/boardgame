@@ -20,7 +20,7 @@ test('hotel assets load under their prefix alongside existing games', async () =
     assert.equal(extension.status, 200);
     assert.match(extension.headers.get('content-type'), /javascript/);
     assert.match(await extension.text(), /buildHotelExtension/);
-    for (const name of ['basin-flow.js','room-search.js','search-state.js','puzzles.css','suite-puzzles.js','puzzle-evidence.js','puzzle-props.js','style.css', 'game.js', 'test-starts.js', 'room-state.js', 'room-layout.js', 'room-scene.js', 'domestic-models.js', 'room-details.js', 'twin-room.js', 'exterior-scene.js', 'Reflector.js', 'GLTFLoader.js', 'BufferGeometryUtils.js', 'three.module.js', 'THREE-LICENSE.txt','assets/hotel-photo.jpg','assets/rainy-town-night.jpg','assets/herringbone_parquet_Diffuse.jpg']) {
+    for (const name of ['puzzle-tricks.js','rubbing-puzzle.js','bath-steam.js','basin-flow.js','room-search.js','search-state.js','puzzles.css','suite-puzzles.js','puzzle-evidence.js','puzzle-props.js','style.css', 'game.js', 'test-starts.js', 'room-state.js', 'room-layout.js', 'room-scene.js', 'domestic-models.js', 'room-details.js', 'twin-room.js', 'exterior-scene.js', 'Reflector.js', 'GLTFLoader.js', 'BufferGeometryUtils.js', 'three.module.js', 'THREE-LICENSE.txt','assets/hotel-photo.jpg','assets/rainy-town-night.jpg','assets/herringbone_parquet_Diffuse.jpg']) {
       const r = await fetch(origin + '/after-hours/' + name);
       assert.equal(r.status, 200, name);
       assert.ok(Number(r.headers.get('content-length')) > 100, name);

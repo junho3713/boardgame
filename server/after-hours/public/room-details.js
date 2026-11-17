@@ -1,4 +1,4 @@
-import {SAFE_BEATS} from './puzzle-evidence.js?v=20261117-puzzles2';
+import {SAFE_BEATS} from './puzzle-evidence.js?v=20261117-tricks1';
 import * as T from './three.module.js';
 import {GLTFLoader} from './GLTFLoader.js';
 import {Reflector} from './Reflector.js';

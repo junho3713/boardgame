@@ -19,7 +19,7 @@ export function buildBasinFlow({parent,lever,state}){
  let valve=0,flow=0,time=0;
  return {root,stream,cloth,update(dt){
   time+=dt;const opening=state.faucetOn?1:0,k=1-Math.exp(-dt*9);valve+=(opening-valve)*k;
-  lever.rotation.z=-.55*valve;
+  lever.rotation.z=-.55*valve;lever.rotation.y+=((state.faucetHot?-.6:0)-lever.rotation.y)*k;
   const target=state.faucetOn?Math.max(0,(valve-.25)/.75):0;flow+=(target-flow)*(1-Math.exp(-dt*12));root.visible=flow>.015;
   cloth.visible=state.basinWetting&&flow>.45;
   const bottom=cloth.visible?1.015:BASIN_IMPACT[1],length=(BASIN_OUTLET[1]-bottom)*Math.min(1,flow*2);

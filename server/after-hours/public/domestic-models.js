@@ -1,5 +1,6 @@
+import {buildBathSteam} from './bath-steam.js?v=20261117-tricks1';
 import * as T from './three.module.js';
-import {buildBasinFlow} from './basin-flow.js?v=20261117-water1';
+import {buildBasinFlow} from './basin-flow.js?v=20261117-tricks1';
 import {GLTFLoader} from './GLTFLoader.js';
 import {Reflector} from './Reflector.js';
 import {registerRoomMirror,getModelNode} from './room-details.js?v=20261117-stairs1';
@@ -8,12 +9,12 @@ import {registerRoomMirror,getModelNode} from './room-details.js?v=20261117-stai
 export function buildDomesticModels({scene,renderer,manager,state,solids,legacy,mirror,canvasTexture}){
  registerRoomMirror(scene,mirror);
  const loader=new GLTFLoader(manager),result={bathLoaded:false,clockLoaded:false,update,clockHands};
- let basinFlow,left,right,shower,entry,hourHand,minuteHand,keyCover,wardrobeLeft,wardrobeRight,caseLid,hour=11,minute=10;
+ let bathSteam,basinFlow,left,right,shower,entry,hourHand,minuteHand,keyCover,wardrobeLeft,wardrobeRight,caseLid,hour=11,minute=10;
  const doorSolid={x:3.76,z:-.325,w:.055,d:1.35,yaw:1.4},showerSolid={x:5.55,z:-2.35,w:.98,d:.04,yaw:0};
  const cabinetLeftSolid={x:7.446,z:-.656,w:.035,d:.875,yaw:0},cabinetRightSolid={x:7.446,z:.256,w:.035,d:.875,yaw:0};
  const wardrobeLeftSolid={x:-2.876,z:3.51,w:.90,d:.055,yaw:0},wardrobeRightSolid={x:-1.924,z:3.51,w:.90,d:.055,yaw:0};
  const names=['bathroom-316.glb','kitchen-316.glb','wall-clock-316.glb','lounge-316.glb','bedroom-fixtures-316.glb'];
- function load(file,apply){loader.load('./assets/models/'+file+'?v=20261117-water1',gltf=>{
+ function load(file,apply){loader.load('./assets/models/'+file+'?v=20261117-tricks1',gltf=>{
   const model=gltf.scene;model.name=file;model.traverse(o=>{if(!o.isMesh)return;o.castShadow=true;o.receiveShadow=true;
    for(const m of Array.isArray(o.material)?o.material:[o.material]){if(m.name==='Clock dial printed ink')o.castShadow=false;if(m.transparent){m.depthWrite=false;o.castShadow=false;}if(m.map)m.map.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());}
   });scene.add(model);model.updateMatrixWorld(true);try{apply(model);}catch(e){console.error('Fixture validation failed',file,e);model.removeFromParent();}
@@ -26,7 +27,8 @@ export function buildDomesticModels({scene,renderer,manager,state,solids,legacy,
   // The bathroom keeps only its own linen cabinet; the UV bulb stays in the bedroom.
   scene.attach(legacy.bathCabinet);legacy.bathCabinet.clear();legacy.bathCabinet.position.set(0,0,0);legacy.bathCabinet.rotation.set(0,0,0);legacy.bathCabinet.attach(vanity);
   vanity.traverse(o=>{if(!o.isMesh)return;const name=o.material?.name||'';if(/porcelain|limestone|nickel/i.test(name))interactive(o,'basin','세면대');});
-  basinFlow=buildBasinFlow({parent:vanity,lever:required(vanity,'Vanity_Faucet_Lever_Pivot'),state});
+  const lever=required(vanity,'Vanity_Faucet_Lever_Pivot');lever.traverse(o=>interactive(o,'basinHeat','수도 손잡이 · 냉수 / 온수'));
+  basinFlow=buildBasinFlow({parent:vanity,lever,state});
   hide(legacy.vanity);hide(legacy.bath);
   interactive(shower,'showerDoor','샤워부스 유리문');interactive(entry,'bathDoor','욕실 문');
   interactive(required(model,'Toilet_ROOT'),'toilet','변기');for(const name of ['Hand towel 6.22','Hand towel 6.54'])interactive(required(model,name),'towels','봉에 걸린 면 수건');
@@ -44,7 +46,7 @@ export function buildDomesticModels({scene,renderer,manager,state,solids,legacy,
  load(names[4],model=>{wardrobeLeft=required(model,'Wardrobe_Door_Left_Pivot');wardrobeRight=required(model,'Wardrobe_Door_Right_Pivot');caseLid=required(model,'Suitcase_Lid_Pivot');interactive(required(model,'Wardrobe_ROOT'),'wardrobe','옷장');interactive(required(model,'Suitcase_ROOT'),'suitcase','짐 받침대 위 여행 가방');hide(legacy.bedroom);for(let i=solids.length-1;i>=0;i--)if(solids[i].suitcaseLegacy)solids.splice(i,1);solids.push(wardrobeLeftSolid,wardrobeRightSolid,{x:2.65,z:.9,w:1.23,d:.82});});
  function clockHands(h,m){hour=h;minute=m;if(hourHand){hourHand.rotation.z=-(h/12*Math.PI*2+m/60*Math.PI/6);minuteHand.rotation.z=-m/60*Math.PI*2;}}
  function collider(o,hinge,cx,cz,w,d){const yaw=o.rotation.y;return{x:hinge.x+cx*Math.cos(yaw)+cz*Math.sin(yaw),z:hinge.z-cx*Math.sin(yaw)+cz*Math.cos(yaw),w,d,yaw};}
- function update(dt){basinFlow?.update(dt);const mix=(o,target)=>o.rotation.y+=(target-o.rotation.y)*Math.min(1,dt*4);
+ function update(dt){bathSteam?.update();basinFlow?.update(dt);const mix=(o,target)=>o.rotation.y+=(target-o.rotation.y)*Math.min(1,dt*4);
   if(result.bathLoaded){mix(left,state.linenCabinetOpen?-1.4:0);mix(right,state.linenCabinetOpen?1.4:0);mix(shower,state.showerOpen?-1.4:0);mix(entry,state.bathDoorOpen?1.48:0);
    Object.assign(doorSolid,collider(entry,entry.position,0,.675,.055,1.35));Object.assign(showerSolid,collider(shower,shower.position,-.5,0,.98,.045));
    Object.assign(cabinetLeftSolid,collider(left,{x:7.446,z:-1.1},0,.45,.035,.895));Object.assign(cabinetRightSolid,collider(right,{x:7.446,z:.7},0,-.45,.035,.895));
@@ -63,7 +65,7 @@ export function buildDomesticModels({scene,renderer,manager,state,solids,legacy,
   for(const z of[-1.33,.93]){const light=new T.PointLight('#f8e4c7',2.4,3,1.8);light.position.set(7.98,1.95,z);scene.add(light);legacy.lightExtras.push(light);}
  }
  function buildBathMirror(){const bathMirror=new Reflector(new T.PlaneGeometry(1.80,1.10),{color:0xd5ddd6,textureWidth:512,textureHeight:512,clipBias:.003});bathMirror.position.set(8.079,1.83,-.2);bathMirror.rotation.y=-Math.PI/2;scene.add(bathMirror);
-  registerRoomMirror(scene,bathMirror);
+  interactive(bathMirror,'bathSteamMirror','욕실 거울 · 마른 비누 자국');registerRoomMirror(scene,bathMirror);bathSteam=buildBathSteam({scene,state,canvasTexture,mirror:bathMirror});
  }
  // A low-intensity neutral room reflection gives nickel and brass proper surface highlights.
  const envScene=new T.Scene();envScene.background=new T.Color('#8d918d');
