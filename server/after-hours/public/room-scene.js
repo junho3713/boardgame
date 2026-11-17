@@ -4,7 +4,8 @@ import {GLTFLoader} from './GLTFLoader.js';
 import {buildExterior} from './exterior-scene.js?v=20261117-environment2';
 import {uvVisible} from './room-state.js?v=20261117-fixtures1';
 import {canWalk} from './room-layout.js?v=20261117-fixtures1';
-import {buildDomesticModels} from './domestic-models.js?v=20261117-fixtures1';
+import {buildDomesticModels} from './domestic-models.js?v=20261117-details2';
+import {buildRoomDetails} from './room-details.js?v=20261117-details2';
 
 export function buildRoom(renderer,state){
  const scene=new T.Scene();scene.background=new T.Color('#121616');scene.fog=new T.FogExp2('#121616',.014);
@@ -125,9 +126,9 @@ export function buildRoom(renderer,state){
  shiftSince(vanityStart,vanitySolids,4.5,.65);const legacyVanity=scene.children.slice(vanityStart);for(const b of solids.slice(vanitySolids))b.bathLegacy=true;
  const diningStart=scene.children.length,diningSolids=solids.length;
  // Ledger and stationery. The worksheet texture is shared with the movable overlay puzzle.
- const ledger=interactive(box(.62,.025,.72,2.9,1.08,-2.05,paper),'ledger','인화 작업표');const blotter=box(.76,.015,1.12,2.98,1.075,-2.03,leather);ledger.position.y=1.1;
- const ledgerPrint=canvasTexture((a,w,h)=>{a.fillStyle='#bda680';a.fillRect(0,0,w,h);a.fillStyle='#514738';a.font='28px serif';a.fillText('CONTACT  /  316',55,80);a.strokeStyle='#5b503b';for(let x=50;x<600;x+=80){a.beginPath();a.moveTo(x,140);a.lineTo(x,700);a.stroke();}for(let y=140;y<740;y+=80){a.beginPath();a.moveTo(50,y);a.lineTo(570,y);a.stroke();}a.font='30px monospace';for(let y=0;y<6;y++)for(let x=0;x<6;x++)a.fillText(String((x*7+y*3)%10),70+x*80,190+y*80);},640,800);const lp=mesh(new T.PlaneGeometry(.6,.7),new T.MeshStandardMaterial({map:ledgerPrint,roughness:1}));lp.rotation.x=-Math.PI/2;lp.position.set(2.9,1.115,-2.05);interactive(lp,'ledger','인화 작업표');
- for(const x of [2.7,3.0]){const pen=cyl(.009,.009,.25,x,1.106,-1.48,brass);pen.rotation.z=Math.PI/2;}
+ const ledger=interactive(box(.62,.025,.72,2.9,1.08,-2.05,paper),'ledger','인화 작업표');const blotter=box(.76,.015,1.12,2.98,1.059,-2.03,leather);ledger.position.y=1.076;
+ const ledgerPrint=canvasTexture((a,w,h)=>{a.fillStyle='#bda680';a.fillRect(0,0,w,h);a.fillStyle='#514738';a.font='28px serif';a.fillText('CONTACT  /  316',55,80);a.strokeStyle='#5b503b';for(let x=50;x<600;x+=80){a.beginPath();a.moveTo(x,140);a.lineTo(x,700);a.stroke();}for(let y=140;y<740;y+=80){a.beginPath();a.moveTo(50,y);a.lineTo(570,y);a.stroke();}a.font='30px monospace';for(let y=0;y<6;y++)for(let x=0;x<6;x++)a.fillText(String((x*7+y*3)%10),70+x*80,190+y*80);},640,800);const lp=mesh(new T.PlaneGeometry(.6,.7),new T.MeshStandardMaterial({map:ledgerPrint,roughness:1}));lp.rotation.x=-Math.PI/2;lp.position.set(2.9,1.091,-2.05);interactive(lp,'ledger','인화 작업표');
+ for(const x of [2.7,3.0]){const pen=cyl(.009,.009,.25,x,1.078,-1.48,brass);pen.rotation.z=Math.PI/2;}
  const chair=group(1.83,0,-2.15);rb(.53,.08,.56,0,.51,0,darkwood,chair);rb(.49,.07,.52,0,.57,0,leather,chair);for(const x of [-.21,.21])for(const z of [-.22,.22])rod([x,0,z],[x,.52,z],.026,darkwood,chair);for(const z of [-.22,.22])rod([-.22,.5,z],[-.22,1.14,z],.025,darkwood,chair);rb(.055,.44,.48,-.23,.94,0,darkwood,chair);solid(1.83,-2.15,.56,.6);shadow(1.83,-2.15,.9,.9);
  // Mantel clock: glass, hands, minute marks and a spring-loaded compartment.
  const clock=interactive(group(2.96,1.09,-2.87),'clock','멈춘 탁상시계');clock.rotation.y=-Math.PI/2;rb(.47,.1,.22,0,.03,0,darkwood,clock);rb(.37,.45,.18,0,.29,0,darkwood,clock,.035);const clockface=canvasTexture((a,w,h)=>{a.fillStyle='#d1c6a5';a.fillRect(0,0,w,h);a.translate(w/2,h/2);a.strokeStyle='#514737';a.lineWidth=5;a.beginPath();a.arc(0,0,235,0,Math.PI*2);a.stroke();for(let i=0;i<60;i++){a.save();a.rotate(i*Math.PI/30);a.lineWidth=i%5?2:5;a.beginPath();a.moveTo(0,-205);a.lineTo(0,i%5?-215:-225);a.stroke();a.restore();}a.fillStyle='#3a352c';a.textAlign='center';a.textBaseline='middle';a.font='48px serif';for(let i=1;i<=12;i++)a.fillText(String(i),Math.sin(i*Math.PI/6)*166,-Math.cos(i*Math.PI/6)*166);},512);const face=mesh(new T.CircleGeometry(.17,64),new T.MeshStandardMaterial({map:clockface,roughness:.65}),clock);face.position.set(0,.3,.101);const hr=box(.014,.1,.006,0,.33,.111,black,clock);const mn=box(.009,.14,.007,0,.35,.12,black,clock);ball(.015,.015,.008,0,.3,.13,brass,clock);const glassface=mesh(new T.CircleGeometry(.172,64),new T.MeshPhysicalMaterial({transparent:true,opacity:.11,roughness:.12,color:'#b9c8ce',depthWrite:false}),clock);glassface.position.set(0,.3,.14);glassface.castShadow=false;
@@ -180,10 +181,12 @@ export function buildRoom(renderer,state){
  const sinkSteel=mat('#7c8983',.28,.75);rb(.73,.025,.5,5.5,.98,5.04,sinkSteel);rb(.58,.015,.35,5.5,.994,5.04,mat('#303d3b',.2,.65));rod([5.5,.99,4.8],[5.5,1.3,4.8],.018,sinkSteel);rod([5.5,1.3,4.8],[5.5,1.3,5.02],.018,sinkSteel);rod([5.5,1.3,5.02],[5.5,1.24,5.02],.018,sinkSteel);
  rb(.84,.035,.58,7.18,.99,5.04,black);for(const x of[6.98,7.38]){cyl(.15,.15,.018,x,1.02,5.04,brass);cyl(.115,.115,.025,x,1.032,5.04,black);}cyl(.11,.13,.19,7.8,1.09,5.03,sinkSteel);rod([7.7,1.22,5.03],[7.91,1.22,5.03],.018,black);
  const legacyKitchen=scene.children.slice(kitchenStart).filter(o=>o!==kitchenBacksplash);
+ const suiteDetailsStart=scene.children.length;
  const fridge=group(4.15,0,5.14);rb(.78,1.94,.88,0,.99,0,mat('#a8aba0',.4,.18),fridge,.035);box(.73,.025,.025,0,1.32,.46,black,fridge);for(const y of[.9,1.56])rod([.25,y-.13,.49],[.25,y+.13,.49],.018,brass,fridge);solid(4.15,5.14,.83,.92);shadow(4.15,5.14,1.1,1.2);
  const diningTable=group(8.98,0,6.85);rb(.95,.08,2.02,0,1.02,0,wood,diningTable);for(const x of[-.34,.34])for(const z of[-.82,.82])rod([x,0,z],[x,.98,z],.035,darkwood,diningTable);solid(8.98,6.85,1.0,2.05);shadow(8.98,6.85,1.5,2.6);
  const trolley=group(5.2,0,9.3);for(const y of[.25,.78])rb(1.25,.05,.62,0,y,0,darkwood,trolley);for(const x of[-.55,.55])for(const z of[-.25,.25])rod([x,.1,z],[x,.9,z],.015,brass,trolley);for(const x of[-.5,.5])for(const z of[-.22,.22])ball(.06,.06,.025,x,.07,z,black,trolley);for(let i=0;i<5;i++)cyl(.12,.12,.015,5.1,.83+i*.016,9.3,ivory);solid(5.2,9.3,1.3,.7);shadow(5.2,9.3,1.6,1.0);
  // A separate tiled bathroom contains the locked vanity and its UV bulb.
+ const legacySuiteDetails=[chair,...scene.children.slice(suiteDetailsStart)];
  const bathStart=scene.children.length,bathSolids=solids.length;
  const bathTile=canvasTexture((a,w,h)=>{a.fillStyle='#a5aaa0';a.fillRect(0,0,w,h);a.strokeStyle='#656d65';a.lineWidth=4;for(let x=0;x<=w;x+=128){a.beginPath();a.moveTo(x,0);a.lineTo(x,h);a.stroke();}for(let y=0;y<=h;y+=128){a.beginPath();a.moveTo(0,y);a.lineTo(w,y);a.stroke();}},512);
  const bathMat=new T.MeshStandardMaterial({map:bathTile,color:'#c9c8b8',roughness:.48});box(4.6,.025,6,5.9,.014,-1.5,bathMat);for(const x of[3.78,8.12]){if(x>8)box(.025,2.4,6,x,1.2,-1.5,bathMat);}for(const z of[-4.4,1.4])box(4.6,2.4,.025,5.9,1.2,z,bathMat);
@@ -191,7 +194,7 @@ export function buildRoom(renderer,state){
  rb(.055,1.22,1.43,8.05,1.94,-1.5,brass);box(.025,1.12,1.32,8.01,1.94,-1.5,new T.MeshStandardMaterial({color:'#a4b3ae',metalness:.9,roughness:.18}));
  rb(1.85,.1,1.28,4.95,.08,-3.68,porcelain);const showerGlass=box(.025,1.95,1.27,5.93,1.14,-3.68,new T.MeshPhysicalMaterial({color:'#91a6a0',transparent:true,opacity:.18,roughness:.1,metalness:.1,depthWrite:false}));showerGlass.castShadow=false;solid(5.93,-3.68,.04,1.27);rod([4.9,1.02,-4.2],[4.9,2.45,-4.2],.025,sinkSteel);rod([4.9,2.45,-4.2],[4.9,2.45,-3.95],.025,sinkSteel);cyl(.13,.13,.035,4.9,2.43,-3.95,sinkSteel);rb(.12,.2,.07,4.9,1.1,-4.16,sinkSteel);
  const toilet=group(4.45,0,.75);ball(.27,.19,.34,0,.33,0,porcelain,toilet);cyl(.14,.19,.3,0,.17,.07,porcelain,toilet);rb(.52,.64,.22,0,.67,.31,porcelain,toilet);const seat=mesh(new T.TorusGeometry(.22,.035,10,40),ivory,toilet);seat.rotation.x=Math.PI/2;seat.scale.y=1.3;seat.position.set(0,.48,-.02);solid(4.45,.75,.65,.95);
- for(const y of[1.1,1.45])rod([5.55,y,1.3],[6.25,y,1.3],.015,brass);rb(.55,.38,.035,5.9,1.26,1.27,linen);const bathNote=interactive(sign('LAUNDRY / 365',.3,.21,6.7,1.42,1.37,Math.PI,'#484435','#cdbb96'),'bathNote','욕실 세탁 안내표');
+ for(const y of[1.1,1.45])rod([5.55,y,1.3],[6.25,y,1.3],.015,brass);rb(.55,.38,.035,5.9,1.26,1.27,linen);const bathNote=interactive(sign('LAUNDRY / 365',.3,.21,7.15,1.45,1.37,Math.PI,'#484435','#cdbb96'),'bathNote','욕실 세탁 안내표');
  const bathFixture=group(5.8,3.03,-1.4);cyl(.2,.25,.06,0,0,0,ivory,bathFixture);ball(.23,.08,.23,0,-.08,0,new T.MeshStandardMaterial({color:'#e0e8dc',emissive:'#c8d5ce',emissiveIntensity:.5}),bathFixture);const bathLight=new T.PointLight('#cfdbd2',24,7,1.7);bathLight.position.set(5.8,2.7,-1.4);scene.add(bathLight);suiteLights.push({fixture:bathFixture,light:bathLight,base:bathLight.intensity});
 
  const legacyBath=scene.children.slice(bathStart).filter(o=>![bathNote,bathFixture,bathLight].includes(o));for(const b of solids.slice(bathSolids))b.bathLegacy=true;
@@ -209,6 +212,7 @@ export function buildRoom(renderer,state){
  solid(5.7,6.9,2.14,3.38);shadow(5.7,6.9,2.7,3.9);
  const blanketNote=box(.23,.015,.35,5.1,.94,6.4,paper);const tag317=interactive(blanketNote,'tag317','침대 위 수하물표');tag317.rotation.y=.15;
  // A compact writing table leaves a clear walking route from the connecting door.
+ const guestFurnitureStart=scene.children.length;
  const table317=group(1.24,0,8.2);rb(.95,.08,1.65,0,.99,0,wood,table317);for(const x of[-.35,.35])for(const z of[-.65,.65])rod([x,0,z],[x,.95,z],.035,darkwood,table317);solid(1.24,8.2,1,1.7);shadow(1.24,8.2,1.4,2.1);
  const receipt317=interactive(box(.31,.012,.48,1.25,1.045,7.9,paper),'receipt317','접힌 룸서비스 영수증');receipt317.rotation.y=-.15;
  for(const [sheet,title]of [[receipt317,'ROOM SERVICE'],[tag317,'HOTEL / 317']]){const print=canvasTexture((a,w,h)=>{a.fillStyle='#cbb58c';a.fillRect(0,0,w,h);a.strokeStyle='#61513b';a.lineWidth=3;a.strokeRect(16,16,w-32,h-32);a.fillStyle='#443e30';a.textAlign='center';a.font='24px serif';a.fillText(title,w/2,60);a.font='46px serif';a.fillText('317',w/2,130);for(let y=180;y<330;y+=24){a.fillStyle='#78684d';a.fillRect(40,y,w-80,2);}},256,384);const ink=mesh(new T.PlaneGeometry(sheet===tag317?.22:.3,sheet===tag317?.34:.47),new T.MeshStandardMaterial({map:print,roughness:1}),sheet);ink.rotation.x=-Math.PI/2;ink.position.y=.009;}
@@ -222,11 +226,13 @@ export function buildRoom(renderer,state){
  // Wardrobe above a recessed safe; door really opens after the symbol puzzle.
  const wardrobe317=group(1.24,0,10.75);box(1.1,2.4,.72,0,1.2,0,darkwood,wardrobe317);for(const x of[-.3,.3])rb(.48,1.05,.05,x,1.82,-.39,wood,wardrobe317);solid(1.24,10.75,1.15,.82);shadow(1.24,10.75,1.5,1.2);
  const safe317=interactive(group(1.24,.66,10.32),'safe317','네 문양의 객실 금고');box(.86,.7,.16,0,0,.05,black,safe317);const safeDoor=group(-.43,0,-.06,safe317);rb(.86,.7,.08,.43,0,0,black,safeDoor);for(let i=0;i<4;i++)box(.09,.1,.025,.19+i*.16,.08,-.055,brass,safeDoor);rod([.62,-.15,-.09],[.75,-.15,-.09],.02,brass,safeDoor);
+ const legacyGuestFurniture=scene.children.slice(guestFurnitureStart).filter(o=>o!==receipt317);
  // 317's normal hotel entrance opens to a short third-floor corridor.
  for(const x of[1.94,3.36])box(.12,2.75,.2,x,1.375,11.7,wood);box(1.54,.12,.2,2.65,2.77,11.7,wood);
  const exit317=interactive(group(2,0,11.7),'exit317','317호 안쪽 비상문 · 열쇠 구멍');rb(1.3,2.65,.12,.65,1.325,0,darkwood,exit317);for(const y of[.65,1.95])rb(1.07,.85,.04,.65,y,-.075,wood,exit317);box(.08,.24,.04,1.08,1.15,-.09,brass,exit317);rod([.92,1.15,-.14],[1.13,1.15,-.14],.025,brass,exit317);ball(.015,.022,.01,1.08,1.05,-.12,black,exit317);
  sign('EXIT',.32,.15,2.65,2.15,11.6,Math.PI);const hallLight=new T.PointLight('#dfd4b2',8,5,1.8);hallLight.position.set(2.65,2.7,13.4);scene.add(hallLight);
  shiftSince(nextRoomStart,nextRoomSolids,3,9);
+ const details=buildRoomDetails({scene,renderer,manager,state,solids,canvasTexture,legacy:{guest:legacyGuestFurniture,suite:legacySuiteDetails}});
  const dustGeo=new T.BufferGeometry(),dustPos=new Float32Array(90*3);for(let i=0;i<90;i++)dustPos.set([(Math.random()-.5)*6,Math.random()*2.8,(Math.random()-.5)*8],i*3);dustGeo.setAttribute('position',new T.BufferAttribute(dustPos,3));const dust=new T.Points(dustGeo,new T.PointsMaterial({color:'#b6b6a5',size:.013,transparent:true,opacity:.26,depthWrite:false}));scene.add(dust);
  const frameHomePosition=frame.position.clone(),frameHomeRotation=frame.rotation.clone();let lastFrameTaken=false;
  function update(dt,time){
@@ -248,11 +254,11 @@ export function buildRoom(renderer,state){
    receipt317.visible=!state.inventory.includes('receipt');tag317.visible=!state.inventory.includes('tag');
    mix(luggageLid.rotation,'x',state.luggageOpen?-1.6:0,3);mix(safeDoor.rotation,'y',state.safeOpen?-1.4:0,3);mix(exit317.rotation,'y',state.exitOpen?-1.6:0,2.5);
    if(state.musicWound)musicDrum.rotation.y=time*.65;
-   domestic.update(dt);for(const light of fixtureLights)light.intensity=state.lightOn?2.4:0;
+   domestic.update(dt);details.update(dt,time);for(const light of fixtureLights)light.intensity=state.lightOn?2.4:0;
    exterior.update(dt,time);dust.rotation.y=Math.sin(time*.04)*.025;
  }
  function clockHands(hour,minute){domestic.clockHands(hour,minute);if(domestic.clockLoaded)return;const ha=hour/12*Math.PI*2+minute/60*Math.PI/6,ma=minute/60*Math.PI*2;hr.position.set(Math.sin(ha)*.045,.3+Math.cos(ha)*.045,.111);hr.rotation.z=-ha;mn.position.set(Math.sin(ma)*.065,.3+Math.cos(ma)*.065,.12);mn.rotation.z=-ma;}
  clockHands(11,10);const clockMark=canvasTexture((a,w,h)=>{a.fillStyle='#c6ab75';a.beginPath();a.moveTo(w*.2,h*.8);a.lineTo(w*.8,h*.8);a.lineTo(w*.8,h*.2);a.closePath();a.fill();},128);const markMesh=mesh(new T.PlaneGeometry(.1,.1),new T.MeshStandardMaterial({map:clockMark,transparent:true,roughness:.8}),clock);markMesh.position.set(0,.29,-.102);markMesh.rotation.y=Math.PI;
  function canMove(x,z){return canWalk(state,x,z,solids);}
- return{scene,roots,solids,ready,assetsFailed,update,canMove,clockHands,frame,clock,mirror,lamp,drawer,lock,photo,canvasTexture,materials:{wood,darkwood,brass,paper,black,ivory},helpers:{group,box,rb,rod,cyl,ball,mesh,sign},uvInk};
+ return{scene,roots,solids,ready,assetsFailed,update,canMove,clockHands,setPuzzleDials:details.setPuzzleDials,frame,clock,mirror,lamp,drawer,lock,photo,canvasTexture,materials:{wood,darkwood,brass,paper,black,ivory},helpers:{group,box,rb,rod,cyl,ball,mesh,sign},uvInk};
 }

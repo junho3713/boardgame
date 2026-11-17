@@ -41,6 +41,11 @@ WASD 이동, 마우스 드래그 또는 방향키 시점, E/클릭 조사, C 몸
 
 Poly Haven CC0 벽지·헤링본 바닥·직물의 컬러/노멀/거칠기 맵, imagegen으로 생성한 호텔 사진, 직접 모델링한 가구와 전화기·탁상시계·스탠드·가방·문 장치, 실제 평면 반사, 그림자, 창밖 빗줄기와 실내 먼지를 사용합니다. `public/credits.txt`에 출처·라이선스·사진 프롬프트를 기록했습니다.
 
+317호의 화장대·의자·침대 옆 협탁·램프·여행가방·금고·오르골과 316호 냉장고·식탁·의자·서비스 카트는 `art/build_room_details.py`로 생성합니다. 가방 안감과 옷, 금고 내부·볼트, 오르골 실린더·빗살·기어를 실제 메시로 만들고 힌지를 분리했습니다. `room-details.js`는 퍼즐 숫자·문양, 애니메이션, 가구 충돌과 317호 평면 거울을 연결합니다. 세 거울은 서로를 숨기는 반사 가드를 공유해 재귀 렌더를 막습니다. 욕실 타월은 봉을 감싼 천 메시이며, 주방 주전자도 곡면으로 다시 만들었습니다.
+
+모델 재생성: `blender --background --python server/after-hours/art/build_room_details.py -- --out work/room-details-build`.
+욕실·주방만 재생성: `blender --background --python server/after-hours/art/build_fixtures.py -- --out work/fixture-build --only Bathroom316 Kitchen316`.
+
 ## 검증
 
 `node --test server/after-hours/fixture-models.test.mjs server/after-hours/room-layout.test.mjs server/after-hours/room-state.test.mjs server/after-hours/server.test.cjs server/girl-lobby/server.test.cjs`

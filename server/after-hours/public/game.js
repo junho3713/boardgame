@@ -1,8 +1,8 @@
 import * as T from './three.module.js';
-import {buildRoom} from './room-scene.js?v=20261117-test-start';
-import {createState,ITEMS,addItem,combineFilms,alignFilm,setClock,useItem,uvVisible,unlockDoor,phase,HINTS,unlockLuggage,hearTune,unlockSafe,MUSIC_SEQUENCE} from './room-state.js?v=20261117-test-start';
-import {zoneAt,ZONES} from './room-layout.js?v=20261117-test-start';
-import {TEST_STARTS,getTestStart,createTestStart,CHECKPOINT_KEY,SETTINGS_KEY,readCheckpoint,writeCheckpoint} from './test-starts.js?v=20261117-test-start';
+import {buildRoom} from './room-scene.js?v=20261117-details2';
+import {createState,ITEMS,addItem,combineFilms,alignFilm,setClock,useItem,uvVisible,unlockDoor,phase,HINTS,unlockLuggage,hearTune,unlockSafe,MUSIC_SEQUENCE} from './room-state.js?v=20261117-details2';
+import {zoneAt,ZONES} from './room-layout.js?v=20261117-details2';
+import {TEST_STARTS,getTestStart,createTestStart,CHECKPOINT_KEY,SETTINGS_KEY,readCheckpoint,writeCheckpoint} from './test-starts.js?v=20261117-details2';
 const $=q=>document.querySelector(q),canvas=$('#world');
 const state=createState();let assetsReady=false,started=false,paused=false,complete=false,mode='walk',active=null,crouched=false,yaw=.02,pitch=0,drag=false,moved=false,inspectionId='',inspectPivot=null,inspectDistance=3.4;
 let inventoryOpened=false,inventoryUnread=false,modalKind='';const knownInventory=new Set(),CLUE_ONLY=new Set(['receipt','tag']);
@@ -106,9 +106,10 @@ function inspectGuestPaper(id){
 }
 const luggageDigits=[0,0,0],safeSymbols=[0,0,0,0];
 function openLuggage(){
+ room.setPuzzleDials(luggageDigits,safeSymbols);
  if(state.luggageOpen){modal('<h2>열린 여행가방</h2><p>안감에는 오르골을 눌러 놓았던 자국이 있다. 작은 태엽 열쇠는 이미 챙겼다.</p>');return;}
  modal(`<h2>여행가방의 세 자리 잠금</h2><p>손잡이에는 수하물표를 매달았던 끈이 남아 있다.<br>세 숫자 고리는 서로 따로 돌아간다.</p><div class="guest-dials">${luggageDigits.map((v,i)=>`<div><button class="outline" data-luggage="${i}" data-delta="1" aria-label="여행가방 ${i+1}번째 숫자 올리기">+</button><output id="luggageDigit${i}">${v}</output><button class="outline" data-luggage="${i}" data-delta="-1" aria-label="여행가방 ${i+1}번째 숫자 내리기">−</button></div>`).join('')}</div><button class="primary" id="openLuggage">가방 잠금쇠 당기기 <span>→</span></button><p id="luggageFeedback" role="status"></p>`);
- document.querySelectorAll('[data-luggage]').forEach(b=>b.onclick=()=>{const i=+b.dataset.luggage;luggageDigits[i]=(luggageDigits[i]+ +b.dataset.delta+10)%10;$('#luggageDigit'+i).textContent=luggageDigits[i];sound('metal');});
+ document.querySelectorAll('[data-luggage]').forEach(b=>b.onclick=()=>{const i=+b.dataset.luggage;luggageDigits[i]=(luggageDigits[i]+ +b.dataset.delta+10)%10;$('#luggageDigit'+i).textContent=luggageDigits[i];room.setPuzzleDials(luggageDigits,safeSymbols);sound('metal');});
  $('#openLuggage').onclick=()=>{if(unlockLuggage(state,luggageDigits.join(''))){closeModal();inventory();sound('unlock');record('317호 여행가방','잠금이 풀린 여행가방 안에서 작은 오르골 태엽 열쇠를 얻었다.');caption('옷 사이에 작은 태엽 열쇠가 숨어 있었다.');}else{$('#luggageFeedback').textContent='잠금쇠가 걸린다. 숫자의 순서를 다시 살펴보자.';sound('wood');}};
 }
 function openMusicBox(){
@@ -124,9 +125,10 @@ function openMusicBox(){
 }
 function musicNote(i){if(!audioOn)return;initAudio();const o=audio.createOscillator(),g=audio.createGain();o.type='sine';o.frequency.value=[523.25,440,659.25,587.33][i];g.gain.setValueAtTime(.0001,audio.currentTime);g.gain.linearRampToValueAtTime(.14,audio.currentTime+.015);g.gain.exponentialRampToValueAtTime(.0001,audio.currentTime+.9);o.connect(g).connect(audio.destination);o.start();o.stop(audio.currentTime+1);}
 function openSafe(){
+ room.setPuzzleDials(luggageDigits,safeSymbols);
  if(state.safeOpen){modal('<h2>열린 객실 금고</h2><p>안의 객실 열쇠는 이미 챙겼다. 남은 봉투에는 “우리는 같은 밤에 이곳에 있었다”라고 적혀 있다.</p>');return;}
  modal(`<h2>네 문양의 객실 금고</h2><p>손잡이 위에 네 개의 문양판이 줄지어 있다.<br>누르면 다음 문양으로 돌아간다.</p><div class="safe-symbols">${safeSymbols.map((v,i)=>`<button class="outline" data-safe="${i}" aria-label="금고 ${i+1}번째 문양 바꾸기">${symbolSVG(v)}<span>${SYMBOLS[v].name}</span></button>`).join('')}</div><button class="primary" id="openSafe">금고 손잡이 당기기 <span>→</span></button><p id="safeFeedback" role="status"></p>`);
- document.querySelectorAll('[data-safe]').forEach(b=>b.onclick=()=>{const i=+b.dataset.safe;safeSymbols[i]=(safeSymbols[i]+1)%4;b.innerHTML=symbolSVG(safeSymbols[i])+`<span>${SYMBOLS[safeSymbols[i]].name}</span>`;sound('metal');});
+ document.querySelectorAll('[data-safe]').forEach(b=>b.onclick=()=>{const i=+b.dataset.safe;safeSymbols[i]=(safeSymbols[i]+1)%4;room.setPuzzleDials(luggageDigits,safeSymbols);b.innerHTML=symbolSVG(safeSymbols[i])+`<span>${SYMBOLS[safeSymbols[i]].name}</span>`;sound('metal');});
  $('#openSafe').onclick=()=>{if(unlockSafe(state,safeSymbols)){closeModal();inventory();sound('unlock');record('비상문 열쇠','오르골과 같은 순서로 문양을 맞추자 금고가 열렸다. 비상문 열쇠와 “우리는 같은 밤에 이곳에 있었다”라는 짧은 메모.');caption('금고 안의 열쇠에는 EXIT라고 새겨져 있다.');}else{$('#safeFeedback').textContent=state.tuneHeard?'손잡이는 돌아가지 않는다. 문양의 순서가 다른 것 같다.':'문양의 순서를 확인할 단서가 필요하다. 방 안의 같은 문양을 찾아보자.';sound('wood');}};
 }
 
@@ -158,7 +160,8 @@ function applyAdminState(snapshot){
  closeInspection();releaseMouse();closeModal();
  for(const key of Object.keys(state))delete state[key];Object.assign(state,snapshot.state);state.complete=false;
  started=true;complete=false;paused=false;mode='walk';active=null;crouched=false;drag=false;moved=false;
- luggageDigits.splice(0,3,...(snapshot.luggageDigits||[0,0,0]));safeSymbols.splice(0,4,...(snapshot.safeSymbols||[0,0,0,0]));
+ luggageDigits.splice(0,3,...(snapshot.luggageDigits||(snapshot.state.luggageOpen?[2,8,4]:[0,0,0])));safeSymbols.splice(0,4,...(snapshot.safeSymbols||(snapshot.state.safeOpen?MUSIC_SEQUENCE:[0,0,0,0])));
+ room.setPuzzleDials(luggageDigits,safeSymbols);
  clockHour=snapshot.clockHour;clockMinute=snapshot.clockMinute;room.clockHands(clockHour,clockMinute);room.update(1,elapsed);
  const point=getTestStart(snapshot.pointId);adminPointId=point.id;let position=snapshot.position;
  if(!room.canMove(position[0],position[2])){const zone=zoneAt(position[0],position[2]);const fallback=getTestStart(zone==='exitHall'?'exit':zone||point.id);position=fallback.position;if(!room.canMove(position[0],position[2]))position=point.position;}

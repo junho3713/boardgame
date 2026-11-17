@@ -1,16 +1,18 @@
 import * as T from './three.module.js';
 import {GLTFLoader} from './GLTFLoader.js';
 import {Reflector} from './Reflector.js';
+import {registerRoomMirror} from './room-details.js?v=20261117-details2';
 
 // Blender-authored fixtures, with stable interaction roots and separate moving parts.
 export function buildDomesticModels({scene,renderer,manager,state,solids,legacy,mirror,canvasTexture}){
+ registerRoomMirror(scene,mirror);
  const loader=new GLTFLoader(manager),result={bathLoaded:false,clockLoaded:false,update,clockHands};
  let left,right,shower,entry,hourHand,minuteHand,keyCover,wardrobeLeft,wardrobeRight,caseLid,hour=11,minute=10;
  const doorSolid={x:3.76,z:-.325,w:.055,d:1.35,yaw:1.4},showerSolid={x:5.55,z:-2.35,w:.98,d:.04,yaw:0};
  const cabinetLeftSolid={x:7.446,z:-.656,w:.035,d:.875,yaw:0},cabinetRightSolid={x:7.446,z:.256,w:.035,d:.875,yaw:0};
  const wardrobeLeftSolid={x:-2.876,z:3.51,w:.90,d:.055,yaw:0},wardrobeRightSolid={x:-1.924,z:3.51,w:.90,d:.055,yaw:0};
  const names=['bathroom-316.glb','kitchen-316.glb','wall-clock-316.glb','lounge-316.glb','bedroom-fixtures-316.glb'];
- function load(file,apply){loader.load('./assets/models/'+file+'?v=20261117-fixtures1',gltf=>{
+ function load(file,apply){loader.load('./assets/models/'+file+'?v=20261117-details2',gltf=>{
   const model=gltf.scene;model.name=file;model.traverse(o=>{if(!o.isMesh)return;o.castShadow=true;o.receiveShadow=true;
    for(const m of Array.isArray(o.material)?o.material:[o.material]){if(m.transparent){m.depthWrite=false;o.castShadow=false;}if(m.map)m.map.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());}
   });scene.add(model);model.updateMatrixWorld(true);try{apply(model);}catch(e){console.error('Fixture validation failed',file,e);model.removeFromParent();}
@@ -60,10 +62,7 @@ export function buildDomesticModels({scene,renderer,manager,state,solids,legacy,
   for(const z of[-1.33,.93]){const light=new T.PointLight('#f8e4c7',2.4,3,1.8);light.position.set(7.98,1.95,z);scene.add(light);legacy.lightExtras.push(light);}
  }
  function buildBathMirror(){const bathMirror=new Reflector(new T.PlaneGeometry(1.80,1.10),{color:0xd5ddd6,textureWidth:512,textureHeight:512,clipBias:.003});bathMirror.position.set(8.079,1.83,-.2);bathMirror.rotation.y=-Math.PI/2;scene.add(bathMirror);
-  // Each mirror has one reflection pass; do not recurse through the mirror in the other room.
-  const bathRender=bathMirror.onBeforeRender,mainRender=mirror.onBeforeRender;
-  bathMirror.onBeforeRender=function(...args){const visible=mirror.visible;mirror.visible=false;try{return bathRender.apply(this,args);}finally{mirror.visible=visible;}};
-  mirror.onBeforeRender=function(...args){const visible=bathMirror.visible;bathMirror.visible=false;try{return mainRender.apply(this,args);}finally{bathMirror.visible=visible;}};
+  registerRoomMirror(scene,bathMirror);
  }
  // A low-intensity neutral room reflection gives nickel and brass proper surface highlights.
  const envScene=new T.Scene();envScene.background=new T.Color('#8d918d');

@@ -6,7 +6,7 @@ import bpy, bmesh, math, os, sys, argparse, json, random
 import numpy as np
 from mathutils import Vector
 from math import sin,cos,pi
-ap=argparse.ArgumentParser();ap.add_argument('--out',required=True);ap.add_argument('--render',action='store_true');opt=ap.parse_args(sys.argv[sys.argv.index('--')+1:])
+ap=argparse.ArgumentParser();ap.add_argument('--out',required=True);ap.add_argument('--render',action='store_true');ap.add_argument('--only',nargs='*');opt=ap.parse_args(sys.argv[sys.argv.index('--')+1:])
 OUT=os.path.abspath(opt.out);os.makedirs(OUT,exist_ok=True);random.seed(316)
 bpy.ops.object.select_all(action='SELECT');bpy.ops.object.delete(use_global=False)
 def W(v):return (v[0],-v[2],v[1])
@@ -88,6 +88,33 @@ def drain(name,center,p=None,r=.029):
  for i in range(10):
   a=2*pi*i/10;cyl(name+' perforation',(center[0]+cos(a)*r*.47,center[1]+.007,center[2]+sin(a)*r*.47),.002,.003,chrome,p=p,vertices=10)
 def rounded_path(name,points,r,mat,p=None):return tube(name,points,r,mat,p)
+
+def draped_towel(x,top,z,width,length):
+ # A continuous cloth surface folds around the rail, with shallow longitudinal pleats.
+ profile=[(top-.40+.40*i/15,z+.027)for i in range(16)]
+ profile += [(top+.027*sin(pi*i/16),z+.027*cos(pi*i/16))for i in range(1,17)]
+ profile += [(top-length*i/24,z-.027)for i in range(1,25)]
+ verts=[];nx=24
+ for j,(y,zz) in enumerate(profile):
+  drop=max(0,top-y)
+  for i in range(nx+1):
+   u=i/nx;wave=sin(u*pi*5+.3)*.008*min(1,drop*6)
+   verts.append((x+(u-.5)*width,y+.004*sin(u*11)*min(1,drop*4),zz+wave))
+ faces=[(j*(nx+1)+i,j*(nx+1)+i+1,(j+1)*(nx+1)+i+1,(j+1)*(nx+1)+i)for j in range(len(profile)-1)for i in range(nx)]
+ o=mesh('Bath towel | cloth folded over rail',verts,faces,linen);o.modifiers.new('Terry cloth thickness','SOLIDIFY').thickness=.003
+ for i in [0,nx]:tube('Bath towel | stitched edge',[verts[j*(nx+1)+i]for j in range(len(profile))],.0018,linen)
+ for j in [len(profile)-1,len(profile)-3]:tube('Bath towel | woven hem',[verts[j*(nx+1)+i]for i in range(nx+1)],.002,linen)
+
+def spun_kettle(loc):
+ rings=[(.045,0),(.103,.014),(.118,.08),(.113,.16),(.087,.215),(.063,.225),(.062,.21),(.078,.198),(.102,.151),(.106,.08),(.09,.025),(.045,.02)];n=64
+ verts=[(loc[0]+r*cos(i*2*pi/n),loc[1]+y,loc[2]+r*sin(i*2*pi/n))for r,y in rings for i in range(n)]
+ faces=[(j*n+i,j*n+(i+1)%n,((j+1)%len(rings))*n+(i+1)%n,((j+1)%len(rings))*n+i)for j in range(len(rings))for i in range(n)]
+ o=mesh('Kettle | spun rounded body',verts,faces,chrome);bm=bmesh.new();bm.from_mesh(o.data);bmesh.ops.recalc_face_normals(bm,faces=list(bm.faces));bm.to_mesh(o.data);bm.free()
+ cyl('Kettle | fitted lid',(loc[0],loc[1]+.228,loc[2]),.071,.014,chrome)
+ cyl('Kettle | lid knob',(loc[0],loc[1]+.248,loc[2]),.023,.031,dark)
+ tube('Kettle | arched handle',[(loc[0],loc[1]+.20+.14*sin(pi*i/32),loc[2]+.105*cos(pi*i/32))for i in range(33)],.014,dark)
+ tube('Kettle | swept spout',[(loc[0]-.095,loc[1]+.07,loc[2]),(loc[0]-.14,loc[1]+.10,loc[2]),(loc[0]-.17,loc[1]+.18,loc[2]),(loc[0]-.18,loc[1]+.22,loc[2])],.018,chrome)
+ cyl('Kettle | open spout tip',(loc[0]-.18,loc[1]+.223,loc[2]),.013,.002,dark)
 def faucet(name,x,z,y,p=None,metal=chrome):
  cyl(name+' escutcheon',(x,y+.009,z),.035,.018,metal,p=p)
  pts=[(x,y,z),(x,y+.21,z),(x,y+.24,z)]
@@ -173,7 +200,7 @@ for x in [4.06,5.24]:cube('Shower niche side',(x,1.4,-4.23),(.04,.64,.24),stone,
 for i in range(3):
  cyl('Shower amenity bottle',(4.35+i*.29,1.25,-4.21),.043,.26,material('Amber amenity '+str(i),(.18,.11+.025*i,.045),.25));cyl('Amenity pump',(4.35+i*.29,1.4,-4.21),.026,.04,brass)
 for y in [1.06,1.48]:tube('Towel rail',[(6.05,y,1.32),(6.05,y,1.22),(6.70,y,1.22),(6.70,y,1.32)],.012,brass)
-for x in [6.24,6.51]:cube('Hanging bath towel',(x,1.23,1.19),(.25,.55,.028),linen,.012)
+for x in [6.24,6.51]:draped_towel(x,1.48,1.22,.25,.55)
 # Privacy door: framed frosted pane above a solid lower panel, hinged into the dry zone.
 entry=empty('Bath_Entry_Pivot',(3.76,0,-1),bath)
 cube('Bathroom door lower panel',(0,.77,.675),(.045,1.5,1.35),oak,.015,entry)
@@ -212,9 +239,7 @@ for x in [.68,1.08]:
  for rr in [.065,.092,.12]:
   tube('Hob ceramic ring',[(x+rr*cos(2*pi*i/64),.992,rr*sin(2*pi*i/64)) for i in range(65)],.0025,chrome)
  for z in [-.18]:cyl('Hob control',(x,.999,z),.022,.012,brass)
-cyl('Kettle | base',(1.49,1.01,0),.105,.035,dark);cyl('Kettle | body',(1.49,1.12,0),.10,.20,chrome);cyl('Kettle | lid',(1.49,1.23,0),.103,.018,chrome)
-tube('Kettle handle',[(1.49,1.25,-.075),(1.49,1.35,-.075),(1.49,1.35,.075),(1.49,1.25,.075)],.015,dark)
-tube('Kettle spout',[(1.42,1.15,0),(1.31,1.22,0),(1.29,1.26,0)],.022,chrome)
+cyl('Kettle | base',(1.49,.993,0),.105,.025,dark);spun_kettle((1.49,1.005,0))
 
 # A round enamel wall clock, with independent hour/minute hand pivots.
 clock=begin('WallClock316');parent=clock
@@ -334,6 +359,7 @@ for coll in collections.values():
 # Export only the respective collection; all textures are packed into the binaries.
 stats={}
 for name,coll in collections.items():
+ if opt.only and name not in opt.only:continue
  bpy.ops.object.select_all(action='DESELECT')
  for ob in coll.objects:ob.select_set(True)
  bpy.context.view_layer.objects.active=next(ob for ob in coll.objects if ob.type=='MESH')
