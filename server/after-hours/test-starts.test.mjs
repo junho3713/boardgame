@@ -5,7 +5,7 @@ import {phase,uvVisible,useItem} from './public/room-state.js';
 import {canWalk} from './public/room-layout.js';
 
 test('each test start is reachable and has the intended next puzzle',()=>{
- const phases={towels:'low',cups:'low',kettle:'low',twin:'low',companion:'neighborKey',bedroom:'low',living:'low',kitchen:'low',bath:'low',hall:'enter317',room317:'luggage',clock:'clock',vanity:'drawer',uv:'mirror',music:'music',safe:'safe',exit:'corridor'};
+ const phases={teaBox:'tea',teaDoor:'tea',water:'jugs',waterKey:'jugKey',towels:'low',cups:'tea',kettle:'jugs',twin:'neighborKey',companion:'neighborKey',bedroom:'low',living:'tea',kitchen:'jugs',bath:'low',hall:'enter317',room317:'luggage',clock:'clock',vanity:'drawer',uv:'mirror',music:'music',safe:'safe',exit:'corridor'};
  for(const point of TEST_STARTS){
   const {state}=createTestStart(point.id);
   assert.equal(phase(state),phases[point.id],point.id);

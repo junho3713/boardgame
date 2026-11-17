@@ -10,10 +10,10 @@ export const ZONES={
  exitHall:{x0:4.81,x1:6.49,z0:20.7,z1:23.65,label:'3층 · 비상구 앞',gate:'exitOpen'},
 };
 export const PASSAGES=[
- {axis:'x',at:-3.6,low:6.3,high:7.7},
- {axis:'z',at:4.5,low:1.46,high:2.78},
- {axis:'x',at:3.6,low:6.9,high:8.4},
- {axis:'x',at:3.6,low:-1,high:.4},
+ {axis:'x',at:-3.6,low:6.3,high:7.7,gate:'twinOpen'},
+ {axis:'z',at:4.5,low:1.46,high:2.78,gate:'bedroomOpen'},
+ {axis:'x',at:3.6,low:6.9,high:8.4,gate:'kitchenOpen'},
+ {axis:'x',at:3.6,low:-1,high:.4,gate:'bathDoorOpen'},
  {axis:'z',at:10.5,low:1.46,high:2.78,gate:'doorOpen'},
  {axis:'z',at:13.5,low:4.46,high:5.78,gate:'room317Open'},
  {axis:'z',at:20.7,low:5,high:6.3,gate:'exitOpen'},

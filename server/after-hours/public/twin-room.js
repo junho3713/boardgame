@@ -1,6 +1,6 @@
 import * as T from './three.module.js';
 import {GLTFLoader} from './GLTFLoader.js';
-import {TRAVEL_STOPS,COMPANION_TARGET} from './room-state.js?v=20261117-suite7';
+import {TRAVEL_STOPS,COMPANION_TARGET} from './room-state.js?v=20261117-doors3';
 
 export const TWIN_SOLIDS=[
  {x:-7.75,z:8.85,w:1.24,d:2.4},{x:-5.25,z:8.85,w:1.24,d:2.4},
@@ -44,7 +44,7 @@ export function buildTwinRoom({scene,renderer,manager,state,solids,canvasTexture
  function decal(parent,map,w,h){const o=new T.Mesh(new T.PlaneGeometry(w,h),new T.MeshStandardMaterial({map,roughness:.8}));parent.add(o);return o;}
  // Keep the clue available even if the optional model fails to load.
  for(const [i,stop]of[2,0,1].entries()){const g=group(-7.06+i*.51,1.62,4.682);const o=decal(g,cards[stop],.404,.304);Object.assign(o.userData,{interactId:'travelPostcards',label:'날짜가 적힌 여행 엽서'});}
- new GLTFLoader(manager).load('./assets/models/twin-room-316.glb?v=20261117-suite7',gltf=>{
+ new GLTFLoader(manager).load('./assets/models/twin-room-316.glb?v=20261117-doors3',gltf=>{
   const model=gltf.scene;lid=model.getObjectByName('CompanionCase_Lid');const chest=model.getObjectByName('CompanionCase_ROOT');
   if(!lid||!chest){console.error('Twin room model is missing its case pivots');return;}
   model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;if(o.material?.map)o.material.map.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());}});

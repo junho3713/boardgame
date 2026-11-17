@@ -56,7 +56,7 @@ test('the twin bedroom keeps usable bed dimensions, separate case hinge and clea
  const m=model('twin-room-316.glb');
  for(const name of['TwinBed_0','TwinBed_1','CompanionCase_ROOT','CompanionCase_Lid'])assert.ok(m.scene.getObjectByName(name),name);
  for(const x of[-7.75,-5.25]){const y=height(m.scene,x,8.85);assert.ok(y>.58&&y<.72,'duvet at seated bed height');}
- const s=createState();for(const [x,z]of[[-3.6,7],[-4.3,7],[-6.5,7],[-6.5,8.7],[-6.55,6.1]])assert.ok(canWalk(s,x,z,TWIN_SOLIDS),x+','+z);
+ const s=createState(true);for(const [x,z]of[[-3.6,7],[-4.3,7],[-6.5,7],[-6.5,8.7],[-6.55,6.1]])assert.ok(canWalk(s,x,z,TWIN_SOLIDS),x+','+z);
  for(const p of TEST_STARTS)assert.ok(canWalk(createTestStart(p.id).state,p.position[0],p.position[2],TWIN_SOLIDS),p.id);
  assert.equal(canWalk(s,-7.75,8.85,TWIN_SOLIDS),false);assert.ok(m.bytes<4000000);
  const chest=m.scene.getObjectByName('CompanionCase_ROOT'),lid=m.scene.getObjectByName('CompanionCase_Lid');

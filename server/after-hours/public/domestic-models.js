@@ -1,7 +1,7 @@
 import * as T from './three.module.js';
 import {GLTFLoader} from './GLTFLoader.js';
 import {Reflector} from './Reflector.js';
-import {registerRoomMirror,getModelNode} from './room-details.js?v=20261117-suite7';
+import {registerRoomMirror,getModelNode} from './room-details.js?v=20261117-doors3';
 
 // Blender-authored fixtures, with stable interaction roots and separate moving parts.
 export function buildDomesticModels({scene,renderer,manager,state,solids,legacy,mirror,canvasTexture}){
@@ -12,7 +12,7 @@ export function buildDomesticModels({scene,renderer,manager,state,solids,legacy,
  const cabinetLeftSolid={x:7.446,z:-.656,w:.035,d:.875,yaw:0},cabinetRightSolid={x:7.446,z:.256,w:.035,d:.875,yaw:0};
  const wardrobeLeftSolid={x:-2.876,z:3.51,w:.90,d:.055,yaw:0},wardrobeRightSolid={x:-1.924,z:3.51,w:.90,d:.055,yaw:0};
  const names=['bathroom-316.glb','kitchen-316.glb','wall-clock-316.glb','lounge-316.glb','bedroom-fixtures-316.glb'];
- function load(file,apply){loader.load('./assets/models/'+file+'?v=20261117-suite7',gltf=>{
+ function load(file,apply){loader.load('./assets/models/'+file+'?v=20261117-doors3',gltf=>{
   const model=gltf.scene;model.name=file;model.traverse(o=>{if(!o.isMesh)return;o.castShadow=true;o.receiveShadow=true;
    for(const m of Array.isArray(o.material)?o.material:[o.material]){if(m.transparent){m.depthWrite=false;o.castShadow=false;}if(m.map)m.map.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());}
   });scene.add(model);model.updateMatrixWorld(true);try{apply(model);}catch(e){console.error('Fixture validation failed',file,e);model.removeFromParent();}
@@ -37,7 +37,7 @@ export function buildDomesticModels({scene,renderer,manager,state,solids,legacy,
  load(names[1],model=>{hide(legacy.kitchen);interactive(required(model,'Kitchen_ROOT'),'kitchenSink','주방 싱크대');interactive(required(model,'HotelKettle_ROOT'),'kettle','스테인리스 전기 주전자');});
  load(names[2],model=>{
   const clock=required(model,'WallClock316_ROOT');hourHand=required(model,'Clock_Hour_Hand');minuteHand=required(model,'Clock_Minute_Hand');keyCover=required(model,'Clock_Key_Cover');
-  clock.removeFromParent();model.removeFromParent();legacy.clock.clear();legacy.clock.position.set(8.65,2.08,4.74);legacy.clock.rotation.set(0,0,0);legacy.clock.add(clock);legacy.clock.userData.label='멈춘 주방 벽시계';result.clockLoaded=true;clockHands(hour,minute);
+  clock.removeFromParent();model.removeFromParent();legacy.clock.clear();legacy.clock.position.set(2.65,2.08,-4.40);legacy.clock.rotation.set(0,0,0);legacy.clock.add(clock);legacy.clock.userData.label='멈춘 침실 벽시계';result.clockLoaded=true;clockHands(hour,minute);
  });
  load(names[3],model=>{hide(legacy.lounge);for(const name of ['LoungeCup_0','LoungeCup_1'])interactive(required(model,name),'cup','도자기 찻잔');});
  load(names[4],model=>{wardrobeLeft=required(model,'Wardrobe_Door_Left_Pivot');wardrobeRight=required(model,'Wardrobe_Door_Right_Pivot');caseLid=required(model,'Suitcase_Lid_Pivot');interactive(required(model,'Wardrobe_ROOT'),'wardrobe','옷장');interactive(required(model,'Suitcase_ROOT'),'suitcase','짐 받침대 위 여행 가방');hide(legacy.bedroom);for(let i=solids.length-1;i>=0;i--)if(solids[i].suitcaseLegacy)solids.splice(i,1);solids.push(wardrobeLeftSolid,wardrobeRightSolid,{x:2.65,z:.9,w:1.23,d:.82});});

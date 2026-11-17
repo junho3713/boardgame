@@ -52,13 +52,13 @@ def make_props(a):
  def hanging_towel(name,x,rail,z,width=.28,length=.50):
   root=empty(name,(x,rail,z),a['parent']);nx=36;profile=[]
   # Back hem -> over the rail -> longer front hem, all one continuous surface.
-  for t in np.linspace(1,0,25):profile.append((-.36*t,.019,t,0))
-  for angle in np.linspace(0,pi,19)[1:]:profile.append((.019*sin(angle),.019*cos(angle),0,1))
-  for t in np.linspace(0,1,36)[1:]:profile.append((-length*t,-.019,t,2))
+  for t in np.linspace(1,0,25):profile.append((-.36*t,.0134,t,0))
+  for angle in np.linspace(0,pi,19)[1:]:profile.append((.0134*sin(angle),.0134*cos(angle),0,1))
+  for t in np.linspace(0,1,36)[1:]:profile.append((-length*t,-.0134,t,2))
   verts=[];faces=[]
   for j,(yy,zz,drop,side)in enumerate(profile):
    for i in range(nx+1):
-    u=i/nx;fold=(.024*sin(u*pi*3.1+.5)+.007*sin(u*pi*6.7))*drop**1.2
+    u=i/nx;fold=(.006+.010*(.5+.5*sin(u*pi*3.1+.5))+.003*sin(u*pi*6.7))*drop**1.6*(1 if side==0 else -1)
     curl=.010*(abs(2*u-1)**9)*drop
     verts.append(((u-.5)*width*(1+.035*drop),yy+.006*sin(u*pi*1.8+.3)*drop**3,zz+fold+curl))
   for j in range(len(profile)-1):
@@ -72,7 +72,7 @@ def make_props(a):
    for li in poly.loop_indices:
     vi=ob.data.loops[li].vertex_index;uv.data[li].uv=((vi%(nx+1))/nx*2,(vi//(nx+1))/(len(profile)-1)*6)
   ob['preserve_uv']=True
-  thick=ob.modifiers.new('Cotton pile and turned edge','SOLIDIFY');thick.thickness=.004;thick.offset=0
+  thick=ob.modifiers.new('Cotton pile and turned edge','SOLIDIFY');thick.thickness=.0024;thick.offset=0
   return root
 
  def folded_towel(name,loc,w=.34,d=.42,p=None):

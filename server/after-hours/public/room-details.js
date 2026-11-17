@@ -19,7 +19,7 @@ export function buildRoomDetails({scene,renderer,manager,state,solids,legacy,can
  const safeDoorSolid={x:4.24,z:19.18,w:.84,d:.07,yaw:0};
  const required=(root,name)=>{const o=getModelNode(root,name);if(!o)throw Error('Missing room detail '+name);return o;};
  function interactive(o,id,label){Object.assign(o.userData,{interactId:id,label});}
- function load(file,apply){loader.load('./assets/models/'+file+'?v=20261117-suite7',gltf=>{
+ function load(file,apply){loader.load('./assets/models/'+file+'?v=20261117-doors3',gltf=>{
   const model=gltf.scene;model.name=file;model.traverse(o=>{if(!o.isMesh)return;o.castShadow=true;o.receiveShadow=true;for(const m of Array.isArray(o.material)?o.material:[o.material])if(m.map)m.map.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());});
   try{apply(model);scene.add(model);model.updateMatrixWorld(true);}catch(e){console.error('Room detail model validation failed',file,e);model.removeFromParent();}
  },undefined,()=>{});}

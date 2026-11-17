@@ -8,12 +8,15 @@ function reachable(s,from,to){
   for(const [dx,dz]of[[1,0],[-1,0],[0,1],[0,-1]]){const nx=x+dx,nz=z+dz,key=nx+','+nz;if(!seen.has(key)&&canWalk(s,nx/10,nz/10)){seen.add(key);queue.push([nx,nz]);}}
  }return false;
 }
-test('all five interiors of 316 are accessible before its exit is solved',()=>{
- const s=createState(),spawn=[0,27];for(const target of [[0,0],[0,75],[65,75],[58,-15],[-65,70]])assert.equal(reachable(s,spawn,target),true,target.join(','));
- assert.equal(reachable(s,spawn,[21,120]),false);assert.equal(reachable(s,spawn,[65,170]),false);
+test('locked internal doors prevent bypasses and progressively reveal each space',()=>{
+ const s=createState(),spawn=[0,27];for(const target of [[0,75],[65,75],[58,-15],[-65,70],[21,120]])assert.equal(reachable(s,spawn,target),false);
+ s.bathDoorOpen=true;assert.ok(reachable(s,spawn,[58,-15]));assert.equal(reachable(s,spawn,[0,75]),false);
+ s.bedroomOpen=true;assert.ok(reachable(s,spawn,[0,75]));assert.equal(reachable(s,spawn,[65,75]),false);assert.equal(reachable(s,spawn,[-65,70]),false);
+ s.kitchenOpen=true;assert.ok(reachable(s,spawn,[65,75]));assert.equal(reachable(s,spawn,[-65,70]),false);
+ s.twinOpen=true;assert.ok(reachable(s,spawn,[-65,70]));assert.equal(reachable(s,spawn,[21,120]),false);
 });
 test('316 opens into a hotel corridor while 317 retains an independent locked entrance',()=>{
- const s=createState();s.doorOpen=true;assert.equal(reachable(s,[0,27],[21,120]),true);assert.equal(reachable(s,[21,120],[65,170]),false);
+ const s=createState();s.bedroomOpen=true;s.doorOpen=true;assert.equal(reachable(s,[0,27],[21,120]),true);assert.equal(reachable(s,[21,120],[65,170]),false);
  addItem(s,'passKey');assert.equal(useItem(s,'passKey','entry317'),true);assert.equal(reachable(s,[21,120],[65,170]),true);assert.equal(s.inventory.includes('passKey'),false);
  assert.equal(reachable(s,[65,170],[56,230]),false);s.exitOpen=true;assert.equal(reachable(s,[65,170],[56,230]),true);
 });
