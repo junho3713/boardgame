@@ -242,16 +242,19 @@ for x in [-1.35,-.45,.45,1.35]:
  cube('Kitchen | door inset panel',(x,.54,.377),(.73,.52,.012),oak,.006)
  tube('Kitchen | brass pull',[(x-.13,.76,.39),(x-.13,.76,.43),(x+.13,.76,.43),(x+.13,.76,.39)],.009,brass)
 top=cube('Kitchen | stone counter with real sink opening',(0,.93,0),(3.83,.07,.81),stone,.016);cut_oval(top,(-.8,.93,0),.365,.275)
-# Elliptical rounded sink rim transitions down to a deep rectangular-ish metal bowl.
-oval_shell('Kitchen | deep stainless sink bowl',(-.8,0,0),[(.378,.288,.970),(.375,.285,.98),(.357,.267,.977),(.34,.25,.95),(.325,.235,.91),(.31,.22,.80),(.29,.20,.765),(.05,.05,.75),(.045,.045,.735),(.29,.20,.745),(.33,.24,.82),(.365,.275,.96)],chrome)
-drain('Kitchen basket strainer',(-.8,.752,0),r=.043)
+# Rolled rim, rounded wall-to-floor cove, a broad floor and recessed drain flange.
+sinkSteel=material('Kitchen | brushed satin sink steel',(.43,.46,.48),.37,.90)
+oval_shell('Kitchen | deep stainless sink bowl',(-.8,0,0),[(.378,.288,.970),(.376,.286,.978),(.367,.277,.982),(.357,.267,.977),(.348,.258,.962),(.339,.249,.94),(.328,.238,.90),(.318,.228,.84),(.308,.218,.812),(.297,.207,.795),(.28,.19,.785),(.25,.17,.782),(.20,.14,.781),(.13,.10,.780),(.075,.065,.779),(.048,.048,.775),(.042,.042,.768),(.042,.042,.760),(.075,.065,.765),(.13,.10,.766),(.20,.14,.767),(.25,.17,.768),(.285,.195,.773),(.31,.22,.790),(.335,.245,.85),(.36,.27,.955)],sinkSteel,n=128)
+drain('Kitchen basket strainer',(-.8,.773,0),r=.043)
 # High arc kitchen mixer, longer than a basin tap.
 pts=[(-.8,.98,-.31),(-.8,1.19,-.31)]
 for i in range(25):
  a=pi*i/24;pts.append((-.8,1.19+.17*sin(a),-.14-.17*cos(a)))
 pts.append((-.8,1.12,.03));tube('Kitchen | curved mixer spout',pts,.018,chrome)
 cyl('Kitchen | tap base',(-.8,.982,-.31),.033,.025,chrome);cyl('Kitchen | aerator',(-.8,1.108,.03),.022,.04,chrome)
-tube('Kitchen | mixer lever',[(-.73,1.03,-.31),(-.68,1.15,-.31)],.009,chrome)
+cyl('Kitchen | mixer valve bridge',(-.772,1.04,-.31),.028,.070,chrome,'x')
+cyl('Kitchen | lever pivot hub',(-.72,1.04,-.31),.027,.045,chrome,'x')
+tube('Kitchen | attached mixer lever',[(-.712,1.061,-.31),(-.70,1.085,-.31),(-.68,1.15,-.31)],.009,chrome)
 cube('Kitchen | sponge tray',(-1.37,.984,-.15),(.22,.022,.14),ceramic,.012);cube('Kitchen | sponge',(-1.37,1.01,-.15),(.14,.035,.085),material('Muted green sponge',(.18,.24,.14),.95),.01)
 cube('Kitchen | inset two-ring hob',(.88,.976,0),(.84,.025,.57),dark,.018)
 for x in [.68,1.08]:

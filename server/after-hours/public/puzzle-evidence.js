@@ -12,9 +12,11 @@ export function trayFits(turns){
 }
 export const STOCK=[
  {id:'tea',name:'홍차',initial:180,tare:80,gross:200,portion:20,color:'#728578'},
- {id:'coffee',name:'커피',initial:240,tare:120,gross:240,portion:20,color:'#9a7354'},
- {id:'sugar',name:'설탕',initial:250,tare:100,gross:250,portion:25,color:'#c0b49a'}
+ {id:'coffee',name:'커피',initial:240,tare:80,gross:200,portion:20,color:'#9a7354'},
+ {id:'sugar',name:'설탕',initial:250,tare:80,gross:230,portion:25,color:'#c0b49a'}
 ];
+export const EMPTY_TIN={id:'empty',name:'빈 예비',gross:80,color:'#9ba2a0'};
+export const WEIGHABLES=[...STOCK,EMPTY_TIN];
 export const STOCK_CODE=STOCK.map(j=>(j.initial-(j.gross-j.tare))/j.portion).join('');
 export const MAP_PLACES=[
  {id:'pier',name:'부두',x:1,y:4},{id:'clock',name:'시계탑',x:3,y:2},
@@ -36,7 +38,15 @@ export const SAFE_TARGET=SAFE_BEATS.map(n=>MUSIC_PHRASES.find(p=>p.beats===n).sy
 export const EVAC_NODES=[{id:'317',x:4,y:0},{id:'corridor',x:4,y:2},{id:'junction',x:2,y:2},{id:'stairs',x:0,y:2},{id:'316',x:2,y:0},{id:'lift',x:5,y:2}];
 export const EVAC_ROUTE=['317','corridor','junction','stairs'];
 export const EVAC_TARGET=[2,3,3]; // south, west, west in the plan printed beside the cabinet
+export const LINEN_TAGS=[{id:'scarf',name:'회색 목도리',number:6},{id:'shirt',name:'남색 셔츠',number:2},{id:'handkerchief',name:'흰 손수건',number:8}];
+export const LINEN_BEFORE=[['scarf','shirt'],['shirt','handkerchief']];
+export const LINEN_CODE=LINEN_TAGS.map(t=>t.number).join('');
 export const STORY={
+ linen:{title:'세탁 담당자가 접어 둔 기록',paragraphs:[
+ '316호의 옷을 돌려준 뒤, 떼어 낸 의뢰표를 이 욕실에 모아 두었다. 젖은 표가 서로 달라붙어 수건 봉과 세면대, 문 옆에 나눠 말렸다. 물건 이름은 앞에, 손님이 맡긴 물건의 보관 번호는 뒤에 남아 있다.',
+ '남색 셔츠를 받은 때가 기억난다. 손님이 소매의 단추를 찾느라 바구니를 들췄고, 밑에 있던 회색 목도리에서 물이 떨어졌다. 그 셔츠를 접어 넣고 손을 닦을 새도 없이 마지막 손님이 흰 손수건을 내밀었다. 시간은 적지 못했어도 맡겨진 순서만큼은 틀림없다.',
+ '그날 이후 린넨장 번호는 물건을 접수한 차례의 보관 번호로 바꿨다. 동행인이 맡긴 꽃무늬 열쇠도 그 안에 있다. 차 상자에서 꺼낸 편지를 다른 사람이 먼저 읽지 않도록 해 달라고 했다.'
+ ]},
  tea:{title:'차 상자에 남긴 편지',paragraphs:[
  '네가 잠든 뒤 317호에서 다시 그 소리가 났어. 이번에는 그냥 넘길 수가 없었어. 먼저 가 볼게. 복도에 누가 있는지 모르니, 방 사이 문은 잠가 두었어.',
  '찻상에서 떨어진 조각을 이 상자에 넣어 뒀어. 처음 그 상을 고치던 날, 나는 가운데 꽃만 보고 다 맞았다고 했지. 그래도 서랍은 열리지 않았어. 너는 바깥 테두리에 남은 작은 무늬와 조각의 끝을 한참 들여다봤어.',
@@ -44,7 +54,7 @@ export const STORY={
  ]},
  stock:{title:'야간 근무자의 수첩',paragraphs:[
  '11월 16일. 316호는 분명 두 명이었는데, 자정까지 찻물을 몇 번이나 다시 올렸다. 그중 한 사람은 복도를 계속 확인했다. 다른 한 사람은 커피를 마시다가도 누가 부르면 바로 일어났다.',
- '새 통 세 개를 열 때마다 내용물 무게를 적어 뒀다. 남은 양을 재고 오늘 몇 회분을 썼는지 세어 두는 건 오래된 버릇이다. 첫 근무 날 빈 통 무게까지 재고에 넣어 혼난 뒤로는, 반드시 바닥의 각인을 확인한다.',
+ '한 상자에 담겨 온 같은 규격의 통 네 개. 셋에는 재료를 나눠 담고, 하나는 비운 채 예비로 남겼다. 뚜껑도 모두 같은 것이었다. 재료를 채울 때마다 내용물만의 무게와 한 번에 덜어 쓰는 양을 적어 뒀다. 마감 때는 오늘 쓴 양을 장부에 옮겼다.',
  '동행인이 트윈 침실 열쇠를 맡겼다. 열쇠함에 누가 손댄 흔적이 있어, 재고를 마감하며 늘 적던 세 수를 새 번호로 삼았다. 통은 자리가 뒤섞여도 잠금판에 새긴 재료 이름은 그대로다. 단맛을 넣지 않은 잔도 있었으니, 세 숫자가 같을 리는 없다.'
  ]},
  twin:{title:'엽서 봉투의 글',paragraphs:[

@@ -12,7 +12,7 @@ export function buildDomesticModels({scene,renderer,manager,state,solids,legacy,
  const cabinetLeftSolid={x:7.446,z:-.656,w:.035,d:.875,yaw:0},cabinetRightSolid={x:7.446,z:.256,w:.035,d:.875,yaw:0};
  const wardrobeLeftSolid={x:-2.876,z:3.51,w:.90,d:.055,yaw:0},wardrobeRightSolid={x:-1.924,z:3.51,w:.90,d:.055,yaw:0};
  const names=['bathroom-316.glb','kitchen-316.glb','wall-clock-316.glb','lounge-316.glb','bedroom-fixtures-316.glb'];
- function load(file,apply){loader.load('./assets/models/'+file+'?v=20261117-stairs1',gltf=>{
+ function load(file,apply){loader.load('./assets/models/'+file+'?v=20261117-fixtures4',gltf=>{
   const model=gltf.scene;model.name=file;model.traverse(o=>{if(!o.isMesh)return;o.castShadow=true;o.receiveShadow=true;
    for(const m of Array.isArray(o.material)?o.material:[o.material]){if(m.name==='Clock dial printed ink')o.castShadow=false;if(m.transparent){m.depthWrite=false;o.castShadow=false;}if(m.map)m.map.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());}
   });scene.add(model);model.updateMatrixWorld(true);try{apply(model);}catch(e){console.error('Fixture validation failed',file,e);model.removeFromParent();}
@@ -22,9 +22,8 @@ export function buildDomesticModels({scene,renderer,manager,state,solids,legacy,
  function interactive(o,id,label){o.userData.interactId=id;o.userData.label=label;return o;}
  load(names[0],model=>{
   left=required(model,'Vanity_Door_Left_Pivot');right=required(model,'Vanity_Door_Right_Pivot');shower=required(model,'Shower_Door_Pivot');entry=required(model,'Bath_Entry_Pivot');const vanity=required(model,'Vanity_ROOT');
-  // Retain these objects so the inventory, key and bulb logic does not depend on load timing.
-  scene.attach(legacy.bulb);legacy.bulb.position.set(7.66,.466,-.55);legacy.bulb.rotation.set(0,Math.PI/2,0);
-  scene.attach(legacy.drawer);legacy.drawer.clear();legacy.drawer.position.set(0,0,0);legacy.drawer.rotation.set(0,0,0);legacy.drawer.attach(vanity);
+  // The bathroom keeps only its own linen cabinet; the UV bulb stays in the bedroom.
+  scene.attach(legacy.bathCabinet);legacy.bathCabinet.clear();legacy.bathCabinet.position.set(0,0,0);legacy.bathCabinet.rotation.set(0,0,0);legacy.bathCabinet.attach(vanity);
   vanity.traverse(o=>{if(!o.isMesh)return;const name=o.material?.name||'';if(/porcelain|limestone|nickel/i.test(name))interactive(o,'basin','세면대');});
   hide(legacy.vanity);hide(legacy.bath);
   interactive(shower,'showerDoor','샤워부스 유리문');interactive(entry,'bathDoor','욕실 문');
@@ -44,7 +43,7 @@ export function buildDomesticModels({scene,renderer,manager,state,solids,legacy,
  function clockHands(h,m){hour=h;minute=m;if(hourHand){hourHand.rotation.z=-(h/12*Math.PI*2+m/60*Math.PI/6);minuteHand.rotation.z=-m/60*Math.PI*2;}}
  function collider(o,hinge,cx,cz,w,d){const yaw=o.rotation.y;return{x:hinge.x+cx*Math.cos(yaw)+cz*Math.sin(yaw),z:hinge.z-cx*Math.sin(yaw)+cz*Math.cos(yaw),w,d,yaw};}
  function update(dt){const mix=(o,target)=>o.rotation.y+=(target-o.rotation.y)*Math.min(1,dt*4);
-  if(result.bathLoaded){mix(left,state.drawerOpen?-1.4:0);mix(right,state.drawerOpen?1.4:0);mix(shower,state.showerOpen?-1.4:0);mix(entry,state.bathDoorOpen?1.48:0);
+  if(result.bathLoaded){mix(left,state.linenCabinetOpen?-1.4:0);mix(right,state.linenCabinetOpen?1.4:0);mix(shower,state.showerOpen?-1.4:0);mix(entry,state.bathDoorOpen?1.48:0);
    Object.assign(doorSolid,collider(entry,entry.position,0,.675,.055,1.35));Object.assign(showerSolid,collider(shower,shower.position,-.5,0,.98,.045));
    Object.assign(cabinetLeftSolid,collider(left,{x:7.446,z:-1.1},0,.45,.035,.895));Object.assign(cabinetRightSolid,collider(right,{x:7.446,z:.7},0,-.45,.035,.895));
   }

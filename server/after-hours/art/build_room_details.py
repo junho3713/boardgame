@@ -6,7 +6,7 @@ import bpy, bmesh, math, os, sys, argparse, json, random
 import numpy as np
 from mathutils import Vector
 from math import sin,cos,pi
-ap=argparse.ArgumentParser();ap.add_argument('--out',required=True);ap.add_argument('--render',action='store_true');opt=ap.parse_args(sys.argv[sys.argv.index('--')+1:])
+ap=argparse.ArgumentParser();ap.add_argument('--out',required=True);ap.add_argument('--render',action='store_true');ap.add_argument('--only',nargs='*');opt=ap.parse_args(sys.argv[sys.argv.index('--')+1:])
 OUT=os.path.abspath(opt.out);os.makedirs(OUT,exist_ok=True);random.seed(316)
 bpy.ops.object.select_all(action='SELECT');bpy.ops.object.delete(use_global=False)
 def W(v):return (v[0],-v[2],v[1])
@@ -318,7 +318,7 @@ for x in [-.55,.55]:
   cyl('Trolley | rubber caster',(x,.065,z),.055,.035,dark,'x',trolley)
   cyl('Trolley | wheel hub',(x-.021,.065,z),.020,.006,chrome,'x',trolley)
 tube('Trolley | push handle',[(-.55,.82,-.24),(-.55,.96,-.24),(-.55,.96,.24),(-.55,.82,.24)],.014,brass,trolley)
-for i in range(4):lathe('Trolley | stacked porcelain',(0,.81+i*.016,0),[(.02,0),(.105,0),(.12,.01),(.118,.018),(.08,.012),(.02,.01)],ceramic,trolley)
+for i in range(4):lathe('Trolley | stacked porcelain',(0,.81+i*.016,0),[(0,.002),(.045,.002),(.062,0),(.085,.001),(.108,.007),(.119,.014),(.12,.018),(.117,.021),(.108,.019),(.092,.014),(.072,.010),(.045,.009),(0,.009)],ceramic,trolley)
 teacup('Trolley | spare cup',(.32,.802,0),trolley)
 
 # The second bedroom belongs to suite 316. All furniture uses real metre dimensions.
@@ -418,6 +418,7 @@ for coll in collections.values():
   bpy.context.view_layer.objects.active=objects[0];bpy.ops.object.join();objects[0].name='Crafted | '+objects[0].active_material.name
 stats={}
 for name,coll in collections.items():
+ if opt.only and name not in opt.only:continue
  bpy.ops.object.select_all(action='DESELECT')
  for ob in coll.objects:ob.select_set(True)
  file={'Guestroom317':'guestroom-317.glb','SuiteDetails316':'suite-details-316.glb','TwinRoom316':'twin-room-316.glb'}[name]

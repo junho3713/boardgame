@@ -26,3 +26,9 @@ test('final cabinet directions follow the actual three segments on the printed p
 test('story fragments describe people, actions and evidence without printing lock combinations',()=>{
  for(const v of Object.values(STORY)){assert.ok(v.paragraphs.length>=3);assert.ok(v.paragraphs.join('').length>150);assert.doesNotMatch(v.paragraphs.join(''),/364|571|북동·서·남동|달·종·물결·별/);}
 });
+
+test('laundry account has a unique chronological order distinct from the storage numbers',async()=>{
+ const {LINEN_TAGS,LINEN_BEFORE,LINEN_CODE,STORY}=await import('./public/puzzle-evidence.js');const permutations=a=>a.length?a.flatMap((v,i)=>permutations(a.filter((_,j)=>i!==j)).map(p=>[v,...p])):[[]];const valid=permutations(LINEN_TAGS.map(t=>t.id)).filter(order=>LINEN_BEFORE.every(([a,b])=>order.indexOf(a)<order.indexOf(b)));assert.equal(valid.length,1);assert.equal(valid[0].map(id=>LINEN_TAGS.find(t=>t.id===id).number).join(''),LINEN_CODE);assert.ok(!STORY.linen.paragraphs.join(' ').includes(LINEN_CODE));assert.notEqual(LINEN_CODE,[...LINEN_CODE].sort().join(''));
+});
+
+test('all pantry containers share the physically measurable empty reference mass',async()=>{const {STOCK,EMPTY_TIN,STORY}=await import('./public/puzzle-evidence.js');for(const j of STOCK)assert.equal(j.tare,EMPTY_TIN.gross);assert.doesNotMatch(STORY.stock.paragraphs.join(' '),/80|120|100|바닥의 각인/);});

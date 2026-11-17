@@ -13,6 +13,19 @@ function model(name){
  const nodes=g.nodes.map(n=>{const root=new T.Group();root.name=n.name;if(n.translation)root.position.fromArray(n.translation);if(n.rotation)root.quaternion.fromArray(n.rotation);if(n.scale)root.scale.fromArray(n.scale);if(n.matrix){root.matrix.fromArray(n.matrix);root.matrix.decompose(root.position,root.quaternion,root.scale);}if(n.mesh!==undefined)for(const p of g.meshes[n.mesh].primitives){const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(accessor(p.attributes.POSITION),3));if(p.indices!==undefined)geo.setIndex(accessor(p.indices));root.add(new T.Mesh(geo,new T.MeshBasicMaterial({side:T.DoubleSide})));}return root;});g.nodes.forEach((n,i)=>n.children?.forEach(c=>nodes[i].add(nodes[c])));const scene=new T.Group();for(const id of g.scenes[g.scene||0].nodes)scene.add(nodes[id]);scene.updateMatrixWorld(true);return{g,scene,nodes,bytes:b.length};
 }
 const height=(scene,x,z,startY=3)=>new T.Raycaster(new T.Vector3(x,startY,z),new T.Vector3(0,-1,0)).intersectObject(scene,true)[0]?.point.y;
+test('bathroom evidence is reachable and its reward rests on the cabinet tray',()=>{
+ const bath=model('bathroom-316.glb');
+ for(const [origin,target] of [[[5.85,1.63,.75],[6.38,1.02,1.333]],[[6.3,1.62,-.3],[7.50,.952,-.75]],[[5.3,1.62,.05],[3.812,1.43,.80]]]){
+  const start=new T.Vector3(...origin),end=new T.Vector3(...target),delta=end.clone().sub(start);
+  const hit=new T.Raycaster(start,delta.clone().normalize()).intersectObject(bath.scene,true)[0];
+  assert.ok(!hit||hit.distance>=delta.length()-.004,'clear view to tag '+target.join(','));
+ }
+ const shelf=height(bath.scene,7.64,-.63,.60);assert.ok(shelf>.42&&shelf<.424);assert.ok(.426-shelf<.008);
+});
+test('service plates have closed centers and the sink has a flat floor and a connected mixer pivot',()=>{
+ const suite=model('suite-details-316.glb');for(const dx of[.001,.02,.04]){const y=height(suite.scene,5.2+dx,9.3);assert.ok(y>.866&&y<.875,'closed plate center '+dx);}
+ const kitchen=model('kitchen-316.glb');const floor=[.10,.14,.20].map(dx=>height(kitchen.scene,5.5+dx,5.04, .90));assert.ok(floor.every(y=>y>.777&&y<.785));assert.ok(Math.max(...floor)-Math.min(...floor)<.004,'broad shallow floor slope');const pivot=height(kitchen.scene,5.55,4.73);assert.ok(pivot>1.05&&pivot<1.08,'lever bridge joins body and hub');assert.ok(height(kitchen.scene,6.65,5.22)>.955,'empty tin is on the counter, clear of hob');
+});
 test('new story props rest on solid counters and the 317 note is not obscured by the music box',()=>{
  const kitchen=model('kitchen-316.glb');for(const x of[4.99,6,6.23,6.46]){const y=height(kitchen.scene,x,5.22);assert.ok(y>.955&&y<.98,'solid countertop under '+x);}
  const guest=model('guestroom-317.glb');assert.ok(Math.abs(height(guest.scene,9.35,19.93)-.7925)<.002);

@@ -5,7 +5,7 @@ import {phase,uvVisible,useItem} from './public/room-state.js';
 import {canWalk} from './public/room-layout.js';
 
 test('each test start is reachable and has the intended next puzzle',()=>{
- const phases={postcards:'neighborKey',desk317:'luggage',evacuationBox:'lastRoom',shower:'low',teaBox:'tea',teaDoor:'tea',water:'stock',waterKey:'stockKey',towels:'low',cups:'tea',kettle:'stock',twin:'neighborKey',companion:'neighborKey',bedroom:'low',living:'tea',kitchen:'stock',bath:'low',hall:'enter317',room317:'luggage',clock:'clock',vanity:'drawer',uv:'mirror',music:'music',safe:'safe',exit:'lastRoom',stairs:'stairs',downstairs:'descend'};
+ const phases={scale:'stock',plates:'stock',sink:'stock',bathEntry:'bathEntry',linen:'linen',linenLock:'linen',postcards:'neighborKey',desk317:'luggage',evacuationBox:'lastRoom',shower:'linen',teaBox:'tea',teaDoor:'tea',water:'stock',waterKey:'stockKey',towels:'linen',cups:'bathEntry',kettle:'stock',twin:'neighborKey',companion:'neighborKey',bedroom:'low',living:'bathEntry',kitchen:'stock',bath:'linen',hall:'enter317',room317:'luggage',clock:'clock',vanity:'drawer',uv:'mirror',music:'music',safe:'safe',exit:'lastRoom',stairs:'stairs',downstairs:'descend'};
  for(const point of TEST_STARTS){
   const {state}=createTestStart(point.id);
   assert.equal(phase(state),phases[point.id],point.id);
@@ -15,7 +15,7 @@ test('each test start is reachable and has the intended next puzzle',()=>{
  }
  assert.ok(uvVisible(createTestStart('uv').state));
  const vanity=createTestStart('vanity').state;
- assert.ok(useItem(vanity,'key','drawer'));assert.ok(vanity.drawerOpen);
+ assert.ok(useItem(vanity,'key','drawer'));assert.ok(vanity.drawerOpen);assert.equal(vanity.bathUnlocked,false);
  const hall=createTestStart('hall').state;
  assert.equal(hall.room317Open,false);assert.ok(useItem(hall,'passKey','entry317'));
  assert.ok(createTestStart('exit').state.exitOpen);
@@ -31,7 +31,7 @@ test('free exploration opens gates and starts never share mutable state',()=>{
 
 test('checkpoint roundtrip preserves progress, camera and usable items',()=>{
  const setup=createTestStart('vanity');setup.state.selected='key';setup.state.notes=[{title:'관찰',text:'수납장'}];setup.state.seconds=73;setup.state.wardrobeOpen=true;setup.state.suitcaseOpen=true;
- Object.assign(setup.state,{trayTurns:[1,2,3,0],stockDigits:[3,1,4],companionArrows:[1,6,0],evacArrows:[2,0,3],stockWeights:[true,false,true],stockBottoms:[false,true,false],inlayInstalled:true,tagRubbed:true});
+ Object.assign(setup.state,{linenDigits:[6,2,0],trayTurns:[1,2,3,0],stockDigits:[3,1,4],companionArrows:[1,6,0],evacArrows:[2,0,3],stockWeights:[true,false,true,true],stockBottoms:[false,true,false],inlayInstalled:true,tagRubbed:true});
  const value={...setup,pointId:'vanity',position:[6.3,1.62,-.3],yaw:-1.5,pitch:-.5,luggageDigits:[2,8,4],safeSymbols:[1,0,2,3]};
  const saved=readCheckpoint(writeCheckpoint(value));
  assert.deepEqual(saved.state,setup.state);assert.deepEqual(saved.position,value.position);
@@ -53,3 +53,7 @@ test('old saved games that already took the spare key do not regenerate it in th
  delete raw.state.companionSolved;delete raw.state.travelPostcardsSeen;
  const restored=readCheckpoint(JSON.stringify(raw));assert.equal(restored.state.companionSolved,true);assert.equal(restored.state.inventory.includes('passKey'),false);assert.equal(restored.state.room317Open,true);
 });
+
+test('existing checkpoints retain bedroom progress and later rewards after bathroom separation',()=>{const setup=createTestStart('uv'),raw=JSON.parse(writeCheckpoint({...setup,pointId:'uv',position:setup.point.position,yaw:0,pitch:0}));delete raw.state.drawerUnlocked;delete raw.state.linenSolved;raw.state.teaTinOpen=true;const restored=readCheckpoint(JSON.stringify(raw));assert.equal(restored.state.drawerUnlocked,true);assert.equal(restored.state.uvInstalled,true);assert.equal(restored.state.linenSolved,true);});
+
+test('the scale placement survives refresh without duplicating a jar in inventory',()=>{const setup=createTestStart('water');setup.state.stockOnScale=1;setup.state.stockWeights[1]=true;setup.state.inventory.push('stock_coffee');setup.state.selected='stock_coffee';const raw=writeCheckpoint({...setup,pointId:'water',position:setup.point.position,yaw:0,pitch:0}),restored=readCheckpoint(raw);assert.equal(restored.state.stockOnScale,1);assert.equal(restored.state.inventory.includes('stock_coffee'),false);assert.equal(restored.state.selected,null);assert.equal(restored.state.stockWeights[1],true);});
