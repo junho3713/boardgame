@@ -51,6 +51,6 @@ export function buildTwinRoom({scene,renderer,manager,state,solids,canvasTexture
   fallback.forEach(o=>o.visible=false);scene.add(model);modelLoaded=true;setDials(values);update(1);
  },undefined,()=>{});
  function setDials(next){values=[...next];faces.forEach((o,i)=>o.material.map=symbolMaps[values[i]]);}
- function update(dt){const k=Math.min(1,dt*4);light.intensity+=((state.lightOn?22:0)-light.intensity)*k;bedsideLight.intensity=state.lightOn?2:0;glow.emissiveIntensity=state.lightOn?.5:0;if(modelLoaded){lid.rotation.x+=((state.companionSolved?-1.85:0)-lid.rotation.x)*k;setDials(state.companionSolved?COMPANION_TARGET:state.companionArrows);}}
+ function update(dt){const k=Math.min(1,dt*4);light.intensity+=((state.lightOn?22:0)-light.intensity)*k;bedsideLight.intensity=state.lightOn?2:0;glow.emissiveIntensity=state.lightOn?.5:0;if(modelLoaded){lid.rotation.x+=((state.companionSolved?-1.85:0)-lid.rotation.x)*k;setDials(state.companionSolved?COMPANION_TARGET:state.companionArrows);if(faces[1])faces[1].visible=state.wheelInstalled;}}
  return {update,setDials};
 }

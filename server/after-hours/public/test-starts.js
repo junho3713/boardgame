@@ -1,7 +1,17 @@
-import {LUGGAGE_CODE,takeWindingKey,takeInnerKey,takeCompanionKeys} from './room-state.js?v=20261117-bath3';
-import {createState,ITEMS,addItem,combineFilms,alignFilm,setClock,useItem,unlockDoor,RING_TARGET,unlockLuggage,hearTune,unlockSafe,takeStairKey,MUSIC_SEQUENCE,unlockCompanionCase,COMPANION_TARGET} from './room-state.js?v=20261117-bath3';
+import {LUGGAGE_CODE,takeWindingKey,takeInnerKey,takeCompanionKeys} from './room-state.js?v=20261117-search1';
+import {createState,ITEMS,addItem,combineFilms,alignFilm,setClock,useItem,unlockDoor,RING_TARGET,unlockLuggage,hearTune,unlockSafe,takeStairKey,MUSIC_SEQUENCE,unlockCompanionCase,COMPANION_TARGET} from './room-state.js?v=20261117-search1';
 
 export const TEST_STARTS=[
+ {id:'searchBathWipe',group:'탐색 확장',label:'욕실 · 얼룩 닦기부터',step:0,position:[5.3,1.62,.05],look:[3.81,1.43,.80],description:'물을 적신 천을 가지고 있습니다. 문 옆 의뢰표에 사용해 닦으세요.'},
+ {id:'searchRouteReady',group:'탐색 확장',label:'마지막 방 · 대피도 조각 맞추기',step:8,position:[7.6,1.62,22.9],look:[7.75,.84,23.94],description:'세 조각을 테이블에 끼운 상태입니다. 끊긴 경로선을 이어 주세요.'},
+ {id:'searchBook',group:'탐색 확장',label:'거실 · 장부 아래 조각',step:0,position:[-2.04,1.62,9.25],look:[-3.28,.928,8.88],description:'미니바 옆 작은 선반의 장부를 들어 보세요.'},
+ {id:'searchBedroom',group:'탐색 확장',label:'침실 · 가방 안감과 액자 도구',step:0,position:[1.65,1.62,1.1],look:[2.65,.72,.9],description:'가방을 열고 안감을 들어 액자 뒷판 고정나사에 쓸 동전을 찾으세요.'},
+ {id:'searchBath',group:'탐색 확장',label:'욕실 · 젖은 천으로 의뢰표 닦기',step:0,position:[5.85,1.62,.75],look:[6.74,1.02,1.30],description:'청소용 천을 찾아 세면대에서 적신 뒤 문 옆 의뢰표를 닦으세요.'},
+ {id:'searchLiving',group:'탐색 확장',label:'거실 · 흩어진 상감 조각',step:0,position:[.3,1.62,7.1],look:[-.45,.43,7.80],description:'소파 아래 천과 미니바 장부 밑을 살펴 세 조각을 모두 찾으세요.'},
+ {id:'searchKitchen',group:'탐색 확장',label:'주방 · 서비스 서랍의 전지',step:0,position:[7.5,1.62,6.3],look:[7.64,.63,5.48],description:'서랍 잠금 탭을 올려 AA 전지 두 개를 꺼내 저울에 넣으세요.'},
+ {id:'searchTwin',group:'탐색 확장',label:'트윈 침실 · 슬라이드 서랍과 엽서',step:4,position:[-6.50,1.62,8.75],look:[-6.50,.69,9.465],description:'세 핀을 홈 끝에 맞춰 협탁 서랍을 열고 빠진 방향판을 찾으세요.'},
+ {id:'search317',group:'탐색 확장',label:'317호 · 자석과 실린더 회수',step:6,position:[5.4,1.62,18.05],look:[4.48,.13,17.65],description:'열린 가방에서 끈 달린 자석을 꺼내 협탁 아래 실린더를 회수하세요.'},
+ {id:'searchInner',group:'탐색 확장',label:'마지막 방 · 찢긴 대피도 복원',step:8,position:[5.6,1.62,22.8],look:[4.4,.81,23.56],description:'서랍, 의자 아래, 휴지통을 찾아 대피도 조각을 테이블에 끼워 복원하세요.'},
  {id:'scale',group:'퍼즐 단계부터 시작',label:'주방 · 통 집기와 저울',step:0,position:[5.65,1.62,6.12],look:[5.7,1.08,5.22],description:'빈 예비 통과 재료 통을 집어 저울 위에 올려 측정하세요.'},
  {id:'plates',group:'소품 모델 확인',label:'주방 · 서비스 카트 접시',step:0,position:[5.2,1.62,8.35],look:[5.2,.87,9.3],description:'중앙이 막힌 접시와 가장자리 두께를 확인합니다.'},
  {id:'sink',group:'소품 모델 확인',label:'주방 · 싱크볼과 수전',step:0,position:[5.42,1.62,6.0],look:[5.5,1.04,5.04],description:'싱크볼 바닥과 수전 손잡이 축의 연결을 확인합니다.'},
@@ -39,30 +49,34 @@ export const TEST_STARTS=[
 export const getTestStart=id=>TEST_STARTS.find(p=>p.id===id)||TEST_STARTS.find(p=>p.id==='bedroom');
 export function createTestStart(id,free=false){
  const point=getTestStart(id),s=createState();
- if(point.step>=1){addItem(s,'filmA');addItem(s,'filmB');combineFilms(s);alignFilm(s,2,1,0);s.frameTaken=true;}
+ if(point.step>=1){s.frameReleased=true;s.coinTaken=true;addItem(s,'filmA');addItem(s,'filmB');combineFilms(s);alignFilm(s,2,1,0);s.frameTaken=true;}
  if(point.step>=2)setClock(s,5,40);
 
  if(point.step>=3){useItem(s,'key','drawer');addItem(s,'bulb');s.bulbTaken=true;useItem(s,'bulb','lamp');s.lightOn=false;s.curtainsClosed=true;}
- if(point.step>=4){s.bathUnlocked=true;s.bathKeyTaken=true;s.linenSolved=true;s.linenCabinetOpen=true;s.tinKeyTaken=true;s.rings=[...RING_TARGET];unlockDoor(s);s.twinOpen=true;s.kitchenOpen=true;s.stockSolved=true;s.stockKeyTaken=true;s.suiteEscaped=!['companion','postcards'].includes(point.id);s.doorOpen=s.suiteEscaped;s.lightOn=true;s.curtainsClosed=false;if(s.suiteEscaped){s.travelPostcardsSeen=true;unlockCompanionCase(s,COMPANION_TARGET);takeCompanionKeys(s);useItem(s,'suiteKey','suiteDoor');}}
+ if(point.step>=4){s.inlayMounted=[true,true];s.inlayFound=[true,true];s.batteriesInstalled=[true,true];s.batteriesTaken=[true,true];s.tagWiped=true;s.wheelInstalled=true;s.bathUnlocked=true;s.bathKeyTaken=true;s.linenSolved=true;s.linenCabinetOpen=true;s.tinKeyTaken=true;s.rings=[...RING_TARGET];unlockDoor(s);s.twinOpen=true;s.kitchenOpen=true;s.stockSolved=true;s.stockKeyTaken=true;s.suiteEscaped=!['companion','postcards','searchTwin'].includes(point.id);s.doorOpen=s.suiteEscaped;s.lightOn=true;s.curtainsClosed=false;if(s.suiteEscaped){s.travelPostcardsSeen=true;unlockCompanionCase(s,COMPANION_TARGET);takeCompanionKeys(s);useItem(s,'suiteKey','suiteDoor');}}
  if(point.step>=5){useItem(s,'passKey','entry317');s.room317Entered=true;}
  if(point.step>=6){unlockLuggage(s,LUGGAGE_CODE);takeWindingKey(s);}
- if(point.step>=7){useItem(s,'windingKey','musicBox');hearTune(s);}
+ if(point.step>=7){s.cylinderInstalled=true;useItem(s,'windingKey','musicBox');hearTune(s);}
  if(point.step>=8){unlockSafe(s,MUSIC_SEQUENCE);takeInnerKey(s);useItem(s,'exitKey','exit317');}
- if(point.step>=9){s.evacuationRead=true;s.evacuationBoxOpen=true;takeStairKey(s);}
+ if(point.step>=9){s.routeRestored=true;s.routeFound=[true,true,true];s.routeMounted=[true,true,true];s.evacuationRead=true;s.evacuationBoxOpen=true;takeStairKey(s);}
  if(point.step>=10)useItem(s,'stairKey','stairDoor');
  const zone=point.id;
  if(['teaBox','teaDoor','water','waterKey'].includes(zone)){s.bedroomOpen=true;s.bathUnlocked=true;s.bathDoorOpen=true;s.bathKeyTaken=true;s.linenSolved=true;s.tinKeyTaken=true;}
  if(zone==='teaBox'){s.teaTraySeen=true;s.tinKeyTaken=true;addItem(s,'tinKey');}
- if(zone==='teaDoor'){s.teaTraySeen=true;s.tinKeyTaken=true;s.teaTinOpen=true;s.inlayTaken=true;addItem(s,'inlay');}
+ if(zone==='teaDoor'){s.inlayFound=[true,true];addItem(s,'inlayA');addItem(s,'inlayB');s.teaTraySeen=true;s.tinKeyTaken=true;s.teaTinOpen=true;s.inlayTaken=true;addItem(s,'inlay');}
  if(['water','waterKey'].includes(zone))s.kitchenOpen=true;
  if(zone==='waterKey'){s.stockSolved=true;}
- if(['living','cups','bathEntry'].includes(zone))s.bedroomOpen=true;
- if(['kitchen','kettle','twin','scale','plates','sink'].includes(zone)){s.bedroomOpen=true;s.bathUnlocked=true;s.bathDoorOpen=true;s.bathKeyTaken=true;s.linenSolved=true;s.tinKeyTaken=true;}
- if(['kitchen','kettle','twin','scale','plates','sink'].includes(zone))s.kitchenOpen=true;
- if(['twin','companion','postcards'].includes(zone)){s.stockSolved=true;s.stockKeyTaken=true;s.twinOpen=true;addItem(s,'tourMap');}
+ if(['living','cups','bathEntry','searchLiving','searchBook'].includes(zone))s.bedroomOpen=true;
+ if(['kitchen','kettle','twin','scale','plates','sink','searchKitchen'].includes(zone)){s.bedroomOpen=true;s.bathUnlocked=true;s.bathDoorOpen=true;s.bathKeyTaken=true;s.linenSolved=true;s.tinKeyTaken=true;}
+ if(['kitchen','kettle','twin','scale','plates','sink','searchKitchen'].includes(zone))s.kitchenOpen=true;
+ if(['twin','companion','postcards','searchTwin'].includes(zone)){s.stockSolved=true;s.stockKeyTaken=true;s.twinOpen=true;addItem(s,'tourMap');}
  if(zone==='desk317'){addItem(s,'receipt');addItem(s,'tag');}
+ if(zone==='searchBathWipe'){s.clothTaken=true;s.clothWet=true;addItem(s,'cloth');s.selected='cloth';}
+ if(zone==='searchRouteReady'){s.routeFound=[true,true,true];s.routeMounted=[true,true,true];}
+ if(zone==='search317'){s.magnetTaken=true;addItem(s,'magnet');}
+ if(zone==='searchTwin'){s.wheelInstalled=false;s.wheelDrawerOpen=false;s.wheelTaken=false;s.companionSolved=false;s.companionKeysTaken=false;}
  if(zone==='shower')s.showerOpen=true;
- if(['bath','towels','shower','linen','linenLock'].includes(zone)){s.bedroomOpen=true;s.bathKeyTaken=true;s.bathUnlocked=true;s.bathDoorOpen=true;}
+ if(['bath','towels','shower','linen','linenLock','searchBath','searchBathWipe'].includes(zone)){s.bedroomOpen=true;s.bathKeyTaken=true;s.bathUnlocked=true;s.bathDoorOpen=true;}
  if(free){s.bedroomOpen=true;s.kitchenOpen=true;s.twinOpen=true;s.bathUnlocked=true;s.explore=true;s.doorOpen=true;s.room317Open=true;s.exitOpen=true;s.stairsOpen=true;s.bathDoorOpen=true;s.showerOpen=true;}
  return{state:s,point,clockHour:point.step>=2?5:11,clockMinute:point.step>=2?40:10};
 }
@@ -79,6 +93,14 @@ export function readCheckpoint(raw){
   if(s.passTaken&&!Object.hasOwn(v.state,'companionSolved'))s.companionSolved=true;
   s.inventory=Array.isArray(v.state.inventory)?[...new Set(v.state.inventory.filter(id=>Object.hasOwn(ITEMS,id)))]:[];s.selected=s.inventory.includes(v.state.selected)?v.state.selected:null;
   if(Number.isInteger(v.state.stockOnScale)&&v.state.stockOnScale>=0&&v.state.stockOnScale<4){s.stockOnScale=v.state.stockOnScale;s.inventory=s.inventory.filter(id=>id!==['stock_tea','stock_coffee','stock_sugar','stock_empty'][s.stockOnScale]);if(!s.inventory.includes(s.selected))s.selected=null;}
+  for(const key of ['wipePatches','inlayFound','inlayMounted','batteriesTaken','batteriesInstalled','postcardFound','routeFound','routeMounted'])if(Array.isArray(v.state[key])&&v.state[key].length===s[key].length&&v.state[key].every(n=>typeof n==='boolean'))s[key]=[...v.state[key]];
+  for(const key of ['wheelSliders','routeOrder'])if(Array.isArray(v.state[key])&&v.state[key].length===3&&v.state[key].every(n=>Number.isInteger(n)&&n>=0&&n<3)&&(key!=='routeOrder'||new Set(v.state[key]).size===3))s[key]=[...v.state[key]];
+  if(!Object.hasOwn(v.state,'frameReleased')){s.frameReleased=s.filmJoined||s.aligned||s.inventory.includes('filmB');s.coinTaken=s.frameReleased;}
+  if(!Object.hasOwn(v.state,'inlayMounted')&&(s.traySolved||s.kitchenOpen)){s.inlayMounted=[true,true];s.inlayFound=[true,true];}
+  if(!Object.hasOwn(v.state,'batteriesInstalled')&&(s.stockWeights.some(Boolean)||s.stockSolved)){s.batteriesInstalled=[true,true];s.batteriesTaken=[true,true];}
+  if(!Object.hasOwn(v.state,'wheelInstalled')&&s.companionSolved)s.wheelInstalled=true;
+  if(!Object.hasOwn(v.state,'cylinderInstalled')&&(s.tuneHeard||s.safeOpen))s.cylinderInstalled=true;
+  if(!Object.hasOwn(v.state,'routeRestored')&&s.evacuationRead){s.routeRestored=true;s.routeFound=[true,true,true];s.routeMounted=[true,true,true];}
   if(Array.isArray(v.state.rings)&&v.state.rings.length===3&&v.state.rings.every(n=>Number.isInteger(n)&&n>=0&&n<8))s.rings=[...v.state.rings];
   for(const key of ['stockWeights','stockBottoms'])if(Array.isArray(v.state[key])&&[3,s[key].length].includes(v.state[key].length)&&v.state[key].every(n=>typeof n==='boolean'))s[key]=s[key].map((value,i)=>v.state[key][i]??value);
   for(const [key,max]of [['linenDigits',9],['stockDigits',9],['companionArrows',7],['evacArrows',3]])if(Array.isArray(v.state[key])&&v.state[key].length===3&&v.state[key].every(n=>Number.isInteger(n)&&n>=0&&n<=max))s[key]=[...v.state[key]];

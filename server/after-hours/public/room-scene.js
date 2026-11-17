@@ -1,14 +1,15 @@
-import {buildPuzzleProps} from './puzzle-props.js?v=20261117-bath3';
+import {buildSearchProps} from './room-search.js?v=20261117-search1';
+import {buildPuzzleProps} from './puzzle-props.js?v=20261117-search1';
 import * as T from './three.module.js';
 import {Reflector} from './Reflector.js';
 import {GLTFLoader} from './GLTFLoader.js';
 import {buildExterior} from './exterior-scene.js?v=20261117-environment2';
-import {uvVisible} from './room-state.js?v=20261117-bath3';
-import {buildHotelExtension} from './hotel-extension.js?v=20261117-bath3';
+import {uvVisible} from './room-state.js?v=20261117-search1';
+import {buildHotelExtension} from './hotel-extension.js?v=20261117-search1';
 import {canWalk} from './room-layout.js?v=20261117-stairs1';
-import {buildDomesticModels} from './domestic-models.js?v=20261117-bath3';
-import {buildTwinRoom} from './twin-room.js?v=20261117-bath3';
-import {buildRoomDetails} from './room-details.js?v=20261117-bath3';
+import {buildDomesticModels} from './domestic-models.js?v=20261117-search1';
+import {buildTwinRoom} from './twin-room.js?v=20261117-search1';
+import {buildRoomDetails} from './room-details.js?v=20261117-search1';
 
 export function buildRoom(renderer,state){
  const scene=new T.Scene();scene.background=new T.Color('#121616');scene.fog=new T.FogExp2('#121616',.014);
@@ -248,10 +249,11 @@ export function buildRoom(renderer,state){
  const teaBox=interactive(group(-2.92,1.01,9.50),'teaTin','꽃무늬 자물쇠가 달린 차 상자');box(.42,.018,.30,0,0,0,wood,teaBox);for(const x of[-.20,.20])box(.02,.18,.30,x,.09,0,wood,teaBox);for(const z of[-.14,.14])box(.42,.18,.02,0,.09,z,wood,teaBox);const teaLid=group(0,.18,.15,teaBox);rb(.44,.025,.32,0,0,-.15,darkwood,teaLid);box(.045,.055,.022,0,.10,-.162,brass,teaBox);const flowerPlate=sign('✿',.05,.05,0,0,0);teaBox.add(flowerPlate);flowerPlate.position.set(0,.10,-.175);flowerPlate.rotation.y=Math.PI;const shackle=mesh(new T.TorusGeometry(.018,.004,8,20),brass,teaBox);shackle.position.set(0,.139,-.165);const teaPaper=interactive(box(.30,.006,.20,0,.025,0,paper,teaBox),'teaNote','차 상자 안의 편지와 조각');
  interactive(sign('물방울 · 욕실',.35,.16,3.49,1.7,.6,-Math.PI/2),'bathDoor','욕실 문 · 물방울 표식');
  const jugBox=interactive(group(4.65,.98,5.21),'waterStation','주방 열쇠 보관함');box(.32,.018,.26,0,0,0,darkwood,jugBox);for(const x of[-.15,.15])box(.02,.12,.26,x,.06,0,wood,jugBox);for(const z of[-.12,.12])box(.32,.12,.02,0,.06,z,wood,jugBox);const jugLid=group(0,.12,-.13,jugBox);rb(.34,.025,.28,0,0,.13,wood,jugLid);const jugKey=interactive(group(0,.028,0,jugBox),'jugKey','보관함 안의 트윈 침실 열쇠');const keyRing=mesh(new T.TorusGeometry(.028,.006,8,24),brass,jugKey);keyRing.rotation.x=Math.PI/2;rod([0,0,.025],[0,0,.095],.006,brass,jugKey);box(.025,.008,.012,.01,0,.08,brass,jugKey);
+ const searchProps=buildSearchProps({T,state,canvasTexture,helpers:{box,rb,rod,cyl,mesh,group,sign,interactive},materials:{wood,darkwood,brass,paper,ivory}});
  const puzzleProps=buildPuzzleProps({T,state,canvasTexture,helpers:{box,rb,rod,cyl,mesh,group,sign,interactive},materials:{wood,darkwood,brass}});
  for(const [i,label]of ['홍차','커피','설탕'].entries()){const f=sign(label,.078,.04,0,0,0);jugBox.add(f);f.position.set(-.1+i*.1,.065,.132);}
  const extension=buildHotelExtension({T,scene,state,roots,solids,helpers:{box,rb,rod,cyl,mesh,group,sign,interactive},materials:{wood,darkwood,brass,ivory,paper,floorMat,wallpaper},partitionDoor});
- solids.push(...extension.solids);
+ solids.push(...extension.solids,{x:6.20,z:22.80,w:.48,d:.48},{x:9.6,z:22.4,w:.32,d:.32},{x:-3.28,z:8.88,w:.45,d:.32});
  const dustGeo=new T.BufferGeometry(),dustPos=new Float32Array(90*3);for(let i=0;i<90;i++)dustPos.set([(Math.random()-.5)*6,Math.random()*2.8,(Math.random()-.5)*8],i*3);dustGeo.setAttribute('position',new T.BufferAttribute(dustPos,3));const dust=new T.Points(dustGeo,new T.PointsMaterial({color:'#b6b6a5',size:.013,transparent:true,opacity:.26,depthWrite:false}));scene.add(dust);
  const frameHomePosition=frame.position.clone(),frameHomeRotation=frame.rotation.clone();let lastFrameTaken=false;
  function update(dt,time){
@@ -275,7 +277,7 @@ export function buildRoom(renderer,state){
    if(state.musicWound)musicDrum.rotation.y=time*.65;
    mix(teaLid.rotation,'x',state.teaTinOpen?1.8:0);teaPaper.visible=state.teaTinOpen;mix(jugLid.rotation,'x',state.stockSolved?-1.8:0);jugKey.visible=state.stockSolved&&!state.stockKeyTaken;jugBox.userData.interactId=jugKey.visible?'jugKey':'waterStation';jugBox.userData.label=jugKey.visible?'열린 보관함 · 트윈 침실 열쇠 꺼내기':'주방 열쇠 보관함';
    for(const d of innerDoors){mix(d.g.rotation,'y',d.yaw+(state[d.field]?1.65:0),3);d.g.userData.label=d.label+(state[d.field]?' · 열림':' · 잠김');const a=d.g.rotation.y;Object.assign(d.collider,{x:d.x+Math.cos(a)*d.w/2,z:d.z-Math.sin(a)*d.w/2,yaw:a});}
-   puzzleProps.update(dt);extension.update();domestic.update(dt);details.update(dt,time);twin.update(dt);for(const light of fixtureLights)light.intensity=state.lightOn?2.4:0;
+   searchProps.update(dt);puzzleProps.update(dt);extension.update();domestic.update(dt);details.update(dt,time);twin.update(dt);for(const light of fixtureLights)light.intensity=state.lightOn?2.4:0;
    exterior.update(dt,time);dust.rotation.y=Math.sin(time*.04)*.025;
  }
  function clockHands(hour,minute){domestic.clockHands(hour,minute);if(domestic.clockLoaded)return;const ha=hour/12*Math.PI*2+minute/60*Math.PI/6,ma=minute/60*Math.PI*2;hr.position.set(Math.sin(ha)*.045,.3+Math.cos(ha)*.045,.111);hr.rotation.z=-ha;mn.position.set(Math.sin(ma)*.065,.3+Math.cos(ma)*.065,.12);mn.rotation.z=-ma;}

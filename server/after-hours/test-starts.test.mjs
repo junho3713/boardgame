@@ -5,7 +5,7 @@ import {phase,uvVisible,useItem} from './public/room-state.js';
 import {canWalk} from './public/room-layout.js';
 
 test('each test start is reachable and has the intended next puzzle',()=>{
- const phases={scale:'stock',plates:'stock',sink:'stock',bathEntry:'bathEntry',linen:'linen',linenLock:'linen',postcards:'neighborKey',desk317:'luggage',evacuationBox:'lastRoom',shower:'linen',teaBox:'tea',teaDoor:'tea',water:'stock',waterKey:'stockKey',towels:'linen',cups:'bathEntry',kettle:'stock',twin:'neighborKey',companion:'neighborKey',bedroom:'low',living:'bathEntry',kitchen:'stock',bath:'linen',hall:'enter317',room317:'luggage',clock:'clock',vanity:'drawer',uv:'mirror',music:'music',safe:'safe',exit:'lastRoom',stairs:'stairs',downstairs:'descend'};
+ const phases={searchBathWipe:'linen',searchRouteReady:'lastRoom',searchBook:'bathEntry',searchBedroom:'low',searchBath:'linen',searchLiving:'bathEntry',searchKitchen:'stock',searchTwin:'neighborKey',search317:'music',searchInner:'lastRoom',scale:'stock',plates:'stock',sink:'stock',bathEntry:'bathEntry',linen:'linen',linenLock:'linen',postcards:'neighborKey',desk317:'luggage',evacuationBox:'lastRoom',shower:'linen',teaBox:'tea',teaDoor:'tea',water:'stock',waterKey:'stockKey',towels:'linen',cups:'bathEntry',kettle:'stock',twin:'neighborKey',companion:'neighborKey',bedroom:'low',living:'bathEntry',kitchen:'stock',bath:'linen',hall:'enter317',room317:'luggage',clock:'clock',vanity:'drawer',uv:'mirror',music:'music',safe:'safe',exit:'lastRoom',stairs:'stairs',downstairs:'descend'};
  for(const point of TEST_STARTS){
   const {state}=createTestStart(point.id);
   assert.equal(phase(state),phases[point.id],point.id);

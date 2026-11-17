@@ -48,7 +48,7 @@ Poly Haven CC0 벽지·헤링본 바닥·직물의 컬러/노멀/거칠기 맵, 
 
 ## 검증
 
-`node --test server/after-hours/fixture-models.test.mjs server/after-hours/room-layout.test.mjs server/after-hours/room-state.test.mjs server/after-hours/test-starts.test.mjs server/after-hours/puzzle-evidence.test.mjs server/after-hours/server.test.cjs`
+`node --test server/after-hours/search-state.test.mjs server/after-hours/fixture-models.test.mjs server/after-hours/room-layout.test.mjs server/after-hours/room-state.test.mjs server/after-hours/test-starts.test.mjs server/after-hours/puzzle-evidence.test.mjs server/after-hours/server.test.cjs`
 
 인벤토리: 상시 I 버튼, 획득 안내, 물건별 조사하기·손에 들기·선택 해제, 조합과 대상 앞 E 사용 안내를 제공합니다.
 
@@ -98,3 +98,7 @@ Escape Simulator 2 공략은 텍스트를 참고했습니다. 영상 전체를 �
 주방 저울은 실제 통 위치와 연동됩니다. 통 조사에서 집어 들고, 선택한 통을 E로 저울에 올려야 총중량이 표시됩니다. 3D 통은 선반에서 저울 접시로 이동하며, 회수하면 표시가 0 g으로 돌아갑니다. 통에는 중량을 쓰지 않습니다. 같은 규격의 빈 예비 통을 직접 달아 기준 무게를 알아내며, 이를 재료 통의 총중량에서 뺍니다. 통의 저울 위치와 소지 상태는 관리자 저장 후에도 유지됩니다.
 
 서비스 카트 접시는 중심까지 닫힌 이중 면 회전체로 수정했습니다. 주방 싱크볼은 넓고 완만한 바닥과 별도 배수구 경사를 가지며 수전 손잡이는 밸브 브리지와 회전축에 연결했습니다. 두 Blender 생성 스크립트와 해당 GLB만 갱신했습니다. F2의 주방 저울·접시·싱크볼 시작점에서 바로 확인할 수 있습니다.
+
+## 각 방 탐색 확장 · 2026-11-17
+침실 가방 안감→동전→액자 고정판, 욕실 천→물 적시기→얼룩 닦기, 거실 두 곳 추가 상감 조각→전체 설치, 주방 서비스 서랍→AA 전지 두 개→저울 전원, 트윈 슬라이드 핀→방향판 설치 및 흩어진 엽서 세 장, 317호 자석→틈 속 실린더→오르골 설치, 마지막 방 대피도 세 조각→조립을 추가했습니다. 읽음 플래그로 잠그지 않고 물리적 부품·전원·도구 조건을 판정합니다. 이전 관리자 저장에서 이미 통과한 퍼즐은 유지합니다.
+참고: Escape Simulator 2 텍스트 공략의 Courtyard 창 닦기, 물건을 장치에 끼우는 상자, Feast 종이 조각 복원 구조를 확인했습니다. 내용물과 해답은 호텔 이야기로 새로 작성했습니다. https://www.walkthroughking.com/text/escapesimulator2.aspx

@@ -46,7 +46,7 @@ export function buildRoomDetails({scene,renderer,manager,state,solids,legacy,can
  function update(dt,time=0){if(!result.guestLoaded)return;const k=Math.min(1,dt*4);
   lid.rotation.x+=( (state.luggageOpen?1.82:0)-lid.rotation.x)*k;
   safeDoor.rotation.y+=( (state.safeOpen?1.52:0)-safeDoor.rotation.y)*k;
-  if(state.musicWound)drum.rotation.x=time*.72;
+  drum.visible=state.cylinderInstalled;if(state.musicWound&&state.cylinderInstalled)drum.rotation.x=time*.72;
   const angle=safeDoor.rotation.y;Object.assign(safeDoorSolid,{x:3.817+.423*Math.cos(angle),z:19.18-.423*Math.sin(angle),yaw:angle});
  }
  return result;
