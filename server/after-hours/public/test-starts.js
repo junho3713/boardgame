@@ -115,3 +115,11 @@ export function readCheckpoint(raw){
 export function writeCheckpoint({state,pointId,position,yaw,pitch,clockHour,clockMinute,luggageDigits,safeSymbols}){
  return JSON.stringify({version:2,state,pointId,position,yaw,pitch,clockHour,clockMinute,luggageDigits,safeSymbols,savedAt:new Date().toISOString()});
 }
+
+// A restart leaves administrator restore mode before reloading the whole game.
+// Only this game's checkpoint/settings are changed; unrelated local storage is preserved.
+export function prepareRestart(storage,href){
+ try{storage.removeItem(CHECKPOINT_KEY);}catch{}
+ try{storage.setItem(SETTINGS_KEY,JSON.stringify({pointId:'bedroom',free:false,autoResume:false}));}catch{}
+ const url=new URL(href);for(const key of ['admin','start','free'])url.searchParams.delete(key);url.hash='';return url.href;
+}

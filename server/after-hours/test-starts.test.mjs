@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {TEST_STARTS,createTestStart,readCheckpoint,writeCheckpoint} from './public/test-starts.js';
+import {TEST_STARTS,createTestStart,readCheckpoint,writeCheckpoint,prepareRestart,CHECKPOINT_KEY,SETTINGS_KEY} from './public/test-starts.js';
 import {phase,uvVisible,useItem} from './public/room-state.js';
 import {canWalk} from './public/room-layout.js';
 
@@ -57,3 +57,17 @@ test('old saved games that already took the spare key do not regenerate it in th
 test('existing checkpoints retain bedroom progress and later rewards after bathroom separation',()=>{const setup=createTestStart('uv'),raw=JSON.parse(writeCheckpoint({...setup,pointId:'uv',position:setup.point.position,yaw:0,pitch:0}));delete raw.state.drawerUnlocked;delete raw.state.linenSolved;raw.state.teaTinOpen=true;const restored=readCheckpoint(JSON.stringify(raw));assert.equal(restored.state.drawerUnlocked,true);assert.equal(restored.state.uvInstalled,true);assert.equal(restored.state.linenSolved,true);});
 
 test('the scale placement survives refresh without duplicating a jar in inventory',()=>{const setup=createTestStart('water');setup.state.stockOnScale=1;setup.state.stockWeights[1]=true;setup.state.inventory.push('stock_coffee');setup.state.selected='stock_coffee';const raw=writeCheckpoint({...setup,pointId:'water',position:setup.point.position,yaw:0,pitch:0}),restored=readCheckpoint(raw);assert.equal(restored.state.stockOnScale,1);assert.equal(restored.state.inventory.includes('stock_coffee'),false);assert.equal(restored.state.selected,null);assert.equal(restored.state.stockWeights[1],true);});
+
+test('restart discards the admin restore point and explicit room URL without clearing other games',()=>{
+ const setup=createTestStart('safe'),saved=writeCheckpoint({...setup,pointId:'safe',position:setup.point.position,yaw:1,pitch:0});
+ const data=new Map([[CHECKPOINT_KEY,saved],[SETTINGS_KEY,JSON.stringify({pointId:'safe',free:true,autoResume:true})],['another-game','keep']]);
+ const storage={removeItem:key=>data.delete(key),setItem:(key,value)=>data.set(key,value)};
+ const url=prepareRestart(storage,'https://example.com/after-hours/?admin=1&start=safe&free=1&source=bookmark#');
+ assert.equal(url,'https://example.com/after-hours/?source=bookmark');assert.equal(data.has(CHECKPOINT_KEY),false);assert.deepEqual(JSON.parse(data.get(SETTINGS_KEY)),{pointId:'bedroom',free:false,autoResume:false});assert.equal(data.get('another-game'),'keep');
+ const fresh=createTestStart('bedroom');assert.equal(phase(fresh.state),'low');assert.deepEqual(fresh.state.inventory,[]);for(const field of ['doorOpen','safeOpen','clockSolved','uvInstalled','luggageOpen','twinOpen','bathUnlocked','kitchenOpen'])assert.equal(fresh.state[field],false);assert.equal(fresh.clockHour,11);assert.equal(fresh.clockMinute,10);
+});
+test('restart remains usable when browser storage access is blocked and on a normal game URL',()=>{
+ const blocked={removeItem(){throw Error('blocked');},setItem(){throw Error('blocked');}};
+ assert.equal(prepareRestart(blocked,'https://example.com/after-hours/?admin=1&start=stairs'),'https://example.com/after-hours/');
+ assert.equal(prepareRestart(blocked,'https://example.com/after-hours/'),'https://example.com/after-hours/');
+});
