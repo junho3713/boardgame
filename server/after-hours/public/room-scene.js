@@ -1,7 +1,7 @@
 import * as T from './three.module.js';
 import {Reflector} from './Reflector.js';
 import {GLTFLoader} from './GLTFLoader.js';
-import {buildExterior} from './exterior-scene.js';
+import {buildExterior} from './exterior-scene.js?v=20261117-environment2';
 import {uvVisible} from './room-state.js';
 
 export function buildRoom(renderer,state){
