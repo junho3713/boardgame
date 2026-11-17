@@ -1,5 +1,5 @@
 import * as T from './three.module.js';
-import {buildRoom} from './room-scene.js?v=20261117-bed';
+import {buildRoom} from './room-scene.js?v=20261117-exterior';
 import {createState,ITEMS,addItem,combineFilms,alignFilm,setClock,useItem,uvVisible,unlockDoor,phase,HINTS} from './room-state.js';
 const $=q=>document.querySelector(q),canvas=$('#world');
 const state=createState();let started=false,paused=false,complete=false,mode='walk',active=null,crouched=false,yaw=.02,pitch=0,drag=false,moved=false,inspectionId='',inspectPivot=null,inspectDistance=3.4;

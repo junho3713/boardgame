@@ -1,6 +1,7 @@
 import * as T from './three.module.js';
 import {Reflector} from './Reflector.js';
 import {GLTFLoader} from './GLTFLoader.js';
+import {buildExterior} from './exterior-scene.js';
 import {uvVisible} from './room-state.js';
 
 export function buildRoom(renderer,state){
@@ -59,8 +60,7 @@ export function buildRoom(renderer,state){
  // Window, rain and pleated curtains.
  const windowGroup=group(0,0,-4.48);for(const x of [-1.5,0,1.5])box(.07,1.95,.12,x,1.65,0,ivory,windowGroup);for(const y of [.68,1.64,2.62])box(3.08,.07,.14,0,y,0,ivory,windowGroup);box(3.2,.12,.32,0,.65,.03,wood,windowGroup);
  const glass=box(2.94,1.88,.025,0,1.65,-.035,new T.MeshPhysicalMaterial({color:'#647789',transparent:true,opacity:.22,roughness:.12,metalness:.15,depthWrite:false}),windowGroup);glass.castShadow=false;
- const outside=group(0,0,-6.5);for(let i=0;i<5;i++){const x=-8+i*3.4;const b=box(2.4,5+i%2,2,x,1,-i%2,mat('#18232b'),outside);for(let f=0;f<4;f++)for(let q=0;q<3;q++)box(.25,.4,.01,x-.7+q*.65,-.3+f*.9,1.01,new T.MeshBasicMaterial({color:(f+q+i)%5===0?'#5f5840':'#26333d'}),outside);}
- const rainGeo=new T.BufferGeometry(),rainPos=new Float32Array(150*6);for(let i=0;i<150;i++){const x=(Math.random()-.5)*3,y=Math.random()*2+.7,z=-4.63-Math.random()*.25;rainPos.set([x,y,z,x-.025,y-.12,z],i*6);}rainGeo.setAttribute('position',new T.BufferAttribute(rainPos,3));const rain=new T.LineSegments(rainGeo,new T.LineBasicMaterial({color:'#8b9ba5',transparent:true,opacity:.25}));scene.add(rain);
+ const exterior=buildExterior(scene,loader,canvasTexture);
  const curtainFabric=new T.MeshStandardMaterial({map:fabricMap,normalMap:fabricNormal,color:'#666758',roughness:1,side:T.DoubleSide});
  const curtains=[];for(const side of [-1,1]){const g=group(side*1.7,0,-4.3);const geo=new T.PlaneGeometry(.95,2.55,40,24),p=geo.attributes.position;for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i);p.setZ(i,Math.sin((x+.5)*Math.PI*12)*.09+(1-Math.abs(y)/1.28)*.025);p.setY(i,y+Math.cos(x*20)*.025);}geo.computeVertexNormals();const cloth=mesh(geo,curtainFabric,g);cloth.position.y=1.56;interactive(cloth,'curtains','커튼');curtains.push({g,side});}
  rod([-2.25,2.96,-4.15],[2.25,2.96,-4.15],.035,brass);for(let i=0;i<18;i++){const tor=mesh(new T.TorusGeometry(.055,.009,8,16),brass);tor.position.set(-2.1+i*.247,2.96,-4.15);tor.rotation.y=Math.PI/2;}
@@ -134,7 +134,7 @@ export function buildRoom(renderer,state){
    mix(lampLight,'intensity',state.lampOn?(state.uvInstalled?11:17):0);lampLight.color.set(state.uvInstalled?'#9f75eb':'#ffc47c');shadeMat.emissive.set(state.uvInstalled?'#623d91':'#e6bc73');lightbulb.material.emissive.set(state.uvInstalled?'#9956ee':'#ffe1a0');
    door.userData.label=state.doorOpen?'열린 문':'잠긴 문';mix(door.rotation,'y',state.doorOpen?-Math.PI*.52:0,2.2);for(let i=0;i<3;i++)rings[i].rotation.z=-state.rings[i]*Math.PI/4;
    mix(clockFlap.position,'z',state.clockSolved?.18:.02);clockKey.visible=false;
-   const p=rainGeo.attributes.position;for(let i=0;i<150;i++){let y=p.getY(i*2)-dt*(1.6+(i%4)*.2);if(y<.65)y=2.7;p.setY(i*2,y);p.setY(i*2+1,y-.12);}p.needsUpdate=true;dust.rotation.y=Math.sin(time*.04)*.025;
+   exterior.update(dt,time);dust.rotation.y=Math.sin(time*.04)*.025;
  }
  function clockHands(hour,minute){const ha=hour/12*Math.PI*2+minute/60*Math.PI/6,ma=minute/60*Math.PI*2;hr.position.set(Math.sin(ha)*.045,.3+Math.cos(ha)*.045,.111);hr.rotation.z=-ha;mn.position.set(Math.sin(ma)*.065,.3+Math.cos(ma)*.065,.12);mn.rotation.z=-ma;}
  clockHands(11,10);const clockMark=canvasTexture((a,w,h)=>{a.fillStyle='#c6ab75';a.beginPath();a.moveTo(w*.2,h*.8);a.lineTo(w*.8,h*.8);a.lineTo(w*.8,h*.2);a.closePath();a.fill();},128);const markMesh=mesh(new T.PlaneGeometry(.1,.1),new T.MeshStandardMaterial({map:clockMark,transparent:true,roughness:.8}),clock);markMesh.position.set(0,.29,-.102);markMesh.rotation.y=Math.PI;
