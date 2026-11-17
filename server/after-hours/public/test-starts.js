@@ -2,9 +2,10 @@ import {LUGGAGE_CODE,takeWindingKey,takeInnerKey,takeCompanionKeys} from './room
 import {createState,ITEMS,addItem,combineFilms,alignFilm,setClock,useItem,unlockDoor,RING_TARGET,unlockLuggage,hearTune,unlockSafe,takeStairKey,MUSIC_SEQUENCE,unlockCompanionCase,COMPANION_TARGET} from './room-state.js?v=20261117-tricks1';
 
 export const TEST_STARTS=[
- {id:'steam',group:'트릭 확인',label:'욕실 · 온수와 거울의 접수 기호',step:0,position:[6.63,1.62,-.2],look:[8.04,1.25,.025],description:'C/H 표시를 E로 H에 맞추고 세면볼을 조사해 물을 틀면 거울의 흔적이 나타납니다.'},
+ {id:'bedCover',group:'소품 모델 확인',label:'첫 방 · 이불과 쪽지',step:0,position:[-.45,1.62,-1.05],look:[-1.46,.76,-1.75],description:'침대에 E를 누르면 이불을 걷거나 덮습니다. 드러난 쪽지는 직접 조준해 E로 집으세요.'},
+ {id:'steam',group:'트릭 확인',label:'욕실 · 온수와 거울의 접수 기호',step:0,position:[6.63,1.62,-.2],look:[7.825,.965,.245],description:'C/H 표시를 E로 H에 맞추고 세면볼을 조사해 물을 틀면 거울의 흔적이 나타납니다.'},
  {id:'rubbing',group:'트릭 확인',label:'317호 · 영수증 정렬과 압흔 전사',step:5,position:[5.4,1.62,17.7],look:[4.35,.55,17.95],description:'수하물표·영수증·연필을 갖고 있습니다. I에서 연필을 조사해 수하물표에 사용하세요.'},
- {id:'basinFlow',group:'소품 모델 확인',label:'욕실 · 수도와 천 적시기',step:0,position:[6.63,1.62,-.2],look:[7.81,1.01,-.2],description:'E로 수도를 켜고 끕니다. I에서 천을 선택해 세면대에 사용하면 물줄기 아래에서 적십니다.'},
+ {id:'basinFlow',group:'소품 모델 확인',label:'욕실 · 수도와 천 적시기',step:0,position:[6.78,1.62,-.91],look:[7.77,.91,-.20],description:'수전을 조작해 물을 받고, 수전 옆 배수봉이나 세면볼 바닥의 마개를 눌러 물을 뺍니다. C/H로 수온을 바꿀 수 있습니다.'},
  {id:'latchNote',group:'이야기 단서 확인',label:'트윈 침실 · 협탁 수리 메모',step:4,position:[-7.1,1.62,6.05],look:[-7.16,.798,5.08],description:'화장대의 접힌 수리 메모를 읽고 협탁 걸쇠에 적용해 보세요.'},
  {id:'searchBathWipe',group:'탐색 확장',label:'욕실 · 얼룩 닦기부터',step:0,position:[5.3,1.62,.05],look:[3.81,1.43,.80],description:'물을 적신 천을 가지고 있습니다. 문 옆 의뢰표에 사용해 닦으세요.'},
  {id:'searchRouteReady',group:'탐색 확장',label:'마지막 방 · 대피도 조각 맞추기',step:8,position:[7.6,1.62,22.9],look:[7.75,.84,23.94],description:'세 조각을 테이블에 끼운 상태입니다. 끊긴 경로선을 이어 주세요.'},
@@ -93,6 +94,7 @@ export function readCheckpoint(raw){
  try{const v=JSON.parse(raw);if(v?.version!==2||!v.state||!Array.isArray(v.position)||v.position.length!==3||!v.position.every(Number.isFinite)||!Number.isFinite(v.yaw)||!Number.isFinite(v.pitch))return null;
   const s=createState();for(const key of Object.keys(s))if(typeof s[key]==='boolean'&&typeof v.state[key]==='boolean')s[key]=v.state[key];
   s.basinWetting=false;
+  if(Number.isFinite(v.state.basinVolume)&&v.state.basinVolume>=0&&v.state.basinVolume<=1)s.basinVolume=v.state.basinVolume;
   if(!Object.hasOwn(v.state,'drawerUnlocked')&&s.clockSolved&&(s.drawerOpen||s.bulbTaken||s.uvInstalled))s.drawerUnlocked=true;
   if(!Object.hasOwn(v.state,'linenSolved')&&(s.teaTinOpen||s.inlayTaken||s.kitchenOpen||s.tinKeyTaken)){s.linenSolved=true;s.bathUnlocked=true;s.bathKeyTaken=true;}
   // Saves made before the twin bedroom already obtained the spare key from the old rack.

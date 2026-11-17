@@ -36,3 +36,17 @@ test('new searches survive a save, and malformed arrays cannot skip them',()=>{
 test('older checkpoints preserve already completed rooms without awarding extra copies',()=>{
  const setup=createTestStart('safe');const raw=JSON.parse(writeCheckpoint({...setup,pointId:'safe',position:setup.point.position,yaw:0,pitch:0}));for(const key of ['inlayMounted','batteriesInstalled','wheelInstalled','cylinderInstalled','frameReleased'])delete raw.state[key];const restored=readCheckpoint(JSON.stringify(raw));assert.ok(restored.state.inlayMounted.every(Boolean));assert.ok(restored.state.batteriesInstalled.every(Boolean));assert.ok(restored.state.wheelInstalled);assert.ok(restored.state.cylinderInstalled);assert.ok(restored.state.frameReleased);assert.ok(!restored.state.inventory.includes('inlayA'));
 });
+test('basin can retain standing water, drain with or without supply, and restore old checkpoints',()=>{
+ const setup=createTestStart('basinFlow'),s=setup.state;
+ const puzzle=createSearchPuzzles({state:s,sound:()=>{},caption:()=>{},inventory:()=>{}});
+ puzzle.interact('basin');puzzle.update(5);const partial=s.basinVolume;
+ assert.ok(partial>0&&partial<1);puzzle.interact('basin');puzzle.update(5);assert.equal(s.basinVolume,partial);
+ const raw=JSON.parse(writeCheckpoint({...setup,pointId:'basinFlow',position:setup.point.position,yaw:0,pitch:0}));
+ assert.equal(readCheckpoint(JSON.stringify(raw)).state.basinVolume,partial);
+ delete raw.state.basinVolume;delete raw.state.drainClosed;
+ assert.equal(readCheckpoint(JSON.stringify(raw)).state.basinVolume,0);assert.equal(readCheckpoint(JSON.stringify(raw)).state.drainClosed,true);
+ puzzle.interact('basin');puzzle.update(60);assert.equal(s.basinVolume,1);
+ puzzle.interact('basinDrain');puzzle.update(1);assert.ok(s.basinVolume<1);
+ puzzle.update(60);assert.ok(s.basinVolume>0&&s.basinVolume<.01);
+ puzzle.interact('basin');puzzle.update(60);assert.equal(s.basinVolume,0);
+});

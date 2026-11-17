@@ -1,3 +1,4 @@
+import {hingedDoor} from './hotel-doors.js';
 import {buildBathSteam} from './bath-steam.js?v=20261117-tricks1';
 import * as T from './three.module.js';
 import {buildBasinFlow} from './basin-flow.js?v=20261117-tricks1';
@@ -9,8 +10,8 @@ import {registerRoomMirror,getModelNode} from './room-details.js?v=20261117-stai
 export function buildDomesticModels({scene,renderer,manager,state,solids,legacy,mirror,canvasTexture}){
  registerRoomMirror(scene,mirror);
  const loader=new GLTFLoader(manager),result={bathLoaded:false,clockLoaded:false,update,clockHands};
- let bathSteam,basinFlow,left,right,shower,entry,hourHand,minuteHand,keyCover,wardrobeLeft,wardrobeRight,caseLid,hour=11,minute=10;
- const doorSolid={x:3.76,z:-.325,w:.055,d:1.35,yaw:1.4},showerSolid={x:5.55,z:-2.35,w:.98,d:.04,yaw:0};
+ let moveEntry,bathSteam,basinFlow,left,right,shower,entry,hourHand,minuteHand,keyCover,wardrobeLeft,wardrobeRight,caseLid,hour=11,minute=10;
+ const showerSolid={x:5.55,z:-2.35,w:.98,d:.04,yaw:0};
  const cabinetLeftSolid={x:7.446,z:-.656,w:.035,d:.875,yaw:0},cabinetRightSolid={x:7.446,z:.256,w:.035,d:.875,yaw:0};
  const wardrobeLeftSolid={x:-2.876,z:3.51,w:.90,d:.055,yaw:0},wardrobeRightSolid={x:-1.924,z:3.51,w:.90,d:.055,yaw:0};
  const names=['bathroom-316.glb','kitchen-316.glb','wall-clock-316.glb','lounge-316.glb','bedroom-fixtures-316.glb'];
@@ -26,15 +27,29 @@ export function buildDomesticModels({scene,renderer,manager,state,solids,legacy,
   left=required(model,'Vanity_Door_Left_Pivot');right=required(model,'Vanity_Door_Right_Pivot');shower=required(model,'Shower_Door_Pivot');entry=required(model,'Bath_Entry_Pivot');const vanity=required(model,'Vanity_ROOT');
   // The bathroom keeps only its own linen cabinet; the UV bulb stays in the bedroom.
   scene.attach(legacy.bathCabinet);legacy.bathCabinet.clear();legacy.bathCabinet.position.set(0,0,0);legacy.bathCabinet.rotation.set(0,0,0);legacy.bathCabinet.attach(vanity);
-  vanity.traverse(o=>{if(!o.isMesh)return;const name=o.material?.name||'';if(/porcelain|limestone|nickel/i.test(name))interactive(o,'basin','세면대');});
+  vanity.traverse(o=>{if(!o.isMesh)return;const name=o.material?.name||'';if(/porcelain|limestone|nickel/i.test(name))interactive(o,'basin','세면대 · 수도 틀기 / 잠그기');});
   const lever=required(vanity,'Vanity_Faucet_Lever_Pivot');lever.traverse(o=>interactive(o,'basinHeat','수도 손잡이 · 냉수 / 온수'));
+  // The original lever is authored on the bathroom face. Pivot it about the
+  // spindle and mirror the same fitting onto the bedroom face.
+  const brassParts=entry.children.find(o=>o.material?.name==='Aged champagne brass');
+  const fitting=brassParts.geometry,leverIndices=[],hingeIndices=[];
+  for(let i=0;i<fitting.index.count;i+=3){
+   const a=fitting.index.getX(i),dest=fitting.attributes.position.getZ(a)>.5?leverIndices:hingeIndices;
+   dest.push(a,fitting.index.getX(i+1),fitting.index.getX(i+2));
+  }
+  const leverMesh=brassParts.clone();leverMesh.geometry=fitting.clone();leverMesh.geometry.setIndex(leverIndices);
+  brassParts.geometry=fitting.clone();brassParts.geometry.setIndex(hingeIndices);
+  const handlePivot=new T.Group();handlePivot.position.set(0,1.05,1.12);entry.add(handlePivot);
+  handlePivot.add(leverMesh);leverMesh.position.set(0,-1.05,-1.12);
+  const reverse=leverMesh.clone();reverse.position.x=-reverse.position.x;reverse.scale.x*=-1;handlePivot.add(reverse);
+  moveEntry=hingedDoor({leaf:entry,handles:[handlePivot],handleAxis:'x',handleSign:-1,width:1.35,thickness:.055,swing:1.48,alongZ:true,solids});
   basinFlow=buildBasinFlow({parent:vanity,lever,state});
   hide(legacy.vanity);hide(legacy.bath);
   interactive(shower,'showerDoor','샤워부스 유리문');interactive(entry,'bathDoor','욕실 문');
   interactive(required(model,'Toilet_ROOT'),'toilet','변기');for(const name of ['Hand towel 6.22','Hand towel 6.54'])interactive(required(model,name),'towels','봉에 걸린 면 수건');
   // Replace the old fixture footprints; the architecture and doorway remain unchanged.
   for(let i=solids.length-1;i>=0;i--)if(solids[i].bathLegacy)solids.splice(i,1);
-  solids.push({x:7.77,z:-.2,w:.74,d:1.92},{x:5.35,z:.87,w:.49,d:.87},{x:4.43,z:-2.35,w:1.08,d:.045},{x:7.08,z:-2.35,w:1.96,d:.045},doorSolid,showerSolid,cabinetLeftSolid,cabinetRightSolid);
+  solids.push({x:7.77,z:-.2,w:.74,d:1.92},{x:5.35,z:.87,w:.49,d:.87},{x:4.43,z:-2.35,w:1.08,d:.045},{x:7.08,z:-2.35,w:1.96,d:.045},showerSolid,cabinetLeftSolid,cabinetRightSolid);
   buildTileSurfaces();buildBathMirror();result.bathLoaded=true;update(1);
  });
  load(names[1],model=>{hide(legacy.kitchen);interactive(required(model,'Kitchen_ROOT'),'kitchenSink','주방 싱크대');interactive(required(model,'HotelKettle_ROOT'),'kettle','스테인리스 전기 주전자');});
@@ -46,9 +61,9 @@ export function buildDomesticModels({scene,renderer,manager,state,solids,legacy,
  load(names[4],model=>{wardrobeLeft=required(model,'Wardrobe_Door_Left_Pivot');wardrobeRight=required(model,'Wardrobe_Door_Right_Pivot');caseLid=required(model,'Suitcase_Lid_Pivot');interactive(required(model,'Wardrobe_ROOT'),'wardrobe','옷장');interactive(required(model,'Suitcase_ROOT'),'suitcase','짐 받침대 위 여행 가방');hide(legacy.bedroom);for(let i=solids.length-1;i>=0;i--)if(solids[i].suitcaseLegacy)solids.splice(i,1);solids.push(wardrobeLeftSolid,wardrobeRightSolid,{x:2.65,z:.9,w:1.23,d:.82});});
  function clockHands(h,m){hour=h;minute=m;if(hourHand){hourHand.rotation.z=-(h/12*Math.PI*2+m/60*Math.PI/6);minuteHand.rotation.z=-m/60*Math.PI*2;}}
  function collider(o,hinge,cx,cz,w,d){const yaw=o.rotation.y;return{x:hinge.x+cx*Math.cos(yaw)+cz*Math.sin(yaw),z:hinge.z-cx*Math.sin(yaw)+cz*Math.cos(yaw),w,d,yaw};}
- function update(dt){bathSteam?.update();basinFlow?.update(dt);const mix=(o,target)=>o.rotation.y+=(target-o.rotation.y)*Math.min(1,dt*4);
-  if(result.bathLoaded){mix(left,state.linenCabinetOpen?-1.4:0);mix(right,state.linenCabinetOpen?1.4:0);mix(shower,state.showerOpen?-1.4:0);mix(entry,state.bathDoorOpen?1.48:0);
-   Object.assign(doorSolid,collider(entry,entry.position,0,.675,.055,1.35));Object.assign(showerSolid,collider(shower,shower.position,-.5,0,.98,.045));
+ function update(dt,player){bathSteam?.update(dt);basinFlow?.update(dt);const mix=(o,target)=>o.rotation.y+=(target-o.rotation.y)*Math.min(1,dt*4);
+  if(result.bathLoaded){mix(left,state.linenCabinetOpen?-1.4:0);mix(right,state.linenCabinetOpen?1.4:0);mix(shower,state.showerOpen?-1.4:0);moveEntry(state.bathDoorOpen,dt,player);
+   Object.assign(showerSolid,collider(shower,shower.position,-.5,0,.98,.045));
    Object.assign(cabinetLeftSolid,collider(left,{x:7.446,z:-1.1},0,.45,.035,.895));Object.assign(cabinetRightSolid,collider(right,{x:7.446,z:.7},0,-.45,.035,.895));
   }
   if(keyCover)keyCover.position.z+=( (state.clockSolved?.14:.065)-keyCover.position.z)*Math.min(1,dt*4);

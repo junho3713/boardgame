@@ -38,10 +38,8 @@ export function buildHotelExtension({T,scene,state,helpers:h,materials:m,partiti
  const liftReadout=sign('—',.32,.15,0,0,0);lift.add(liftReadout);liftReadout.position.set(0,2.48,.1);
  interactive(sign('← 계단 · STAIRS',1.0,.2,1.0,2.5,13.36,Math.PI),'elevator','비상계단 안내');
  // Corridor west wall opening and steel fire door.
- const stairDoor=partitionDoor(-3.6,12.75,1.5,Math.PI/2,'stairsOpen','stairDoor','3층 계단문');
- stairDoor.children.slice(0,3).forEach((o,i)=>o.material=i?dark:steel);
+ partitionDoor(-3.6,12.75,1.5,Math.PI/2,'stairsOpen','stairDoor','3층 계단문',1.53,'3F  STAIRS',1);
  for(const z of[11.19,12.81])box(.20,2.76,.10,-3.6,1.38,z,steel);box(.20,.1,1.72,-3.6,2.78,12,steel);
- interactive(sign('3F STAIRS\n계단 · 2층으로',.7,.32,-3.49,2.2,12,Math.PI/2),'stairDoor','3층 계단문 · 열쇠 구멍');
  box(1,.16,3,-4.1,-.08,12,concrete);box(6.6,.12,3,-6.9,3.24,12,concrete);
  // 18 risers: 180 mm high, 300 mm deep; camera floor height uses the same dimensions.
  for(let i=1;i<=18;i++){const x=-4.6-(i-.5)*.3,y=-i*.18;box(.3,.18,3,x,y-.09,12,concrete);for(const z of[10.8,13.2])box(.025,.006,.12,x+.13,y+.004,z,safety);}
@@ -55,5 +53,5 @@ export function buildHotelExtension({T,scene,state,helpers:h,materials:m,partiti
  sign('2F\n계단 로비',.9,.55,-14.18,-1.55,12,Math.PI/2);sign('3F ↑',.55,.23,-7.2,.10,13.48,Math.PI);
  const diffuser=new T.MeshStandardMaterial({color:'#d8e3d9',emissive:'#a7c7b4',emissiveIntensity:.5});
  for(const [x,y,z]of[[-4.3,2.4,13.47],[-7.1,.6,13.47],[-10,-1.1,13.47],[-12.6,-.6,15.95]]){const light=new T.PointLight('#c7ddce',7,5,1.7);light.position.set(x,y,z-.18);scene.add(light);box(.46,.20,.09,x,y,z,steel);box(.40,.13,.025,x,y,z-.06,diffuser);}
- return{solids:[tableSolid,{x:4.4,z:23.9,w:1.1,d:.62}],update(){key.visible=state.evacuationBoxOpen&&!state.stairKeyTaken;emergencyLid.rotation.x=state.evacuationBoxOpen?-1.8:0;}};
+ return{solids:[tableSolid,{x:4.4,z:23.9,w:1.1,d:.62}],update(dt){emergencyLid.rotation.x+=((state.evacuationBoxOpen?-1.8:0)-emergencyLid.rotation.x)*(1-Math.exp(-dt*5));key.visible=state.evacuationBoxOpen&&emergencyLid.rotation.x<-.65&&!state.stairKeyTaken;}};
 }

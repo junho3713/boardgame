@@ -1,3 +1,5 @@
+import {createBedSearch} from './bed-cover.js';
+import {buildHotelDoor,hingedDoor} from './hotel-doors.js';
 import {buildSearchProps} from './room-search.js?v=20261117-tricks1';
 import {buildPuzzleProps} from './puzzle-props.js?v=20261117-tricks1';
 import * as T from './three.module.js';
@@ -104,13 +106,13 @@ export function buildRoom(renderer,state){
  for(const x of [-.65,0,.65])for(const y of [.75,1.08,1.4])ball(.035,.035,.016,x,y,-1.743,brass,fallback);
  const blanketGeo=new T.PlaneGeometry(2.24,2.8,32,40),bp=blanketGeo.attributes.position;for(let i=0;i<bp.count;i++){const x=bp.getX(i),y=bp.getY(i);const drop=Math.max(0,Math.abs(x)-.94)*2.1;bp.setZ(i,Math.sin(y*9+x*2)*.014+Math.cos(x*12)*.012-drop);}blanketGeo.computeVertexNormals();const blanket=mesh(blanketGeo,fabric,fallback);blanket.rotation.x=-Math.PI/2;blanket.position.set(0,.81,.4);
  for(const x of [-.5,.5]){const pillow=rb(.89,.18,.55,x,.86,-1.2,linen,fallback,.07);pillow.rotation.y=x*.08;}
+ const bedSearch=createBedSearch({bed,fallbackBlanket:blanket,scene,state,canvasTexture});
  new GLTFLoader(manager).load('./assets/models/bed-316.glb?v=20261117-long-tuft',gltf=>{
    const model=gltf.scene;model.name='bed-316-model';model.rotation.y=Math.PI;model.scale.setScalar(1.08);
    model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
-   bed.add(model);fallback.visible=false;bed.userData.modelState='loaded';
+   bed.add(model);fallback.visible=false;bedSearch.setModel(model);bed.userData.modelState='loaded';
  },undefined,()=>{bed.userData.modelState='fallback';});
  shadow(-2,-1.45,2.65,3.8);solid(-2,-1.45,2.14,3.38);
- // The film is found by crouching to search the bed; no loose placeholder blocks.
  const lampStart=scene.children.length,lampSolids=solids.length;
  // Living-room side table and UV lamp.
  const bedside=group(-2.95,0,-3.65);rb(.75,.65,.64,0,.4,0,wood,bedside);rb(.84,.07,.72,0,.77,0,wood,bedside);for(const x of [-.25,.25])for(const z of [-.2,.2])rod([x,0,z],[x,.2,z],.035,darkwood,bedside);solid(-2.95,-3.65,.85,.75);shadow(-2.95,-3.65,1.2,1.1);
@@ -155,8 +157,22 @@ export function buildRoom(renderer,state){
  const switchGroup=interactive(group(.96,1.35,4.43),'switch','벽 스위치');rb(.13,.22,.025,0,0,0,ivory,switchGroup,.008);rb(.055,.1,.025,0,0,-.022,black,switchGroup,.008);
  // The exit is a heavy mechanical door, with three nested ring dials.
  for(const x of [1.4,2.84])box(.12,2.75,.2,x,1.375,10.49,wood);box(1.56,.12,.2,2.12,2.76,10.49,wood);
- const door=interactive(group(1.46,0,4.5),'door','잠긴 문');rb(1.32,2.65,.12,.66,1.325,0,darkwood,door);for(const y of [.65,1.95])rb(1.08,.9,.045,.66,y,-.077,wood,door);box(.11,.1,.07,1.12,1.12,-.13,brass,door);rod([.94,1.12,-.16],[1.15,1.12,-.16],.025,brass,door);for(const y of [.3,1.3,2.3])cyl(.025,.025,.15,0,y,0,brass,door);
- const lock=interactive(group(.82,1.65,-.13,door),'lock','세 겹의 잠금장치');const lockPlate=cyl(.255,.255,.045,0,0,0,brass,lock);lockPlate.rotation.x=Math.PI/2;const rings=[];for(let i=0;i<3;i++){const ring=group(0,0,-.035-i*.008,lock),radius=.21-i*.056;const tor=mesh(new T.TorusGeometry(radius,.018,10,64),darkwood,ring);const notch=box(.028,.045,.015,0,radius,-.01,ivory,ring);rings.push(ring);}ball(.025,.025,.018,0,0,-.08,brass,lock);
+ const innerDoors=[];
+ const doorMetal=mat('#64716b',.43,.55);
+ function partitionDoor(x,z,w,yaw,field,id,label,swing=1.53,plaque='',plaqueSide=-1){
+   const leaf=interactive(group(x,0,z),id,label);leaf.rotation.y=yaw;
+   if(['door','twinDoor','kitchenDoor'].includes(id)){
+     const frame=group(x,0,z);frame.rotation.y=yaw;
+     for(const edge of [-.042,w+.042])rb(.075,2.72,.19,edge,1.36,0,wood,frame,.005);
+     rb(w+.16,.073,.19,w/2,2.697,0,wood,frame,.005);
+   }
+   const handles=buildHotelDoor({parent:leaf,width:w,kind:id==='stairDoor'?'fire':'wood',plaque,plaqueSide,
+     helpers:{rb,box,cyl,group,sign,rod},materials:{wood,darkwood,brass,metal:doorMetal,dark:black}});
+   const move=hingedDoor({leaf,handles,width:w,thickness:.084,yaw,swing,solids});
+   innerDoors.push({leaf,field,label,move});return leaf;
+ }
+ const door=partitionDoor(1.46,4.5,1.32,0,'bedroomOpen','door','거실 문 · 세 겹의 잠금',-1.53);
+ const lock=interactive(group(.82,1.65,-.082,door),'lock','세 겹의 잠금장치');const lockPlate=cyl(.255,.255,.045,0,0,0,brass,lock);lockPlate.rotation.x=Math.PI/2;const rings=[];for(let i=0;i<3;i++){const ring=group(0,0,-.035-i*.008,lock),radius=.21-i*.056;const tor=mesh(new T.TorusGeometry(radius,.018,10,64),darkwood,ring);const notch=box(.028,.045,.015,0,radius,-.01,ivory,ring);rings.push(ring);}ball(.025,.025,.018,0,0,-.08,brass,lock);
  // Living room furniture leaves a clear route along the right side of the suite.
  const loungeStart=scene.children.length;
  const sofa=group(-1.35,0,8.35);rb(2.4,.28,.95,0,.4,0,darkwood,sofa,.05);rb(2.35,.65,.2,0,.82,.42,fabric,sofa,.06);for(const x of[-1.1,1.1])rb(.23,.5,1.05,x,.65,0,fabric,sofa,.06);for(const x of[-.52,.52])rb(.9,.18,.78,x,.62,-.04,fabric,sofa,.06);for(const x of[-.9,.9])for(const z of[-.33,.33])cyl(.045,.06,.28,x,.14,z,darkwood,sofa);solid(-1.35,8.35,2.5,1.1);shadow(-1.35,8.35,2.9,1.6);
@@ -176,8 +192,8 @@ export function buildRoom(renderer,state){
  for(const x of[-2.3,3.3,8.5]){const light=new T.PointLight('#e8c89c',6,5,1.8);light.position.set(x,2.35,12);scene.add(light);const lamp=group(x,3.04,12);cyl(.15,.2,.08,0,0,0,brass,lamp);ball(.16,.1,.16,0,-.11,0,new T.MeshStandardMaterial({color:'#e5d9bd',emissive:'#e9c592',emissiveIntensity:.5}),lamp);}
  // Entry door 317 is a normal locked hotel door, not 316's internal connecting door.
  for(const x of[4.4,5.84])box(.12,2.75,.2,x,1.375,13.5,wood);box(1.56,.12,.2,5.12,2.77,13.5,wood);
- const entry317=interactive(group(4.46,0,13.5),'entry317','317호 출입문 · 잠김');rb(1.32,2.65,.12,.66,1.325,0,darkwood,entry317);for(const y of[.65,1.95])rb(1.08,.9,.04,.66,y,-.077,wood,entry317);rod([.99,1.13,-.14],[1.17,1.13,-.14],.024,brass,entry317);box(.09,.2,.04,1.09,1.12,-.095,brass,entry317);sign('317',.4,.18,5.12,2.15,13.4,Math.PI);
- sign('316 · SUITE',.66,.18,2.12,2.3,10.7,0);sign('317 →',.7,.18,1.1,1.9,13.37,Math.PI);
+ partitionDoor(4.46,13.5,1.32,0,'room317Open','entry317','317호 출입문',-1.53,'317');
+ sign('317 →',.7,.18,1.1,1.9,13.37,Math.PI);
  // Other guest doors are scenery: they cannot bypass the suite or 317 locks.
  for(const x of[-1.9,8.65]){rb(1.23,2.6,.12,x,1.3,13.4,darkwood);for(const side of[-1,1])box(.1,2.72,.17,x+side*.68,1.36,13.38,wood);sign(x<0?'315':'319',.34,.15,x,2.05,13.31,Math.PI);rod([x+.35,1.12,13.29],[x+.52,1.12,13.29],.022,brass);}
  // A residential hotel kitchenette: refrigerator, sink, hob and a dining table.
@@ -214,7 +230,7 @@ export function buildRoom(renderer,state){
  sign('317 · 객실',.7,.17,2.12,2.94,4.7,0);
  // Reuse the authored bed geometry, textures and soft furnishings for the next guest room.
  const nextBed=group(5.7,0,6.9);nextBed.rotation.y=Math.PI;
- ready.then(()=>{const copy=bed.clone(true);copy.position.set(0,0,0);copy.rotation.set(0,0,0);copy.traverse(o=>{delete o.userData.interactId;delete o.userData.label;});nextBed.add(copy);interactive(nextBed,'bed317','317호 침대');nextBed.updateMatrixWorld(true);const surface=new T.Raycaster(new T.Vector3(tag317.position.x,3,tag317.position.z),new T.Vector3(0,-1,0)).intersectObject(nextBed,true).find(hit=>{for(let o=hit.object;o;o=o.parent)if(!o.visible)return false;return true;});if(surface)tag317.position.y=surface.point.y+.045;});
+ ready.then(()=>{const copy=bed.clone(true);copy.position.set(0,0,0);copy.rotation.set(0,0,0);copy.traverse(o=>{o.morphTargetInfluences?.fill(0);delete o.userData.interactId;delete o.userData.label;});nextBed.add(copy);interactive(nextBed,'bed317','317호 침대');nextBed.updateMatrixWorld(true);const surface=new T.Raycaster(new T.Vector3(tag317.position.x,3,tag317.position.z),new T.Vector3(0,-1,0)).intersectObject(nextBed,true).find(hit=>{for(let o=hit.object;o;o=o.parent)if(!o.visible)return false;return true;});if(surface)tag317.position.y=surface.point.y+.045;});
  solid(5.7,6.9,2.14,3.38);shadow(5.7,6.9,2.7,3.9);
  const blanketNote=box(.23,.015,.35,5.1,.94,6.4,paper);const tag317=interactive(blanketNote,'tag317','침대 위 수하물표');tag317.rotation.y=.15;
  // A compact writing table leaves a clear walking route from the connecting door.
@@ -235,17 +251,15 @@ export function buildRoom(renderer,state){
  const legacyGuestFurniture=scene.children.slice(guestFurnitureStart).filter(o=>o!==receipt317);
  // 317's normal hotel entrance opens to a short third-floor corridor.
  for(const x of[1.94,3.36])box(.12,2.75,.2,x,1.375,11.7,wood);box(1.54,.12,.2,2.65,2.77,11.7,wood);
- const exit317=interactive(group(2,0,11.7),'exit317','317호 안쪽 방 · 잠김');rb(1.3,2.65,.12,.65,1.325,0,darkwood,exit317);for(const y of[.65,1.95])rb(1.07,.85,.04,.65,y,-.075,wood,exit317);box(.08,.24,.04,1.08,1.15,-.09,brass,exit317);rod([.92,1.15,-.14],[1.13,1.15,-.14],.025,brass,exit317);ball(.015,.022,.01,1.08,1.05,-.12,black,exit317);
- sign('317 INNER',.6,.15,2.65,2.15,11.6,Math.PI);const hallLight=new T.PointLight('#dfd4b2',8,5,1.8);hallLight.position.set(2.65,2.7,13.4);scene.add(hallLight);
+ partitionDoor(2,11.7,1.3,0,'exitOpen','exit317','317호 안쪽 문',-1.53,'317 INNER');
+ const hallLight=new T.PointLight('#dfd4b2',8,5,1.8);hallLight.position.set(2.65,2.7,13.4);scene.add(hallLight);
  shiftSince(nextRoomStart,nextRoomSolids,3,9);
  const details=buildRoomDetails({scene,renderer,manager,state,solids,canvasTexture,legacy:{guest:legacyGuestFurniture,suite:legacySuiteDetails,minibar:minibarCups}});
  const twin=buildTwinRoom({scene,renderer,manager,state,solids,canvasTexture,helpers:{box,rb,group,cyl,ball,sign},materials:{wood,darkwood,brass,ivory,floorMat}});
 
- const innerDoors=[];
- function partitionDoor(x,z,w,yaw,field,id,label){const g=interactive(group(x,0,z),id,label);g.rotation.y=yaw;rb(w,2.64,.07,w/2,1.32,0,wood,g);for(const y of[.68,1.9])rb(w-.2,.83,.025,w/2,y,-.045,darkwood,g);rod([w-.27,1.07,-.09],[w-.1,1.07,-.09],.018,brass,g);const plate=box(.10,.23,.016,w-.2,1.06,-.065,brass,g);const collider={x,z,w,d:.07,yaw};solids.push(collider);innerDoors.push({g,yaw,field,label,collider,x,z,w});return g;}
- partitionDoor(3.6,8.4,1.5,Math.PI/2,'kitchenOpen','kitchenDoor','주방 문 · 열쇠 잠금');
- partitionDoor(-3.6,6.3,1.4,-Math.PI/2,'twinOpen','twinDoor','트윈 침실 문 · 잠김');
- partitionDoor(1.46,10.5,1.32,0,'doorOpen','suiteDoor','316호 출입문 · 복도로');
+ partitionDoor(3.6,8.4,1.5,Math.PI/2,'kitchenOpen','kitchenDoor','주방 문',-1.53);
+ partitionDoor(-3.6,6.3,1.4,-Math.PI/2,'twinOpen','twinDoor','트윈 침실 문',-1.53);
+ partitionDoor(1.46,10.5,1.32,0,'doorOpen','suiteDoor','316호 출입문',1.53,'316 · SUITE',1);
  const teaBox=interactive(group(-2.92,1.01,9.50),'teaTin','꽃무늬 자물쇠가 달린 차 상자');box(.42,.018,.30,0,0,0,wood,teaBox);for(const x of[-.20,.20])box(.02,.18,.30,x,.09,0,wood,teaBox);for(const z of[-.14,.14])box(.42,.18,.02,0,.09,z,wood,teaBox);const teaLid=group(0,.18,.15,teaBox);rb(.44,.025,.32,0,0,-.15,darkwood,teaLid);box(.045,.055,.022,0,.10,-.162,brass,teaBox);const flowerPlate=sign('✿',.05,.05,0,0,0);teaBox.add(flowerPlate);flowerPlate.position.set(0,.10,-.175);flowerPlate.rotation.y=Math.PI;const shackle=mesh(new T.TorusGeometry(.018,.004,8,20),brass,teaBox);shackle.position.set(0,.139,-.165);const teaPaper=interactive(box(.30,.006,.20,0,.025,0,paper,teaBox),'teaNote','차 상자 안의 편지와 조각');
  interactive(sign('물방울 · 욕실',.35,.16,3.49,1.7,.6,-Math.PI/2),'bathDoor','욕실 문 · 물방울 표식');
  const jugBox=interactive(group(4.65,.98,5.21),'waterStation','주방 열쇠 보관함');box(.32,.018,.26,0,0,0,darkwood,jugBox);for(const x of[-.15,.15])box(.02,.12,.26,x,.06,0,wood,jugBox);for(const z of[-.12,.12])box(.32,.12,.02,0,.06,z,wood,jugBox);const jugLid=group(0,.12,-.13,jugBox);rb(.34,.025,.28,0,0,.13,wood,jugLid);const jugKey=interactive(group(0,.028,0,jugBox),'jugKey','보관함 안의 트윈 침실 열쇠');const keyRing=mesh(new T.TorusGeometry(.028,.006,8,24),brass,jugKey);keyRing.rotation.x=Math.PI/2;rod([0,0,.025],[0,0,.095],.006,brass,jugKey);box(.025,.008,.012,.01,0,.08,brass,jugKey);
@@ -256,32 +270,34 @@ export function buildRoom(renderer,state){
  solids.push(...extension.solids,{x:6.20,z:22.80,w:.48,d:.48},{x:9.6,z:22.4,w:.32,d:.32},{x:-3.28,z:8.88,w:.45,d:.32});
  const dustGeo=new T.BufferGeometry(),dustPos=new Float32Array(90*3);for(let i=0;i<90;i++)dustPos.set([(Math.random()-.5)*6,Math.random()*2.8,(Math.random()-.5)*8],i*3);dustGeo.setAttribute('position',new T.BufferAttribute(dustPos,3));const dust=new T.Points(dustGeo,new T.PointsMaterial({color:'#b6b6a5',size:.013,transparent:true,opacity:.26,depthWrite:false}));scene.add(dust);
  const frameHomePosition=frame.position.clone(),frameHomeRotation=frame.rotation.clone();let lastFrameTaken=false;
- function update(dt,time){
+ function update(dt,time,player){
    const mix=(o,k,target,speed=4)=>o[k]+=(target-o[k])*Math.min(1,dt*speed);
    mix(mainLight,'intensity',state.lightOn?26:0);ceilingLamp.children[1].material.emissiveIntensity=state.lightOn?.45:0;
    mix(moon,'intensity',state.curtainsClosed?.08:1.6);mix(bounce,'intensity',state.curtainsClosed?.25:2.8);
    for(const {g,side}of curtains){mix(g.position,'x',side*(state.curtainsClosed?.8:1.7),3);mix(g.scale,'x',state.curtainsClosed?1.7:1,3);}
    for(const {g}of curtains)g.children[0].rotation.y=Math.sin(time*.6)*.008;
    for(const {hinge,side}of wardrobeDoors)mix(hinge.rotation,'y',state.wardrobeOpen?side*1.5:0,2.5);mix(suitcaseLid.rotation,'x',state.suitcaseOpen?1.7:0,3);mix(drawer.position,'x',state.drawerOpen?2.47:2.95,4);if(!domestic.bathLoaded)mix(bathCabinet.position,'x',state.linenCabinetOpen?-.64:0,4);bulb.visible=state.drawerOpen&&!state.bulbTaken;
-   bed.userData.label=!state.inventory.includes('filmA')&&!state.filmJoined?'침대 · 아래 살펴보기':'침대';
+   bedSearch.update(dt);
    frame.traverse(o=>{if(o.userData.filmBack)o.visible=!state.inventory.includes('filmB')&&!state.filmJoined;});
    if(state.frameTaken!==lastFrameTaken){if(state.frameTaken){frame.position.set(-3.43,.6,1.15);frame.rotation.set(.09,Math.PI/2-.1,-.04);}else{frame.position.copy(frameHomePosition);frame.rotation.copy(frameHomeRotation);}lastFrameTaken=state.frameTaken;}
    uvInk.material.opacity=0;
    mix(lampLight,'intensity',state.lampOn?(state.uvInstalled?11:17):0);lampLight.color.set(state.uvInstalled?'#9f75eb':'#ffc47c');shadeMat.emissive.set(state.uvInstalled?'#623d91':'#e6bc73');lightbulb.material.emissive.set(state.uvInstalled?'#9956ee':'#ffe1a0');
-   door.userData.label=state.bedroomOpen?'거실로 이어지는 열린 문':'거실 문 · 세 겹의 잠금';mix(door.rotation,'y',state.bedroomOpen?-Math.PI*.52:0,2.2);for(let i=0;i<3;i++)rings[i].rotation.z=-state.rings[i]*Math.PI/4;
-   entry317.userData.label=state.room317Open?'열린 317호 출입문':'317호 출입문 · 잠김';mix(entry317.rotation,'y',state.room317Open?-Math.PI*.52:0,2.2);
+   for(let i=0;i<3;i++)rings[i].rotation.z=-state.rings[i]*Math.PI/4;
    for(const {fixture,light,base}of suiteLights){mix(light,'intensity',state.lightOn?base:0);fixture.children[1].material.emissiveIntensity=state.lightOn?.4:0;}
    mix(clockFlap.position,'z',state.clockSolved?.18:.02);clockKey.visible=false;
    receipt317.visible=!state.inventory.includes('receipt');tag317.visible=!state.inventory.includes('tag');
-   mix(luggageLid.rotation,'x',state.luggageOpen?-1.6:0,3);mix(safeDoor.rotation,'y',state.safeOpen?-1.4:0,3);mix(exit317.rotation,'y',state.exitOpen?-1.6:0,2.5);
+   mix(luggageLid.rotation,'x',state.luggageOpen?-1.6:0,3);mix(safeDoor.rotation,'y',state.safeOpen?-1.4:0,3);
    if(state.musicWound)musicDrum.rotation.y=time*.65;
    mix(teaLid.rotation,'x',state.teaTinOpen?1.8:0);teaPaper.visible=state.teaTinOpen;mix(jugLid.rotation,'x',state.stockSolved?-1.8:0);jugKey.visible=state.stockSolved&&!state.stockKeyTaken;jugBox.userData.interactId=jugKey.visible?'jugKey':'waterStation';jugBox.userData.label=jugKey.visible?'열린 보관함 · 트윈 침실 열쇠 꺼내기':'주방 열쇠 보관함';
-   for(const d of innerDoors){mix(d.g.rotation,'y',d.yaw+(state[d.field]?1.65:0),3);d.g.userData.label=d.label+(state[d.field]?' · 열림':' · 잠김');const a=d.g.rotation.y;Object.assign(d.collider,{x:d.x+Math.cos(a)*d.w/2,z:d.z-Math.sin(a)*d.w/2,yaw:a});}
-   searchProps.update(dt);puzzleProps.update(dt);extension.update();domestic.update(dt);details.update(dt,time);twin.update(dt);for(const light of fixtureLights)light.intensity=state.lightOn?2.4:0;
+   for(const d of innerDoors){
+     d.move(state[d.field],dt,player);
+     d.leaf.userData.label=d.label+(state[d.field]?' · 열림':' · 잠김');
+   }
+   searchProps.update(dt);puzzleProps.update(dt);extension.update(dt);domestic.update(dt,player);details.update(dt,time);twin.update(dt);for(const light of fixtureLights)light.intensity=state.lightOn?2.4:0;
    exterior.update(dt,time);dust.rotation.y=Math.sin(time*.04)*.025;
  }
  function clockHands(hour,minute){domestic.clockHands(hour,minute);if(domestic.clockLoaded)return;const ha=hour/12*Math.PI*2+minute/60*Math.PI/6,ma=minute/60*Math.PI*2;hr.position.set(Math.sin(ha)*.045,.3+Math.cos(ha)*.045,.111);hr.rotation.z=-ha;mn.position.set(Math.sin(ma)*.065,.3+Math.cos(ma)*.065,.12);mn.rotation.z=-ma;}
  clockHands(11,10);const clockMark=canvasTexture((a,w,h)=>{a.fillStyle='#c6ab75';a.beginPath();a.moveTo(w*.2,h*.8);a.lineTo(w*.8,h*.8);a.lineTo(w*.8,h*.2);a.closePath();a.fill();},128);const markMesh=mesh(new T.PlaneGeometry(.1,.1),new T.MeshStandardMaterial({map:clockMark,transparent:true,roughness:.8}),clock);markMesh.position.set(0,.29,-.102);markMesh.rotation.y=Math.PI;
  function canMove(x,z){return canWalk(state,x,z,solids);}
- return{scene,roots,solids,ready,assetsFailed,update,canMove,clockHands,setPuzzleDials:details.setPuzzleDials,setCompanionDials:twin.setDials,frame,clock,mirror,lamp,drawer,lock,photo,canvasTexture,materials:{wood,darkwood,brass,paper,black,ivory},helpers:{group,box,rb,rod,cyl,ball,mesh,sign},uvInk};
+ return{scene,roots,solids,bedNote:bedSearch.note,ready,assetsFailed,update,canMove,clockHands,setPuzzleDials:details.setPuzzleDials,setCompanionDials:twin.setDials,frame,clock,mirror,lamp,drawer,lock,photo,canvasTexture,materials:{wood,darkwood,brass,paper,black,ivory},helpers:{group,box,rb,rod,cyl,ball,mesh,sign},uvInk};
 }
