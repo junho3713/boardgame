@@ -1,4 +1,4 @@
-import {createState,ITEMS,addItem,combineFilms,alignFilm,setClock,useItem,unlockDoor,RING_TARGET,unlockLuggage,hearTune,unlockSafe,MUSIC_SEQUENCE,unlockCompanionCase,COMPANION_TARGET} from './room-state.js?v=20261117-doors3';
+import {createState,ITEMS,addItem,combineFilms,alignFilm,setClock,useItem,unlockDoor,RING_TARGET,unlockLuggage,hearTune,unlockSafe,takeStairKey,MUSIC_SEQUENCE,unlockCompanionCase,COMPANION_TARGET} from './room-state.js?v=20261117-stairs1';
 
 export const TEST_STARTS=[
  {id:'bedroom',group:'공간으로 이동',label:'316호 · 침실',step:0,position:[0,1.62,2.7],look:[0,1.4,-1],description:'처음 상태로 침실에서 시작합니다.'},
@@ -16,7 +16,9 @@ export const TEST_STARTS=[
  {id:'bath',group:'공간으로 이동',label:'316호 · 욕실',step:0,position:[5.3,1.62,.05],look:[7.45,1.2,-.6],description:'욕실 구조와 세면대·샤워부스를 바로 확인합니다.'},
  {id:'hall',group:'공간으로 이동',label:'3층 · 호텔 복도',step:4,position:[2.12,1.62,11.85],look:[5.12,1.55,13.5],description:'316호를 해결한 상태입니다. 317호 예비 열쇠를 가지고 있습니다.'},
  {id:'room317',group:'공간으로 이동',label:'317호 · 객실',step:5,position:[5.12,1.62,14.2],look:[6.9,1.2,17.2],description:'이전 객실과 출입문을 통과한 상태로 317호 퍼즐을 시작합니다.'},
- {id:'exit',group:'공간으로 이동',label:'317호 뒤 · 비상구',step:8,position:[5.65,1.62,21.35],look:[5.65,1.6,23.7],description:'두 객실을 해결한 상태입니다. 앞으로 걸어가면 완료 화면을 확인할 수 있습니다.'},
+ {id:'exit',group:'공간으로 이동',label:'317호 · 마지막 방 / 계단 열쇠',step:8,position:[7.5,1.62,22.0],look:[7.5,.85,24.0],description:'317호 안쪽 방을 연 상태입니다. 대피 안내 아래 계단문 열쇠를 찾으세요.'},
+ {id:'stairs',group:'퍼즐 단계부터 시작',label:'3층 · 잠긴 계단문',step:9,position:[-2.7,1.62,12],look:[-3.6,1.4,12],description:'317호에서 찾은 계단문 열쇠를 가지고 있습니다.'},
+ {id:'downstairs',group:'공간으로 이동',label:'2층 · 계단 로비',step:10,position:[-11.4,-1.62,12],look:[-9.0,-1.5,12],description:'계단문을 열고 2층에 도착한 상태. 위층까지 걸어 올라갈 수도 있습니다.'},
  {id:'clock',group:'퍼즐 단계부터 시작',label:'침실 · 벽시계 퍼즐부터',step:1,position:[2.55,1.62,-3.4],look:[2.65,2.08,-4.40],description:'필름 조합과 정렬까지 완료했습니다. 시계 바늘 조작부터 확인합니다.'},
  {id:'vanity',group:'퍼즐 단계부터 시작',label:'욕실 · 수납장 열기부터',step:2,position:[6.3,1.62,-.3],look:[7.38,.55,-.2],description:'시계에서 얻은 작은 열쇠를 가지고 있습니다. I에서 손에 들어 수납장에 사용하세요.'},
  {id:'uv',group:'퍼즐 단계부터 시작',label:'침실 · UV 거울 단서부터',step:3,position:[1.65,1.62,1.15],look:[3.48,1.83,1.15],description:'전구 설치·액자 조사·조명 차단을 마쳤습니다. 거울 단서와 출입문 잠금을 확인합니다.'},
@@ -30,11 +32,13 @@ export function createTestStart(id,free=false){
  if(point.step>=2)setClock(s,5,40);
  if(point.step>=2){useItem(s,'key','bathDoor');}
  if(point.step>=3){useItem(s,'key','drawer');addItem(s,'bulb');s.bulbTaken=true;useItem(s,'bulb','lamp');s.lightOn=false;s.curtainsClosed=true;}
- if(point.step>=4){s.rings=[...RING_TARGET];unlockDoor(s);s.twinOpen=true;s.kitchenOpen=true;s.jugSolved=true;s.jugKeyTaken=true;s.suiteEscaped=point.id!=='companion';s.doorOpen=point.id!=='companion';s.lightOn=true;s.curtainsClosed=false;if(point.id!=='companion'){s.travelPostcardsSeen=true;unlockCompanionCase(s,COMPANION_TARGET);}}
+ if(point.step>=4){s.rings=[...RING_TARGET];unlockDoor(s);s.twinOpen=true;s.kitchenOpen=true;s.jugSolved=true;s.jugKeyTaken=true;s.suiteEscaped=point.id!=='companion';s.doorOpen=point.id!=='companion';s.lightOn=true;s.curtainsClosed=false;if(point.id!=='companion'){s.travelPostcardsSeen=true;unlockCompanionCase(s,COMPANION_TARGET);useItem(s,'suiteKey','suiteDoor');}}
  if(point.step>=5){useItem(s,'passKey','entry317');s.room317Entered=true;}
  if(point.step>=6)unlockLuggage(s,'284');
  if(point.step>=7){useItem(s,'windingKey','musicBox');hearTune(s);}
  if(point.step>=8){unlockSafe(s,MUSIC_SEQUENCE);useItem(s,'exitKey','exit317');}
+ if(point.step>=9){s.evacuationRead=true;takeStairKey(s);}
+ if(point.step>=10)useItem(s,'stairKey','stairDoor');
  const zone=point.id;
  if(['teaBox','teaDoor','water','waterKey'].includes(zone)){s.bedroomOpen=true;s.bathUnlocked=true;s.bathDoorOpen=true;}
  if(zone==='teaBox'){s.teaTraySeen=true;s.tinKeyTaken=true;addItem(s,'tinKey');}
@@ -45,7 +49,7 @@ export function createTestStart(id,free=false){
  if(['kitchen','kettle','twin'].includes(zone))s.kitchenOpen=true;
  if(zone==='twin'){s.jugSolved=true;s.twinOpen=true;}
  if(['bath','towels'].includes(zone)){s.bathUnlocked=true;s.bathDoorOpen=true;}
- if(free){s.bedroomOpen=true;s.kitchenOpen=true;s.twinOpen=true;s.bathUnlocked=true;s.explore=true;s.doorOpen=true;s.room317Open=true;s.exitOpen=true;s.bathDoorOpen=true;s.showerOpen=true;}
+ if(free){s.bedroomOpen=true;s.kitchenOpen=true;s.twinOpen=true;s.bathUnlocked=true;s.explore=true;s.doorOpen=true;s.room317Open=true;s.exitOpen=true;s.stairsOpen=true;s.bathDoorOpen=true;s.showerOpen=true;}
  return{state:s,point,clockHour:point.step>=2?5:11,clockMinute:point.step>=2?40:10};
 }
 

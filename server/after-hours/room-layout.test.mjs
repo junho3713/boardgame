@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {canWalk,zoneAt} from './public/room-layout.js';
+import {canWalk,zoneAt,floorHeight} from './public/room-layout.js';
 import {createState,addItem,useItem,phase} from './public/room-state.js';
 function reachable(s,from,to){
  const queue=[from],seen=new Set([from.join(',')]);
@@ -35,4 +35,14 @@ test('rotated furniture and hinged door leaves use their rotated collision footp
 test('corridor hints require finding and using the separate guest-room key',()=>{
  const s=createState();s.doorOpen=true;assert.equal(phase(s),'exit');s.suiteEscaped=true;assert.equal(phase(s),'neighborKey');addItem(s,'passKey');assert.equal(phase(s),'enter317');
  assert.equal(useItem(s,'passKey','exit317'),false);assert.equal(useItem(s,'passKey','entry317'),true);assert.equal(phase(s),'enter317');s.room317Entered=true;assert.equal(phase(s),'luggage');
+});
+
+test('the stair route requires the corridor key and cannot be reached through 317',()=>{
+ const s=createState(true);s.stairsOpen=false;
+ assert.equal(reachable(s,[56,230],[-115,120]),false);
+ assert.equal(canWalk(s,-3.6,12),false);s.stairsOpen=true;
+ assert.ok(reachable(s,[56,230],[-115,120]));assert.ok(reachable(s,[-115,120],[56,230]));
+ assert.equal(zoneAt(-7,12),'stairs');assert.equal(zoneAt(-12,12),'lowerHall');
+ let last=0;for(let i=0;i<=60;i++){const y=floorHeight(-4.4-i*.1,12);assert.ok(y<=last+1e-9);assert.ok(last-y<=.181);last=y;}
+ assert.equal(last,-3.24);assert.equal(floorHeight(5.6,23),0);assert.equal(floorHeight(-12,15),-3.24);
 });

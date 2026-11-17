@@ -8,6 +8,7 @@ const FILES = new Map([
   ['style.css', 'text/css; charset=utf-8'],
   ['game.js', 'text/javascript; charset=utf-8'],
   ['room-scene.js', 'text/javascript; charset=utf-8'],
+  ['hotel-extension.js', 'text/javascript; charset=utf-8'],
   ['exterior-scene.js', 'text/javascript; charset=utf-8'],
   ['room-state.js', 'text/javascript; charset=utf-8'],
   ['room-layout.js', 'text/javascript; charset=utf-8'],

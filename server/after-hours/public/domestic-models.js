@@ -1,7 +1,7 @@
 import * as T from './three.module.js';
 import {GLTFLoader} from './GLTFLoader.js';
 import {Reflector} from './Reflector.js';
-import {registerRoomMirror,getModelNode} from './room-details.js?v=20261117-doors3';
+import {registerRoomMirror,getModelNode} from './room-details.js?v=20261117-stairs1';
 
 // Blender-authored fixtures, with stable interaction roots and separate moving parts.
 export function buildDomesticModels({scene,renderer,manager,state,solids,legacy,mirror,canvasTexture}){
@@ -12,9 +12,9 @@ export function buildDomesticModels({scene,renderer,manager,state,solids,legacy,
  const cabinetLeftSolid={x:7.446,z:-.656,w:.035,d:.875,yaw:0},cabinetRightSolid={x:7.446,z:.256,w:.035,d:.875,yaw:0};
  const wardrobeLeftSolid={x:-2.876,z:3.51,w:.90,d:.055,yaw:0},wardrobeRightSolid={x:-1.924,z:3.51,w:.90,d:.055,yaw:0};
  const names=['bathroom-316.glb','kitchen-316.glb','wall-clock-316.glb','lounge-316.glb','bedroom-fixtures-316.glb'];
- function load(file,apply){loader.load('./assets/models/'+file+'?v=20261117-doors3',gltf=>{
+ function load(file,apply){loader.load('./assets/models/'+file+'?v=20261117-stairs1',gltf=>{
   const model=gltf.scene;model.name=file;model.traverse(o=>{if(!o.isMesh)return;o.castShadow=true;o.receiveShadow=true;
-   for(const m of Array.isArray(o.material)?o.material:[o.material]){if(m.transparent){m.depthWrite=false;o.castShadow=false;}if(m.map)m.map.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());}
+   for(const m of Array.isArray(o.material)?o.material:[o.material]){if(m.name==='Clock dial printed ink')o.castShadow=false;if(m.transparent){m.depthWrite=false;o.castShadow=false;}if(m.map)m.map.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());}
   });scene.add(model);model.updateMatrixWorld(true);try{apply(model);}catch(e){console.error('Fixture validation failed',file,e);model.removeFromParent();}
  },undefined,()=>{});}
  const hide=nodes=>nodes.forEach(o=>o.visible=false);

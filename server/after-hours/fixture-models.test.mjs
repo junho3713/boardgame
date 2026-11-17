@@ -13,6 +13,15 @@ function model(name){
  const nodes=g.nodes.map(n=>{const root=new T.Group();root.name=n.name;if(n.translation)root.position.fromArray(n.translation);if(n.rotation)root.quaternion.fromArray(n.rotation);if(n.scale)root.scale.fromArray(n.scale);if(n.matrix){root.matrix.fromArray(n.matrix);root.matrix.decompose(root.position,root.quaternion,root.scale);}if(n.mesh!==undefined)for(const p of g.meshes[n.mesh].primitives){const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(accessor(p.attributes.POSITION),3));if(p.indices!==undefined)geo.setIndex(accessor(p.indices));root.add(new T.Mesh(geo,new T.MeshBasicMaterial({side:T.DoubleSide})));}return root;});g.nodes.forEach((n,i)=>n.children?.forEach(c=>nodes[i].add(nodes[c])));const scene=new T.Group();for(const id of g.scenes[g.scene||0].nodes)scene.add(nodes[id]);scene.updateMatrixWorld(true);return{g,scene,nodes,bytes:b.length};
 }
 const height=(scene,x,z,startY=3)=>new T.Raycaster(new T.Vector3(x,startY,z),new T.Vector3(0,-1,0)).intersectObject(scene,true)[0]?.point.y;
+test('clock marks point radially and its tapered hands have short tails',()=>{
+ const m=model('wall-clock-316.glb'),points=[];
+ m.scene.traverse(o=>{if(!o.isMesh)return;const a=o.geometry.attributes.position;for(let i=0;i<a.count;i++){const p=new T.Vector3().fromBufferAttribute(a,i).applyMatrix4(o.matrixWorld),r=Math.hypot(p.x,p.y);if(r>.249*.65&&r<.278*.65&&p.z>.058*.65)points.push(p);}});
+ for(let i=0;i<60;i++){const a=i*Math.PI/30,rx=Math.sin(a),ry=Math.cos(a),hits=points.map(p=>({r:p.x*rx+p.y*ry,t:p.x*ry-p.y*rx})).filter(p=>p.r>.249*.65&&Math.abs(p.t)<.003);
+  assert.ok(hits.length>=4,'tick '+i);const radial=Math.max(...hits.map(p=>p.r))-Math.min(...hits.map(p=>p.r)),tangent=Math.max(...hits.map(p=>p.t))-Math.min(...hits.map(p=>p.t));assert.ok(radial>tangent*2,'tick radial alignment '+i);
+ }
+ for(const name of ['Clock_Hour_Hand','Clock_Minute_Hand']){const bounds=new T.Box3().setFromObject(m.scene.getObjectByName(name));assert.ok(bounds.min.y>-.014,'short counterweight');assert.ok(bounds.max.y>.09,'readable hand');}
+ const size=new T.Box3().setFromObject(m.scene).getSize(new T.Vector3());assert.ok(size.x>.39&&size.x<.42,'hotel wall clock diameter');
+});
 test('Blender names with spaces and decimal points resolve after GLTFLoader sanitizes them',()=>{
  const scene=new T.Group();for(const name of['Hand towel 6.22','Hand towel 6.54','Trolley | spare cup']){const node=new T.Group();node.name=T.PropertyBinding.sanitizeNodeName(name);scene.add(node);assert.equal(getModelNode(scene,name),node);}
 });
@@ -25,7 +34,7 @@ test('animated cabinet doors, shower door, privacy door and clock hands remain s
  const bath=model('bathroom-316.glb');for(const name of ['Vanity_ROOT','Vanity_Door_Left_Pivot','Vanity_Door_Right_Pivot','Shower_Door_Pivot','Bath_Entry_Pivot'])assert.ok(bath.nodes.some(n=>n.name===name),name);
  const clock=model('wall-clock-316.glb');for(const name of ['WallClock316_ROOT','Clock_Hour_Hand','Clock_Minute_Hand','Clock_Key_Cover'])assert.ok(clock.nodes.some(n=>n.name===name),name);
  const bedroom=model('bedroom-fixtures-316.glb');for(const name of ['Wardrobe_Door_Left_Pivot','Wardrobe_Door_Right_Pivot','Wire_Hanger_0','Wire_Hanger_1','Wire_Hanger_2','Suitcase_Lid_Pivot'])assert.ok(bedroom.nodes.some(n=>n.name===name),name);
- for(const filename of ['bathroom-316.glb','kitchen-316.glb','wall-clock-316.glb','lounge-316.glb','bedroom-fixtures-316.glb']){const m=model(filename);assert.ok(m.bytes<(filename==='bathroom-316.glb'?4500000:3500000));assert.ok(m.g.images?.every(image=>image.bufferView!==undefined&&!image.uri));assert.equal(m.g.cameras,undefined);}
+ for(const filename of ['bathroom-316.glb','kitchen-316.glb','wall-clock-316.glb','lounge-316.glb','bedroom-fixtures-316.glb']){const m=model(filename);assert.ok(m.bytes<(filename==='bathroom-316.glb'?4500000:3500000));assert.ok((m.g.images||[]).every(image=>image.bufferView!==undefined&&!image.uri));assert.equal(m.g.cameras,undefined);}
 });
 
 test('317 luggage and safe expose real cavities when their separated doors open',()=>{

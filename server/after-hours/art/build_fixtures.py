@@ -230,22 +230,33 @@ for x in [.68,1.08]:
 spun_kettle((1.49,.970,0))
 
 # A round enamel wall clock, with independent hour/minute hand pivots.
-clock=begin('WallClock316');parent=clock
-cyl('Clock | dark housing',(0,0,0),.315,.10,oak,'z',vertices=96)
-cyl('Clock | metal bezel',(0,0,.055),.314,.025,brass,'z',vertices=96)
-cyl('Clock | enamel face',(0,0,.072),.288,.012,ceramic,'z',vertices=96)
+clock=begin('WallClock316');parent=clock;clock.scale=(.65,.65,.65)
+clockInk=material('Clock dial printed ink',(.035,.043,.039),.86)
+clockFace=material('Clock matte ivory enamel',(.85,.84,.79),.60)
+clockMetal=material('Clock brushed champagne bezel',(.42,.36,.25),.38,.65)
+cyl('Clock | dark housing',(0,0,0),.306,.072,dark,'z',vertices=128)
+cyl('Clock | fine metal bezel',(0,0,.042),.310,.026,clockMetal,'z',vertices=128)
+cyl('Clock | inset dial',(0,0,.055),.291,.012,clockFace,'z',vertices=128)
+# All marks point radially away from the axle in Blender's X/Z dial plane.
 for i in range(60):
- a=2*pi*i/60;r=.27;length=.027 if i%5==0 else .012
- mark=cube('Clock tick',(sin(a)*r,cos(a)*r,.083),(.005,length,.002),ink,.001);mark.rotation_euler[1]=-a
+ a=2*pi*i/60;length=.022 if i%5==0 else .009;width=.0042 if i%5==0 else .0019;r=.274-length/2
+ mark=cube('Clock tick '+str(i),(sin(a)*r,cos(a)*r,.0614),(width,length,.00035),clockInk,0);mark.rotation_euler[1]=a
+font_path='C:/Windows/Fonts/segoeui.ttf'
+clockFont=bpy.data.fonts.load(font_path) if os.path.exists(font_path) else bpy.data.fonts.get('Bfont')
 for i in range(1,13):
- a=pi*i/6;cu=bpy.data.curves.new('Clock numeral','FONT');cu.body=str(i);cu.size=.047;cu.align_x='CENTER';cu.align_y='CENTER';cu.extrude=.0006
- ob=bpy.data.objects.new('Clock numeral '+str(i),cu);current.objects.link(ob);ob.parent=clock;ob.location=W((sin(a)*.226,cos(a)*.226,.085));ob.rotation_euler=(pi/2,0,0);cu.materials.append(ink)
-for name,length,width,z in [('Clock_Hour_Hand',.145,.013,.098),('Clock_Minute_Hand',.215,.007,.108)]:
- pivot=empty(name,(0,0,z),clock);cube(name+' blade',(0,length*.43,0),(width,length,.006),ink,.003,pivot);cube(name+' counterweight',(0,-.025,0),(width*1.4,.045,.008),ink,.003,pivot)
-cyl('Clock | central cap',(0,0,.12),.017,.012,brass,'z')
-cube('Clock | small key compartment',(0,-.335,0),(.23,.085,.10),oak,.015)
-cover=empty('Clock_Key_Cover',(0,-.335,.065),clock);cube('Clock | compartment cover',(0,0,0),(.21,.068,.018),oak,.009,cover)
-mesh('Clock | triangle on rear',[(-.05,-.06,-.056),(.05,-.06,-.056),(.05,.04,-.056)],[(0,1,2)],brass)
+ a=pi*i/6;cu=bpy.data.curves.new('Clock numeral','FONT');cu.body=str(i);cu.font=clockFont;cu.size=.050;cu.align_x='CENTER';cu.align_y='CENTER';cu.extrude=0;cu.resolution_u=20
+ ob=bpy.data.objects.new('Clock numeral '+str(i),cu);current.objects.link(ob);ob.parent=clock;ob.location=W((sin(a)*.222,cos(a)*.222,.0617));ob.rotation_euler=(pi/2,0,0);cu.materials.append(clockInk)
+for name,length,width,z in [('Clock_Hour_Hand',.145,.012,.076),('Clock_Minute_Hand',.219,.0065,.085)]:
+ pivot=empty(name,(0,0,z),clock)
+ outline=[(-width/2,-.018),(width/2,-.018),(width/2,length*.70),(width*.17,length),(0,length+.003),(-width*.17,length),(-width/2,length*.70)]
+ verts=[(x,y,d) for d in [-.0018,.0018] for x,y in outline];n=len(outline);faces=[tuple(range(n-1,-1,-1)),tuple(range(n,2*n))]+[(i,(i+1)%n,(i+1)%n+n,i+n) for i in range(n)]
+ hand=mesh(name+' | tapered blade',verts,faces,ink,pivot)
+ for poly in hand.data.polygons:poly.use_smooth=False
+cyl('Clock | axle washer',(0,0,.092),.014,.006,clockMetal,'z',vertices=48)
+cyl('Clock | dark axle pin',(0,0,.097),.006,.006,ink,'z',vertices=32)
+cube('Clock | small key compartment',(0,-.326,-.015),(.20,.065,.075),dark,.008)
+cover=empty('Clock_Key_Cover',(0,-.326,.065),clock);cube('Clock | compartment cover',(0,0,-.038),(.18,.052,.014),clockMetal,.005,cover)
+mesh('Clock | triangle on rear',[(-.05,-.06,-.040),(.05,-.06,-.040),(.05,.04,-.040)],[(0,1,2)],brass)
 
 # Lounge: rounded upholstered cushions, piping and a proper coffee-table assembly.
 lounge=begin('Lounge316');parent=lounge

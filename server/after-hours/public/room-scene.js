@@ -2,11 +2,12 @@ import * as T from './three.module.js';
 import {Reflector} from './Reflector.js';
 import {GLTFLoader} from './GLTFLoader.js';
 import {buildExterior} from './exterior-scene.js?v=20261117-environment2';
-import {uvVisible} from './room-state.js?v=20261117-doors3';
-import {canWalk} from './room-layout.js?v=20261117-doors3';
-import {buildDomesticModels} from './domestic-models.js?v=20261117-doors3';
-import {buildTwinRoom} from './twin-room.js?v=20261117-doors3';
-import {buildRoomDetails} from './room-details.js?v=20261117-doors3';
+import {uvVisible} from './room-state.js?v=20261117-stairs1';
+import {buildHotelExtension} from './hotel-extension.js?v=20261117-stairs1';
+import {canWalk} from './room-layout.js?v=20261117-stairs1';
+import {buildDomesticModels} from './domestic-models.js?v=20261117-stairs1';
+import {buildTwinRoom} from './twin-room.js?v=20261117-stairs1';
+import {buildRoomDetails} from './room-details.js?v=20261117-stairs1';
 
 export function buildRoom(renderer,state){
  const scene=new T.Scene();scene.background=new T.Color('#121616');scene.fog=new T.FogExp2('#121616',.014);
@@ -61,7 +62,7 @@ export function buildRoom(renderer,state){
  for(const [x,z,w,d]of[[0,0,7.4,9.2],[0,7.5,7.4,6],[6.6,7.5,6,6]])box(w,.12,d,x,3.27,z,mat('#827b68'));
  // A genuine hotel corridor separates 316 from 317.
  box(13.8,.15,3,3.3,-.075,12,floorMat);box(13.8,.12,3,3.3,3.27,12,mat('#827b68'));
- for(const x of[-3.68,10.28])box(.16,3.2,3,x,1.6,12,wallpaper);
+ box(.16,3.2,3,10.28,1.6,12,wallpaper);for(const z of[10.875,13.125])box(.16,3.2,.75,-3.68,1.6,z,wallpaper);box(.16,.5,1.5,-3.68,2.95,12,wallpaper);
  box(7.2,3.2,.16,0,1.6,13.58,wallpaper);box(.86,3.2,.16,4.03,1.6,13.58,wallpaper);box(4.42,3.2,.16,7.99,1.6,13.58,wallpaper);box(1.32,.5,.16,5.12,2.95,13.58,wallpaper);
  // 317 has its own entrance from the corridor and a final exit at the far end.
  box(6.6,.15,7.2,6.9,-.075,17.1,floorMat);box(6.6,.12,7.2,6.9,3.24,17.1,mat('#827b68'));
@@ -69,8 +70,6 @@ export function buildRoom(renderer,state){
  box(1.4,3.2,.14,4.3,1.6,20.72,wallpaper);box(3.9,3.2,.14,8.25,1.6,20.72,wallpaper);box(1.3,.5,.14,5.65,2.95,20.72,wallpaper);
  for(const x of[3.67,10.17]){box(.07,.78,7.2,x,.39,17.1,darkwood);box(.09,.06,7.2,x,.82,17.1,brass);box(.12,.08,7.2,x,3.08,17.1,ivory);}
  for(const [x,w]of[[4.3,1.3],[8.25,3.8]])box(w,.78,.06,x,.39,20.62,darkwood);
- box(1.8,.15,3,5.65,-.075,22.2,floorMat);for(const x of[4.75,6.55])box(.12,3.2,3,x,1.6,22.2,wallpaper);box(1.8,.12,3,5.65,3.24,22.2,ivory);box(1.9,3.2,.12,5.65,1.6,23.75,wallpaper);
- sign('비상구 · EXIT',1,.25,5.65,2.25,23.66,Math.PI);
  // Suite wainscot and trim follow the openings instead of covering them.
  for(const [x,z,d]of[[-3.58,0,9],[3.58,-2.75,3.5],[3.58,2.45,4.1]]){box(.08,.78,d,x,.39,z,darkwood);box(.11,.065,d,x,.82,z,brass);box(.12,.09,d,x,.09,z,wood);for(const y of[3.03,3.12,3.18])box(.15,.055,d,x,y,z,ivory);}
  for(const z of[-4.49,4.49,4.68,10.49])for(const [x,w]of(z<0?[[0,7.2]]:[[-1.075,5.05],[3.2,.8]])){box(w,.78,.07,x,.39,z,darkwood);box(w,.06,.09,x,.82,z,brass);box(w,.09,.1,x,.09,z,wood);for(const y of[3.03,3.12,3.18])box(w,.055,.15,x,y,z,ivory);}
@@ -232,8 +231,8 @@ export function buildRoom(renderer,state){
  const legacyGuestFurniture=scene.children.slice(guestFurnitureStart).filter(o=>o!==receipt317);
  // 317's normal hotel entrance opens to a short third-floor corridor.
  for(const x of[1.94,3.36])box(.12,2.75,.2,x,1.375,11.7,wood);box(1.54,.12,.2,2.65,2.77,11.7,wood);
- const exit317=interactive(group(2,0,11.7),'exit317','317호 안쪽 비상문 · 열쇠 구멍');rb(1.3,2.65,.12,.65,1.325,0,darkwood,exit317);for(const y of[.65,1.95])rb(1.07,.85,.04,.65,y,-.075,wood,exit317);box(.08,.24,.04,1.08,1.15,-.09,brass,exit317);rod([.92,1.15,-.14],[1.13,1.15,-.14],.025,brass,exit317);ball(.015,.022,.01,1.08,1.05,-.12,black,exit317);
- sign('EXIT',.32,.15,2.65,2.15,11.6,Math.PI);const hallLight=new T.PointLight('#dfd4b2',8,5,1.8);hallLight.position.set(2.65,2.7,13.4);scene.add(hallLight);
+ const exit317=interactive(group(2,0,11.7),'exit317','317호 안쪽 방 · 잠김');rb(1.3,2.65,.12,.65,1.325,0,darkwood,exit317);for(const y of[.65,1.95])rb(1.07,.85,.04,.65,y,-.075,wood,exit317);box(.08,.24,.04,1.08,1.15,-.09,brass,exit317);rod([.92,1.15,-.14],[1.13,1.15,-.14],.025,brass,exit317);ball(.015,.022,.01,1.08,1.05,-.12,black,exit317);
+ sign('317 INNER',.6,.15,2.65,2.15,11.6,Math.PI);const hallLight=new T.PointLight('#dfd4b2',8,5,1.8);hallLight.position.set(2.65,2.7,13.4);scene.add(hallLight);
  shiftSince(nextRoomStart,nextRoomSolids,3,9);
  const details=buildRoomDetails({scene,renderer,manager,state,solids,canvasTexture,legacy:{guest:legacyGuestFurniture,suite:legacySuiteDetails,minibar:minibarCups}});
  const twin=buildTwinRoom({scene,renderer,manager,state,solids,canvasTexture,helpers:{box,rb,group,cyl,ball,sign},materials:{wood,darkwood,brass,ivory,floorMat}});
@@ -250,6 +249,8 @@ export function buildRoom(renderer,state){
  interactive(sign('3L     5L / 4L = KEY',.70,.18,6.24,1.48,4.72),'waterStation','계량 장치 사용 안내');
 
  const jugBox=interactive(group(4.65,.98,5.21),'waterStation','계량 장치의 열쇠 보관함');box(.32,.018,.26,0,0,0,darkwood,jugBox);for(const x of[-.15,.15])box(.02,.12,.26,x,.06,0,wood,jugBox);for(const z of[-.12,.12])box(.32,.12,.02,0,.06,z,wood,jugBox);const jugLid=group(0,.12,-.13,jugBox);rb(.34,.025,.28,0,0,.13,wood,jugLid);const jugKey=interactive(group(0,.028,0,jugBox),'jugKey','보관함 안의 트윈 침실 열쇠');const keyRing=mesh(new T.TorusGeometry(.028,.006,8,24),brass,jugKey);keyRing.rotation.x=Math.PI/2;rod([0,0,.025],[0,0,.095],.006,brass,jugKey);box(.025,.008,.012,.01,0,.08,brass,jugKey);
+ const extension=buildHotelExtension({T,scene,state,roots,solids,helpers:{box,rb,rod,cyl,mesh,group,sign,interactive},materials:{wood,darkwood,brass,ivory,paper,floorMat,wallpaper},partitionDoor});
+ solids.push(...extension.solids);
  const dustGeo=new T.BufferGeometry(),dustPos=new Float32Array(90*3);for(let i=0;i<90;i++)dustPos.set([(Math.random()-.5)*6,Math.random()*2.8,(Math.random()-.5)*8],i*3);dustGeo.setAttribute('position',new T.BufferAttribute(dustPos,3));const dust=new T.Points(dustGeo,new T.PointsMaterial({color:'#b6b6a5',size:.013,transparent:true,opacity:.26,depthWrite:false}));scene.add(dust);
  const frameHomePosition=frame.position.clone(),frameHomeRotation=frame.rotation.clone();let lastFrameTaken=false;
  function update(dt,time){
@@ -273,7 +274,7 @@ export function buildRoom(renderer,state){
    if(state.musicWound)musicDrum.rotation.y=time*.65;
    mix(teaLid.rotation,'x',state.teaTinOpen?1.8:0);teaPaper.visible=state.teaTinOpen;mix(jugLid.rotation,'x',state.jugSolved?-1.8:0);jugKey.visible=state.jugSolved&&!state.jugKeyTaken;jugBox.userData.interactId=jugKey.visible?'jugKey':'waterStation';jugBox.userData.label=jugKey.visible?'열린 보관함 · 트윈 침실 열쇠 꺼내기':'계량 장치의 열쇠 보관함';
    for(const d of innerDoors){mix(d.g.rotation,'y',d.yaw+(state[d.field]?1.65:0),3);d.g.userData.label=d.label+(state[d.field]?' · 열림':' · 잠김');const a=d.g.rotation.y;Object.assign(d.collider,{x:d.x+Math.cos(a)*d.w/2,z:d.z-Math.sin(a)*d.w/2,yaw:a});}for(const j of jugRoots){const h=Math.max(.002,state[j.field]/j.max*(j.h-.025));j.water.visible=state[j.field]>0;j.water.scale.y=h/.01;j.water.position.y=h/2+.012;}
-   domestic.update(dt);details.update(dt,time);twin.update(dt);for(const light of fixtureLights)light.intensity=state.lightOn?2.4:0;
+   extension.update();domestic.update(dt);details.update(dt,time);twin.update(dt);for(const light of fixtureLights)light.intensity=state.lightOn?2.4:0;
    exterior.update(dt,time);dust.rotation.y=Math.sin(time*.04)*.025;
  }
  function clockHands(hour,minute){domestic.clockHands(hour,minute);if(domestic.clockLoaded)return;const ha=hour/12*Math.PI*2+minute/60*Math.PI/6,ma=minute/60*Math.PI*2;hr.position.set(Math.sin(ha)*.045,.3+Math.cos(ha)*.045,.111);hr.rotation.z=-ha;mn.position.set(Math.sin(ma)*.065,.3+Math.cos(ma)*.065,.12);mn.rotation.z=-ma;}
