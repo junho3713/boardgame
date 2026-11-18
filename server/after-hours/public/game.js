@@ -3,7 +3,7 @@ import {createSearchPuzzles} from './room-search.js?v=20261117-tricks1';
 import {createSuitePuzzles} from './suite-puzzles.js?v=20261117-tricks1';
 import * as T from './three.module.js';
 import {buildRoom} from './room-scene.js?v=20261117-tricks1';
-import {createState,ITEMS,addItem,combineFilms,alignFilm,setClock,useItem,uvVisible,unlockDoor,phase,HINTS,MUSIC_SEQUENCE,TRAVEL_STOPS} from './room-state.js?v=20261117-tricks1';
+import {createState,ITEMS,DRAWER_NOTE,addItem,canCombineFilms,combineFilms,alignFilm,setClock,useItem,uvVisible,unlockDoor,phase,HINTS,MUSIC_SEQUENCE,TRAVEL_STOPS} from './room-state.js?v=20261117-tricks1';
 import {zoneAt,ZONES,floorHeight} from './room-layout.js?v=20261117-tricks1';
 import {TEST_STARTS,getTestStart,createTestStart,CHECKPOINT_KEY,SETTINGS_KEY,readCheckpoint,writeCheckpoint,prepareRestart} from './test-starts.js?v=20261117-tricks1';
 const $=q=>document.querySelector(q),canvas=$('#world');
@@ -30,9 +30,20 @@ function modal(html,kind=''){if(['inspect','focus'].includes(mode))closeInspecti
 function closeModal(){ $('#modal').hidden=true;modalKind='';paused=false;keys.clear();}
 function pause(){if(!started||complete)return;if(['inspect','focus'].includes(mode)){closeInspection();return;}if(!$('#modal').hidden){closeModal();return;}releaseMouse();paused=true;$('#pause').hidden=false;}
 function resume(){paused=false;$('#pause').hidden=true;keys.clear();}
+const FILM_COMBINE_GUIDE='I로 인벤토리를 열고 ‘두 필름 조각 합치기’를 누르세요.';
 function inventory(){
  const added=state.inventory.filter(id=>!knownInventory.has(id));knownInventory.clear();state.inventory.forEach(id=>knownInventory.add(id));
- if(added.length){inventoryUnread=true;toast(`${ITEMS[added[added.length-1]]} 획득\nI 인벤토리에서 조사해 단서를 찾거나, 손에 들어 사용할 수 있어요.`,6500);}
+ if(added.length){
+   inventoryUnread=true;
+   const foundFilm=added.includes('filmA')||added.includes('filmB');
+   if(foundFilm&&canCombineFilms(state)){
+     toast(`필름 조각 두 장을 모았습니다.\n${FILM_COMBINE_GUIDE}`,8500);
+   }else if(foundFilm){
+     toast(`${ITEMS[added.at(-1)]} 획득\n다른 조각을 찾으면 I 인벤토리에서 합칠 수 있어요.`,6500);
+   }else{
+     toast(`${ITEMS[added.at(-1)]} 획득\nI 인벤토리에서 조사해 단서를 찾거나, 손에 들어 사용할 수 있어요.`,6500);
+   }
+ }
  const bar=$('#inventory');bar.replaceChildren();state.inventory.forEach((id,i)=>{
    const b=document.createElement('button');b.className='item'+(state.selected===id?' active':'');b.title=ITEMS[id]+(CLUE_ONLY.has(id)?' · 클릭: 조사하기 · I: 인벤토리':' · 클릭: 손에 들기 · 두 번 클릭: 조사하기 · I: 인벤토리');
    b.innerHTML=`<span class="item-num">${i+1}</span><span class="item-icon">${ICONS[id]}</span><span>${ITEMS[id]}</span><span class="inspect-link">${CLUE_ONLY.has(id)?'조사하기':state.selected===id?'선택 해제':'손에 들기'}</span>`;
@@ -45,15 +56,21 @@ function inventory(){
 }
 function equipItem(id){if(!state.inventory.includes(id))return;if(CLUE_ONLY.has(id)){inspectItem(id);return;}state.selected=id;closeInspection();closeModal();inventory();toast(`${ITEMS[id]} — 손에 들었습니다.\n사용할 대상을 바라보고 E를 누르세요.`,5000);}
 function take(id,title,text){addItem(state,id);state.selected=null;inventory();sound('paper');if(title)record(title,text);}
+function joinFilmPieces(){
+ if(!combineFilms(state))return;
+ record('이어진 필름','두 조각의 찢긴 부분이 맞았다. 네 개의 작은 창과 삼각 표식.');
+ inventory();
+ inspectItem('film');
+}
 function planeItem(kind){const {group,mesh,rb,rod,cyl}=room.helpers;const g=new T.Group();const texture=room.canvasTexture((a,w,h)=>{a.fillStyle='#b49a65';a.fillRect(0,0,w,h);a.strokeStyle='#584a2c';a.lineWidth=8;a.strokeRect(18,18,w-36,h-36);a.fillStyle='#56452c';a.font='28px monospace';a.fillText('CONTACT / 316',35,55);if(kind==='film'){for(const [x,y]of [[.17,.17],[.83,.17],[.17,.83],[.83,.83]])a.clearRect(w*x-43,h*y-43,86,86);a.fillStyle='#e3d1a4';a.font='21px serif';for(const [i,x,y]of [['I',.17,.17],['II',.83,.17],['III',.17,.83],['IV',.83,.83]])a.fillText(i,w*x-25,h*y-53);a.fillText('◢',16,100);}else{a.globalAlpha=.3;for(let i=0;i<80;i++)a.fillRect(Math.random()*w,Math.random()*h,1,Math.random()*h);a.globalAlpha=1;a.fillText(kind==='filmA'?'I     III':'II     IV',45,220);}},512,512);
  const o=new T.Mesh(new T.PlaneGeometry(.8,.8),new T.MeshStandardMaterial({map:texture,side:T.DoubleSide,transparent:true,roughness:.9}));g.add(o);return g;}
-function inspectItem(id){if(!state.inventory.includes(id))return;if(searchPuzzles.inspect(id)||puzzles.inspect(id))return;if(id.startsWith('film')){inspectModel(planeItem(id),id,ITEMS[id],id==='film'?'찢긴 가장자리가 맞물렸다. 네 개의 작은 창과 구석의 삼각 표식이 남아 있다.':id==='filmA'?'인화실 쪽지에서 떼어 낸 필름. 쪽지에는 “두 장을 겹쳐 볼 것”이라고 적혀 있다.':'얇은 인화용 필름. 찢긴 가장자리에 오래된 접착제 자국이 남아 있다.');if(id!=='film'&&state.inventory.includes('filmA')&&state.inventory.includes('filmB'))setInspectAction('두 조각 합치기',()=>{combineFilms(state);record('이어진 필름','두 조각의 찢긴 부분이 맞았다. 네 개의 작은 창과 삼각 표식.');closeInspection();inventory();inspectItem('film');sound('paper');});else setInspectAction('손에 들기',()=>equipItem(id));}else if(['key','bathKey','windingKey','exitKey','stairKey','passKey','tinKey','twinKey','suiteKey'].includes(id)){const g=new T.Group();const {mesh,rod,box}=room.helpers;const ring=mesh(new T.TorusGeometry(.15,.028,12,32),room.materials.brass,g);rod([0,-.15,0],[0,-.65,0],.027,room.materials.brass,g);box(.13,.05,.05,.06,-.55,0,room.materials.brass,g);if(id==='windingKey'){g.clear();const {rb,cyl}=room.helpers;for(const x of[-.18,.18])rb(.32,.18,.06,x,.08,0,room.materials.brass,g);cyl(.05,.05,.32,0,-.1,0,room.materials.brass,g);for(const x of[-.045,.045])rb(.025,.12,.09,x,-.31,0,room.materials.brass,g);for(const z of[-.045,.045])rb(.09,.12,.025,0,-.31,z,room.materials.brass,g);}inspectModel(g,id,ITEMS[id],id==='windingKey'?'날개 모양 손잡이와 네모난 축. 문을 여는 열쇠보다 태엽을 감는 도구에 가깝다.':id==='stairKey'?'3F STAIRS. 317호 안쪽 방에서 찾았다. 호텔 복도 왼쪽 끝 계단문에 맞는다.':id==='exitKey'?'317 INNER. 317호 끝의 안쪽 방을 여는 열쇠다.':id==='passKey'?'317호 예비 열쇠. 꼬리표에 동행인 보관용이라고 적혀 있다.':id==='tinKey'?'꽃무늬 작은 열쇠. 미니바 차 상자의 잠금판에도 같은 꽃무늬가 있다.':id==='twinKey'?'TWIN 표식. 거실 왼쪽 침실 문에 맞는다.':id==='suiteKey'?'316 EXIT 표식. 거실에서 호텔 복도로 나가는 문에 맞는다.':id==='bathKey'?'물방울 표식. 침실 옆 욕실 문에 맞는 별도의 열쇠다.':'삼각 표식. 인화 작업표 아래 책상 서랍의 잠금판과 같다.');setInspectAction('손에 들기',()=>equipItem(id));}else{const g=new T.Group();const {cyl}=room.helpers;cyl(.07,.07,.8,0,0,0,new T.MeshStandardMaterial({color:'#9c82b8',roughness:.3}),g);cyl(.075,.075,.12,0,.44,0,room.materials.brass,g);cyl(.075,.075,.12,0,-.44,0,room.materials.brass,g);inspectModel(g,id,ITEMS[id],'UV-A / 365 nm. 유리 표면에 “주변광을 차단할 것”이라는 작은 글씨가 남아 있다.');setInspectAction('손에 들기',()=>equipItem(id));}}
+function inspectItem(id){if(!state.inventory.includes(id))return;if(searchPuzzles.inspect(id)||puzzles.inspect(id))return;if(id.startsWith('film')){inspectModel(planeItem(id),id,ITEMS[id],id==='film'?'찢긴 가장자리가 맞물렸다. 네 개의 작은 창과 구석의 삼각 표식이 남아 있다.':id==='filmA'?'인화실 쪽지에서 떼어 낸 필름. 쪽지에는 “두 장을 겹쳐 볼 것”이라고 적혀 있다.':'얇은 인화용 필름. 찢긴 가장자리에 오래된 접착제 자국이 남아 있다.');if(id!=='film'&&canCombineFilms(state))setInspectAction('두 필름 조각 합치기',joinFilmPieces);else setInspectAction('손에 들기',()=>equipItem(id));}else if(['key','bathKey','windingKey','exitKey','stairKey','passKey','tinKey','twinKey','suiteKey'].includes(id)){const g=new T.Group();const {mesh,rod,box}=room.helpers;const ring=mesh(new T.TorusGeometry(.15,.028,12,32),room.materials.brass,g);rod([0,-.15,0],[0,-.65,0],.027,room.materials.brass,g);box(.13,.05,.05,.06,-.55,0,room.materials.brass,g);if(id==='windingKey'){g.clear();const {rb,cyl}=room.helpers;for(const x of[-.18,.18])rb(.32,.18,.06,x,.08,0,room.materials.brass,g);cyl(.05,.05,.32,0,-.1,0,room.materials.brass,g);for(const x of[-.045,.045])rb(.025,.12,.09,x,-.31,0,room.materials.brass,g);for(const z of[-.045,.045])rb(.09,.12,.025,0,-.31,z,room.materials.brass,g);}inspectModel(g,id,ITEMS[id],id==='windingKey'?'날개 모양 손잡이와 네모난 축. 문을 여는 열쇠보다 태엽을 감는 도구에 가깝다.':id==='stairKey'?'3F STAIRS. 317호 안쪽 방에서 찾았다. 호텔 복도 왼쪽 끝 계단문에 맞는다.':id==='exitKey'?'317 INNER. 317호 끝의 안쪽 방을 여는 열쇠다.':id==='passKey'?'317호 예비 열쇠. 꼬리표에 동행인 보관용이라고 적혀 있다.':id==='tinKey'?'꽃무늬 작은 열쇠. 미니바 차 상자의 잠금판에도 같은 꽃무늬가 있다.':id==='twinKey'?'TWIN 표식. 거실 왼쪽 침실 문에 맞는다.':id==='suiteKey'?'316 EXIT 표식. 거실에서 호텔 복도로 나가는 문에 맞는다.':id==='bathKey'?'물방울 표식. 침실 옆 욕실 문에 맞는 별도의 열쇠다.':'삼각 표식. 인화 작업표 아래 책상 서랍의 잠금판과 같다.');setInspectAction('손에 들기',()=>equipItem(id));}else{const g=new T.Group();const {cyl}=room.helpers;cyl(.07,.07,.8,0,0,0,new T.MeshStandardMaterial({color:'#9c82b8',roughness:.3}),g);cyl(.075,.075,.12,0,.44,0,room.materials.brass,g);cyl(.075,.075,.12,0,-.44,0,room.materials.brass,g);inspectModel(g,id,ITEMS[id],'UV-A / 365 nm. 유리 표면에 “주변광을 차단할 것”이라는 작은 글씨가 남아 있다.');setInspectAction('손에 들기',()=>equipItem(id));}}
 function inspectModel(source,id,title,text){closeModal();releaseMouse();paused=true;mode='inspect';inspectionId=id;$('#inspectHint').textContent='드래그해서 뒤집고, 휠로 가까이 보세요.';$('#hud').hidden=true;$('#inspection').hidden=false;$('#inspectTitle').textContent=title;$('#inspectText').textContent=text;$('#inspectBackAction').hidden=true;$('#inspectAction').hidden=true;
  if(inspectPivot)inspectScene.remove(inspectPivot);inspectPivot=new T.Group();const obj=source.clone(true);obj.position.set(0,0,0);obj.rotation.set(0,0,0);obj.traverse(o=>{o.visible=o.userData.filmBack?!state.inventory.includes('filmB')&&!state.filmJoined:o.visible;});const bounds=new T.Box3().setFromObject(obj),center=bounds.getCenter(new T.Vector3()),size=bounds.getSize(new T.Vector3());obj.position.sub(center);inspectPivot.add(obj);inspectPivot.scale.setScalar(1.8/Math.max(size.x,size.y,size.z));inspectPivot.position.y=.12;inspectScene.add(inspectPivot);inspectDistance=3.5;inspectCamera.position.set(0,.1,inspectDistance);sound('paper');}
 function closeInspection(){if(!['inspect','focus'].includes(mode))return;camera.fov=57;camera.updateProjectionMatrix();mode='walk';paused=false;$('#inspection').hidden=true;$('#hud').hidden=!started;$('#inspectBackAction').hidden=true;keys.clear();}
 function focusMirror(){$('#inspectHint').textContent='반사된 방과 실제 방을 비교하세요. ESC로 돌아갑니다.';releaseMouse();mode='focus';paused=true;$('#hud').hidden=true;$('#inspection').hidden=false;$('#inspectTitle').textContent='거울 속의 방';$('#inspectText').textContent=uvVisible(state)&&state.frameTaken?'현재의 벽은 비어 있다. 거울 속의 벽은 그렇지 않다.':'같은 방을, 반대쪽에서 바라본다.';$('#inspectBackAction').hidden=true;$('#inspectAction').hidden=true;camera.position.set(2.05,1.83,1.15);camera.rotation.set(0,-Math.PI/2,0);camera.fov=30;camera.updateProjectionMatrix();}
 function setInspectAction(text,fn){const b=$('#inspectAction');b.hidden=false;b.textContent=text;b.onclick=fn;}
-$('#inspectBackAction').onclick=()=>{if(inspectionId!=='frame'||Math.cos(inspectPivot.rotation.y)>-.6||state.inventory.includes('filmB')||state.filmJoined)return;if(!state.frameReleased){$('#inspectText').textContent='뒷판의 납작한 고정나사가 조각을 누르고 있다. 넓은 홈에 맞는 물건이 필요하다.';return;}take('filmB','사진 뒤의 필름','액자 뒷판에 테이프로 붙어 있던 필름 조각.');inspectPivot.traverse(o=>{if(o.userData.filmBack)o.visible=false;});$('#inspectBackAction').hidden=true;$('#inspectText').textContent='붙어 있던 조각을 떼었다. 누군가는 앞면보다 뒷면을 감추고 싶었던 것 같다.';};
+$('#inspectBackAction').onclick=()=>{if(inspectionId!=='frame'||Math.cos(inspectPivot.rotation.y)>-.6||state.inventory.includes('filmB')||state.filmJoined)return;if(!state.frameReleased){$('#inspectText').textContent='뒷판의 납작한 고정나사가 조각을 누르고 있다. 넓은 홈에 맞는 물건이 필요하다.';return;}take('filmB','사진 뒤의 필름','액자 뒷판에 테이프로 붙어 있던 필름 조각.');inspectPivot.traverse(o=>{if(o.userData.filmBack)o.visible=false;});$('#inspectBackAction').hidden=true;$('#inspectText').textContent=canCombineFilms(state)?FILM_COMBINE_GUIDE:'붙어 있던 조각을 떼었다. 다른 조각을 찾으면 인벤토리에서 합칠 수 있다.';};
 function openFilm(){let x=0,y=2,q=1,dragging=false,sx=0,sy=0,bx=0,by=0;const grid=Array.from({length:30},(_,i)=>(i*7+Math.floor(i/6)*3+2)%10);grid[8]=0;grid[10]=5;grid[20]=4;grid[22]=0;
  modal(`<div class="overline">CONTACT SHEET / OBSERVATION</div><h2>겹쳐진 자리</h2><p>종이에 남은 칸과 필름의 작은 창.<br>어느 쪽에도 혼자서는 읽히는 문장이 없다.</p><div class="filmboard"><div class="filmgrid">${grid.map(v=>`<span>${v}</span>`).join('')}</div><span class="board-mark">◢</span><div class="film-mask" tabindex="0" role="img" aria-label="움직이는 필름. 드래그 또는 방향키로 이동"><svg viewBox="0 0 150 150"><path d="M0 0H150V150H0Z M8 8V42H42V8Z M108 8V42H142V8Z M8 108V142H42V108Z M108 108V142H142V108Z" fill="#503c1bee" fill-rule="evenodd" stroke="#dccb9b" stroke-width=".8"/><g fill="#e4d1a3" font-size="9" font-family="serif"><text x="1" y="7">◢</text><text x="20" y="53">I</text><text x="119" y="53">II</text><text x="16" y="103">III</text><text x="117" y="103">IV</text></g></svg></div></div><div class="film-instruction">필름을 드래그해 옮기세요. 표식과 찢긴 자국을 살펴보세요.</div><div class="buttonrow"><button class="outline" id="rotateFilm">필름 ↶</button><button class="outline" id="observeFilm">겹친 자리 기록</button></div><div class="observation-note" id="filmRead"></div>`);
  const mask=$('.film-mask'),board=$('.filmboard');const render=()=>{mask.style.left=x*50+'px';mask.style.top=y*50+'px';mask.style.transform=`rotate(${q*90}deg)`;};render();mask.onpointerdown=e=>{dragging=true;sx=e.clientX;sy=e.clientY;bx=x;by=y;mask.setPointerCapture(e.pointerId);};mask.onpointermove=e=>{if(!dragging)return;const scale=board.getBoundingClientRect().width/300;x=Math.max(0,Math.min(3,bx+(e.clientX-sx)/(50*scale)));y=Math.max(0,Math.min(2,by+(e.clientY-sy)/(50*scale)));render();};mask.onpointerup=()=>dragging=false;mask.onkeydown=e=>{const dirs={ArrowLeft:[-.1,0],ArrowRight:[.1,0],ArrowUp:[0,-.1],ArrowDown:[0,.1]};if(dirs[e.code]){e.preventDefault();e.stopPropagation();x=Math.max(0,Math.min(3,x+dirs[e.code][0]));y=Math.max(0,Math.min(2,y+dirs[e.code][1]));render();}};$('#rotateFilm').onclick=()=>{q=(q+3)%4;render();sound('paper');};$('#observeFilm').onclick=()=>{if(alignFilm(state,x,y,q)){$('#filmRead').textContent='0 5 : 4 0';record('인화 작업표','삼각 표식과 필름이 맞았을 때 네 창에 0 · 5 · 4 · 0이 남았다.');sound('paper');caption('숫자는 원래부터 거기 있었다.\n보지 못하게 가려져 있었을 뿐.');}else{$('#filmRead').textContent='';toast('필름의 표식과 종이의 자국이 아직 어긋나 있다.');}};}
@@ -64,11 +81,18 @@ const ARROWS=['↑','↗','→','↘','↓','↙','←','↖'];
 function openLock(){modal(`<div class="overline">DOOR / THREE CONCENTRIC RINGS</div><h2>세 겹의 잠금</h2><p>세 고리에 하나씩 홈이 나 있다.<br>오래된 금속은 손의 힘에 따라 조금씩 돌아간다.</p><svg class="ring-lock" id="ringDiagram" viewBox="0 0 280 280" aria-label="바깥 가운데 안쪽의 세 회전 고리"><circle cx="140" cy="140" r="127" fill="#1c251e" stroke="#8b7350" stroke-width="5"/>${[105,76,47].map((r,i)=>`<g id="dial${i}" transform="rotate(${state.rings[i]*45} 140 140)"><circle cx="140" cy="140" r="${r}" fill="none" stroke="#a68b5c" stroke-width="11"/><path d="M134 ${140-r-10}h12v20h-12z" fill="#e1d3ac"/></g>`).join('')}<circle cx="140" cy="140" r="14" fill="#bbaa79"/></svg><div class="ring-row">${['바깥','가운데','안쪽'].map((name,i)=>`<button data-ring="${i}">${name}<span id="ringValue${i}">${ARROWS[state.rings[i]]}</span></button>`).join('')}</div><button class="primary" id="releaseLock">가운데 잠금 누르기 <span>→</span></button><p class="muted" id="lockFeedback" role="status"></p>`);document.querySelectorAll('[data-ring]').forEach(b=>b.onclick=()=>{const i=+b.dataset.ring;state.rings[i]=(state.rings[i]+1)%8;$('#dial'+i).setAttribute('transform',`rotate(${state.rings[i]*45} 140 140)`);$('#ringValue'+i).textContent=ARROWS[state.rings[i]];sound('metal');});$('#releaseLock').onclick=()=>{if(unlockDoor(state)){closeModal();sound('unlock');record('열린 문','세 고리의 홈이 서로 다른 방향을 가리켰을 때 문 안의 걸쇠가 풀렸다.');caption('걸쇠가 안쪽으로 물러났다.\n문 너머에서도, 누군가는 당신을 기다렸던 모양이다.');}else{$('#lockFeedback').textContent='금속판 안쪽에서 무딘 소리만 돌아온다.';sound('wood');}};}
 function interact(id){
  if(id==='bed'){state.bedCoverFolded=!state.bedCoverFolded;sound('cloth');return;}
+ if(id==='drawerNote'){
+  if(!state.drawerOpen)return;
+  const {title,lines}=DRAWER_NOTE;
+  record(title,lines.join(' '));
+  sound('paper');
+  modal(`<h2>${escape(title)}</h2><div class="note">${lines.map(escape).join('<br><br>')}</div>`);
+  return;
+ }
  if(id==='filmA'){
   if(room.bedNote.visible&&!state.inventory.includes('filmA')&&!state.filmJoined){
    room.bedNote.visible=false;
    take('filmA','이불 속 인화실 쪽지','쪽지에 인화용 필름 한 조각이 붙어 있다. 뒷면에는 “두 장을 겹쳐 볼 것”이라고 적혀 있다.');
-   toast('인화실 쪽지와 필름 조각을 챙겼다.');
   }
   return;
  }
@@ -78,7 +102,14 @@ function interact(id){
  case'ledger':if(state.inventory.includes('film')){modal('<div class="overline">KITCHEN TABLE</div><h2>인화 작업표</h2><p>작은 숫자와 삼각 표식. 작업표의 일부만 유난히 닳아 있다.</p><button class="outline" id="placeFilm">가지고 있는 필름 올려보기</button>');$('#placeFilm').onclick=openFilm;}else modal('<div class="overline">WRITING DESK</div><h2>인화 작업표</h2><div class="note">CONTACT / 316<br><br>숫자들이 칸을 채우고 있다.<br>작업표 한 귀퉁이에 작은 삼각 자국이 남아 있다.</div>');record('인화 작업표','침실 책상 위의 낡은 작업표. 숫자가 든 칸과 한쪽의 삼각 자국.');break;
  case'clock':inspectModel(room.clock,'clock','침실의 원형 벽시계','법랑 문자판과 금속 테두리. 시계 아래에는 작은 보관칸이 달려 있다. 뒷판에는 작업표와 같은 삼각 표식이 있다.');setInspectAction('두 바늘을 움직여 보기',()=>{closeInspection();openClock();});break;
  case'drawer':if(state.drawerOpen){state.drawerOpen=false;sound('wood');toast('책상 서랍을 닫았다.');}else if(state.drawerUnlocked){state.drawerOpen=true;sound('wood');}else{sound('wood');caption('침실 책상 서랍이 잠겨 있다.\n손잡이 옆에 삼각 표식과 작은 열쇠 구멍이 있다.');}break;
- case'bulb':if(!state.drawerOpen||state.bulbTaken)return;state.bulbTaken=true;take('bulb','서랍 안의 전구','평범한 전구와 다른 보랏빛 유리. UV-A라는 작은 글씨.');break;
+ case'bulb':
+  if(!state.drawerOpen||state.bulbTaken)return;
+  state.bulbTaken=true;
+  take('bulb','서랍 안의 전구','평범한 전구와 다른 보랏빛 유리. UV-A라는 작은 글씨.');
+  if(!state.notes.some(note=>note.title===DRAWER_NOTE.title)){
+   toast('보랏빛 전구를 챙겼다.\n전구 옆에 접힌 쪽지가 남아 있다.',6500);
+  }
+  break;
  case'lamp':state.lampOn=!state.lampOn;sound('metal');toast(state.lampOn?'스탠드를 켰다.':'스탠드를 껐다.');break;
  case'switch':state.lightOn=!state.lightOn;sound('wood');break;
  case'bathDoor':if(!state.bathUnlocked){caption('욕실 문이 잠겨 있다. 열쇠 구멍 옆에 물방울 표식이 있다.');break;}state.bathDoorOpen=!state.bathDoorOpen;sound('wood');caption(state.bathDoorOpen?'욕실 문을 열었다.':'욕실 문을 닫았다.',2200);break;
@@ -115,14 +146,15 @@ function journal(){modal(`<div class="overline">THINGS YOU HAVE NOTICED</div><h2
 function bag(){
  inventoryOpened=true;inventoryUnread=false;inventory();
  modal(`<h2>인벤토리 <kbd>I</kbd></h2><p class="inventory-intro">가진 물건을 다시 조사해 단서를 찾고, 방 안의 대상에 사용할 수 있어요.</p>
+ ${canCombineFilms(state)?'<div class="buttonrow"><button class="primary" id="joinFilms">두 필름 조각 합치기 <span aria-hidden="true">→</span></button></div>':''}
  <ul class="inventory-instructions"><li><strong>조사해서 단서 찾기</strong><span>물건을 뒤집고 확대해 글씨·뒷면·표면의 흔적을 살펴보세요.</span></li><li><strong>물건 사용하기</strong><span>‘손에 들기’를 누른 뒤, 사용할 대상 앞에서 <kbd>E</kbd>를 누르세요.</span></li><li><strong>물건 조합하기</strong><span>조합할 수 있는 물건을 모으면 조합 버튼이 나타나요.</span></li></ul>
  <div class="inventory-item-list">${state.inventory.map(id=>`<article class="inventory-entry"><strong>${ITEMS[id]}</strong><div class="inventory-item-actions"><button class="outline" data-inspect="${id}" aria-label="${ITEMS[id]} 조사하기">조사하기</button>${CLUE_ONLY.has(id)?'':state.selected===id?`<button class="outline" data-unequip="${id}" aria-label="${ITEMS[id]} 선택 해제">선택 해제</button>`:`<button class="outline" data-equip="${id}" aria-label="${ITEMS[id]} 손에 들기">손에 들기</button>`}</div></article>`).join('')}</div>
  ${!state.inventory.length?'<p class="inventory-empty"><strong>아직 가진 물건이 없어요.</strong><span>방에서 물건을 얻으면 여기에 모입니다.</span></p>':''}
- <div class="buttonrow">${state.inventory.includes('filmA')&&state.inventory.includes('filmB')?'<button class="outline" id="joinFilms">두 필름 조각 합치기</button>':''}</div><p class="inventory-shortcut"><kbd>I</kbd> 또는 <kbd>ESC</kbd>로 닫기</p>`,'inventory');
+ <p class="inventory-shortcut"><kbd>I</kbd> 또는 <kbd>ESC</kbd>로 닫기</p>`,'inventory');
  document.querySelectorAll('[data-inspect]').forEach(b=>b.onclick=()=>{const id=b.dataset.inspect;closeModal();inspectItem(id);});
  document.querySelectorAll('[data-equip]').forEach(b=>b.onclick=()=>equipItem(b.dataset.equip));
  document.querySelectorAll('[data-unequip]').forEach(b=>b.onclick=()=>{state.selected=null;closeModal();inventory();toast('물건 선택을 해제했습니다.');});
- if($('#joinFilms'))$('#joinFilms').onclick=()=>{combineFilms(state);record('이어진 필름','찢긴 두 조각이 서로 맞물렸다.');inventory();closeModal();inspectItem('film');};
+ if($('#joinFilms'))$('#joinFilms').onclick=joinFilmPieces;
 }
 function hint(){const p=phase(state);if(p!==hintPhase){hintPhase=p;hintStep=0;}modal(`<div class="overline">A SMALL NUDGE</div><h2>잠깐, 다른 시선으로.</h2><p>도움은 한 번에 한 단계씩 보여줍니다.<br>마지막 단계는 구체적인 해결 방법을 포함합니다.</p><div class="note" id="hintText">아직 도움을 요청하지 않았습니다.</div><button class="outline" id="nextHint" style="margin-top:20px">첫 번째 도움 보기</button>`);$('#nextHint').onclick=()=>{const lines=HINTS[p];$('#hintText').textContent=lines[Math.min(hintStep,2)];if(hintStep<3){hintStep++;state.hints++;}$('#nextHint').textContent=hintStep<3?`더 구체적으로 보기 (${hintStep}/3)`:'모든 도움을 확인했습니다';$('#nextHint').disabled=hintStep>=3;};}
 function help(){modal('<div class="overline">HOW TO LOOK CLOSER</div><h2>눈높이를 바꿔보세요.</h2><p>PC 키보드와 마우스로 플레이합니다.</p><p>316호는 두 침실·거실·간이주방·욕실로 나뉜 스위트룸입니다. 거실 출입문을 나서면 호텔 복도가 나오고, 복도에서 317호로 들어갈 수 있습니다.</p><div class="note">WASD — 걷기<br>마우스 드래그 / 방향키 — 시점<br>화면 클릭 — 마우스 시점 잠금<br>E 또는 물건 클릭 — 조사<br>C — 몸 낮추기 / 일어서기<br>I — 인벤토리 열기/닫기 · J — 관찰 기록 · H — 선택형 도움<br>1–5 — 소지품 선택 · ESC — 닫기 / 일시정지</div><p>물건을 들여다볼 때는 드래그로 뒤집고 휠로 확대합니다.<br>인벤토리에서 물건을 선택한 뒤, 대상 앞에서 E로 사용할 수 있습니다.</p><p class="muted">다음 행동은 자동 안내하지 않습니다. 정답은 여러 발견을 연결해야 알 수 있습니다.</p>');}

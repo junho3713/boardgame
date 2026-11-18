@@ -6,7 +6,7 @@ import * as T from './three.module.js';
 import {Reflector} from './Reflector.js';
 import {GLTFLoader} from './GLTFLoader.js';
 import {buildExterior} from './exterior-scene.js?v=20261117-environment2';
-import {uvVisible} from './room-state.js?v=20261117-tricks1';
+import {DRAWER_NOTE,uvVisible} from './room-state.js?v=20261117-tricks1';
 import {buildHotelExtension} from './hotel-extension.js?v=20261117-tricks1';
 import {canWalk} from './room-layout.js?v=20261117-stairs1';
 import {buildDomesticModels} from './domestic-models.js?v=20261117-tricks1';
@@ -141,6 +141,26 @@ export function buildRoom(renderer,state){
  box(.68,.025,1.40,0,.57,0,darkwood,drawer);rb(.035,.12,1.43,-.36,.625,0,wood,drawer,.006);box(.03,.10,1.40,.325,.625,0,wood,drawer);for(const z of[-.685,.685])box(.65,.10,.025,0,.625,z,wood,drawer);
  rod([-.39,.63,-.13],[-.39,.63,.13],.009,brass,drawer);const deskMark=sign('△',.075,.075,0,0,0,-Math.PI/2,'#cfb37f','#463727');drawer.add(deskMark);deskMark.position.set(-.383,.63,.39);ball(.007,.014,.012,-.383,.63,.49,black,drawer);
  const bulb=interactive(group(-.03,.615,.2,drawer),'bulb','책상 서랍 안의 보랏빛 전구');const tube=mesh(new T.CylinderGeometry(.028,.028,.33,16),new T.MeshStandardMaterial({color:'#8573b9',emissive:'#1c1039',roughness:.3}),bulb);tube.rotation.z=Math.PI/2;for(const x of[-.18,.18]){const end=cyl(.034,.034,.055,x,0,0,brass,bulb);end.rotation.z=Math.PI/2;}bulb.visible=false;
+ const notePrint=canvasTexture((ctx,w,h)=>{
+   ctx.fillStyle='#d9c6a2';ctx.fillRect(0,0,w,h);
+   const fold=ctx.createLinearGradient(0,0,w,0);
+   fold.addColorStop(0,'#b79e7200');fold.addColorStop(.47,'#886a4533');
+   fold.addColorStop(.5,'#fff1cc99');fold.addColorStop(.55,'#b79e7200');
+   ctx.fillStyle=fold;ctx.fillRect(0,0,w,h);
+   ctx.fillStyle='#4e3e2f';ctx.font='20px serif';
+   DRAWER_NOTE.lines.forEach((line,i)=>ctx.fillText(line,27,84+i*48,w-54));
+ },448,264);
+ const noteShape=new T.PlaneGeometry(.255,.15,12,6);
+ const noteVertices=noteShape.attributes.position;
+ for(let i=0;i<noteVertices.count;i++){
+   const x=noteVertices.getX(i),y=noteVertices.getY(i);
+   noteVertices.setZ(i,.005*Math.exp(-Math.pow(x/.018,2))+.006*Math.pow(Math.abs(x)/.128,4)+.004*Math.sin(y*28+x*8));
+ }
+ noteShape.computeVertexNormals();
+ const drawerNote=interactive(mesh(noteShape,new T.MeshStandardMaterial({map:notePrint,roughness:.96,side:T.DoubleSide}),drawer),'drawerNote','접힌 쪽지 읽기');
+ drawerNote.position.set(-.16,.589,-.25);
+ drawerNote.rotation.set(-Math.PI/2,-Math.PI/2+.18,0,'YXZ');
+ drawerNote.visible=false;
  const mirrorStart=scene.children.length,mirrorSolids=solids.length;
  // Photographic print and a removable frame with an actual back.
  const frame=interactive(group(-3.47,1.83,1.15),'frame','호텔 사진');frame.rotation.y=Math.PI/2;rb(1.34,.98,.1,0,0,0,darkwood,frame);for(const y of [-.45,.45])rb(1.3,.045,.13,0,y,.02,brass,frame);for(const x of [-.63,.63])rb(.045,.88,.13,x,0,.02,brass,frame);const pic=mesh(new T.PlaneGeometry(1.18,.79),new T.MeshStandardMaterial({map:photo,roughness:.8}),frame);pic.position.z=.057;box(1.17,.8,.014,0,0,-.059,paper,frame);const backPaper=box(.4,.3,.014,.2,.05,-.077,mat('#a78b5b'),frame);backPaper.userData.filmBack=true;const tape=box(.46,.035,.018,.2,.05,-.088,new T.MeshStandardMaterial({color:'#a68e59',transparent:true,opacity:.78,roughness:1}),frame);tape.userData.filmBack=true;
@@ -278,6 +298,7 @@ export function buildRoom(renderer,state){
    for(const {g}of curtains)g.children[0].rotation.y=Math.sin(time*.6)*.008;
    for(const {hinge,side}of wardrobeDoors)mix(hinge.rotation,'y',state.wardrobeOpen?side*1.5:0,2.5);mix(suitcaseLid.rotation,'x',state.suitcaseOpen?1.7:0,3);mix(drawer.position,'x',state.drawerOpen?2.47:2.95,4);if(!domestic.bathLoaded)mix(bathCabinet.position,'x',state.linenCabinetOpen?-.64:0,4);bulb.visible=state.drawerOpen&&!state.bulbTaken;
    bedSearch.update(dt);
+   drawerNote.visible=state.drawerOpen;
    frame.traverse(o=>{if(o.userData.filmBack)o.visible=!state.inventory.includes('filmB')&&!state.filmJoined;});
    if(state.frameTaken!==lastFrameTaken){if(state.frameTaken){frame.position.set(-3.43,.6,1.15);frame.rotation.set(.09,Math.PI/2-.1,-.04);}else{frame.position.copy(frameHomePosition);frame.rotation.copy(frameHomeRotation);}lastFrameTaken=state.frameTaken;}
    uvInk.material.opacity=0;
