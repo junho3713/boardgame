@@ -39,3 +39,109 @@
 .water-jugs{display:flex;justify-content:center;gap:48px;text-align:center}.water-controls{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.water-controls button{min-height:48px}
 
 #prompt.mirror-prompt{top:72%}
+
+/* The guest picker sits in the existing start flow, above the first action. */
+#landing {
+ display:flex;
+ flex-direction:column;
+ overflow-y:auto;
+ scrollbar-width:thin;
+ scrollbar-color:#71654c #121916;
+}
+#landing .landing-content {
+ position:relative;
+ top:auto;
+ left:auto;
+ margin:clamp(84px,13vh,144px) 0 34px 7.5%;
+}
+#landing h1 {
+ margin:18px 0 13px;
+ font-size:clamp(39px,5.25vw,76px);
+ line-height:1.16;
+ letter-spacing:-.038em;
+ word-break:keep-all;
+}
+#landing .lede {margin:0 0 18px;}
+#landing footer {position:static;margin:auto 5% 22px;}
+.guest-choice {
+ margin:0;
+ padding:0;
+ border:0;
+ min-width:0;
+}
+.guest-choice legend {
+ padding:0;
+ margin:0 0 8px;
+ color:var(--ivory);
+ font-size:12px;
+ font-weight:600;
+}
+.guest-options {
+ display:grid;
+ grid-template-columns:repeat(2,minmax(0,1fr));
+ gap:8px;
+ max-width:330px;
+}
+.guest-option {position:relative;cursor:pointer;min-width:0;}
+.guest-option input {
+ position:absolute;
+ width:1px;
+ height:1px;
+ opacity:0;
+}
+.guest-option-face {
+ display:grid;
+ grid-template-columns:clamp(41px,6vw,64px) minmax(0,1fr) 12px;
+ gap:8px;
+ min-height:64px;
+ align-items:center;
+ padding-right:8px;
+ border:1px solid #8b846548;
+ background:#111c17ef;
+ color:#d5ceba;
+ font-size:12px;
+}
+.guest-option-face img {
+ display:block;
+ width:100%;
+ height:62px;
+ object-fit:cover;
+ object-position:center 28%;
+ background:#202d25;
+}
+.guest-option-face::after {
+ content:'';
+ width:11px;
+ height:11px;
+ box-sizing:border-box;
+ border:1px solid #b4ab8b;
+ border-radius:50%;
+}
+.guest-option:hover .guest-option-face {border-color:#a58b61;}
+.guest-option input:checked + .guest-option-face {
+ border-color:var(--gold);
+ background:#302b20f5;
+ color:#f4e6c7;
+}
+.guest-option input:checked + .guest-option-face::after {
+ border-color:var(--gold);
+ background:var(--gold);
+ box-shadow:inset 0 0 0 2px #302b20;
+}
+.guest-option input:focus-visible + .guest-option-face {
+ outline:2px solid var(--gold);
+ outline-offset:3px;
+}
+.landing-actions .primary {margin:16px 0 3px;}
+.landing-secondary {display:flex;flex-wrap:wrap;gap:0 16px;}
+.landing-secondary .quiet {min-height:44px;padding:10px 0;}
+#adminGuestAppearance {margin-bottom:12px;}
+@media (max-height:610px) {
+ #landing .landing-content {margin-top:77px;margin-bottom:14px;}
+ #landing h1 {font-size:clamp(36px,5vw,50px);margin:12px 0 9px;}
+ #landing .lede {margin-bottom:12px;}
+ .landing-content .landing-meta {display:none;}
+}
+@media (max-width:700px) {
+ #landing .landing-content {margin-left:8%;}
+}

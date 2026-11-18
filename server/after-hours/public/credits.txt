@@ -31,7 +31,7 @@ Guest room 317 and additional suite furniture (2026-11-17): original Blender 4.4
 
 2026-11-17: Original Blender twin bedroom (twin-room-316.glb), bedding, keepsake box and travel postcard artwork. Furniture proportions and metric wood UVs revised. No third-party mesh sources.
 
-Mirror guest: Microsoft Rocketbox, Male_Adult_04. Adapted for AFTER HOURS with embedded textures and new poses.
+Mirror guests: Microsoft Rocketbox, Male_Adult_04 and Female_Adult_11. Adapted for AFTER HOURS with embedded textures, new poses and Blender-rendered portraits. The female guest's asymmetric evening dress, fitted silhouette, makeup and pearl earrings were styled for the game.
 https://github.com/microsoft/Microsoft-Rocketbox
 
 MIT License

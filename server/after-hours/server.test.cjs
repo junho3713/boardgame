@@ -16,6 +16,14 @@ test('hotel assets load under their prefix alongside existing games', async () =
     assert.match(page.headers.get('content-security-policy'), /connect-src 'self' blob:/);
     const html = await page.text();
     assert.match(html, /316호에서 눈뜨기/);
+    assert.match(html, /name="guestAppearance" value="male" checked/);
+    assert.match(html, /name="guestAppearance" value="female"/);
+    for(const name of ['guest-male.webp','guest-female.webp']){
+      const portrait=await fetch(origin+'/after-hours/assets/'+name);
+      assert.equal(portrait.status,200,name);
+      assert.equal(portrait.headers.get('content-type'),'image/webp');
+      assert.equal(Buffer.from(await portrait.arrayBuffer()).toString('ascii',8,12),'WEBP');
+    }
     const extension = await fetch(origin + '/after-hours/hotel-extension.js');
     assert.equal(extension.status, 200);
     assert.match(extension.headers.get('content-type'), /javascript/);
@@ -39,7 +47,7 @@ test('hotel assets load under their prefix alongside existing games', async () =
     assert.equal(gltf.images.length, 15);
     assert.ok(gltf.images.every(image => image.bufferView !== undefined && !image.uri));
     assert.equal(gltf.cameras, undefined);
-    for(const name of ['bathroom-316.glb','kitchen-316.glb','wall-clock-316.glb','lounge-316.glb','bedroom-fixtures-316.glb','guestroom-317.glb','suite-details-316.glb','twin-room-316.glb']){
+    for(const name of ['bathroom-316.glb','kitchen-316.glb','wall-clock-316.glb','lounge-316.glb','bedroom-fixtures-316.glb','guestroom-317.glb','suite-details-316.glb','twin-room-316.glb','mirror-guest-female.glb']){
       const response=await fetch(origin+'/after-hours/assets/models/'+name);assert.equal(response.status,200,name);assert.equal(response.headers.get('content-type'),'model/gltf-binary');const data=Buffer.from(await response.arrayBuffer());assert.equal(data.toString('ascii',0,4),'glTF');assert.equal(data.readUInt32LE(8),data.length);
     }
     const modelHead = await fetch(origin + '/after-hours/assets/models/bed-316.glb', {method:'HEAD'});

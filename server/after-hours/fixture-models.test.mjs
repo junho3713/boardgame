@@ -21,7 +21,7 @@ function model(name){
 const height=(scene,x,z,startY=3)=>new T.Raycaster(new T.Vector3(x,startY,z),new T.Vector3(0,-1,0)).intersectObject(scene,true)[0]?.point.y;
 test('all room mirrors see the guest layer while the first-person camera and interaction rays exclude it',()=>{
  const scene=new T.Scene(),guest=new T.Layers();guest.set(MIRROR_GUEST_LAYER);
- for(let i=0;i<3;i++){
+ for(let i=0;i<4;i++){
   const mirror=new Reflector(new T.PlaneGeometry(1,1));
   registerRoomMirror(scene,mirror);
   assert.ok(mirror.camera.layers.test(guest));
@@ -30,10 +30,12 @@ test('all room mirrors see the guest layer while the first-person camera and int
  }
  assert.equal(new T.PerspectiveCamera().layers.test(guest),false);
  assert.equal(new T.Raycaster().layers.test(guest),false);
- const {g}=model('mirror-guest.glb');
- for(const bone of ['Bip01 LEye','Bip01 REye','Bip01 Head'])assert.ok(g.nodes.some(n=>n.name===bone));
- assert.deepEqual(g.animations.map(a=>a.name).sort(),['Crouch','CrouchWalk','Stand','Walk']);
- assert.ok(g.images.every(i=>i.bufferView!==undefined),'guest textures travel with its mesh');
+ for(const file of ['mirror-guest.glb','mirror-guest-female.glb']){
+  const {g}=model(file);
+  for(const bone of ['Bip01 LEye','Bip01 REye','Bip01 Head'])assert.ok(g.nodes.some(n=>n.name===bone),file+' '+bone);
+  assert.deepEqual(g.animations.map(a=>a.name).sort(),['Crouch','CrouchWalk','Stand','Walk'],file);
+  assert.ok(g.skins.length&&g.images.every(i=>i.bufferView!==undefined),file+' keeps its skeleton and textures');
+ }
 });
 test('basin water starts at the aerator and its animated lever stays attached to the mixer',()=>{
  const bath=model('bathroom-316.glb'),lever=bath.scene.getObjectByName('Vanity_Faucet_Lever_Pivot');assert.ok(lever);assert.ok(lever.children.length);
