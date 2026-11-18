@@ -10,6 +10,7 @@ const $=q=>document.querySelector(q),canvas=$('#world');
 const state=createState();let assetsReady=false,started=false,paused=false,complete=false,mode='walk',active=null,crouched=false,yaw=.02,pitch=0,drag=false,moved=false,inspectionId='',inspectPivot=null,inspectDistance=3.4;
 let inventoryOpened=false,inventoryUnread=false,modalKind='';const knownInventory=new Set(),CLUE_ONLY=new Set(['receipt','tag','tourMap']);
 const keys=new Set(),player=new T.Vector3(0,1.62,2.75),clock=new T.Clock(),ray=new T.Raycaster(),pointer=new T.Vector2(),look=new T.Vector3();
+let jumpRequested=false,jumpFootY=null,jumpVelocity=0;
 let renderer;
 try{renderer=new T.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});}catch(e){$('#loadStatus').textContent='이 브라우저에서 3D 그래픽을 시작하지 못했습니다. 하드웨어 가속이 켜진 PC 브라우저에서 열어주세요.';throw e;}
 renderer.setPixelRatio(Math.min(devicePixelRatio,1.6));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.14;renderer.outputColorSpace=T.SRGBColorSpace;
@@ -25,7 +26,7 @@ function toast(s,duration=3900){$('#toast').textContent=s;$('#toast').classList.
 function caption(s,duration=5500){$('#caption').textContent=s;$('#caption').classList.add('show');clearTimeout(caption.t);caption.t=setTimeout(()=>$('#caption').classList.remove('show'),duration);}
 function record(title,text){if(!state.notes.some(n=>n.title===title))state.notes.push({title,text});}
 function escape(s){return String(s).replace(/[&<>"']/g,x=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x]));}
-function releaseMouse(){keys.clear();drag=false;if(document.pointerLockElement)document.exitPointerLock();}
+function releaseMouse(){keys.clear();jumpRequested=false;drag=false;if(document.pointerLockElement)document.exitPointerLock();}
 function modal(html,kind=''){if(['inspect','focus'].includes(mode))closeInspection();releaseMouse();$('#caption').classList.remove('show');$('#toast').classList.remove('show');paused=true;modalKind=kind;$('#pause').hidden=true;$('#modalBody').innerHTML=html;$('#modal').hidden=false;$('#modal article').scrollTop=0;$('#prompt').hidden=true;const heading=$('#modalBody h2');if(heading){heading.id='modalTitle';$('#modal').setAttribute('aria-labelledby','modalTitle');}}
 function closeModal(){ $('#modal').hidden=true;modalKind='';paused=false;keys.clear();}
 function pause(){if(!started||complete)return;if(['inspect','focus'].includes(mode)){closeInspection();return;}if(!$('#modal').hidden){closeModal();return;}releaseMouse();paused=true;$('#pause').hidden=false;}
@@ -157,8 +158,8 @@ function bag(){
  if($('#joinFilms'))$('#joinFilms').onclick=joinFilmPieces;
 }
 function hint(){const p=phase(state);if(p!==hintPhase){hintPhase=p;hintStep=0;}modal(`<div class="overline">A SMALL NUDGE</div><h2>잠깐, 다른 시선으로.</h2><p>도움은 한 번에 한 단계씩 보여줍니다.<br>마지막 단계는 구체적인 해결 방법을 포함합니다.</p><div class="note" id="hintText">아직 도움을 요청하지 않았습니다.</div><button class="outline" id="nextHint" style="margin-top:20px">첫 번째 도움 보기</button>`);$('#nextHint').onclick=()=>{const lines=HINTS[p];$('#hintText').textContent=lines[Math.min(hintStep,2)];if(hintStep<3){hintStep++;state.hints++;}$('#nextHint').textContent=hintStep<3?`더 구체적으로 보기 (${hintStep}/3)`:'모든 도움을 확인했습니다';$('#nextHint').disabled=hintStep>=3;};}
-function help(){modal('<div class="overline">HOW TO LOOK CLOSER</div><h2>눈높이를 바꿔보세요.</h2><p>PC 키보드와 마우스로 플레이합니다.</p><p>316호는 두 침실·거실·간이주방·욕실로 나뉜 스위트룸입니다. 거실 출입문을 나서면 호텔 복도가 나오고, 복도에서 317호로 들어가면 거실 양옆에 주방과 욕실이 있고, 거실 끝에 침실이 있습니다.</p><div class="note">WASD — 걷기<br>마우스 드래그 / 방향키 — 시점<br>화면 클릭 — 마우스 시점 잠금<br>E 또는 물건 클릭 — 조사<br>C — 몸 낮추기 / 일어서기<br>I — 인벤토리 열기/닫기 · J — 관찰 기록 · H — 선택형 도움<br>1–5 — 소지품 선택 · ESC — 닫기 / 일시정지</div><p>물건을 들여다볼 때는 드래그로 뒤집고 휠로 확대합니다.<br>인벤토리에서 물건을 선택한 뒤, 대상 앞에서 E로 사용할 수 있습니다.</p><p class="muted">다음 행동은 자동 안내하지 않습니다. 정답은 여러 발견을 연결해야 알 수 있습니다.</p>');}
-function start(explore){state.explore=explore;state.doorOpen=explore;state.room317Open=explore;state.exitOpen=explore;state.stairsOpen=explore;for(const k of ['bedroomOpen','kitchenOpen','twinOpen','bathUnlocked','bathDoorOpen','kitchen317Open','bath317Open'])state[k]=explore;started=true;complete=false;paused=false;$('#landing').hidden=true;$('#hud').hidden=false;$('#modeName').textContent=explore?'자유 탐색 · L 조명 / U 스탠드':'관찰은 당신의 몫이다.';player.set(0,1.62,2.7);yaw=0;pitch=-.015;initAudio();inventory();record('316호 스위트룸에서 깨어나다','침실 옆에는 욕실, 안쪽 문 너머에는 거실과 간이주방, 동행인의 트윈 침실이 있다. 호텔 복도로 나가는 출입문은 거실에 있다.');caption(explore?'열린 방을 자유롭게 둘러볼 수 있습니다.':'316호의 침실에서 눈을 떴다.\n거실로 이어지는 안쪽 문이 잠겨 있다.',6200);}
+function help(){modal('<div class="overline">HOW TO LOOK CLOSER</div><h2>눈높이를 바꿔보세요.</h2><p>PC 키보드와 마우스로 플레이합니다.</p><p>316호는 두 침실·거실·간이주방·욕실로 나뉜 스위트룸입니다. 거실 출입문을 나서면 호텔 복도가 나오고, 복도에서 317호로 들어가면 거실 양옆에 주방과 욕실이 있고, 거실 끝에 침실이 있습니다.</p><div class="note">WASD — 이동<br>Shift 누른 채 이동 — 달리기<br>스페이스바 — 점프<br>마우스 드래그 / 방향키 — 시점<br>화면 클릭 — 마우스 시점 잠금<br>E 또는 물건 클릭 — 조사<br>C — 몸 낮추기 / 일어서기<br>I — 인벤토리 열기/닫기 · J — 관찰 기록 · H — 선택형 도움<br>1–5 — 소지품 선택 · ESC — 닫기 / 일시정지</div><p>물건을 들여다볼 때는 드래그로 뒤집고 휠로 확대합니다.<br>인벤토리에서 물건을 선택한 뒤, 대상 앞에서 E로 사용할 수 있습니다.</p><p class="muted">다음 행동은 자동 안내하지 않습니다. 정답은 여러 발견을 연결해야 알 수 있습니다.</p>');}
+function start(explore){state.explore=explore;state.doorOpen=explore;state.room317Open=explore;state.exitOpen=explore;state.stairsOpen=explore;for(const k of ['bedroomOpen','kitchenOpen','twinOpen','bathUnlocked','bathDoorOpen','kitchen317Open','bath317Open'])state[k]=explore;started=true;complete=false;paused=false;$('#landing').hidden=true;$('#hud').hidden=false;$('#modeName').textContent=explore?'자유 탐색 · L 조명 / U 스탠드':'관찰은 당신의 몫이다.';player.set(0,1.62,2.7);resetMovement();yaw=0;pitch=-.015;initAudio();inventory();record('316호 스위트룸에서 깨어나다','침실 옆에는 욕실, 안쪽 문 너머에는 거실과 간이주방, 동행인의 트윈 침실이 있다. 호텔 복도로 나가는 출입문은 거실에 있다.');caption(explore?'열린 방을 자유롭게 둘러볼 수 있습니다.':'316호의 침실에서 눈을 떴다.\n거실로 이어지는 안쪽 문이 잠겨 있다.',6200);}
 function finish(){if(complete)return;if(state.explore)return;if(!state.exitOpen||!state.safeOpen)return;complete=true;state.complete=true;releaseMouse();$('#caption').classList.remove('show');$('#toast').classList.remove('show');$('#hud').hidden=true;$('#ending').hidden=false;const t=Math.round(state.seconds);$('#result').textContent=`조사 시간 ${Math.floor(t/60)}분 ${t%60}초  /  관찰 기록 ${state.notes.length}개  /  도움 ${state.hints}회`;sound('unlock');}
 let adminEnabled=new URLSearchParams(location.search).get('admin')==='1';
 let adminPointId='bedroom',adminFree=false,adminAutoResume=true;
@@ -176,7 +177,7 @@ function applyAdminState(snapshot){
  clockHour=snapshot.clockHour;clockMinute=snapshot.clockMinute;room.clockHands(clockHour,clockMinute);room.update(1,elapsed);
  const point=getTestStart(snapshot.pointId);adminPointId=point.id;let position=snapshot.position;
  if(!room.canMove(position[0],position[2])){const zone=zoneAt(position[0],position[2]);const fallback=getTestStart(zone==='exitHall'?'exit':zone==='lowerHall'?'downstairs':zone||point.id);position=fallback.position;if(!room.canMove(position[0],position[2]))position=point.position;}
- player.fromArray(position);player.y=floorHeight(player.x,player.z)+1.62;yaw=snapshot.yaw;pitch=snapshot.pitch;
+ player.fromArray(position);player.y=floorHeight(player.x,player.z)+1.62;resetMovement();yaw=snapshot.yaw;pitch=snapshot.pitch;
  camera.fov=57;camera.updateProjectionMatrix();camera.position.copy(player);camera.rotation.set(pitch,yaw,0);camera.updateMatrixWorld();room.scene.updateMatrixWorld(true);
  $('#landing').hidden=true;$('#ending').hidden=true;$('#pause').hidden=true;$('#inspection').hidden=true;$('#hud').hidden=false;$('#prompt').hidden=true;
  $('#caption').classList.remove('show');$('#toast').classList.remove('show');$('#modeName').textContent='관리자 테스트 · F2로 위치 변경';
@@ -229,7 +230,7 @@ function initializeAdmin(){
 
 $('#inventoryButton').onclick=$('#inventoryGuide').onclick=bag;
 $('#storyStart').onclick=()=>start(false);$('#exploreStart').onclick=()=>start(true);$('#closeInspect').onclick=closeInspection;$('#closeModal').onclick=closeModal;$('#resume').onclick=resume;$('#restart').onclick=$('#endingRestart').onclick=()=>{adminEnabled=false;adminAutoResume=false;const storage={removeItem:key=>localStorage.removeItem(key),setItem:(key,value)=>localStorage.setItem(key,value)};location.replace(prepareRestart(storage,location.href));};$('#returnRoom').onclick=()=>{complete=false;state.explore=true;$('#ending').hidden=true;$('#hud').hidden=false;$('#modeName').textContent='해결한 밀실 · 자유 탐색';};$('#pauseButton').onclick=pause;$('#journalButton').onclick=journal;$('#hintButton').onclick=hint;$('#help').onclick=help;$('#brand').onclick=e=>{e.preventDefault();pause();};$('#sound').onclick=()=>{audioOn=!audioOn;$('#sound').textContent=audioOn?'SOUND ON':'SOUND OFF';if(audio||started)initAudio();};$('#fullscreen').onclick=()=>{if(document.fullscreenElement)document.exitFullscreen();else document.documentElement.requestFullscreen?.().catch(()=>toast('브라우저 창을 넓혀서 플레이해 주세요.'));};
-document.addEventListener('keydown',e=>{if(e.code==='F2'){e.preventDefault();if(!$('#modal').hidden&&modalKind==='admin')closeModal();else openAdminPanel();return;}if(['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)||e.target.isContentEditable)return;if(e.code==='Escape'){e.preventDefault();if(['inspect','focus'].includes(mode))closeInspection();else if(!$('#modal').hidden)closeModal();else if(!$('#pause').hidden)resume();else pause();return;}if(!started||complete)return;if(e.repeat&&['KeyE','KeyC','KeyI','KeyJ','KeyH'].includes(e.code))return;if(e.code==='KeyI'){e.preventDefault();if(!$('#pause').hidden)return;if(!$('#modal').hidden&&modalKind==='inventory')closeModal();else bag();return;}if(!$('#modal').hidden||!$('#pause').hidden||mode==='inspect')return;if(e.code==='KeyJ'){journal();return;}if(e.code==='KeyH'){hint();return;}if(state.explore&&e.code==='KeyL'){state.lightOn=!state.lightOn;return;}if(state.explore&&e.code==='KeyU'){state.uvInstalled=!state.uvInstalled;state.lampOn=true;return;}if(e.code==='KeyC'){crouched=!crouched;toast(crouched?'몸을 낮췄다.':'몸을 일으켰다.');return;}if(/^Digit[1-5]$/.test(e.code)){const id=state.inventory[+e.code.slice(-1)-1];if(id){if(CLUE_ONLY.has(id))inspectItem(id);else{state.selected=state.selected===id?null:id;inventory();}}return;}if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code))e.preventDefault();keys.add(e.code);if(e.code==='KeyE'&&active)interact(active.id);});document.addEventListener('keyup',e=>keys.delete(e.code));
+document.addEventListener('keydown',e=>{if(e.code==='F2'){e.preventDefault();if(!$('#modal').hidden&&modalKind==='admin')closeModal();else openAdminPanel();return;}if(['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)||e.target.isContentEditable)return;if(e.code==='Escape'){e.preventDefault();if(['inspect','focus'].includes(mode))closeInspection();else if(!$('#modal').hidden)closeModal();else if(!$('#pause').hidden)resume();else pause();return;}if(!started||complete)return;if(e.repeat&&['KeyE','KeyC','KeyI','KeyJ','KeyH'].includes(e.code))return;if(e.code==='KeyI'){e.preventDefault();if(!$('#pause').hidden)return;if(!$('#modal').hidden&&modalKind==='inventory')closeModal();else bag();return;}if(!$('#modal').hidden||!$('#pause').hidden||mode==='inspect')return;if(e.code==='KeyJ'){journal();return;}if(e.code==='KeyH'){hint();return;}if(state.explore&&e.code==='KeyL'){state.lightOn=!state.lightOn;return;}if(state.explore&&e.code==='KeyU'){state.uvInstalled=!state.uvInstalled;state.lampOn=true;return;}if(e.code==='KeyC'){if(jumpFootY!==null)return;crouched=!crouched;toast(crouched?'몸을 낮췄다.':'몸을 일으켰다.');return;}if(/^Digit[1-5]$/.test(e.code)){const id=state.inventory[+e.code.slice(-1)-1];if(id){if(CLUE_ONLY.has(id))inspectItem(id);else{state.selected=state.selected===id?null:id;inventory();}}return;}if(e.code==='Space'){if(!paused&&mode==='walk'){e.preventDefault();if(!e.repeat&&!crouched&&jumpFootY===null)jumpRequested=true;}return;}if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();keys.add(e.code);if(e.code==='KeyE'&&active)interact(active.id);});document.addEventListener('keyup',e=>keys.delete(e.code));
 canvas.addEventListener('pointerdown',e=>{if(!started||paused&&mode!=='inspect'||complete)return;drag=true;moved=false;canvas.setPointerCapture(e.pointerId);});canvas.addEventListener('pointermove',e=>{if(!drag||document.pointerLockElement)return;if(Math.abs(e.movementX)+Math.abs(e.movementY)>2)moved=true;if(mode==='inspect'&&inspectPivot){inspectPivot.rotation.y+=e.movementX*.009;inspectPivot.rotation.x+=e.movementY*.006;}else if(!paused){yaw-=e.movementX*.0025;pitch=Math.max(-1.3,Math.min(1.3,pitch-e.movementY*.0025));}});canvas.addEventListener('pointerup',()=>drag=false);canvas.addEventListener('click',e=>{if(!started||paused||complete||moved)return;pointer.set(e.clientX/innerWidth*2-1,-e.clientY/innerHeight*2+1);ray.setFromCamera(pointer,camera);const target=pickTarget();if(target){interact(target.id);return;}if(!document.pointerLockElement)canvas.requestPointerLock?.()?.catch?.(()=>{});});document.addEventListener('mousemove',e=>{if(document.pointerLockElement===canvas&&!paused&&!complete){yaw-=e.movementX*.0025;pitch=Math.max(-1.3,Math.min(1.3,pitch-e.movementY*.0025));}});canvas.addEventListener('wheel',e=>{if(mode==='inspect'){e.preventDefault();inspectDistance=Math.max(2.1,Math.min(5,inspectDistance+e.deltaY*.002));inspectCamera.position.z=inspectDistance;}},{passive:false});window.addEventListener('blur',()=>{keys.clear();drag=false;if(started&&!complete&&!paused)pause();});document.addEventListener('pointerlockchange',()=>keys.clear());
 function pickTarget(){const hits=ray.intersectObjects(room.scene.children,true);for(const hit of hits){let o=hit.object;if(!o.visible||hit.distance>2.65)continue;let visible=true;for(let p=o.parent;p;p=p.parent)if(!p.visible)visible=false;if(!visible)continue;if(o.type==='Points'||o.type==='LineSegments'||o.material?.transparent&&o.material.opacity<.15)continue;let id=null,label='';while(o){if(o.userData.interactId){id=o.userData.interactId;label=o.userData.label;break;}o=o.parent;}if(id)return{id,label,distance:hit.distance};if(hit.object.isMesh)return null;}return null;}
 function resize(){renderer.setSize(innerWidth,innerHeight);for(const c of[camera,inspectCamera]){c.aspect=innerWidth/innerHeight;c.updateProjectionMatrix();}}window.addEventListener('resize',resize);
@@ -241,10 +242,65 @@ document.addEventListener('visibilitychange',()=>{
 });
 function wakeAudio(){if(started&&audioOn&&audio?.state!=='running')initAudio();}
 window.addEventListener('pointerdown',wakeAudio);window.addEventListener('keydown',wakeAudio);
+
+function resetMovement(){
+ keys.clear();
+ jumpRequested=false;
+ jumpFootY=null;
+ step=0;
+}
+
+function movePlayer(dt){
+ const moveX=Number(keys.has('KeyD'))-Number(keys.has('KeyA'));
+ const moveZ=Number(keys.has('KeyS'))-Number(keys.has('KeyW'));
+ const sprinting=!crouched&&(keys.has('ShiftLeft')||keys.has('ShiftRight'));
+ const distance=(crouched?1.1:sprinting?3.25:1.85)*dt/(Math.hypot(moveX,moveZ)||1);
+ const dx=(Math.cos(yaw)*moveX+Math.sin(yaw)*moveZ)*distance;
+ const dz=(-Math.sin(yaw)*moveX+Math.cos(yaw)*moveZ)*distance;
+
+ if(jumpRequested&&!crouched&&jumpFootY===null){
+  jumpFootY=floorHeight(player.x,player.z);
+  jumpVelocity=4.25;
+  step=0;
+ }
+ jumpRequested=false;
+
+ const startX=player.x,startZ=player.z;
+ if(room.canMove(player.x+dx,player.z))player.x+=dx;
+ if(room.canMove(player.x,player.z+dz))player.z+=dz;
+
+ const floor=floorHeight(player.x,player.z);
+ const eyeHeight=crouched?.56:1.62;
+ if(jumpFootY!==null){
+  const gravity=16;
+  jumpFootY+=jumpVelocity*dt-.5*gravity*dt*dt;
+  jumpVelocity-=gravity*dt;
+  if(jumpFootY<floor||(jumpFootY===floor&&jumpVelocity<=0)){
+   jumpFootY=null;
+   player.y=floor+eyeHeight;
+   sound('wood');
+  }else{
+   player.y=jumpFootY+eyeHeight;
+  }
+ }else{
+  player.y+=(floor+eyeHeight-player.y)*Math.min(1,dt*9);
+ }
+
+ camera.position.copy(player);
+ if(jumpFootY===null&&(player.x!==startX||player.z!==startZ)){
+  camera.position.y+=Math.sin(elapsed*(sprinting?14:9))*(sprinting?.023:.014);
+  step+=dt;
+  if(step>(crouched?.8:sprinting?.31:.55)){
+   sound('wood');
+   step=0;
+  }
+ }
+}
+
 function animate(){requestAnimationFrame(animate);const frameDelta=clock.getDelta(),dt=Math.min(frameDelta,.05);elapsed+=dt;const simDelta=started&&!document.hidden&&$('#pause').hidden?Math.min(frameDelta,1):0;searchPuzzles.update(simDelta);room.update(dt,elapsed,started?player:null);
  bathAudio?.(state,player,yaw,zoneAt(player.x,player.z)==='bath',started&&audioOn&&!document.hidden&&$('#pause').hidden&&!complete);
  if(mode==='inspect'){if(inspectionId==='frame')$('#inspectBackAction').hidden=!(Math.cos(inspectPivot.rotation.y)<-.6&&!state.inventory.includes('filmB')&&!state.filmJoined);renderer.render(inspectScene,inspectCamera);return;}
- if(!started){camera.position.set(.25,1.48,3.1);camera.rotation.set(-.015,-.3+Math.sin(elapsed*.07)*.025,0);}else if(!paused&&!complete){state.seconds+=dt;if(keys.has('ArrowLeft'))yaw+=dt*1.35;if(keys.has('ArrowRight'))yaw-=dt*1.35;if(keys.has('ArrowUp'))pitch=Math.min(1.3,pitch+dt);if(keys.has('ArrowDown'))pitch=Math.max(-1.3,pitch-dt);let mx=+keys.has('KeyD')-+keys.has('KeyA'),mz=+keys.has('KeyS')-+keys.has('KeyW');const len=Math.hypot(mx,mz)||1;mx/=len;mz/=len;const speed=(crouched?1.1:1.85)*dt,dx=(Math.cos(yaw)*mx+Math.sin(yaw)*mz)*speed,dz=(-Math.sin(yaw)*mx+Math.cos(yaw)*mz)*speed;if(room.canMove(player.x+dx,player.z))player.x+=dx;if(room.canMove(player.x,player.z+dz))player.z+=dz;player.y+=( (floorHeight(player.x,player.z)+(crouched?.56:1.62))-player.y)*Math.min(1,dt*9);camera.position.copy(player);if(mx||mz){camera.position.y+=Math.sin(elapsed*9)*.014;step+=dt;if(step>(crouched?.8:.55)){sound('wood');step=0;}}camera.rotation.set(pitch,yaw,0);const zone=zoneAt(player.x,player.z);if(zone==='hall'&&!state.suiteEscaped){state.suiteEscaped=true;state.selected=null;inventory();record('316호 밖의 호텔 복도','두 침실·거실·간이주방·욕실이 있던 316호를 나왔다. 복도 건너편에는 317호 객실이 있다.');caption('316호를 빠져나왔다. 여기는 호텔의 3층 복도다.\n건너편에 317호가 보인다.',6500);}if(zone==='room317'&&!state.room317Entered){state.room317Entered=true;state.selected=null;inventory();record('복도 건너편 317호에 들어서다','316호와 별개의 객실이다. 거실 양옆에 주방과 욕실이 있고, 맞은편에는 닫힌 침실 문이 있다.');caption('317호. 다른 투숙객의 흔적이 남아 있다.',6500);}$('.room-title b').textContent=zone==='lowerHall'?'2F':zone==='hall'||zone==='stairs'?'3F':['room317','exitHall','kitchen317','bath317'].includes(zone)?'317':'316';$('.room-title .overline').textContent=ZONES[zone]?.label||'316호 · 스위트룸';if(zone==='lowerHall'&&!state.lowerHallEntered){state.lowerHallEntered=true;record('2층 계단 로비','317호에서 계단문 열쇠를 찾아 복도로 돌아온 뒤, 고장 난 엘리베이터 대신 계단으로 내려왔다.');caption('2층에 도착했다. 계단을 통해 위층으로 돌아갈 수도 있다.',6500);}ray.setFromCamera(new T.Vector2(0,0),camera);active=pickTarget();$('#prompt').hidden=!active;if(active){$('#prompt').classList.toggle('mirror-prompt',active.id==='mirror'||active.id==='bathSteamMirror');$('#prompt span').textContent=active.label;$('#usePrompt').textContent=state.selected?'사용: '+ITEMS[state.selected]:'';}if(state.doorOpen&&!state.phoneHeard){phoneTimer+=dt;if(phoneTimer>6){sound('ring');phoneTimer=0;}}}
+ if(!started){camera.position.set(.25,1.48,3.1);camera.rotation.set(-.015,-.3+Math.sin(elapsed*.07)*.025,0);}else if(!paused&&!complete){state.seconds+=dt;if(keys.has('ArrowLeft'))yaw+=dt*1.35;if(keys.has('ArrowRight'))yaw-=dt*1.35;if(keys.has('ArrowUp'))pitch=Math.min(1.3,pitch+dt);if(keys.has('ArrowDown'))pitch=Math.max(-1.3,pitch-dt);movePlayer(dt);camera.rotation.set(pitch,yaw,0);const zone=zoneAt(player.x,player.z);if(zone==='hall'&&!state.suiteEscaped){state.suiteEscaped=true;state.selected=null;inventory();record('316호 밖의 호텔 복도','두 침실·거실·간이주방·욕실이 있던 316호를 나왔다. 복도 건너편에는 317호 객실이 있다.');caption('316호를 빠져나왔다. 여기는 호텔의 3층 복도다.\n건너편에 317호가 보인다.',6500);}if(zone==='room317'&&!state.room317Entered){state.room317Entered=true;state.selected=null;inventory();record('복도 건너편 317호에 들어서다','316호와 별개의 객실이다. 거실 양옆에 주방과 욕실이 있고, 맞은편에는 닫힌 침실 문이 있다.');caption('317호. 다른 투숙객의 흔적이 남아 있다.',6500);}$('.room-title b').textContent=zone==='lowerHall'?'2F':zone==='hall'||zone==='stairs'?'3F':['room317','exitHall','kitchen317','bath317'].includes(zone)?'317':'316';$('.room-title .overline').textContent=ZONES[zone]?.label||'316호 · 스위트룸';if(zone==='lowerHall'&&!state.lowerHallEntered){state.lowerHallEntered=true;record('2층 계단 로비','317호에서 계단문 열쇠를 찾아 복도로 돌아온 뒤, 고장 난 엘리베이터 대신 계단으로 내려왔다.');caption('2층에 도착했다. 계단을 통해 위층으로 돌아갈 수도 있다.',6500);}ray.setFromCamera(new T.Vector2(0,0),camera);active=pickTarget();$('#prompt').hidden=!active;if(active){$('#prompt').classList.toggle('mirror-prompt',active.id==='mirror'||active.id==='bathSteamMirror');$('#prompt span').textContent=active.label;$('#usePrompt').textContent=state.selected?'사용: '+ITEMS[state.selected]:'';}if(state.doorOpen&&!state.phoneHeard){phoneTimer+=dt;if(phoneTimer>6){sound('ring');phoneTimer=0;}}}
  room.updateGuest(started,player,yaw,pitch,floorHeight(player.x,player.z),dt);
  // Keep the low-light fill outside the face, also during a mirror close-up.
  eyeFill.position.set(player.x-.52*Math.sin(yaw)-.16*Math.cos(yaw),player.y+.20,player.z-.52*Math.cos(yaw)+.16*Math.sin(yaw));
