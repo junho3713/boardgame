@@ -1,7 +1,7 @@
-"""Blender 4.4: blender -b -P build_hatless_mage.py -- model.glb portrait.png [figure.png]
+"""Blender 4.4: blender -b -P build_hatless_mage.py -- model.glb portrait.png [figure.png] [source.blend]
 
 Models the hatless character from the supplied design sheet in Blender coordinates.
-The single skinned mesh faces -Y. The hotel aligns the two eye joints with its camera.
+The editable costume pieces share one rig facing -Y. All dimensions are in metres.
 """
 import math
 import sys
@@ -12,7 +12,9 @@ import bpy
 import numpy as np
 from mathutils import Quaternion, Vector
 
-output, portrait, *figure = [Path(p).resolve() for p in sys.argv[sys.argv.index("--") + 1:]]
+output, portrait, *extras = [Path(p).resolve() for p in sys.argv[sys.argv.index("--") + 1:]]
+figure = next((p for p in extras if p.suffix.lower()==".png"), None)
+source_scene = next((p for p in extras if p.suffix.lower()==".blend"), None)
 bpy.ops.wm.read_factory_settings(use_empty=True)
 scene = bpy.context.scene
 scene.render.fps = 24
@@ -39,11 +41,14 @@ def paint(name, color, rough=.76, metal=0, fill=.20):
     return len(materials)-1
 
 
-skin = paint("Peach porcelain", "ffdabd")
+skin = paint("Warm peach skin", "f5cfb0", .96, fill=.18)
 lip = paint("Rose ink", "9e5c60")
-hair = paint("Espresso hair", "47343b", .74)
+mouth = paint("Mouth interior", "773d48", .96)
+tongue = paint("Lower lip and tongue", "dc8883", .94)
+tooth = paint("Warm ivory", "fbe5d2", .90)
+hair = paint("Espresso hair", "503b42", .90, fill=.27)
 hair_shadow = paint("Plum shadow", "34272e")
-hair_light = paint("Chestnut locks", "513b42", .72)
+hair_light = paint("Chestnut locks", "59414a", .90, fill=.25)
 glint = paint("Chestnut ribbon light", "70505a", .68)
 ink = paint("Soft black lashes", "312533")
 red = paint("Vermilion wool", "b83646")
@@ -66,8 +71,8 @@ def iris_map():
     # One eye painting is shared by both eyes. Mesh UVs retain the almond silhouette.
     w,h = 320,192
     u,v = np.meshgrid((np.arange(w)+.5)/w,(np.arange(h)+.5)/h)
-    x=(u-.485)/.276
-    y=(v-.52)/.56
+    x=(u-.48)/.225
+    y=(v-.515)/.445
     r=np.hypot(x,y)
     rgb=np.zeros((h,w,3))
     sclera=np.clip((v-.50)*1.4,0,1)[...,None]
@@ -76,13 +81,13 @@ def iris_map():
     bevel=np.clip((.98-r)*10,0,1)
     sunset=np.clip((.67-y)/1.7,0,1)
     ray=(.5+.5*np.cos(a*28+.6*np.sin(a*7)))*np.clip(1-abs(r-.72)*4,0,1)
-    pigment=np.array([.22,.10,.17])+sunset[...,None]*[.54,.16,.11]+ray[...,None]*[.055,.038,.02]
+    pigment=np.array([.15,.085,.13])+sunset[...,None]*[.60,.14,.13]+ray[...,None]*[.055,.038,.02]
     pigment=bevel[...,None]*pigment+(1-bevel[...,None])*[.18,.10,.15]
-    pupil=np.clip((.46-np.hypot(x*1.15,(y-.11)*.84))*26,0,1)
+    pupil=np.clip((.40-np.hypot(x*1.15,(y-.11)*.84))*26,0,1)
     pigment=pigment*(1-pupil[...,None])+pupil[...,None]*[.14,.075,.115]
     inside=np.clip((1-r)*70,0,1)[...,None]
     rgb=rgb*(1-inside)+pigment*inside
-    for cx,cy,rx,ry,tint in [(-.32,.45,.19,.22,(1,.98,.89)),(.46,-.42,.085,.10,(1,.86,.63))]:
+    for cx,cy,rx,ry,tint in [(-.34,.37,.21,.15,(1,.98,.89)),(.39,-.53,.095,.067,(1,.86,.63))]:
         spot=np.clip((1-np.hypot((x-cx)/rx,(y-cy)/ry))*14,0,1)[...,None]
         rgb=rgb*(1-spot)+spot*tint
     img=bpy.data.images.new("Garnet iris",width=w,height=h,alpha=False)
@@ -104,11 +109,13 @@ def iris_map():
 
 iris_map()
 verts,faces,colors,weights,uvs=[],[],[],[],[]
+parts=[]
+def part(name):
+    parts.append((name,len(verts),len(faces)))
 H="Head"
 P="Pelvis"
 S="Spine"
 N="Neck"
-C="Cloak"
 
 
 def vertex(point, joint, uv=(0,0)):
@@ -206,7 +213,6 @@ bone(P,(0,.01,.90),(0,.01,1.09))
 bone(S,(0,.01,1.09),(0,.01,1.397),P)
 bone(N,(0,.008,1.397),(0,0,1.482),S)
 bone(H,(0,0,1.482),(0,0,1.765),N)
-bone(C,(0,.090,1.37),(0,.16,.63),S)
 for side,s in [("L",1),("R",-1)]:
     bone(side+"Eye",(.057*s,-.105,1.612),(.057*s,-.135,1.612),H)
     bone(side+" UpperArm",(.144*s,.013,1.374),(.203*s,.018,1.147),S)
@@ -218,9 +224,10 @@ for side,s in [("L",1),("R",-1)]:
 bpy.ops.object.mode_set(mode="OBJECT")
 
 # The face narrows towards the jaw and has a shallow projected nose and upper lip.
+part("Face and ears")
 head_profile=[
- (1.474,.008,.043,.029),(1.483,.037,.066,.049),(1.503,.068,.088,.067),
- (1.534,.099,.102,.085),(1.566,.120,.111,.102),(1.608,.133,.112,.116),
+ (1.495,.005,.060,.027),(1.502,.028,.076,.043),(1.517,.055,.089,.061),
+ (1.539,.086,.102,.083),(1.567,.112,.112,.102),(1.608,.129,.113,.116),
  (1.648,.138,.115,.126),(1.686,.136,.117,.133),(1.720,.126,.114,.126),
  (1.75,.106,.103,.110),(1.775,.075,.079,.085),(1.791,.039,.045,.051),(1.796,.005,.009,.010)]
 
@@ -239,12 +246,14 @@ def headsize(z):
 def visage(x,z):
     rx,front,_=headsize(z)
     cross=max(0,1-min(abs(x)/rx,.99999)**2.45)**.50
-    nose=.0145*math.exp(-(x/.018)**2-((z-1.576)/.017)**2)+.005*math.exp(-(x/.014)**2-((z-1.597)/.038)**2)
-    return -front*cross-nose
+    nose=.020*math.exp(-(x/.014)**2-((z-1.573)/.014)**2)+.007*math.exp(-(x/.013)**2-((z-1.595)/.03)**2)
+    socket=.0042*math.exp(-((abs(x)-.054)/.030)**2-((z-1.616)/.020)**2)
+    cheek=.005*math.exp(-((abs(x)-.075)/.033)**2-((z-1.573)/.023)**2)
+    return -front*cross-nose+socket-cheek
 
 
 rows=[]
-for z in np.linspace(1.474,1.796,65):
+for z in np.linspace(1.495,1.796,72):
     rx,_,back=headsize(z)
     row=[]
     for k in range(96):
@@ -257,23 +266,24 @@ grid(rows,skin,True)
 face(rows[0][::-1],skin)
 face(rows[-1],skin)
 for s in (-1,1):
-    ellipsoid((s*.125,.001,1.567),(.021,.016,.030),skin,H)
+    ellipsoid((s*.119,.003,1.568),(.014,.013,.023),skin,H)
 
 
 def face_line(coords,thickness,material):
     pipe([(x,visage(x,z)-.0024,z) for x,z in coords],thickness,material,H,8)
 
 
+part("Eyes, brows and expression")
 for s in (-1,1):
     rows=[]
     top,bottom=[],[]
     for i in range(29):
         t=i/28
-        x=s*(.018+.081*t)
-        crest=sin(pi*t)**.72
-        mid=1.609+.0065*t
-        high=mid+.023*crest
-        low=mid-.0185*crest
+        x=s*(.023+.069*t)
+        crest=max(0,sin(pi*t))**.70
+        mid=1.608+.0125*t+(.0012 if s<0 else 0)
+        high=mid+.0135*crest
+        low=mid-.0188*crest
         top.append((x,high))
         bottom.append((x,low))
         col=[]
@@ -281,137 +291,196 @@ for s in (-1,1):
             f=k/6
             z=low+(high-low)*f
             y=visage(x,z)-.002-.004*crest*sin(pi*f)
-            col.append(vertex((x,y,z),H,(t,(z-1.586)/.054)))
+            col.append(vertex((x,y,z),H,(t,(z-1.587)/.052)))
         rows.append(col)
     grid(rows,eye,reverse=s==1)
     face_line(top,[.0009+.0029*(sin(pi*i/28)**.75)+.0013*i/28 for i in range(29)],ink)
     face_line(bottom[9:],[.00045+.00065*sin(pi*i/19) for i in range(20)],hair_shadow)
-    face_line([top[-2],top[-1],(.107*s,1.625)],[.0026,.0027,.00025],ink)
-    brow=[((.024+.072*t)*s,1.645+.009*sin(pi*t)+.003*t) for t in np.linspace(0,1,14)]
+    face_line([top[-2],top[-1],(.100*s,1.629)],[.0026,.0027,.00025],ink)
+    brow=[((.019+.069*t)*s,1.634+.020*t+.003*sin(pi*t)) for t in np.linspace(0,1,14)]
     face_line(brow,[.0006+.0022*max(0,sin(pi*i/13))**.7 for i in range(14)],hair_shadow)
 
-face_line([(-.020,1.543),(-.012,1.5407),(-.003,1.540),(.005,1.541),(.013,1.5418),(.020,1.544)],
-          [.00045,.00115,.00135,.00114,.00085,.0003],lip)
-face_line([(-.004,1.568),(.0005,1.5665),(.005,1.568)], [.0003,.0007,.00025],lip)
+def expression_patch(outline,mat,offset):
+    # Slightly convex painted surface, conforming to the cheek in three-quarter view.
+    center=[sum(v[i] for v in outline)/len(outline) for i in (0,1)]
+    cx,cz=center
+    middle=vertex((cx,visage(cx,cz)-offset,cz),H)
+    border=[vertex((x,visage(x,z)-offset,z),H) for x,z in outline]
+    for i,j in enumerate(border):
+        face([middle,j,border[(i+1)%len(border)]],mat)
 
-# Dome, overlapping pointed bob panels and a parted fringe all turn with the head.
-def hair_point(a,z,extra=0):
-    if z<1.612:
-        taper=max(.79,1-(1.612-z)*.72)
-        rx,fy,by=.149*taper,.129*taper,.155*taper
-    else:
-        fac=math.sqrt(max(.0002,1-((z-1.612)/.207)**2))
-        rx,fy,by=.152*fac,.130*fac,.155*fac
-        if z<1.796:
-            sx,front,back=headsize(z)
-            rx,fy,by=max(rx,sx+.006),max(fy,front+.020),max(by,back+.005)
-    return Vector(((rx+extra)*sin(a),.012-(fy+extra if cos(a)>0 else by+extra)*cos(a),z))
+opening=[(-.025,1.545),(-.022,1.548),(-.015,1.550),(-.006,1.549),(.003,1.550),
+         (.012,1.555),(.020,1.555),(.025,1.551),(.027,1.545),(.026,1.536),
+         (.022,1.530),(.016,1.529),(.005,1.533),(-.006,1.536),(-.017,1.539),(-.024,1.541)]
+expression_patch(opening[::-1],mouth,.0021)
+expression_patch([(-.012,1.539),(.000,1.539),(.009,1.540),(.016,1.541),(.023,1.540),
+                  (.024,1.536),(.021,1.532),(.017,1.531),(.004,1.535)][::-1],tongue,.0027)
+expression_patch([(-.019,1.548),(-.011,1.548),(-.014,1.543)][::-1],tooth,.0033)
+face_line([(-.003,1.572),(.0005,1.571),(.003,1.572)],[.00025,.00048,.00025],lip)
 
-
-def hairline(a):
-    f=max(0,cos(a))
-    return 1.500+.012*cos(11*a+.35)*(1-f)+.179*f**1.8
-
+# A continuous bob shell has a hand-plotted hairline. The main fringe is cut
+# into that shell so the crown stays smooth when viewed from above or behind.
+part("Bob and swept fringe")
+hair_edges=[(-180,1.544),(-156,1.536),(-141,1.549),(-130,1.531),(-120,1.552),
+ (-111,1.533),(-102,1.559),(-93,1.540),(-82,1.568),(-74,1.552),(-66,1.577),
+ (-58,1.611),(-52,1.625),(-45,1.678),(-42,1.644),(-35,1.638),(-31,1.680),
+ (-27,1.652),(-18,1.640),(-14,1.704),(-11,1.657),(1,1.632),(5,1.639),
+ (10,1.710),(15,1.671),(24,1.650),(28,1.680),(35,1.648),(45,1.632),
+ (48,1.662),(53,1.639),(62,1.600),(68,1.581),(76,1.553),(85,1.572),
+ (94,1.538),(106,1.557),(116,1.534),(125,1.549),(143,1.532),
+ (155,1.549),(170,1.536),(180,1.544)]
+angles=np.array([p[0] for p in hair_edges])
+fringe=np.array([p[1] for p in hair_edges])
+samples=sorted(set(range(-180,180,3))|set(angles[:-1]))
+def hair_surface(a,z):
+    # The crown sweeps forward into a narrow, turned-under nape.
+    d=(z-1.642)/.161
+    f=math.sqrt(max(.0002,1-max(0,d)**2))
+    lower=max(0,1.638-z)
+    rx=(.155-.19*lower)*f
+    front=(.143-.085*lower)*f
+    back=(.159-.105*lower)*f
+    if z<1.791:
+        sx,fy,by=headsize(z)
+        rx=max(rx,sx+.007)
+        front=max(front,fy+.022)
+        back=max(back,by+.008)
+    return Vector((rx*sin(a),.010-(front if cos(a)>=0 else back)*cos(a),z))
 
 rows=[]
-for t in np.linspace(0,1,32):
-    rows.append([vertex(hair_point(a,1.818*(1-t)+hairline(a)*t),H) for a in np.arange(72)*tau/72])
+for t in np.linspace(0,1,42):
+    row=[]
+    for deg in samples:
+        a=math.radians(deg)
+        edge=float(np.interp(deg,angles,fringe))
+        # Near the part each section sweeps across the forehead rather than radiating straight down.
+        # Common crown rings avoid twisting quads above each deep fringe notch.
+        z=(1.8028+(1.718-1.8028)*t/.64 if t<.64 else 1.718+(edge-1.718)*(t-.64)/.36)
+        bend=.11*sin(pi*min(1,(1.8028-z)/.16))*cos(a+.4)
+        p=hair_surface(a+bend,z)
+        row.append(vertex(p,H))
+    rows.append(row)
 grid(rows,hair,True,reverse=True)
 face(rows[0],hair)
+# A narrow dark underside defines the tips without a thick ink outline.
+turned=[]
+for deg in samples:
+    a=math.radians(deg)
+    z=float(np.interp(deg,angles,fringe))
+    p=hair_surface(a,z+.003)
+    p.x*=.985
+    p.y=.01+(p.y-.01)*.984
+    turned.append(vertex(p,H))
+grid([rows[-1],turned],hair_shadow,True,reverse=True)
 
-
-def lock(start,finish,root,tip,width,shade,depth=.008,streak=False):
+def tress(sections,mat):
+    # Cubic interpolation of section centres, widths and twists gives a curved
+    # tapered solid with a different silhouette from the front, side and rear.
+    path=np.array(sections,dtype=float)
+    slope=np.gradient(path,axis=0)
     rows=[]
-    shine=[]
-    root=min(1.816,root+.017)
-    for i in range(19):
-        t=i/18
-        along=t*t*(3-2*t)
-        angle=start+(finish-start)*along
-        spread=width*(.68+.44*sin(pi*t))*(1-.998*t**2.5)
-        lift=sin(min(1,t/.23)*pi/2)
-        def strand(u):
-            z=root+(tip-root)*t+.006*abs(u)*(1-t)**2
-            p=hair_point(angle+u*spread,z,depth*(1-u*u)*lift+.0003)
-            if tip<1.50:
-                p.x*=1-.17*t**4
-                p.y-=.026*t**4
-            return p
+    for q in np.linspace(0,len(path)-1,(len(path)-1)*9+1):
+        k=min(int(q),len(path)-2)
+        t=q-k
+        x,y,z,w,d,angle=((2*t**3-3*t*t+1)*path[k]+(t**3-2*t*t+t)*slope[k]
+                   +(-2*t**3+3*t*t)*path[k+1]+(t**3-t*t)*slope[k+1])
+        a=math.radians(angle)
         row=[]
-        for u in np.linspace(-1,1,9):
-            row.append(vertex(strand(u),H))
+        for v in np.arange(16)*tau/16:
+            across=max(.0002,w)*cos(v)
+            depth=max(.0002,d)*sin(v)
+            row.append(vertex((x+across*cos(a)-depth*sin(a),y+across*sin(a)+depth*cos(a),z),H))
         rows.append(row)
-        if .17<t<.74:
-            p=strand(-.27)
-            p+=Vector((sin(angle),-cos(angle),0))*.001
-            shine.append(p)
-    grid(rows,shade,reverse=True)
-    if streak and len(shine)>1:
-        pipe(shine,[.00022+.00085*sin(pi*i/(len(shine)-1)) for i in range(len(shine))],glint,H,6)
-
-
-for k in range(15):
-    a=.99+k*(tau-1.98)/14
-    curl=.09*sin(k*1.7)
-    lock(a-.08,a+curl,1.779-.011*(k%3),1.491+.019*sin(k*1.82),.226,
-         hair_light if k%4==1 else hair,.006+.002*(k%2),k%3==1)
-for a,b,tip,w,shade in [(-1.24,-1.10,1.382,.21,hair),(-1.06,-.86,1.411,.145,hair_light),
-                          (1.14,1.02,1.390,.205,hair),(1.01,.85,1.427,.13,hair_light)]:
-    lock(a,b,1.723,tip,w,shade,.013,True)
-for a,b,tip,w,shade in [(-1.08,-1.19,1.556,.23,hair),(-.77,-.93,1.622,.27,hair_light),
-                         (-.49,-.65,1.639,.24,hair),(-.28,-.34,1.647,.20,hair_light),
-                         (-.055,-.17,1.635,.19,hair),(.11,.18,1.660,.17,hair_light),
-                         (.28,.43,1.643,.22,hair),(.53,.66,1.650,.21,hair_light),
-                         (.75,.97,1.605,.25,hair)]:
-    lock(a,b,1.795,tip,w,shade,.0105,shade==hair_light)
-
-# Tunic, shaped yoke and standing collar. The neckline opens to a small bound V.
-torso_rings([(1.345,.071,.059),(1.398,.068,.058),(1.435,.050,.048),(1.509,.047,.044)],skin,N)
-torso_rings([(.744,.220,.142),(.758,.226,.144),(.802,.218,.141),(.87,.193,.129),
-             (.922,.166,.111),(1.023,.124,.092),(1.092,.118,.085),(1.155,.135,.097),
-             (1.239,.154,.110),(1.32,.158,.101),(1.355,.165,.088),
-             (1.38,.14,.077),(1.398,.059,.053)],red,trunk,wave=.015)
-torso_rings([(.747,.224,.145),(.754,.230,.147),(.775,.227,.147)],gold,trunk,wave=.015)
-torso_rings([(.743,.224,.145),(.748,.227,.147)],red_dark,trunk,wave=.015)
-torso_rings([(1.415,.052,.049),(1.442,.050,.048)],belt,N)
-torso_rings([(1.414,.053,.050),(1.418,.053,.050)],gold,N)
-
-def neck_yoke(a,t):
-    front=max(0,cos(a))
-    rx=.051+(.163-.051)*t
-    ry=.052+(.133-.052)*t
-    z=1.425-.063*t-.073*front**3*(1-.78*abs(sin(a)))*t
-    x=rx*sin(a)
-    y=.003-ry*cos(a)
-    if front>.05:
-        rz=[1.28,1.32,1.355,1.38,1.398,1.412,1.425]
-        width=np.interp(z,rz,[.158,.158,.165,.14,.059,.053,.051])
-        depth=np.interp(z,rz,[.106,.101,.088,.077,.053,.052,.051])
-        surface=.01-depth*math.sqrt(max(0,1-(x/width)**2))
-        y=min(y,surface-.003)
-    return Vector((x,y,z))
-
-
-for lo,hi,mat in [(0,.67,skin),(.67,.93,gold),(.93,1,gold_light)]:
-    rows=[[vertex(neck_yoke(k*tau/72,t),S) for k in range(72)] for t in np.linspace(lo,hi,4)]
     grid(rows,mat,True,reverse=True)
+    face(rows[0],mat)
+    face(rows[-1][::-1],mat)
+
+part("Face-framing locks")
 for s in (-1,1):
-    pipe([(s*.014,-.119,1.292),(s*.010,-.108,1.269),(-s*.009,-.105,1.247)],
-         [.0024,.0025,.0018],belt,S,8)
-    pipe([(0,-.124,1.288),(s*.012,-.125,1.295),(s*.019,-.123,1.290),(0,-.119,1.281)],
-         [.002,.0025,.002,.002],belt,S,8)
+    # The long locks sit forward of the ears, narrow by the jaw, and kick out at the shoulder.
+    def side(points):
+        return [(s*x,y,z,w,d,s*angle) for x,y,z,w,d,angle in points]
+    tress(side([(.103,-.027,1.742,.011,.003,55),(.122,-.065,1.684,.024,.006,51),
+                (.130,-.069,1.615,.025,.007,55),(.120,-.066,1.553,.021,.007,60),
+                (.096,-.062,1.497,.021,.007,43),(.090,-.073,1.451,.023,.007,34),
+                (.105,-.083,1.405,.022,.007,26),(.122,-.086,1.381,.014,.004,18),
+                (.143,-.083,1.366+.008*s,.0005,.0005,10)]),hair)
+    tress(side([(.134,.031,1.722,.017,.006,94),(.151,.036,1.664,.025,.009,82),
+                (.152,.047,1.610,.021,.009,70),(.164,.063,1.584,.013,.005,52),
+                (.183,.079,1.573,.0006,.0005,27)]),hair)
+    tress(side([(.137,.063,1.687,.016,.008,95),(.148,.078,1.630,.023,.008,86),
+                (.146,.092,1.582,.018,.006,75),(.132,.106,1.546,.0007,.0004,60)]),hair_light)
 
+# Continuous bare neck and shoulders, a broad bound neckline and the bodice
+# share a cross-section at their seams. There is no overlapping shoulder mantle.
+part("Neck and exposed shoulders")
+def shoulder_weight(a,t):
+    j=("L" if sin(a)>0 else "R")+" UpperArm"
+    return mixj(S,j,.72*abs(sin(a))**6*t)
+def garment_ring(z,rx,ry,side_rise,shift,weight,fold=0):
+    row=[]
+    for a in np.arange(96)*tau/96:
+        flank=abs(sin(a))
+        drape=fold*(.65*sin(7*a+.8)+.35*sin(11*a-1.1))
+        pt=((rx+drape)*sin(a),shift-(ry+drape*.7)*cos(a),z+side_rise*flank**1.4)
+        row.append(vertex(pt,weight(a) if callable(weight) else weight))
+    return row
+# From the bound neckline to the neck. A gently modelled clavicle lies in the mesh.
+neckline=(1.302,.211,.113,.016,.009)
+surface_sections=[neckline,(1.315,.209,.110,.023,.010),(1.329,.202,.105,.026,.012),
+                  (1.346,.190,.094,.026,.013),(1.362,.171,.083,.022,.014),
+                  (1.375,.140,.072,.017,.013),(1.388,.100,.061,.010,.011),
+                  (1.407,.062,.050,.004,.008),(1.430,.045,.044,.0,.007),
+                  (1.470,.042,.043,.0,.005),(1.515,.047,.047,.0,.001)]
+rows=[]
+for i,(z,rx,ry,rise,cy) in enumerate(surface_sections):
+    row=garment_ring(z,rx,ry,rise,cy,(lambda a: shoulder_weight(a,max(0,1-i/7))) if i<8 else N)
+    rows.append(row)
+grid(rows,skin,True)
+
+part("Off-shoulder tunic")
+body_sections=[(.742,.220,.141,.002),(.748,.223,.144,.002),(.772,.220,.143,.002),(.803,.210,.137,.003),
+               (.89,.174,.120,.0045),(.976,.142,.101,.0025),(1.032,.124,.088,.001),
+               (1.064,.122,.088,.001),(1.100,.134,.092,.005),(1.145,.142,.101,.003),
+               (1.19,.149,.106,.0025),(1.229,.156,.111,.002),(1.260,.177,.113,.0018),
+               (1.280,.205,.114,.001)]
+rows=[]
+for z,rx,ry,fold in body_sections:
+    side_rise=.016*max(0,min(1,(z-1.20)/.080))
+    row=garment_ring(z,rx,ry,side_rise,.009,
+          (lambda a:shoulder_weight(a,(z-1.20)/.080)) if z>1.20 else trunk(z),fold)
+    rows.append(row)
+for i in range(len(rows)-1):
+    grid(rows[i:i+2],red_dark if i==0 else gold if i==1 else red,True)
+face(rows[0][::-1],red_dark)
+part("Bound neckline and hem embroidery")
+rows=[]
+for t,rx,ry in [(0,.205,.113),(.10,.209,.115),(.82,.212,.116),(1,.211,.113)]:
+    rows.append(garment_ring(1.280+.022*t,rx,ry,.016,.009,lambda a:shoulder_weight(a,1)))
+grid(rows,gold,True)
+for s in (-1,1):
+    pipe([(s*.014,-.104,1.279),(s*.009,-.108,1.265),(-s*.013,-.106,1.248)],
+         [.0018,.0025,.0009],belt,S,8)
 def skirt_point(a,z):
-    rx=np.interp(z,[.775,.805,.87],[.228,.221,.195])
-    ry=np.interp(z,[.775,.805,.87],[.148,.144,.132])
-    f=1+.015*cos(8*a+.65*z)
-    return (rx*sin(a)*f,.01-ry*cos(a)*f,z)
-
-
+    rx,ry,fold=[np.interp(z,[p[0] for p in body_sections],[p[i] for p in body_sections]) for i in (1,2,3)]
+    fold*=.65*sin(7*a+.8)+.35*sin(11*a-1.1)
+    return ((rx+fold+.001)*sin(a),.009-(ry+.7*fold+.001)*cos(a),z)
 for k in range(18):
     a=tau*k/18
-    points=[skirt_point(a+tau/18*t,.778+.052*(1-abs(2*t-1))) for t in np.linspace(0,1,15)]
-    pipe(points,.0038,gold,P,7)
+    rows=[[vertex(skirt_point(a+tau/18*t,.775+.049*(1-abs(2*t-1))+dz),P)
+           for t in np.linspace(0,1,17)] for dz in [-.0025,.0025]]
+    grid(rows,gold)
+
+part("Choker and clasp")
+rings([(1.457,.0445,.045,0,.004),(1.459,.0455,.046,0,.004),
+       (1.480,.046,.047,0,.004),(1.482,.045,.046,0,.004)],belt,N)
+def plate(x,z,d):
+    return (x,-.043-d+.15*x,z)
+for w,h,d,mat in [(.010,.012,.0015,buckle),(.007,.009,.0024,stocking)]:
+    ids=[vertex(plate(.008+x,1.469+z,d),N) for x,z in [(-w,-h),(w,-h),(w,h),(-w,h)]]
+    face(ids,mat)
+
+part("Waist belt and buckle")
 
 # A slanted leather belt uses its own surface so the buckle sits flush.
 def beltpoint(a,t):
@@ -430,59 +499,7 @@ pipe([clasp(x,z) for x,z in [(-.026,-.019),(.026,-.019),(.026,.019),(-.026,.019)
      .0048,buckle,trunk(1.075),10)
 pipe([clasp(-.006,0),clasp(.021,0)],.0024,buckle,trunk(1.075),8)
 
-# Two-sided, lined cloak. The opening runs behind the elbows, with actual bound edges.
-def cloak_point(t,u,inside=False):
-    a=.87+(tau-1.74)*u
-    edge=abs(2*u-1)
-    flare=sin(t*pi*.62)
-    rx=.104+.191*flare
-    ry=.074+.101*flare
-    center=.025+.106*t
-    pleat=.011*sin(10*pi*u+.7*t)*sin(pi*.83*t)**1.1
-    inset=-.0035 if inside else 0
-    return Vector(((rx+pleat+inset)*sin(a),center-(ry+pleat+inset)*cos(a),
-                   1.405-t*(.792-.054*edge**4)+.014*t**3*cos(6*pi*u)))
 
-
-def cloak_joint(t):
-    return mixj(S,C,min(1,max(0,(t-.06)/.58)))
-
-
-for inside,mat in [(False,cape),(True,lining)]:
-    rows=[]
-    for t in np.linspace(0,1,23):
-        rows.append([vertex(cloak_point(t,u,inside),cloak_joint(t)) for u in np.linspace(0,1,57)])
-    grid(rows,mat,reverse=not inside)
-for t0,t1,mat in [(0,.037,gold),(.951,.986,gold),(.986,1,gold_light)]:
-    rows=[]
-    for t in np.linspace(t0,t1,4):
-        row=[]
-        for u in np.linspace(0,1,57):
-            pt=cloak_point(t,u)
-            pt+=Vector((pt.x,pt.y-(.025+.106*t),0)).normalized()*.0015
-            row.append(vertex(pt,cloak_joint(t)))
-        rows.append(row)
-    grid(rows,mat,reverse=True)
-for u in (0,1):
-    ts=np.linspace(0,1,30)
-    pipe([cloak_point(t,u) for t in ts],[.004+.002*t for t in ts],
-         gold,lambda i:cloak_joint(ts[i]),8)
-
-# Shoulder capelet overlaps the sleeve heads and is bound to each upper arm at the edge.
-for t0,t1,mat in [(0,.77,cape),(.77,.94,gold),(.94,1,gold_light)]:
-    rows=[]
-    for t in np.linspace(t0,t1,5):
-        row=[]
-        for a in np.linspace(.66,tau-.66,65):
-            fl=abs(sin(a))
-            rx=.055+.186*t
-            ry=.056+.082*t
-            z=1.431-.019*t-(.043+.064*fl**1.4)*t**3+.018*fl**2*sin(pi*t*.85)
-            pt=(rx*sin(a),.005-ry*cos(a),z)
-            j=("L" if sin(a)>0 else "R")+" UpperArm"
-            row.append(vertex(pt,mixj(S,j,fl**3*t**1.5)))
-        rows.append(row)
-    grid(rows,mat,reverse=True)
 
 for side,s in [("L",1),("R",-1)]:
     upper,fore,hand=[side+" "+name for name in ("UpperArm","Forearm","Hand")]
@@ -490,11 +507,13 @@ for side,s in [("L",1),("R",-1)]:
     def arm_weights(z):
         return mixj(fore,upper,(z-1.116)/.071)
     # Tailored shoulders, gathered sleeves and a turned-back gold cuff.
-    sleeve=[(.939,.053,.053,.241,-.019),(.952,.057,.054,.241,-.018),
-            (1.002,.052,.050,.231,-.008),(1.093,.052,.053,.212,.006),
-            (1.151,.055,.054,.203,.015),(1.199,.056,.056,.192,.018),
-            (1.299,.062,.064,.166,.017),(1.347,.068,.067,.150,.014),
-            (1.374,.059,.060,.141,.016),(1.389,.035,.043,.136,.015)]
+    part(side+" sleeve")
+    sleeve=[(.939,.051,.051,.241,-.019),(.952,.053,.053,.241,-.018),
+            (.992,.048,.047,.234,-.013),(1.021,.047,.050,.226,-.005),
+            (1.074,.052,.053,.214,.002),(1.109,.049,.050,.210,.009),
+            (1.145,.051,.052,.200,.013),(1.174,.055,.053,.197,.015),
+            (1.219,.056,.056,.182,.017),(1.254,.054,.058,.172,.016),
+            (1.279,.043,.051,.163,.016),(1.294,.025,.038,.155,.016)]
     def sided(rows):
         return [(z,rx,ry,s*x,y) for z,rx,ry,x,y in rows]
     rings(sided(sleeve),red,arm_weights,32)
@@ -502,16 +521,22 @@ for side,s in [("L",1),("R",-1)]:
                  (.971,.056,.054,.238,-.016)]),gold,fore,32)
     rings(sided([(.929,.045,.044,.243,-.020),(.939,.047,.045,.242,-.020)]),red_dark,fore,32)
     # Palm and tapered fingers, held in a relaxed curve.
-    ellipsoid((s*.243,-.023,.918),(.032,.021,.044),stocking,hand)
+    part(side+" fingerless glove")
+    ellipsoid((s*.243,-.023,.918),(.029,.019,.041),stocking,hand)
     for j in range(4):
         x=.222+j*.0135
-        length=(.048,.055,.051,.040)[j]
-        pipe([(s*x,-.030,.900),(s*(x+.002),-.034,.888),
-              (s*(x+.004),-.041,.900-length+.007),(s*(x+.003),-.044,.900-length)],
-             [.0078,.0076,.0066,.0044],stocking,hand)
+        length=(.042,.047,.044,.034)[j]
+        curl=(.011,.019,.025,.027)[j] if s==1 else (.012,.014,.016,.019)[j]
+        path=[(s*x,-.026,.901),(s*(x+.001),-.026,.891),
+              (s*(x+.002),-.027+.35*curl,.902-length*.64),
+              (s*(x+.001),-.028+.78*curl,.902-length*.93),
+              (s*x,-.027+curl,.902-length)]
+        pipe(path,[.0070,.0068,.0065,.0056,.0035],skin,hand)
+        ellipsoid(path[-1],(.0036,.0038,.0034),skin,hand)
     pipe([(s*.221,-.029,.930),(s*.211,-.035,.914),(s*.205,-.041,.902)],
-         [.010,.009,.0058],stocking,hand)
+         [.009,.008,.0049],skin,hand)
     # One dark stocking and one wrapped leg, as in the front view of the sheet.
+    part(side+" leg")
     legs=[(.115,.038,.040,.091,.015),(.24,.042,.048,.090,.016),
           (.337,.055,.062,.089,.018),(.420,.051,.055,.089,.010),
           (.49,.044,.045,.088,.001),(.526,.049,.052,.088,.001),
@@ -521,14 +546,19 @@ for side,s in [("L",1),("R",-1)]:
     legmat=stocking if s==1 else wrap
     rings(sided(legs),legmat,leg_weights,40)
     if s==-1:
-        zs=np.linspace(.30,.775,180)
-        pts=[]
-        for n,z in enumerate(zs):
-            a=n/(len(zs)-1)*tau*7.4
-            r=[np.interp(z,[p[0] for p in legs],[p[i] for p in legs]) for i in (1,2,3,4)]
-            pts.append((s*r[2]+(r[0]+.0005)*sin(a),r[3]-(r[1]+.0005)*cos(a),z))
-        pipe(pts,.0024,wrap_shadow,lambda i:leg_weights(zs[i]),6)
+        rows=[]
+        for t in np.linspace(0,7.05,259):
+            a=t*tau
+            row=[]
+            for offset,thickness in [(0,.0025),(.003,.0028),(.029,.0018),(.060,.0008),(.064,.0003)]:
+                z=.339+t*.0595+offset
+                r=[np.interp(z,[p[0] for p in legs],[p[i] for p in legs]) for i in (1,2,3,4)]
+                pt=(s*r[2]+(r[0]+thickness)*sin(a),r[3]-(r[1]+thickness)*cos(a),z)
+                row.append(vertex(pt,leg_weights(z)))
+            rows.append(row)
+        grid(rows,wrap,reverse=True)
     # Boot lasts have a forward toe, a flat sole and a separate stacked heel.
+    part(side+" boot")
     rings(sided([(.021,.052,.099,.091,-.046),(.037,.054,.103,.091,-.047),
                  (.057,.055,.104,.091,-.048),(.075,.052,.089,.091,-.036),
                  (.093,.043,.061,.091,-.005),(.118,.039,.048,.091,.008),
@@ -552,31 +582,99 @@ for side,s in [("L",1),("R",-1)]:
         grid([cuff[i],inner],gold,True,reverse=t==0)
 
 
-mesh=bpy.data.meshes.new("Mage sculpt and wardrobe")
-mesh.from_pydata(verts,[],faces)
-mesh.update()
-model=bpy.data.objects.new("Mage",mesh)
-scene.collection.objects.link(model)
-for m in materials:
-    mesh.materials.append(m)
-uv=mesh.uv_layers.new(name="Iris painting")
-for polygon,mat in zip(mesh.polygons,colors):
-    polygon.use_smooth=True
-    polygon.material_index=mat
-    for loop in polygon.loop_indices:
-        uv.data[loop].uv=uvs[mesh.loops[loop].vertex_index]
-groups={j.name[6:]:model.vertex_groups.new(name=j.name) for j in armature.bones}
-for i,ws in enumerate(weights):
-    for joint,weight in ws.items():
-        groups[joint].add([i],weight,"REPLACE")
-model.parent=rig
-model.modifiers.new("Guest movement","ARMATURE").object=rig
+parts.append(("End",len(verts),len(faces)))
+# Painted shadows keep the jaw and collarbones readable under the hotel's moving lights.
+def painted_skin(name,point):
+    x,y,z=point
+    base=np.array(materials[skin].diffuse_color[:3])
+    dark=blush=0.
+    if name=="Face and ears":
+        front=max(0,min(1,-y/.065))
+        blush=math.exp(-((abs(x)-.079)/.026)**2-((z-1.581)/.014)**2)*front
+        dark=.13*max(0,min(1,(z-1.644)/.03))*front
+    elif name=="Neck and exposed shoulders":
+        dark=.28*math.exp(-((z-1.479)/.030)**2)
+        if y<-.020:
+            collar=1.361+.14*abs(x)
+            dark+=.14*math.exp(-((z-collar)/.007)**2)*math.exp(-((abs(x)-.065)/.047)**2)
+            dark+=.08*math.exp(-(x/.014)**2-((z-1.364)/.010)**2)
+    return (*np.clip(base*(1-dark)*[1,1-.16*blush,1-.12*blush],0,1),1)
+
+def use_paint(mat_id,layer):
+    mat=materials[mat_id]
+    shade=mat.node_tree.nodes.new("ShaderNodeVertexColor")
+    shade.layer_name=layer
+    # glTF carries vertex paint on base colour only. Its emissive colour is uniform.
+    mat.node_tree.links.new(shade.outputs["Color"],mat.node_tree.nodes.get("Principled BSDF").inputs["Base Color"])
+
+use_paint(skin,"Skin paint")
+use_paint(hair,"Chestnut tones")
+use_paint(hair_light,"Chestnut tones")
+for (name,v0,f0),(_,v1,f1) in zip(parts,parts[1:]):
+    mesh=bpy.data.meshes.new(name)
+    local_faces=[tuple(idx-v0 for idx in f) for f in faces[f0:f1]]
+    mesh.from_pydata(verts[v0:v1],[],local_faces)
+    mesh.update()
+    model=bpy.data.objects.new(name,mesh)
+    scene.collection.objects.link(model)
+    palette=sorted(set(colors[f0:f1]))
+    for m in palette:
+        mesh.materials.append(materials[m])
+    if skin in palette:
+        tint=mesh.color_attributes.new(name="Skin paint",type="BYTE_COLOR",domain="POINT")
+        for i,pt in enumerate(verts[v0:v1]):
+            tint.data[i].color=painted_skin(name,pt)
+    if name in ("Bob and swept fringe","Face-framing locks"):
+        tint=mesh.color_attributes.new(name="Chestnut tones",type="BYTE_COLOR",domain="POINT")
+        for i,(x,y,z) in enumerate(verts[v0:v1]):
+            a=math.atan2(x,-y+.010)
+            ridge=1.733+.014*cos(a+.55)
+            sheen=math.exp(-((z-ridge)/.017)**2)*(.5+.5*cos(a+.8))**2
+            side_shadow=.20*max(0,min(1,(1.67-z)/.10))
+            base=np.array(materials[hair].diffuse_color[:3])
+            color=base*(1-side_shadow+.13*sheen+.024*cos(13*a+4*z))
+            tint.data[i].color=(*color,1)
+    uv=mesh.uv_layers.new(name="Iris painting") if eye in palette else None
+    for poly,mat in zip(mesh.polygons,colors[f0:f1]):
+        poly.use_smooth=True
+        poly.material_index=palette.index(mat)
+        if uv:
+            for loop in poly.loop_indices:
+                uv.data[loop].uv=uvs[v0+mesh.loops[loop].vertex_index]
+    joints=sorted({j for ws in weights[v0:v1] for j in ws})
+    groups={j:model.vertex_groups.new(name="Bip01 "+j) for j in joints}
+    for i,ws in enumerate(weights[v0:v1]):
+        for joint,weight in ws.items():
+            groups[joint].add([i],weight,"REPLACE")
+    model.parent=rig
+    model.modifiers.new("Guest movement","ARMATURE").object=rig
 
 
 def turn(name,degrees,axis=(1,0,0)):
     joint=rig.pose.bones["Bip01 "+name]
     local=joint.bone.matrix_local.to_quaternion().inverted() @ Vector(axis)
     joint.rotation_quaternion=Quaternion(local,math.radians(degrees))
+
+
+def aim_at(name,point):
+    bpy.context.view_layer.update()
+    j=rig.pose.bones["Bip01 "+name]
+    turn_world=(j.tail-j.head).rotation_difference(Vector(point)-j.head)
+    base=j.matrix.to_quaternion() @ j.rotation_quaternion.inverted()
+    j.rotation_quaternion=base.inverted() @ turn_world @ base @ j.rotation_quaternion
+
+
+def show_palm():
+    bpy.context.view_layer.update()
+    j=rig.pose.bones["Bip01 L Hand"]
+    axis=(j.tail-j.head).normalized()
+    current=(j.matrix @ j.bone.matrix_local.inverted()).to_quaternion() @ Vector((0,-1,0))
+    camera=Vector((.15,-1,0))
+    a=(current-axis*current.dot(axis)).normalized()
+    b=(camera-axis*camera.dot(axis)).normalized()
+    angle=math.atan2(axis.dot(a.cross(b)),a.dot(b))
+    base=j.matrix.to_quaternion() @ j.rotation_quaternion.inverted()
+    j.rotation_quaternion=base.inverted() @ Quaternion(axis,angle) @ base @ j.rotation_quaternion
 
 
 for action_name,low,walking in [("Stand",False,False),("Walk",False,True),
@@ -586,10 +684,15 @@ for action_name,low,walking in [("Stand",False,False),("Walk",False,True),
         step=sin(tau*(frame-1)/24) if walking else 0
         turn(S,38 if low else 0)
         turn(N,-28 if low else 0)
-        turn(C,-43+step*2 if low else step*2.8)
+        if not low and not walking:
+            neck=rig.pose.bones["Bip01 Neck"]
+            rest=neck.bone.matrix_local.to_quaternion()
+            # A small downward glance and asymmetric head tilt complement the drawn brows.
+            attitude=Quaternion((0,1,0),math.radians(-4)) @ Quaternion((1,0,0),math.radians(4))
+            neck.rotation_quaternion=rest.inverted() @ attitude @ rest
         for side,s in [("L",1),("R",-1)]:
             stride=s*step
-            turn(side+" Thigh",(-77 if low else 0)-stride*(12 if low else 24))
+            turn(side+" Thigh",(-77 if low else (3*s if not walking else 0))-stride*(12 if low else 24))
             turn(side+" Calf",(116 if low else 2)+max(-stride,0)*(13 if low else 22))
             turn(side+" Foot",(-39 if low else -2)+stride*9)
             for part,pitch,spread in [
@@ -602,8 +705,13 @@ for action_name,low,walking in [("Stand",False,False),("Walk",False,True),
                 arm=rig.pose.bones["Bip01 "+name]
                 axis=arm.bone.matrix_local.to_quaternion().inverted() @ Vector((0,1,0))
                 arm.rotation_quaternion=Quaternion(axis,math.radians(spread)) @ arm.rotation_quaternion
+            if side=="L" and not walking and not low:
+                aim_at("L UpperArm",(.209,-.069,1.174))
+                aim_at("L Forearm",(.107,-.165,1.311))
+                aim_at("L Hand",(.059,-.171,1.342))
+                show_palm()
         for j in rig.pose.bones:
-            if j.name[6:] not in (H,P,"LEye","REye","L Hand","R Hand"):
+            if j.name[6:] not in (H,P,"LEye","REye","R Hand"):
                 j.keyframe_insert("rotation_quaternion",frame=frame,group=j.name)
     action=rig.animation_data.action
     track=rig.animation_data.nla_tracks.new()
@@ -611,6 +719,8 @@ for action_name,low,walking in [("Stand",False,False),("Walk",False,True),
     track.strips.new(action_name,1,action)
     track.mute=True
     rig.animation_data.action=None
+    for j in rig.pose.bones:
+        j.rotation_quaternion=(1,0,0,0)
 for j in rig.pose.bones:
     j.rotation_quaternion=(1,0,0,0)
 bpy.context.view_layer.update()
@@ -655,6 +765,27 @@ def photo(file,target,offset,scale,w,h):
     bpy.ops.render.render(write_still=True)
 
 
-photo(portrait,(0,0,1.566),(.16,-1.7,.065),.565,400,500)
+photo(portrait,(0,0,1.508),(.72,-1.7,.105),.625,520,650)
 if figure:
-    photo(figure[0],(0,0,.919),(.65,-2.7,.18),1.99,620,840)
+    photo(figure,(0,0,.912),(.52,-2.7,.15),1.94,550,800)
+if source_scene:
+    scene.frame_end=25
+    rig.data.display_type="STICK"
+    bpy.ops.object.select_all(action="DESELECT")
+    mesh=bpy.data.objects["Face and ears"]
+    bpy.context.view_layer.objects.active=mesh
+    scene.render.filepath="//mage-render.png"
+    for screen in bpy.data.screens:
+        for area in screen.areas:
+            if area.type=="VIEW_3D":
+                space=area.spaces.active
+                space.region_3d.view_rotation=cam.rotation_euler.to_quaternion()
+                space.region_3d.view_distance=2.85
+                space.region_3d.view_location=(0,0,.94)
+                space.region_3d.view_perspective="ORTHO"
+                space.overlay.show_overlays=False
+                space.shading.type="MATERIAL"
+    if bpy.data.images.get("Garnet iris"):
+        bpy.data.images.remove(bpy.data.images["Garnet iris"])
+    bpy.context.preferences.filepaths.save_version=0
+    bpy.ops.wm.save_as_mainfile(filepath=str(source_scene),compress=True)
