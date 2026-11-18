@@ -5,7 +5,7 @@ import {phase,uvVisible,useItem} from './public/room-state.js';
 import {canWalk} from './public/room-layout.js';
 
 test('each test start is reachable and has the intended next puzzle',()=>{
- const phases={bedCover:'low',steam:'linen',rubbing:'luggage',basinFlow:'linen',latchNote:'neighborKey',searchBathWipe:'linen',searchRouteReady:'lastRoom',searchBook:'bathEntry',searchBedroom:'low',searchBath:'linen',searchLiving:'bathEntry',searchKitchen:'stock',searchTwin:'neighborKey',search317:'music',searchInner:'lastRoom',scale:'stock',plates:'stock',sink:'stock',bathEntry:'bathEntry',linen:'linen',linenLock:'linen',postcards:'neighborKey',desk317:'luggage',evacuationBox:'lastRoom',shower:'linen',teaBox:'tea',teaDoor:'tea',water:'stock',waterKey:'stockKey',towels:'linen',cups:'bathEntry',kettle:'stock',twin:'neighborKey',companion:'neighborKey',bedroom:'low',living:'bathEntry',kitchen:'stock',bath:'linen',hall:'enter317',room317:'luggage',clock:'clock',vanity:'drawer',uv:'mirror',music:'music',safe:'safe',exit:'lastRoom',stairs:'stairs',downstairs:'descend'};
+ const phases={bedCover:'low',steam:'linen',rubbing:'luggage',basinFlow:'linen',latchNote:'neighborKey',searchBathWipe:'linen',searchRouteReady:'lastRoom',searchBook:'bathEntry',searchBedroom:'low',searchBath:'linen',searchLiving:'bathEntry',searchKitchen:'stock',searchTwin:'neighborKey',search317:'music',searchInner:'lastRoom',scale:'stock',plates:'stock',sink:'stock',bathEntry:'bathEntry',linen:'linen',linenLock:'linen',postcards:'neighborKey',desk317:'luggage',evacuationBox:'lastRoom',shower:'linen',teaBox:'tea',teaDoor:'tea',water:'stock',waterKey:'stockKey',towels:'linen',cups:'bathEntry',kettle:'stock',twin:'neighborKey',companion:'neighborKey',bedroom:'low',living:'bathEntry',kitchen:'stock',bath:'linen',hall:'enter317',room317:'galley317',kitchen317:'breakfast317',bath317:'luggage',clock:'clock',vanity:'drawer',uv:'mirror',music:'music',safe:'safe',exit:'lastRoom',stairs:'stairs',downstairs:'descend'};
  for(const point of TEST_STARTS){
   const {state}=createTestStart(point.id);
   assert.equal(phase(state),phases[point.id],point.id);
@@ -23,10 +23,10 @@ test('each test start is reachable and has the intended next puzzle',()=>{
 
 test('free exploration opens gates and starts never share mutable state',()=>{
  for(const point of TEST_STARTS){const s=createTestStart(point.id,true).state;
-  for(const key of ['explore','doorOpen','room317Open','exitOpen','bathDoorOpen','showerOpen'])assert.equal(s[key],true,point.id+key);
+  for(const key of ['explore','doorOpen','room317Open','exitOpen','kitchen317Open','bath317Open','bathDoorOpen','showerOpen'])assert.equal(s[key],true,point.id+key);
  }
- const a=createTestStart('safe'),b=createTestStart('safe');a.state.inventory.push('receipt');a.state.rings[0]=0;
- assert.ok(!b.state.inventory.includes('receipt'));assert.equal(b.state.rings[0],5);
+ const a=createTestStart('safe'),b=createTestStart('safe');a.state.inventory.push('galleyKey317');a.state.rings[0]=0;
+ assert.ok(!b.state.inventory.includes('galleyKey317'));assert.equal(b.state.rings[0],5);
 });
 
 test('checkpoint roundtrip preserves progress, camera and usable items',()=>{
@@ -55,6 +55,20 @@ test('old saved games that already took the spare key do not regenerate it in th
 });
 
 test('existing checkpoints retain bedroom progress and later rewards after bathroom separation',()=>{const setup=createTestStart('uv'),raw=JSON.parse(writeCheckpoint({...setup,pointId:'uv',position:setup.point.position,yaw:0,pitch:0}));delete raw.state.drawerUnlocked;delete raw.state.linenSolved;raw.state.teaTinOpen=true;const restored=readCheckpoint(JSON.stringify(raw));assert.equal(restored.state.drawerUnlocked,true);assert.equal(restored.state.uvInstalled,true);assert.equal(restored.state.linenSolved,true);});
+
+
+test('317 keys and doors survive reload, including tags collected in the former guest room',()=>{
+ const setup=createTestStart('bath317');
+ const checkpoint={...setup,pointId:'bath317',position:setup.point.position,yaw:0,pitch:0,luggageDigits:[0,0,0],safeSymbols:[0,0,0,0]};
+ setup.state.vanity317Open=true;setup.state.inventory.push('tag','safeKey317');
+ const fresh=readCheckpoint(writeCheckpoint(checkpoint)).state;
+ assert.ok(fresh.bath317Open&&fresh.vanity317Open&&fresh.inventory.includes('safeKey317'));
+ assert.ok(useItem(fresh,'safeKey317','safe317'));assert.ok(!fresh.inventory.includes('safeKey317'));
+ delete setup.state.kitchen317Open;delete setup.state.bath317Open;delete setup.state.safeUnlocked317;
+ setup.state.inventory=['tag'];const old=readCheckpoint(writeCheckpoint(checkpoint)).state;
+ assert.ok(old.kitchen317Open&&old.bath317Open&&old.safeUnlocked317);
+ assert.deepEqual(old.inventory,['tag']);
+});
 
 test('the scale placement survives refresh without duplicating a jar in inventory',()=>{const setup=createTestStart('water');setup.state.stockOnScale=1;setup.state.stockWeights[1]=true;setup.state.inventory.push('stock_coffee');setup.state.selected='stock_coffee';const raw=writeCheckpoint({...setup,pointId:'water',position:setup.point.position,yaw:0,pitch:0}),restored=readCheckpoint(raw);assert.equal(restored.state.stockOnScale,1);assert.equal(restored.state.inventory.includes('stock_coffee'),false);assert.equal(restored.state.selected,null);assert.equal(restored.state.stockWeights[1],true);});
 

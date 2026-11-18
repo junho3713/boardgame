@@ -8,7 +8,7 @@ export const TEST_STARTS=[
  {id:'basinFlow',group:'소품 모델 확인',label:'욕실 · 수도와 천 적시기',step:0,position:[6.78,1.62,-.91],look:[7.77,.91,-.20],description:'수전을 조작해 물을 받고, 수전 옆 배수봉이나 세면볼 바닥의 마개를 눌러 물을 뺍니다. C/H로 수온을 바꿀 수 있습니다.'},
  {id:'latchNote',group:'이야기 단서 확인',label:'트윈 침실 · 협탁 수리 메모',step:4,position:[-7.1,1.62,6.05],look:[-7.16,.798,5.08],description:'화장대의 접힌 수리 메모를 읽고 협탁 걸쇠에 적용해 보세요.'},
  {id:'searchBathWipe',group:'탐색 확장',label:'욕실 · 얼룩 닦기부터',step:0,position:[5.3,1.62,.05],look:[3.81,1.43,.80],description:'물을 적신 천을 가지고 있습니다. 문 옆 의뢰표에 사용해 닦으세요.'},
- {id:'searchRouteReady',group:'탐색 확장',label:'마지막 방 · 대피도 조각 맞추기',step:8,position:[7.6,1.62,22.9],look:[7.75,.84,23.94],description:'세 조각을 테이블에 끼운 상태입니다. 끊긴 경로선을 이어 주세요.'},
+ {id:'searchRouteReady',group:'탐색 확장',label:'317호 침실 · 대피도 조각 맞추기',step:8,position:[7.6,1.62,22.9],look:[7.75,.84,23.94],description:'세 조각을 테이블에 끼운 상태입니다. 끊긴 경로선을 이어 주세요.'},
  {id:'searchBook',group:'탐색 확장',label:'거실 · 장부 아래 조각',step:0,position:[-2.04,1.62,9.25],look:[-3.28,.928,8.88],description:'미니바 옆 작은 선반의 장부를 들어 보세요.'},
  {id:'searchBedroom',group:'탐색 확장',label:'침실 · 가방 안감과 액자 도구',step:0,position:[1.65,1.62,1.1],look:[2.65,.72,.9],description:'가방을 열고 안감을 들어 액자 뒷판 고정나사에 쓸 동전을 찾으세요.'},
  {id:'searchBath',group:'탐색 확장',label:'욕실 · 젖은 천으로 의뢰표 닦기',step:0,position:[5.85,1.62,.75],look:[6.74,1.02,1.30],description:'청소용 천을 찾아 세면대에서 적신 뒤 문 옆 의뢰표를 닦으세요.'},
@@ -16,7 +16,7 @@ export const TEST_STARTS=[
  {id:'searchKitchen',group:'탐색 확장',label:'주방 · 서비스 서랍의 전지',step:0,position:[7.5,1.62,6.3],look:[7.64,.63,5.48],description:'서랍 잠금 탭을 올려 AA 전지 두 개를 꺼내 저울에 넣으세요.'},
  {id:'searchTwin',group:'탐색 확장',label:'트윈 침실 · 슬라이드 서랍과 엽서',step:4,position:[-6.50,1.62,8.75],look:[-6.50,.69,9.465],description:'방 안에서 수리 기록을 찾아 협탁의 세 핀을 맞추세요.'},
  {id:'search317',group:'탐색 확장',label:'317호 · 자석과 실린더 회수',step:6,position:[5.4,1.62,18.05],look:[4.48,.13,17.65],description:'열린 가방에서 끈 달린 자석을 꺼내 협탁 아래 실린더를 회수하세요.'},
- {id:'searchInner',group:'탐색 확장',label:'마지막 방 · 찢긴 대피도 복원',step:8,position:[5.6,1.62,22.8],look:[4.4,.81,23.56],description:'서랍, 의자 아래, 휴지통을 찾아 대피도 조각을 테이블에 끼워 복원하세요.'},
+ {id:'searchInner',group:'탐색 확장',label:'317호 침실 · 찢긴 대피도 복원',step:8,position:[5.6,1.62,22.8],look:[4.4,.81,23.56],description:'서랍, 의자 아래, 휴지통을 찾아 대피도 조각을 테이블에 끼워 복원하세요.'},
  {id:'scale',group:'퍼즐 단계부터 시작',label:'주방 · 통 집기와 저울',step:0,position:[5.65,1.62,6.12],look:[5.7,1.08,5.22],description:'빈 예비 통과 재료 통을 집어 저울 위에 올려 측정하세요.'},
  {id:'plates',group:'소품 모델 확인',label:'주방 · 서비스 카트 접시',step:0,position:[5.2,1.62,8.35],look:[5.2,.87,9.3],description:'중앙이 막힌 접시와 가장자리 두께를 확인합니다.'},
  {id:'sink',group:'소품 모델 확인',label:'주방 · 싱크볼과 수전',step:0,position:[5.42,1.62,6.0],look:[5.5,1.04,5.04],description:'싱크볼 바닥과 수전 손잡이 축의 연결을 확인합니다.'},
@@ -38,8 +38,10 @@ export const TEST_STARTS=[
  {id:'kitchen',group:'공간으로 이동',label:'316호 · 간이주방',step:0,position:[4.5,1.62,8.2],look:[6.4,1.3,5.0],description:'주방 가구와 싱크대를 바로 확인합니다.'},
  {id:'bath',group:'공간으로 이동',label:'316호 · 욕실',step:0,position:[5.3,1.62,.05],look:[7.45,1.2,-.6],description:'욕실 구조와 세면대·샤워부스를 바로 확인합니다.'},
  {id:'hall',group:'공간으로 이동',label:'3층 · 호텔 복도',step:4,position:[2.12,1.62,11.85],look:[5.12,1.55,13.5],description:'316호를 해결한 상태입니다. 317호 예비 열쇠를 가지고 있습니다.'},
- {id:'room317',group:'공간으로 이동',label:'317호 · 객실',step:5,position:[5.12,1.62,14.2],look:[6.9,1.2,17.2],description:'이전 객실과 출입문을 통과한 상태로 317호 퍼즐을 시작합니다.'},
- {id:'exit',group:'공간으로 이동',label:'317호 · 마지막 방 / 계단 열쇠',step:8,position:[7.5,1.62,22.0],look:[7.5,.85,24.0],description:'317호 안쪽 방을 연 상태입니다. 대피 안내를 읽고 잠긴 계단 열쇠함을 조사하세요.'},
+ {id:'kitchen317',group:'공간으로 이동',label:'317호 · 주방',step:5,position:[2.86,1.62,17.97],look:[.96,1.17,14.84],description:'주방 문을 연 상태입니다. 식탁에 남은 조식 쟁반을 조사하세요.'},
+ {id:'bath317',group:'공간으로 이동',label:'317호 · 욕실',step:5,position:[10.94,1.62,17.76],look:[13.73,1.23,16.37],description:'욕실 문을 열었습니다. 세면대 아래 투숙객의 짐을 조사할 수 있습니다.'},
+ {id:'room317',group:'공간으로 이동',label:'317호 · 거실',step:5,position:[5.12,1.62,14.2],look:[6.9,1.2,17.2],description:'이전 객실과 출입문을 통과한 상태로 317호 퍼즐을 시작합니다.'},
+ {id:'exit',group:'공간으로 이동',label:'317호 · 침실',step:8,position:[5.65,1.62,21.63],look:[10.00,1.01,23.13],description:'317호 침실을 연 상태입니다. 대피 안내를 읽고 잠긴 계단 열쇠함을 조사하세요.'},
  {id:'stairs',group:'퍼즐 단계부터 시작',label:'3층 · 잠긴 계단문',step:9,position:[-2.7,1.62,12],look:[-3.6,1.4,12],description:'317호에서 찾은 계단문 열쇠를 가지고 있습니다.'},
  {id:'downstairs',group:'공간으로 이동',label:'2층 · 계단 로비',step:10,position:[-11.4,-1.62,12],look:[-9.0,-1.5,12],description:'계단문을 열고 2층에 도착한 상태. 위층까지 걸어 올라갈 수도 있습니다.'},
  {id:'postcards',group:'이야기 단서 확인',label:'트윈 침실 · 엽서와 편지',step:4,position:[-6.55,1.62,5.8],look:[-6.55,1.62,4.7],description:'관광 지도를 가지고 있습니다. 엽서의 앞뒷면을 읽어 보세요.'},
@@ -60,6 +62,12 @@ export function createTestStart(id,free=false){
  if(point.step>=3){useItem(s,'key','drawer');addItem(s,'bulb');s.bulbTaken=true;useItem(s,'bulb','lamp');s.lightOn=false;s.curtainsClosed=true;}
  if(point.step>=4){s.inlayMounted=[true,true];s.inlayFound=[true,true];s.batteriesInstalled=[true,true];s.batteriesTaken=[true,true];s.tagWiped=true;s.wheelInstalled=true;s.bathUnlocked=true;s.bathKeyTaken=true;s.linenSolved=true;s.linenCabinetOpen=true;s.tinKeyTaken=true;s.rings=[...RING_TARGET];unlockDoor(s);s.twinOpen=true;s.kitchenOpen=true;s.stockSolved=true;s.stockKeyTaken=true;s.suiteEscaped=!['companion','postcards','searchTwin','latchNote'].includes(point.id);s.doorOpen=s.suiteEscaped;s.lightOn=true;s.curtainsClosed=false;if(s.suiteEscaped){s.travelPostcardsSeen=true;unlockCompanionCase(s,COMPANION_TARGET);takeCompanionKeys(s);useItem(s,'suiteKey','suiteDoor');}}
  if(point.step>=5){useItem(s,'passKey','entry317');s.room317Entered=true;}
+ const visitedKitchen=point.step>=6||['kitchen317','bath317','desk317','rubbing'].includes(point.id);
+ const visitedBath=point.step>=6||['bath317','desk317','rubbing'].includes(point.id);
+ if(visitedKitchen){s.galleyKey317Taken=true;s.kitchen317Open=true;}
+ if(visitedBath){s.breakfast317Open=true;s.bathKey317Taken=true;s.bath317Open=true;}
+ if(point.step>=6||['desk317','rubbing'].includes(point.id)){s.vanity317Open=true;addItem(s,'receipt');addItem(s,'tag');addItem(s,'safeKey317');}
+ if(point.step>=7)useItem(s,'safeKey317','safe317');
  if(point.step>=6){unlockLuggage(s,LUGGAGE_CODE);takeWindingKey(s);}
  if(point.step>=7){s.cylinderInstalled=true;useItem(s,'windingKey','musicBox');hearTune(s);}
  if(point.step>=8){unlockSafe(s,MUSIC_SEQUENCE);takeInnerKey(s);useItem(s,'exitKey','exit317');}
@@ -83,7 +91,7 @@ export function createTestStart(id,free=false){
  if(['searchTwin','latchNote'].includes(zone)){s.wheelInstalled=false;s.wheelDrawerOpen=false;s.wheelTaken=false;s.companionSolved=false;s.companionKeysTaken=false;}
  if(zone==='shower')s.showerOpen=true;
  if(['bath','towels','shower','linen','linenLock','searchBath','searchBathWipe','basinFlow','steam'].includes(zone)){s.bedroomOpen=true;s.bathKeyTaken=true;s.bathUnlocked=true;s.bathDoorOpen=true;}
- if(free){s.bedroomOpen=true;s.kitchenOpen=true;s.twinOpen=true;s.bathUnlocked=true;s.explore=true;s.doorOpen=true;s.room317Open=true;s.exitOpen=true;s.stairsOpen=true;s.bathDoorOpen=true;s.showerOpen=true;}
+ if(free){s.kitchen317Open=true;s.bath317Open=true;s.bedroomOpen=true;s.kitchenOpen=true;s.twinOpen=true;s.bathUnlocked=true;s.explore=true;s.doorOpen=true;s.room317Open=true;s.exitOpen=true;s.stairsOpen=true;s.bathDoorOpen=true;s.showerOpen=true;}
  return{state:s,point,clockHour:point.step>=2?5:11,clockMinute:point.step>=2?40:10};
 }
 
@@ -100,6 +108,11 @@ export function readCheckpoint(raw){
   // Saves made before the twin bedroom already obtained the spare key from the old rack.
   if(s.passTaken&&!Object.hasOwn(v.state,'companionSolved'))s.companionSolved=true;
   s.inventory=Array.isArray(v.state.inventory)?[...new Set(v.state.inventory.filter(id=>Object.hasOwn(ITEMS,id)))]:[];s.selected=s.inventory.includes(v.state.selected)?v.state.selected:null;
+  // Older suites stored the tag on the bed and had no small cylinder lock.
+  if(!Object.hasOwn(v.state,'kitchen317Open')&&(s.room317Entered||s.explore)){
+   s.kitchen317Open=s.bath317Open=s.breakfast317Open=s.galleyKey317Taken=s.bathKey317Taken=true;
+   if(s.inventory.includes('tag')||s.luggageOpen||s.safeOpen)s.safeUnlocked317=true;
+  }
   if(Number.isInteger(v.state.stockOnScale)&&v.state.stockOnScale>=0&&v.state.stockOnScale<4){s.stockOnScale=v.state.stockOnScale;s.inventory=s.inventory.filter(id=>id!==['stock_tea','stock_coffee','stock_sugar','stock_empty'][s.stockOnScale]);if(!s.inventory.includes(s.selected))s.selected=null;}
   for(const key of ['wipePatches','inlayFound','inlayMounted','batteriesTaken','batteriesInstalled','postcardFound','routeFound','routeMounted'])if(Array.isArray(v.state[key])&&v.state[key].length===s[key].length&&v.state[key].every(n=>typeof n==='boolean'))s[key]=[...v.state[key]];
   for(const key of ['wheelSliders','routeOrder'])if(Array.isArray(v.state[key])&&v.state[key].length===3&&v.state[key].every(n=>Number.isInteger(n)&&n>=0&&n<3)&&(key!=='routeOrder'||new Set(v.state[key]).size===3))s[key]=[...v.state[key]];
@@ -123,7 +136,7 @@ export function readCheckpoint(raw){
   if(Array.isArray(v.state.trayTurns)&&v.state.trayTurns.length===4&&v.state.trayTurns.every(n=>Number.isInteger(n)&&n>=0&&n<4))s.trayTurns=[...v.state.trayTurns];
   if(!Object.hasOwn(v.state,'bedroomOpen')){s.bedroomOpen=s.doorOpen||v.position[2]>4.5;s.bathUnlocked=true;s.bathDoorOpen=true;s.kitchenOpen=v.position[0]>3.6&&v.position[2]>4.5||s.companionSolved||s.doorOpen;s.twinOpen=s.companionSolved||v.position[0]<-3.6;s.stockSolved=s.twinOpen;}
   for(const key of ['seconds','hints'])if(Number.isFinite(v.state[key])&&v.state[key]>=0)s[key]=v.state[key];
-  s.notes=Array.isArray(v.state.notes)?v.state.notes.filter(n=>typeof n?.title==='string'&&typeof n?.text==='string').slice(-100).map(n=>({title:n.title.slice(0,300),text:n.text.slice(0,5000)})):[];s.complete=false;
+  s.notes=Array.isArray(v.state.notes)?v.state.notes.filter(n=>typeof n?.title==='string'&&typeof n?.text==='string').slice(-100).map(n=>({title:n.title.slice(0,300).replaceAll('317호 안쪽 방','317호 침실'),text:n.text.slice(0,5000).replaceAll('317호 안쪽 방','317호 침실').replaceAll('317 INNER','침실')})):[];s.complete=false;
   const point=getTestStart(v.pointId),digits=(value,length,max)=>Array.isArray(value)&&value.length===length&&value.every(n=>Number.isInteger(n)&&n>=0&&n<=max)?[...value]:Array(length).fill(0);
   return{version:2,state:s,pointId:point.id,position:[...v.position],yaw:v.yaw,pitch:Math.max(-1.3,Math.min(1.3,v.pitch)),clockHour:Number.isInteger(v.clockHour)&&v.clockHour>=1&&v.clockHour<=12?v.clockHour:11,clockMinute:Number.isInteger(v.clockMinute)&&v.clockMinute>=0&&v.clockMinute<60?v.clockMinute:10,luggageDigits:digits(v.luggageDigits,3,9),safeSymbols:digits(v.safeSymbols,4,3),savedAt:typeof v.savedAt==='string'?v.savedAt:''};
  }catch{return null;}

@@ -4,10 +4,10 @@ import * as T from './three.module.js';
 import {buildBasinFlow} from './basin-flow.js?v=20261117-tricks1';
 import {GLTFLoader} from './GLTFLoader.js';
 import {Reflector} from './Reflector.js';
-import {registerRoomMirror,getModelNode} from './room-details.js?v=20261117-stairs1';
+import {registerRoomMirror,getModelNode} from './room-details.js?v=20261117-tricks1';
 
 // Blender-authored fixtures, with stable interaction roots and separate moving parts.
-export function buildDomesticModels({scene,renderer,manager,state,solids,legacy,mirror,canvasTexture}){
+export function buildDomesticModels({guestSuite,scene,renderer,manager,state,solids,legacy,mirror,canvasTexture}){
  registerRoomMirror(scene,mirror);
  const loader=new GLTFLoader(manager),result={bathLoaded:false,clockLoaded:false,update,clockHands};
  let moveEntry,bathSteam,basinFlow,left,right,shower,entry,hourHand,minuteHand,keyCover,wardrobeLeft,wardrobeRight,caseLid,hour=11,minute=10;
@@ -24,6 +24,7 @@ export function buildDomesticModels({scene,renderer,manager,state,solids,legacy,
  const required=(model,name)=>{const o=getModelNode(model,name);if(!o)throw Error('Missing model node '+name);return o;};
  function interactive(o,id,label){o.userData.interactId=id;o.userData.label=label;return o;}
  load(names[0],model=>{
+  guestSuite.installBath(model);
   left=required(model,'Vanity_Door_Left_Pivot');right=required(model,'Vanity_Door_Right_Pivot');shower=required(model,'Shower_Door_Pivot');entry=required(model,'Bath_Entry_Pivot');const vanity=required(model,'Vanity_ROOT');
   // The bathroom keeps only its own linen cabinet; the UV bulb stays in the bedroom.
   scene.attach(legacy.bathCabinet);legacy.bathCabinet.clear();legacy.bathCabinet.position.set(0,0,0);legacy.bathCabinet.rotation.set(0,0,0);legacy.bathCabinet.attach(vanity);
@@ -52,12 +53,12 @@ export function buildDomesticModels({scene,renderer,manager,state,solids,legacy,
   solids.push({x:7.77,z:-.2,w:.74,d:1.92},{x:5.35,z:.87,w:.49,d:.87},{x:4.43,z:-2.35,w:1.08,d:.045},{x:7.08,z:-2.35,w:1.96,d:.045},showerSolid,cabinetLeftSolid,cabinetRightSolid);
   buildTileSurfaces();buildBathMirror();result.bathLoaded=true;update(1);
  });
- load(names[1],model=>{hide(legacy.kitchen);interactive(required(model,'Kitchen_ROOT'),'kitchenSink','주방 싱크대');interactive(required(model,'HotelKettle_ROOT'),'kettle','스테인리스 전기 주전자');});
+ load(names[1],model=>{guestSuite.installKitchen(model);hide(legacy.kitchen);interactive(required(model,'Kitchen_ROOT'),'kitchenSink','주방 싱크대');interactive(required(model,'HotelKettle_ROOT'),'kettle','스테인리스 전기 주전자');});
  load(names[2],model=>{
   const clock=required(model,'WallClock316_ROOT');hourHand=required(model,'Clock_Hour_Hand');minuteHand=required(model,'Clock_Minute_Hand');keyCover=required(model,'Clock_Key_Cover');
   clock.removeFromParent();model.removeFromParent();legacy.clock.clear();legacy.clock.position.set(2.65,2.08,-4.40);legacy.clock.rotation.set(0,0,0);legacy.clock.add(clock);legacy.clock.userData.label='멈춘 침실 벽시계';result.clockLoaded=true;clockHands(hour,minute);
  });
- load(names[3],model=>{hide(legacy.lounge);for(const name of ['LoungeCup_0','LoungeCup_1'])interactive(required(model,name),'cup','도자기 찻잔');});
+ load(names[3],model=>{guestSuite.installLounge(model);hide(legacy.lounge);for(const name of ['LoungeCup_0','LoungeCup_1'])interactive(required(model,name),'cup','도자기 찻잔');});
  load(names[4],model=>{wardrobeLeft=required(model,'Wardrobe_Door_Left_Pivot');wardrobeRight=required(model,'Wardrobe_Door_Right_Pivot');caseLid=required(model,'Suitcase_Lid_Pivot');interactive(required(model,'Wardrobe_ROOT'),'wardrobe','옷장');interactive(required(model,'Suitcase_ROOT'),'suitcase','짐 받침대 위 여행 가방');hide(legacy.bedroom);for(let i=solids.length-1;i>=0;i--)if(solids[i].suitcaseLegacy)solids.splice(i,1);solids.push(wardrobeLeftSolid,wardrobeRightSolid,{x:2.65,z:.9,w:1.23,d:.82});});
  function clockHands(h,m){hour=h;minute=m;if(hourHand){hourHand.rotation.z=-(h/12*Math.PI*2+m/60*Math.PI/6);minuteHand.rotation.z=-m/60*Math.PI*2;}}
  function collider(o,hinge,cx,cz,w,d){const yaw=o.rotation.y;return{x:hinge.x+cx*Math.cos(yaw)+cz*Math.sin(yaw),z:hinge.z-cx*Math.sin(yaw)+cz*Math.cos(yaw),w,d,yaw};}

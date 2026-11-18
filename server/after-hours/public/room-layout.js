@@ -6,8 +6,10 @@ export const ZONES={
  kitchen:{x0:3.6,x1:9.6,z0:4.5,z1:10.5,label:'316호 · 간이주방'},
  bath:{x0:3.6,x1:8.2,z0:-4.5,z1:1.5,label:'316호 · 욕실'},
  hall:{x0:-3.6,x1:10.2,z0:10.5,z1:13.5,label:'3층 · 호텔 복도',gate:'doorOpen'},
- room317:{x0:3.6,x1:10.2,z0:13.5,z1:20.7,label:'317호 · 객실',gate:'room317Open'},
- exitHall:{x0:3.6,x1:10.2,z0:20.7,z1:24.6,label:'317호 · 안쪽 방',gate:'exitOpen'},
+ room317:{x0:3.6,x1:10.2,z0:13.5,z1:20.7,label:'317호 · 거실',gate:'room317Open'},
+ kitchen317:{x0:-1.2,x1:3.6,z0:13.5,z1:18.7,label:'317호 · 주방',gate:'kitchen317Open'},
+ bath317:{x0:10.2,x1:14.8,z0:13.5,z1:19.5,label:'317호 · 욕실',gate:'bath317Open'},
+ exitHall:{x0:3.6,x1:12.1,z0:20.7,z1:24.6,label:'317호 · 침실',gate:'exitOpen'},
  stairs:{x0:-10.2,x1:-3.6,z0:10.5,z1:13.5,label:'비상계단 · 3층 → 2층',gate:'stairsOpen'},
  lowerHall:{x0:-14.2,x1:-10.2,z0:10.5,z1:16,label:'2층 · 계단 로비',gate:'stairsOpen'},
 };
@@ -20,6 +22,8 @@ export const PASSAGES=[
  {axis:'x',at:3.6,low:-1,high:.4,gate:'bathDoorOpen'},
  {axis:'z',at:10.5,low:1.46,high:2.78,gate:'doorOpen'},
  {axis:'z',at:13.5,low:4.46,high:5.78,gate:'room317Open'},
+ {axis:'x',at:3.6,low:14.75,high:16.05,gate:'kitchen317Open'},
+ {axis:'x',at:10.2,low:17,high:18.4,gate:'bath317Open'},
  {axis:'z',at:20.7,low:5,high:6.3,gate:'exitOpen'},
 ];
 export function zoneAt(x,z){for(const [id,b]of Object.entries(ZONES))if(x>=b.x0&&x<=b.x1&&z>=b.z0&&z<=b.z1)return id;return null;}

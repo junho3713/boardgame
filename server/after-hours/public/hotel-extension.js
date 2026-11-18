@@ -5,12 +5,13 @@ export function buildHotelExtension({T,scene,state,helpers:h,materials:m,partiti
  const steel=new T.MeshStandardMaterial({color:'#66756e',roughness:.47,metalness:.5});
  const dark=new T.MeshStandardMaterial({color:'#242e2a',roughness:.67});
  const safety=new T.MeshStandardMaterial({color:'#c3b56d',roughness:.8});
- // A furnished last room beyond the locked INNER door, with a physical clue and key.
- box(6.6,.16,3.9,6.9,-.08,22.65,m.floorMat);box(6.6,.12,3.9,6.9,3.24,22.65,m.ivory);
- for(const x of[3.58,10.28])box(.16,3.2,3.9,x,1.6,22.65,m.wallpaper);
- box(6.7,3.2,.16,6.9,1.6,24.68,m.wallpaper);
- for(const x of[3.69,10.17])box(.08,.75,3.9,x,.375,22.65,m.darkwood);
- box(6.5,.75,.08,6.9,.375,24.56,m.darkwood);
+ // The bedroom has a recessed sleeping bay beside the evacuation desk.
+ box(8.5,.16,3.9,7.85,-.08,22.65,m.floorMat);box(8.5,.12,3.9,7.85,3.24,22.65,m.ivory);
+ box(1.9,3.2,.14,11.15,1.6,20.72,m.wallpaper);
+ for(const x of[3.58,12.16])box(.16,3.2,3.9,x,1.6,22.65,m.wallpaper);
+ box(8.65,3.2,.16,7.85,1.6,24.68,m.wallpaper);
+ for(const x of[3.69,12.07])box(.08,.75,3.9,x,.375,22.65,m.darkwood);
+ box(8.45,.75,.08,7.85,.375,24.56,m.darkwood);
  rb(1.7,.08,.68,7.5,.78,24.03,m.wood);for(const x of[6.78,8.22])for(const z of[23.8,24.25])box(.06,.74,.06,x,.37,z,m.darkwood);
  // Furniture footprints are kept away from the approach and return path.
  const tableSolid={x:7.5,z:24.03,w:1.7,d:.68};
@@ -30,6 +31,11 @@ export function buildHotelExtension({T,scene,state,helpers:h,materials:m,partiti
  sign('대피 안내 · 3층',.75,.2,7.5,1.5,24.56,Math.PI);
  const roomLight=new T.PointLight('#efdbaf',13,7,1.8);roomLight.position.set(7.0,2.7,22.7);scene.add(roomLight);
  cyl(.23,.27,.09,7,3.03,22.7,m.brass);box(.32,.035,.32,7,2.96,22.7,m.ivory);
+ // Bedside reading lamp on a stone-topped nightstand in the sleeping bay.
+ const bedside=group(9.16,0,23.98);
+ rb(.66,.47,.52,0,.33,0,m.wood,bedside);rb(.70,.045,.56,0,.59,0,m.ivory,bedside);
+ rb(.56,.20,.025,0,.41,-.27,m.darkwood,bedside);rod([-.085,.42,-.29],[.085,.42,-.29],.009,m.brass,bedside);
+ cyl(.098,.12,.035,0,.63,0,m.brass,bedside);cyl(.014,.014,.29,0,.79,0,m.brass,bedside);cyl(.13,.21,.19,0,1.0,0,m.ivory,bedside);
  // The elevator is visibly out of service, with a readable and actionable notice.
  const lift=interactive(group(10.14,0,12),'elevator','엘리베이터 · 고장 / 운행 중지');lift.rotation.y=-Math.PI/2;
  rb(1.9,2.7,.08,0,1.35,0,dark,lift);for(const x of[-.43,.43])box(.85,2.48,.04,x,1.24,.06,steel,lift);
@@ -53,5 +59,5 @@ export function buildHotelExtension({T,scene,state,helpers:h,materials:m,partiti
  sign('2F\n계단 로비',.9,.55,-14.18,-1.55,12,Math.PI/2);sign('3F ↑',.55,.23,-7.2,.10,13.48,Math.PI);
  const diffuser=new T.MeshStandardMaterial({color:'#d8e3d9',emissive:'#a7c7b4',emissiveIntensity:.5});
  for(const [x,y,z]of[[-4.3,2.4,13.47],[-7.1,.6,13.47],[-10,-1.1,13.47],[-12.6,-.6,15.95]]){const light=new T.PointLight('#c7ddce',7,5,1.7);light.position.set(x,y,z-.18);scene.add(light);box(.46,.20,.09,x,y,z,steel);box(.40,.13,.025,x,y,z-.06,diffuser);}
- return{solids:[tableSolid,{x:4.4,z:23.9,w:1.1,d:.62}],update(dt){emergencyLid.rotation.x+=((state.evacuationBoxOpen?-1.8:0)-emergencyLid.rotation.x)*(1-Math.exp(-dt*5));key.visible=state.evacuationBoxOpen&&emergencyLid.rotation.x<-.65&&!state.stairKeyTaken;}};
+ return{solids:[{x:9.16,z:23.98,w:.70,d:.56},tableSolid,{x:4.4,z:23.9,w:1.1,d:.62}],update(dt){emergencyLid.rotation.x+=((state.evacuationBoxOpen?-1.8:0)-emergencyLid.rotation.x)*(1-Math.exp(-dt*5));key.visible=state.evacuationBoxOpen&&emergencyLid.rotation.x<-.65&&!state.stairKeyTaken;}};
 }

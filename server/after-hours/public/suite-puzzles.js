@@ -18,6 +18,8 @@ export function mapSvg(){
 }
 export const evacSvg=evacuationSvg;
 
+import {takeGalleyKey317,takeBreakfastKey317,takeTaggedKey317} from './room-state.js?v=20261117-tricks1';
+
 export function createSuitePuzzles(ctx){
  const {state:s,modal,closeModal,inventory,record,caption,sound,equipItem,room,luggageDigits,safeSymbols,musicNote}=ctx;
  const story=(id)=>{const v=STORY[id];record(v.title,v.paragraphs.join('\n\n'));return `<div class="story-paper"><h3>${v.title}</h3>${v.paragraphs.map(t=>`<p>${t}</p>`).join('')}</div>`;};
@@ -50,6 +52,18 @@ export function createSuitePuzzles(ctx){
   document.querySelectorAll('[data-direction]').forEach(b=>b.onclick=()=>{const i=+b.dataset.direction;values[i]=(values[i]+1)%count;b.innerHTML=arrow(values[i],count===8)+`<small>${count===8?DIRECTIONS[values[i]]:['북','동','남','서'][values[i]]}</small>`;if(count===8)room.setCompanionDials(values);sound('metal');});$('#directionSubmit').onclick=()=>{if(attempt(values)){sound('unlock');success();}else $('#directionStatus').textContent='잠금쇠가 움직이지 않는다. 화살표가 가리키는 방향을 다시 비교하자.';};
  }
  function companion(){if(!s.wheelInstalled){caption('보관함의 가운데 방향판이 빠져 있다. 옆 협탁에는 얕은 슬라이드 서랍이 있다.');return;}const companionValues=s.companionArrows;if(s.companionSolved){reward('열린 동행인의 보관함','316 EXIT와 317이 적힌 두 열쇠. 함께 접어 둔 쪽지에는 “오늘 밤 우리가 확인한 것은 그 안에 있어”라고 적혀 있다.','두 열쇠 꺼내기',takeCompanionKeys,s.companionKeysTaken);return;}compassLock('동행인의 여행 보관함',['부두','역','정원'],companionValues,8,v=>unlockCompanionCase(s,v),companion,'북쪽 표식 아래 세 개의 화살표. 잠금판에는 “그 자리에서 바라본 것”이라고 새겨져 있다.');}
+ function breakfastEnvelope(){
+  const text='“네 몫까지 아침을 시켰어. 복도에서 다시 발소리가 나서 주방을 잠갔어. 열쇠는 봉투에 넣어 둘게. 밤새 찾던 것도 아침 쟁반에 함께 돌아왔대.”';
+  record('조식 주문 봉투',text);reward('동행인의 조식 주문 봉투',text,'종이 봉투에서 주방 열쇠 꺼내기',takeGalleyKey317,s.galleyKey317Taken||s.kitchen317Open);
+ }
+ function breakfast(){
+  if(!s.breakfast317Open){s.breakfast317Open=true;sound('metal');caption('은색 덮개를 옆으로 밀었다. 접힌 냅킨 고리에 무언가 매달려 있다.');}
+  else caption('식은 아침 쟁반에 접힌 냅킨과 투숙객 보관용 영수증이 놓여 있다.');
+ }
+ function taggedKey(){
+  if(takeTaggedKey317(s)){inventory();record('세면대 아래의 수하물표','젖은 외투에서 떼어 둔 수하물표에 작은 열쇠가 묶여 있다. 열쇠 머리에 거실 금고와 같은 문양이 새겨져 있다.');}
+  tag();
+ }
  function receipt(){record('호텔 영수증','11월 16일 · 317호 · 숙박 및 추가 린넨 요금. 뒷면은 인쇄되지 않았다.');modal('<h2>호텔 영수증</h2><div class="story-paper"><h3>HOTEL · 317</h3><p>11월 16일 / 투숙객 보관용</p><table><tr><td>숙박</td><td>1박</td></tr><tr><td>추가 린넨</td><td>1세트</td></tr></table><p>서명란은 비어 있다. 종이 뒷면에는 아무것도 인쇄되지 않았다.</p></div>');}
  function tag(){modal(`<h2>317호 수하물표</h2><div class="story-paper" id="tagFace"><h3>HOTEL · 317</h3><p>가방 손잡이에 오래 매달려 있던 표. 한쪽 면에 잉크를 닦아 낸 얼룩이 있다.</p></div><button class="outline" id="flipTag">수하물표 뒤집기</button>`);$('#flipTag').onclick=()=>{record('수하물표 뒷면',s.tagRubbed?'종이에 옮긴 자국은 5 · 7 · 1이다.':'잉크는 지워졌지만 눌러 쓴 숫자의 요철이 남아 있다.');$('#tagFace').innerHTML=s.tagRubbed?`<h3>종이에 옮긴 압흔</h3><div class="rubbing-code">${LUGGAGE_IMPRINT}</div><p>연필 가루가 눌린 획의 가장자리에 남았다.</p>`:'<h3>지워진 뒷면</h3><div class="indentation" aria-hidden="true"></div><p>얕은 획이 손끝에 걸린다. 숫자인 것 같지만 눈으로는 읽기 어렵다.</p>';$('#flipTag').hidden=true;};}
  function desk(){modal(`<h2>317호의 메모와 연필</h2>${story('desk')}${!s.pencilTaken?'<button class="primary" id="takePencil">메모 옆 연필 집기</button>':'<p class="muted">연필을 가져간 자리.</p>'}`);if($('#takePencil'))$('#takePencil').onclick=()=>{s.pencilTaken=true;addItem(s,'pencil');inventory();closeModal();};}
@@ -61,7 +75,7 @@ export function createSuitePuzzles(ctx){
   modal('<h2>317호의 야상곡</h2><p>문양판 하나가 드러날 때마다 작은 추가 움직인다.</p><div class="music-phrases" id="musicPhrases"></div><button class="primary" id="playMusic">태엽 풀어 연주하기</button><p class="muted">타격은 소리와 화면에 함께 나타납니다. 다시 연주할 수 있습니다.</p>');
   const stage=$('#musicPhrases'),button=$('#playMusic');button.onclick=async()=>{button.disabled=true;stage.replaceChildren();for(const phrase of MUSIC_PHRASES){if($('#modal').hidden||$('#musicPhrases')!==stage)return;const p=document.createElement('div');p.innerHTML=symbol(phrase.symbol)+`<b>${names[phrase.symbol]}</b><span class="played-beats"></span>`;stage.append(p);for(let n=0;n<phrase.beats;n++){if($('#modal').hidden||$('#musicPhrases')!==stage)return;p.querySelector('.played-beats').insertAdjacentHTML('beforeend','<i></i>');p.setAttribute('aria-label',`${names[phrase.symbol]} ${n+1}회 타격`);musicNote(phrase.symbol);await new Promise(r=>setTimeout(r,400));}await new Promise(r=>setTimeout(r,450));}if($('#musicPhrases')!==stage||$('#modal').hidden)return;hearTune(s);record('오르골 타격 기록','별: 두 번 / 물결: 네 번 / 종: 한 번 / 달: 세 번.');button.disabled=false;button.textContent='다시 연주하기';};
  }
- function safe(){if(s.safeOpen){reward('열린 객실 금고','317 INNER라고 적힌 열쇠와 “안쪽 방에서 기다릴게”라는 쪽지가 있다.','안쪽 방 열쇠 꺼내기',takeInnerKey,s.innerKeyTaken);return;}modal(`<h2>객실 금고</h2><p>문양판 위의 눈금은 칸마다 개수가 다르다.</p><div class="safe-symbols">${safeSymbols.map((v,i)=>`<div>${beats(SAFE_BEATS[i])}<button class="outline" data-safe="${i}" aria-label="${i+1}번째 문양 변경">${symbol(v)}<span>${names[v]}</span></button></div>`).join('')}</div><button class="primary" id="openSafe">금고 손잡이 당기기</button><p id="safeFeedback" role="status"></p>`);document.querySelectorAll('[data-safe]').forEach(b=>b.onclick=()=>{const i=+b.dataset.safe;safeSymbols[i]=(safeSymbols[i]+1)%4;b.innerHTML=symbol(safeSymbols[i])+`<span>${names[safeSymbols[i]]}</span>`;room.setPuzzleDials(luggageDigits,safeSymbols);sound('metal');});$('#openSafe').onclick=()=>{if(unlockSafe(s,safeSymbols)){sound('unlock');safe();}else $('#safeFeedback').textContent='손잡이가 걸린다. 문양판 위의 눈금과 방 안에서 관찰한 것을 비교하자.';};}
+ function safe(){if(s.safeOpen){reward('열린 객실 금고','침실 꼬리표가 달린 열쇠와 접힌 쪽지가 있다. “잠이 오지 않으면 내 침대 곁에 앉아 있어 줘.”','침실 열쇠 꺼내기',takeInnerKey,s.innerKeyTaken);return;}if(!s.safeUnlocked317){caption('문양판 손잡이 아래에 작은 열쇠 구멍이 있다. 테두리에 수하물표의 열쇠와 같은 문양이 새겨져 있다.');return;}modal(`<h2>객실 금고</h2><p>문양판 위의 눈금은 칸마다 개수가 다르다.</p><div class="safe-symbols">${safeSymbols.map((v,i)=>`<div>${beats(SAFE_BEATS[i])}<button class="outline" data-safe="${i}" aria-label="${i+1}번째 문양 변경">${symbol(v)}<span>${names[v]}</span></button></div>`).join('')}</div><button class="primary" id="openSafe">금고 손잡이 당기기</button><p id="safeFeedback" role="status"></p>`);document.querySelectorAll('[data-safe]').forEach(b=>b.onclick=()=>{const i=+b.dataset.safe;safeSymbols[i]=(safeSymbols[i]+1)%4;b.innerHTML=symbol(safeSymbols[i])+`<span>${names[safeSymbols[i]]}</span>`;room.setPuzzleDials(luggageDigits,safeSymbols);sound('metal');});$('#openSafe').onclick=()=>{if(unlockSafe(s,safeSymbols)){sound('unlock');safe();}else $('#safeFeedback').textContent='손잡이가 걸린다. 문양판 위의 눈금과 방 안에서 관찰한 것을 비교하자.';};}
  function evacuation(){s.evacuationRead=true;if(!s.routeRestored){ctx.searchRoute();return;}modal(`<h2>접힌 대피 안내</h2>${story('inner')}${evacSvg()}`);}
 
  function evacuationBox(){const evacValues=s.evacArrows;if(s.evacuationBoxOpen){reward('열린 계단 열쇠함','3F STAIRS 꼬리표가 달린 열쇠. 긴 계단으로 내려가는 문을 여는 열쇠다.','계단문 열쇠 꺼내기',takeStairKey,s.stairKeyTaken);return;}compassLock('계단 열쇠함',['객실에서','복도를 지나','계단으로'],evacValues,4,v=>unlockEvacuationBox(s,v),evacuationBox,'317 → STAIRS. 세 개의 화살표 위에 대피도와 같은 북쪽 표식이 있다.');}
@@ -71,7 +85,13 @@ export function createSuitePuzzles(ctx){
   if(id==='cup'&&ctx.zone()==='living'){cup();return true;}
   if(/^linenTag[0-2]$/.test(id)){linenTag(+id.slice(-1));return true;}
   if(/^stockJar[0-3]$/.test(id)){jar(+id.slice(-1));return true;}
-  const handlers={bathNote:linenNote,linenCabinet,linenReward:linenCabinet,teaTin:tin,teaNote:tin,teaTray:tray,stockSheet,kitchenScale:scale,stockBox,waterStation:stockBox,stockKey:stockBox,jugKey:stockBox,travelPostcards:postcards,companionCase:companion,receipt317:()=>{addItem(s,'receipt');inventory();receipt();},tag317:()=>{addItem(s,'tag');inventory();tag();},pencil317:desk,luggage317:luggage,musicBox:music,safe317:safe,evacuationPlan:evacuation,evacuationBox,stairKey:evacuationBox,kitchenDoor:()=>caption(s.kitchenOpen?'주방 문이 열려 있다.':'KITCHEN. 잠금판 아래에는 보통 열쇠 구멍이 있다.')};
+  const handlers={
+   envelope317:breakfastEnvelope,breakfast317:breakfast,
+   breakfastKey317:()=>reward('냅킨에 묶인 열쇠','은색 고리에 매듭을 지어 고정한 열쇠. 낡은 자개 꼬리표에 욕실이라고 쓰여 있다.','매듭을 풀고 욕실 열쇠 챙기기',takeBreakfastKey317,s.bathKey317Taken||s.bath317Open),
+   galleyDoor317:()=>caption(s.kitchen317Open?'주방 문이 열려 있다.':'주방 문이 잠겨 있다. 문틈으로 식은 커피 냄새가 난다.'),
+   bathDoor317:()=>caption(s.bath317Open?'욕실 문이 열려 있다.':'자개 문패가 달린 욕실 문이다. 손잡이가 잠겨 있다.'),
+   vanity317:()=>{s.vanity317Open=!s.vanity317Open;sound('wood');caption(s.vanity317Open?'문이 열리며 선반과 마른 수건이 드러난다.':'수납장 문을 닫았다.');},
+   bathNote:linenNote,linenCabinet,linenReward:linenCabinet,teaTin:tin,teaNote:tin,teaTray:tray,stockSheet,kitchenScale:scale,stockBox,waterStation:stockBox,stockKey:stockBox,jugKey:stockBox,travelPostcards:postcards,companionCase:companion,receipt317:()=>{addItem(s,'receipt');inventory();receipt();},tag317:taggedKey,pencil317:desk,luggage317:luggage,musicBox:music,safe317:safe,evacuationPlan:evacuation,evacuationBox,stairKey:evacuationBox,kitchenDoor:()=>caption(s.kitchenOpen?'주방 문이 열려 있다.':'KITCHEN. 잠금판 아래에는 보통 열쇠 구멍이 있다.')};
   if(handlers[id]){handlers[id]();return true;}return false;
  }
  return{interact,inspect};

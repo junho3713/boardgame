@@ -34,7 +34,19 @@ test('rotated furniture and hinged door leaves use their rotated collision footp
 });
 test('corridor hints require finding and using the separate guest-room key',()=>{
  const s=createState();s.doorOpen=true;assert.equal(phase(s),'exit');s.suiteEscaped=true;assert.equal(phase(s),'neighborKey');addItem(s,'passKey');assert.equal(phase(s),'enter317');
- assert.equal(useItem(s,'passKey','exit317'),false);assert.equal(useItem(s,'passKey','entry317'),true);assert.equal(phase(s),'enter317');s.room317Entered=true;assert.equal(phase(s),'luggage');
+ assert.equal(useItem(s,'passKey','exit317'),false);assert.equal(useItem(s,'passKey','entry317'),true);assert.equal(phase(s),'enter317');s.room317Entered=true;assert.equal(phase(s),'galley317');
+});
+
+
+test('317 has four walkable rooms and each side door only opens its own wall',()=>{
+ const s=createState();s.room317Open=true;
+ const lounge=[52,145],kitchen=[12,163],bath=[125,177],bedroom=[65,221];
+ assert.equal(zoneAt(1.2,16.3),'kitchen317');assert.equal(zoneAt(12.5,17.7),'bath317');
+ for(const target of [kitchen,bath,bedroom])assert.equal(reachable(s,lounge,target),false);
+ s.kitchen317Open=true;assert.ok(reachable(s,lounge,kitchen));assert.equal(reachable(s,kitchen,bath),false);
+ s.bath317Open=true;assert.ok(reachable(s,kitchen,bath));assert.equal(reachable(s,bath,bedroom),false);
+ s.exitOpen=true;assert.ok(reachable(s,bath,bedroom));
+ for(const [x,z] of [[3.6,17.7],[10.2,15.5],[12.0,13.5],[1.2,13.5]])assert.equal(canWalk(s,x,z),false);
 });
 
 test('the stair route requires the corridor key and cannot be reached through 317',()=>{
