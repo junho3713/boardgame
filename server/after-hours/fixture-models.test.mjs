@@ -1,4 +1,6 @@
 import {createBedSearch} from './public/bed-cover.js';
+import {MIRROR_GUEST_LAYER} from './public/mirror-guest.js';
+import {Reflector} from './public/Reflector.js';
 import {buildBasinFlow} from './public/basin-flow.js';
 import {basinSurface} from './public/basin-water.js';
 import {hingedDoor} from './public/hotel-doors.js';
@@ -17,6 +19,22 @@ function model(name){
  const nodes=g.nodes.map(n=>{const root=new T.Group();root.name=n.name;if(n.translation)root.position.fromArray(n.translation);if(n.rotation)root.quaternion.fromArray(n.rotation);if(n.scale)root.scale.fromArray(n.scale);if(n.matrix){root.matrix.fromArray(n.matrix);root.matrix.decompose(root.position,root.quaternion,root.scale);}if(n.mesh!==undefined)for(const p of g.meshes[n.mesh].primitives){const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(accessor(p.attributes.POSITION),3));if(p.indices!==undefined)geo.setIndex(accessor(p.indices));root.add(new T.Mesh(geo,new T.MeshBasicMaterial({name:g.materials[p.material]?.name,side:T.DoubleSide})));}return root;});g.nodes.forEach((n,i)=>n.children?.forEach(c=>nodes[i].add(nodes[c])));const scene=new T.Group();for(const id of g.scenes[g.scene||0].nodes)scene.add(nodes[id]);scene.updateMatrixWorld(true);return{g,scene,nodes,bytes:b.length};
 }
 const height=(scene,x,z,startY=3)=>new T.Raycaster(new T.Vector3(x,startY,z),new T.Vector3(0,-1,0)).intersectObject(scene,true)[0]?.point.y;
+test('all room mirrors see the guest layer while the first-person camera and interaction rays exclude it',()=>{
+ const scene=new T.Scene(),guest=new T.Layers();guest.set(MIRROR_GUEST_LAYER);
+ for(let i=0;i<3;i++){
+  const mirror=new Reflector(new T.PlaneGeometry(1,1));
+  registerRoomMirror(scene,mirror);
+  assert.ok(mirror.camera.layers.test(guest));
+  assert.ok(mirror.camera.layers.isEnabled(0),'room and lights still reflect');
+  mirror.dispose();
+ }
+ assert.equal(new T.PerspectiveCamera().layers.test(guest),false);
+ assert.equal(new T.Raycaster().layers.test(guest),false);
+ const {g}=model('mirror-guest.glb');
+ for(const bone of ['Bip01 LEye','Bip01 REye','Bip01 Head'])assert.ok(g.nodes.some(n=>n.name===bone));
+ assert.deepEqual(g.animations.map(a=>a.name).sort(),['Crouch','CrouchWalk','Stand','Walk']);
+ assert.ok(g.images.every(i=>i.bufferView!==undefined),'guest textures travel with its mesh');
+});
 test('basin water starts at the aerator and its animated lever stays attached to the mixer',()=>{
  const bath=model('bathroom-316.glb'),lever=bath.scene.getObjectByName('Vanity_Faucet_Lever_Pivot');assert.ok(lever);assert.ok(lever.children.length);
  const before=lever.getWorldPosition(new T.Vector3());assert.ok(before.distanceTo(new T.Vector3(8.005,1.178,-.142))<.001);

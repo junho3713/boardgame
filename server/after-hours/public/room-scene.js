@@ -1,4 +1,5 @@
 import {createBedSearch} from './bed-cover.js';
+import {createMirrorGuest} from './mirror-guest.js';
 import {buildHotelDoor,hingedDoor} from './hotel-doors.js';
 import {buildSearchProps} from './room-search.js?v=20261117-tricks1';
 import {buildPuzzleProps} from './puzzle-props.js?v=20261117-tricks1';
@@ -18,6 +19,7 @@ export function buildRoom(renderer,state){
  const roots=[],solids=[],tweens=[],suiteLights=[],fixtureLights=[];const assetsFailed=[];let resolveReady;
  const ready=new Promise(r=>resolveReady=r);
  const manager=new T.LoadingManager(()=>resolveReady());manager.onError=url=>assetsFailed.push(url);
+ const updateGuest=createMirrorGuest(scene,manager);
  const loader=new T.TextureLoader(manager),aniso=Math.min(8,renderer.capabilities.getMaxAnisotropy());
  function tex(name,color=false,repeat=[1,1]){const t=loader.load('./assets/'+name);t.wrapS=t.wrapT=T.RepeatWrapping;t.repeat.set(...repeat);t.anisotropy=aniso;if(color)t.colorSpace=T.SRGBColorSpace;return t;}
  const floorMap=tex('herringbone_parquet_Diffuse.jpg',true,[3,3.8]);
@@ -320,5 +322,5 @@ export function buildRoom(renderer,state){
  function clockHands(hour,minute){domestic.clockHands(hour,minute);if(domestic.clockLoaded)return;const ha=hour/12*Math.PI*2+minute/60*Math.PI/6,ma=minute/60*Math.PI*2;hr.position.set(Math.sin(ha)*.045,.3+Math.cos(ha)*.045,.111);hr.rotation.z=-ha;mn.position.set(Math.sin(ma)*.065,.3+Math.cos(ma)*.065,.12);mn.rotation.z=-ma;}
  clockHands(11,10);const clockMark=canvasTexture((a,w,h)=>{a.fillStyle='#c6ab75';a.beginPath();a.moveTo(w*.2,h*.8);a.lineTo(w*.8,h*.8);a.lineTo(w*.8,h*.2);a.closePath();a.fill();},128);const markMesh=mesh(new T.PlaneGeometry(.1,.1),new T.MeshStandardMaterial({map:clockMark,transparent:true,roughness:.8}),clock);markMesh.position.set(0,.29,-.102);markMesh.rotation.y=Math.PI;
  function canMove(x,z){return canWalk(state,x,z,solids);}
- return{scene,roots,solids,bedNote:bedSearch.note,ready,assetsFailed,update,canMove,clockHands,setPuzzleDials:details.setPuzzleDials,setCompanionDials:twin.setDials,frame,clock,mirror,lamp,drawer,lock,photo,canvasTexture,materials:{wood,darkwood,brass,paper,black,ivory},helpers:{group,box,rb,rod,cyl,ball,mesh,sign},uvInk};
+ return{scene,roots,solids,updateGuest,bedNote:bedSearch.note,ready,assetsFailed,update,canMove,clockHands,setPuzzleDials:details.setPuzzleDials,setCompanionDials:twin.setDials,frame,clock,mirror,lamp,drawer,lock,photo,canvasTexture,materials:{wood,darkwood,brass,paper,black,ivory},helpers:{group,box,rb,rod,cyl,ball,mesh,sign},uvInk};
 }

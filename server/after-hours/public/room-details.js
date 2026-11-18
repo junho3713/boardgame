@@ -2,6 +2,7 @@ import {SAFE_BEATS} from './puzzle-evidence.js?v=20261117-tricks1';
 import * as T from './three.module.js';
 import {GLTFLoader} from './GLTFLoader.js';
 import {Reflector} from './Reflector.js';
+import {MIRROR_GUEST_LAYER} from './mirror-guest.js';
 
 // GLTFLoader replaces spaces and punctuation in Blender node names.
 export function getModelNode(root,name){return root.getObjectByName(name)||root.getObjectByName(T.PropertyBinding.sanitizeNodeName(name));}
@@ -9,6 +10,7 @@ export function getModelNode(root,name){return root.getObjectByName(name)||root.
 // Mirrors share a visibility guard, preserving the lounge's reflection-only puzzle ink.
 const mirrorSets=new WeakMap();
 export function registerRoomMirror(scene,mirror){
+ mirror.camera?.layers.enable(MIRROR_GUEST_LAYER);
  let mirrors=mirrorSets.get(scene);if(!mirrors){mirrors=[];mirrorSets.set(scene,mirrors);}
  if(mirrors.includes(mirror))return;mirrors.push(mirror);const render=mirror.onBeforeRender;
  mirror.onBeforeRender=function(...args){const others=mirrors.filter(o=>o!==mirror).map(o=>[o,o.visible]);others.forEach(([o])=>o.visible=false);try{return render.apply(this,args);}finally{others.forEach(([o,v])=>o.visible=v);}};

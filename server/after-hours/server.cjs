@@ -25,6 +25,8 @@ const FILES = new Map([
   ['basin-water.js', 'text/javascript; charset=utf-8'],
   ['bath-audio.js', 'text/javascript; charset=utf-8'],
   ['bed-cover.js', 'text/javascript; charset=utf-8'],
+  ['mirror-guest.js', 'text/javascript; charset=utf-8'],
+  ['assets/models/mirror-guest.glb', 'model/gltf-binary'],
   ['hotel-doors.js', 'text/javascript; charset=utf-8'],
   ['basin-flow.js', 'text/javascript; charset=utf-8'],
   ['room-details.js', 'text/javascript; charset=utf-8'],

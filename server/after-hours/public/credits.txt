@@ -30,3 +30,28 @@ Hotel fixture models (bathroom, kitchenette, wall clock, lounge and bedroom fitt
 Guest room 317 and additional suite furniture (2026-11-17): original Blender 4.4 geometry and embedded procedural textures, source art/build_room_details.py. Leather luggage shell, fabric lining, mechanical music box, steel safe, walnut casework, upholstered chairs, porcelain and enamel refrigerator are authored for this project. Bathroom towel drape and spun kitchen kettle revised in art/build_fixtures.py. No external meshes used.
 
 2026-11-17: Original Blender twin bedroom (twin-room-316.glb), bedding, keepsake box and travel postcard artwork. Furniture proportions and metric wood UVs revised. No third-party mesh sources.
+
+Mirror guest: Microsoft Rocketbox, Male_Adult_04. Adapted for AFTER HOURS with embedded textures and new poses.
+https://github.com/microsoft/Microsoft-Rocketbox
+
+MIT License
+
+Copyright (c) 2020 Microsoft
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
