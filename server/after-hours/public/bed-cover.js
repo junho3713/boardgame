@@ -4,8 +4,48 @@ const materials = new Set(['Oxblood | woven jacquard', 'Oxblood | tailored pipin
 const cotton='Ivory | washed cotton';
 export const isBedCover = o => o.isMesh && materials.has(o.material?.name);
 
-// Build two poses on the original Blender vertices. Work in the bed's own
-// coordinates so seams, trim and fabric follow the same moving fold.
+// Bed-local +Z points to the foot. Each pose uses the original cloth coordinates
+// so the jacquard, piping and cuff gather together and reverse without drift.
+const pullPoses = [.32, .68, 1];
+const smooth = T.MathUtils.smoothstep;
+const bell = value => Math.exp(-value * value);
+
+function pullCloth(point, amount, cuff) {
+  const {x, y} = point;
+  if (point.z >= 1.34) return; // The material hanging over the foot stays put.
+  const nearHand = smooth(x, -.95, .65);
+  const grip = bell((x - .64) / .39);
+  const pull = amount * (1 - .46 * (1 - nearHand) * (1 - amount));
+  // The loose lip rides up against the bound edge before the quilt piles up.
+  if (cuff) point.z += pull * (.10 + .044 * grip) * (1 - smooth(point.z, -.76, -.38));
+  const z = point.z;
+  const loose = 1 - smooth(z, -.60, 1.34);
+  const travel = .62 + .22 * nearHand + .12 * grip + .044 * Math.sin(5.3 * x + .55);
+  point.z += travel * pull * loose;
+
+  // The leading corner pulls first. Short curved ridges develop in the slack
+  // behind it. Vary their reach across the bed so they break up at the sides.
+  const skew = .13 * x + .065 * Math.sin(2.9 * x + .4);
+  const depth = z + skew;
+  const first = .123 * (.50 + .50 * bell((x - .42) / .61)) * bell((depth + .18) / .145);
+  const middle = .146 * (.44 + .56 * bell((x + .25) / .74)) * bell((depth - .24 - .09 * Math.cos(3.1 * x)) / .17);
+  const last = .089 * (.25 + .75 * bell((x - .18) / .64)) * bell((depth - .68 + .11 * Math.sin(3.5 * x)) / .14);
+  const gather = pull * (.38 + .62 * amount);
+  const top = smooth(y, .48, .78);
+  const hemWave = .071 * bell((z + .53 - .062 * Math.sin(x * 5.2 + .5)) / .092);
+  const pinch = .037 * bell((x - .47 + (z + .6) * .64) / .12) * bell((z + .50) / .37);
+  const ridges = first + middle + last + hemWave + pinch;
+  const liftAtGrip = .036 * Math.sin(Math.PI * amount) * grip * bell((z + .54) / .30);
+  point.y += top * (gather * ridges + liftAtGrip);
+  // The visible side still hangs under gravity. Its pleats billow outward.
+  point.x += Math.sign(x) * smooth(Math.abs(x), .82, 1.01) * (.035 + (1 - top) * .55) * ridges * gather;
+  // Let the ivory overhang settle onto the exposed sheet ahead of the quilt.
+  if (cuff) {
+    const freeLip = 1 - smooth(z, -.65, -.53);
+    point.y -= pull * (freeLip * .059 + .032 * smooth(Math.abs(x), .81, .95));
+  }
+}
+
 export function prepareCoverMesh(mesh, bed, cottonCuff = false) {
   mesh.updateWorldMatrix(true, false);
   const toBed = bed.matrixWorld.clone().invert().multiply(mesh.matrixWorld);
@@ -31,26 +71,23 @@ export function prepareCoverMesh(mesh, bed, cottonCuff = false) {
     movable=Uint8Array.from(parent,(_,i)=>Number(hem.has(find(i))));
   }
   const poses = [], normals = [];
-  for (const angle of [1.38, 2.92]) {
+  for (const amount of pullPoses) {
     const pose = base.clone();
     for (let i = 0; i < base.count; i++) {
       if(movable&&!movable[i])continue;
       point.fromBufferAttribute(base, i).applyMatrix4(toBed);
-      const hinge = .17 + .075 * point.x + .025 * Math.cos(point.x * 3.2);
-      const length = Math.max(0, hinge - point.z);
-      if (length > 0) {
-        // Bend over a rounded fold first, then lay the free cloth over the foot.
-        const radius = .052, bent = Math.min(length, radius * angle), a = bent / radius;
-        const free = length - bent;
-        const lift = radius * (1 - Math.cos(a)) + free * Math.sin(a);
-        point.z = hinge - radius * Math.sin(a) - free * Math.cos(a);
-        point.y += lift + Math.min(1, length * 7) * Math.max(0, .77 - point.y) * Math.sin(angle / 2);
-      }
+      pullCloth(point, amount, cottonCuff || mesh.material.name === 'Ivory | seam thread');
       point.applyMatrix4(fromBed);
       pose.setXYZ(i, point.x, point.y, point.z);
     }
     const temp = geometry.clone(); temp.setAttribute('position', pose); temp.computeVertexNormals();
-    normals.push(temp.attributes.normal); poses.push(pose); temp.dispose();
+    const normal = temp.attributes.normal, originalNormal = geometry.attributes.normal;
+    if (movable && originalNormal) {
+      for (let i=0; i<base.count; i++) if (!movable[i]) {
+        normal.setXYZ(i, originalNormal.getX(i), originalNormal.getY(i), originalNormal.getZ(i));
+      }
+    }
+    normals.push(normal); poses.push(pose); temp.dispose();
   }
   geometry.morphAttributes.position = poses; geometry.morphAttributes.normal = normals;
   geometry.computeBoundingBox(); geometry.computeBoundingSphere();
@@ -118,13 +155,20 @@ export function createBedSearch({bed, fallbackBlanket, scene, state, canvasTextu
     });
     seatNote();
   }, update(dt) {
-    t=T.MathUtils.clamp(t+(state.bedCoverFolded?1:-1)*dt/.85,0,1);
-    const p=t*t*(3-2*t), lifted=2*Math.min(p,1-p);
+    t=T.MathUtils.clamp(t+(state.bedCoverFolded?1:-1)*dt/.95,0,1);
+    const p=t*t*(3-2*t);
+    const next=p<=pullPoses[0]?0:p<=pullPoses[1]?1:2;
+    const start=next===0?0:pullPoses[next-1];
+    const blend=(p-start)/(pullPoses[next]-start);
     for(const mesh of targets) {
-      mesh.morphTargetInfluences[0]=lifted;
-      mesh.morphTargetInfluences[1]=Math.max(0,2*p-1);
+      const weights=mesh.morphTargetInfluences;
+      weights.fill(0);
+      if(next>0) weights[next-1]=1-blend;
+      weights[next]=blend;
     }
-    note.visible=state.bedCoverFolded&&t>.64&&!state.filmJoined&&!state.inventory.includes('filmA');
-    bed.userData.label=state.bedCoverFolded?'이불 다시 덮기':'이불 걷기';
+    // Enable the slip while it is still physically occluded. The fabric then
+    // reveals or hides its edge continuously as the player changes direction.
+    note.visible=t>.08&&!state.filmJoined&&!state.inventory.includes('filmA');
+    bed.userData.label=state.bedCoverFolded?'이불 다시 덮기':'이불을 발치로 당기기';
   }};
 }

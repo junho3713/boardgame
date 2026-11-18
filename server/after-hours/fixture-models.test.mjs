@@ -149,7 +149,33 @@ test('authored bed uncovers a separately aimable slip, covers it again and keeps
   return ray.intersectObject(scene,true).find(hit=>{for(let o=hit.object;o;o=o.parent)if(!o.visible)return false;return true;})?.object;
  }
  search.update(1);assert.equal(search.note.visible,false);assert.notEqual(aim(),search.note);
+ let cloth;
+ modelRoot.traverse(m=>{if(m.material?.name==='Oxblood | woven jacquard')cloth=m;});
+ assert.ok(cloth);
+ const toBed=bed.matrixWorld.clone().invert().multiply(cloth.matrixWorld);
+ const base=cloth.geometry.attributes.position;
+ const rest=new T.Vector3(),current=new T.Vector3();
+ function checkPull(){
+  let near=0,far=0,highest=0,footSamples=0;
+  for(let i=0;i<base.count;i++){
+   rest.fromBufferAttribute(base,i).applyMatrix4(toBed);
+   cloth.getVertexPosition(i,current).applyMatrix4(toBed);
+   if(rest.z>1.34){assert.ok(rest.distanceTo(current)<1e-5);footSamples++;}
+   if(rest.z<-.48&&rest.y>.75){
+    const shift=current.z-rest.z;
+    if(rest.x>.45&&rest.x<.70)near=Math.max(near,shift);
+    if(rest.x<-.45&&rest.x>-.70)far=Math.max(far,shift);
+   }
+   highest=Math.max(highest,current.y-rest.y);
+  }
+  assert.ok(footSamples>0&&near>far&&far>0,'the near corner leads and the foot stays seated');
+  assert.ok(highest<.20,'no part swings up into a standing flap');
+  return near;
+ }
+ state.bedCoverFolded=true;search.update(.36);const partial=checkPull();
+ state.bedCoverFolded=false;search.update(.12);assert.ok(checkPull()<partial,'mid-pull reverses smoothly');
  state.bedCoverFolded=true;search.update(1);assert.equal(aim(),search.note);assert.equal(state.inventory.length,0);
+ assert.ok(checkPull()>.72,'the open hem has travelled towards the foot');
  state.bedCoverFolded=false;search.update(1);assert.equal(search.note.visible,false);
  state.bedCoverFolded=true;search.update(1);assert.equal(aim(),search.note);
  state.inventory.push('filmA');search.update(1);assert.equal(search.note.visible,false);

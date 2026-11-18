@@ -65,7 +65,7 @@ function openLock(){modal(`<div class="overline">DOOR / THREE CONCENTRIC RINGS</
 function interact(id){
  if(id==='bed'){state.bedCoverFolded=!state.bedCoverFolded;sound('cloth');return;}
  if(id==='filmA'){
-  if(state.bedCoverFolded&&room.bedNote.visible&&!state.inventory.includes('filmA')&&!state.filmJoined){
+  if(room.bedNote.visible&&!state.inventory.includes('filmA')&&!state.filmJoined){
    room.bedNote.visible=false;
    take('filmA','이불 속 인화실 쪽지','쪽지에 인화용 필름 한 조각이 붙어 있다. 뒷면에는 “두 장을 겹쳐 볼 것”이라고 적혀 있다.');
    toast('인화실 쪽지와 필름 조각을 챙겼다.');
