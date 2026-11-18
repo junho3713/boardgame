@@ -1,4 +1,6 @@
-"""Build the reflection guest variants and optional portraits with Blender 4.4.
+"""Build a Rocketbox guest and optional portrait with Blender 4.4.
+
+For the current female mirror guest, use build_hatless_mage.py.
 
 blender -b -P build_mirror_guest.py -- <Rocketbox avatar folder> <output.glb> [<portrait.png>]
 Supported inputs: Male_Adult_04 (m006) and Female_Adult_11 (f011).
