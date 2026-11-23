@@ -2,12 +2,12 @@ import {basinOutflow} from './basin-water.js';
 
 // Independent filtered bands let the same stream change from porcelain hiss to
 // a rounder pool splash. The drain can keep sounding after the tap is shut.
-export function createBathAudio(ctx) {
+export function createBathAudio(ctx, {x=7.825,z=-.2,output=ctx.destination}={}) {
   const ear = ctx.createBiquadFilter();
   ear.type = 'lowpass';
   const pan = ctx.createStereoPanner?.();
-  if (pan) ear.connect(pan).connect(ctx.destination);
-  else ear.connect(ctx.destination);
+  if (pan) ear.connect(pan).connect(output);
+  else ear.connect(output);
   const buffer = ctx.createBuffer(1, ctx.sampleRate * 3, ctx.sampleRate);
   const samples = buffer.getChannelData(0);
   for (let i = 0; i < samples.length; i++) samples[i] = Math.random() * 2 - 1;
@@ -26,7 +26,7 @@ export function createBathAudio(ctx) {
     const now = ctx.currentTime;
     if (now < nextUpdate || ctx.state !== 'running') return;
     nextUpdate = now + .045;
-    const dx = 7.825 - player.x, dz = -.2 - player.z, distance = Math.hypot(dx, dz);
+    const dx = x - player.x, dz = z - player.z, distance = Math.hypot(dx, dz);
     const proximity = audible ? 1 / (1 + .53 * distance * distance) : 0;
     const wall = inBath ? 1 : state.bathDoorOpen ? .44 : .17;
     const level = proximity * wall, flow = Number(state.faucetOn), depth = Math.sqrt(state.basinVolume);

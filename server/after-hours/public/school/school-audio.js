@@ -1,5 +1,6 @@
+import {createBathAudio} from '../bath-audio.js';
 export function schoolAudio(){
-  let ctx,master,bed,noise,on=true;
+  let ctx,master,bed,noise,on=true,taps,tankHiss;
   function wake(){
     const C=window.AudioContext||window.webkitAudioContext;if(!C)return;
     if(!ctx){ctx=new C();master=ctx.createGain();master.gain.value=on?.54:0;master.connect(ctx.destination);
@@ -21,6 +22,11 @@ export function schoolAudio(){
     n.connect(f).connect(g).connect(master);n.start(t);n.stop(t+duration);n.onended=()=>{n.disconnect();f.disconnect();g.disconnect();};}
   function sound(kind){
     if(kind==='step'){rustle(330,.14,.16);tone(86,48,.11,.085);}
+    if(kind==='tileStep'){rustle(680,.12,.18);tone(155,74,.09,.11);tone(145,85,.16,.039,.09);}
+    if(kind==='hinge'){rustle(1050,.29,.12);tone(540,386,.24,.038,0,'triangle');}
+    if(kind==='china'){rustle(930,.30,.11);tone(1200,710,.09,.075,.26);}
+    if(kind==='flush'){rustle(680,1.42,.48);rustle(270,.93,.39,.25);tone(125,52,.62,.075,.8);}
+    if(kind==='rattle'){tone(1390,840,.18,.14,.71);tone(1190,780,.22,.11,1.03);}
     if(kind==='slide')rustle(820,.5,.15);
     if(kind==='key'){tone(1180,810,.17,.12);tone(770,650,.2,.10,.07);}
     if(kind==='click')tone(210,93,.057,.14,0,'triangle');
@@ -35,5 +41,18 @@ export function schoolAudio(){
   }
   function enable(v){on=v;if(ctx)master.gain.setTargetAtTime(on?.54:0,ctx.currentTime,.035);}
   document.addEventListener('visibilitychange',()=>{if(!ctx)return;if(document.hidden)ctx.suspend().catch(()=>{});else if(on)wake();});
-  return {wake,enable,sound,field,ambience(dark){if(ctx)bed.gain.setTargetAtTime(dark?.043:.027,ctx.currentTime,.14);}};
+  function plumbing(s,player,yaw,inside,audible){
+    if(!ctx||(!taps&&!inside))return;
+    if(!taps){
+      taps=[4.48,5.92].map(z=>createBathAudio(ctx,{x:-13.36,z,output:master}));
+      const src=ctx.createBufferSource(),band=ctx.createBiquadFilter();src.buffer=noise;src.loop=true;
+      band.type='bandpass';band.frequency.value=1480;band.Q.value=.85;tankHiss=ctx.createGain();tankHiss.gain.value=0;
+      src.connect(band).connect(tankHiss).connect(master);src.start();
+    }
+    taps.forEach((update,i)=>update(s.basins[i],player,yaw,inside,audible));
+    const filling=s.tanks.some((v,i)=>v<.995&&!s.flushing[i]&&(i===0||s.supply));
+    const distance=Math.hypot(player.x+11,player.z-1.12);
+    tankHiss.gain.setTargetAtTime(filling&&audible?(inside?.16:.015)/(1+.30*distance*distance):0,ctx.currentTime,.08);
+  }
+  return {wake,enable,sound,field,plumbing,ambience(dark){if(ctx)bed.gain.setTargetAtTime(dark?.043:.027,ctx.currentTime,.14);}};
 }

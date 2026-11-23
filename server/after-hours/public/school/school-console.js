@@ -99,10 +99,15 @@ export function schoolConsole(s, audio, say) {
   }
   function journal(){
     show('서령고등학교 · 학생 수첩','조사 기록');
-    const items=[[s.film,s.mounted?'투명 원고 (창틀)':'투명 원고'],[s.roomKey,'교실 열쇠'],[s.tape,s.loaded?'인계 테이프 (데크)':'인계 테이프'],[s.exitKey,'현관 열쇠']].filter(x=>x[0]);
+    const items=[[s.film,s.mounted?'투명 원고 (창틀)':'투명 원고'],[s.roomKey,'교실 열쇠'],[s.lostKey,'분실물함 열쇠'],[s.tape,s.loaded?'인계 테이프 (데크)':'인계 테이프'],[s.exitKey,'현관 열쇠']].filter(x=>x[0]);
     element('div','소지품　'+(items.map(x=>x[1]).join(' · ')||'비어 있다'),'paper');
     if(!s.notes.length)element('p','발견한 흔적을 여기에 적어 두자.');
     for(const n of s.notes)element('div',n,'entry');
+  }
+  function washLog(){
+    show('본관 서쪽 · 시설 주임 결재','청소 당번 일지');
+    element('div','11월 6일　둘째 칸 급수 점검. 물을 내리면 곧 다시 참.\n11월 7일　분실물함 열쇠 인계　　[서명 없음]\n\n아래에 번진 연필 글씨가 남아 있다.\n「빨간 실이 끊어졌다. 뚜껑 안에서 두 번, 짤랑.」','paper');
+    remember(s,'서쪽 화장실 일지　둘째 칸 물탱크의 급수 점검 기록. 분실물함 열쇠 인계란은 비어 있다.');
   }
   function hints(){
     const pair=hint(s);if(hintPhase!==pair[0]){hintPhase=pair[0];hintLevel=0;}
@@ -110,5 +115,5 @@ export function schoolConsole(s, audio, say) {
     if(!hintLevel)button('조금 더 펼쳐 보기',()=>{hintLevel=1;hints();});
   }
   function pause(){show('탐색 일시정지','복도는 조용하다.','WASD 이동 · 드래그 또는 방향키로 시점 조절 · E 조사\nJ 수첩 · H 힌트 · F 손전등');button('이어서 조사하기',close);button('시작 화면으로',()=>location.reload());}
-  return {windowView,drawer:()=>dial('교탁의 번호 서랍',false),patch:()=>dial('구내 방송 송출반',true),attendance,chart,deck,journal,hints,pause,close,isOpen:()=>dialog.open};
+  return {windowView,drawer:()=>dial('교탁의 번호 서랍',false),patch:()=>dial('구내 방송 송출반',true),attendance,chart,deck,washLog,journal,hints,pause,close,isOpen:()=>dialog.open};
 }

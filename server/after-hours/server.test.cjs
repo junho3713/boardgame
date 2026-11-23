@@ -22,7 +22,7 @@ test('hotel assets load under their prefix alongside existing games', async () =
     const school=await fetch(origin+'/after-hours/school/');
     assert.equal(school.status,200);
     assert.match(await school.text(),/마지막 종례/);
-    for(const file of ['school-game.js','school-scene.js','school-state.js','school-console.js','school-audio.js','school.css','school-night.jpg']){
+    for(const file of ['school-game.js','school-scene.js','school-state.js','school-console.js','school-audio.js','school.css','school-night.jpg','washroom.js','washroom.glb']){
       const resource=await fetch(origin+'/after-hours/school/'+file,{method:'HEAD'});
       assert.equal(resource.status,200,file);
       assert.ok(Number(resource.headers.get('content-length'))>100);

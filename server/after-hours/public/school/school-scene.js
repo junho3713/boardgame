@@ -1,8 +1,9 @@
 import * as T from '../three.module.js';
 import {Reflector} from '../Reflector.js';
 import {GLASS,PORTALS} from './school-state.js';
+import {buildWashroom} from './washroom.js';
 
-export function buildSchool(renderer,s){
+export function buildSchool(renderer,s,washModel){
   const scene=new T.Scene();scene.background=new T.Color('#14222b');scene.fog=new T.FogExp2('#172629',.033);
   const blocks=[],groups=new Map(),solid=(x,z,w,d)=>blocks.push({x,z,w,d});
   const cube=new T.BoxGeometry(1,1,1),tube=new T.CylinderGeometry(.5,.5,1,12),scratch=new T.Object3D();
@@ -68,7 +69,7 @@ export function buildSchool(renderer,s){
   }
   partition(true,0,-5.45,9.2);partition(true,0,5.45,9.2);gateWall(PORTALS[0],-5.4,5.4);
   partition(false,-4.6,-6.7,2.6);partition(false,-4.6,6.5,2.2);partition(true,-6.1,-8.01,3);
-  gateWall(PORTALS[1],-8,-1.65);partition(false,-7.6,2.975,9.25);gateWall(PORTALS[2],-7.6,-4.6);
+  gateWall(PORTALS[1],-8,-1.65);gateWall(PORTALS[3],-1.65,7.6);gateWall(PORTALS[2],-7.6,-4.6);
   partition(false,-12.82,-4.825,6.35);partition(true,-10.20,-8.02,5.20);partition(true,-10.20,-1.64,5.20);
   function fixture(x,z,m,len=1.55){box(.34,.085,len+.14,x,3.29,z,base);for(const dx of [-.099,.099])cyl(.026,len,x+dx,3.225,z,m,null,Math.PI/2);}
   const coldTube=mat('#768580');
@@ -196,8 +197,10 @@ export function buildSchool(renderer,s){
     box(w+.08,.018,.16,0,.011,0,steel,g);
     return {leaf,w,p,mid,ax,block:{x:g.position.x,z:g.position.z,w:ax?w:.08,d:ax?.08:w}};
   }
-  const doors=[slider(PORTALS[0],'classDoor','교실 미닫이문',oak),slider(PORTALS[1],'boothDoor','방송실 방음문',base),slider(PORTALS[2],'exitDoor','서쪽 현관문',steel)];
+  const doors=[slider(PORTALS[0],'classDoor','교실 미닫이문',oak),slider(PORTALS[1],'boothDoor','방송실 방음문',base),slider(PORTALS[2],'exitDoor','서쪽 현관문',steel),slider(PORTALS[3],'washDoor','서쪽 화장실 문',mint)];
   doors.forEach(d=>blocks.push(d.block));
+  sign(scene,'서쪽 화장실',.86,.24,-7.508,2.65,5.49,Math.PI/2);
+  const updateWashroom=buildWashroom(washModel,s,{scene,blocks,solid,box,sign,panel,group,lit,texture,mat,rand});
   // Corridor display case, the rain-gear tray and a paper patch schedule.
   const chart=group(-7.52,1.71,.45,'chart','방송 회선 점검표');chart.rotation.y=Math.PI/2;
   box(1.48,1.03,.055,0,0,0,wood,chart);box(1.40,.95,.04,0,0,.045,cork,chart);
@@ -207,6 +210,8 @@ export function buildSchool(renderer,s){
   box(1.24,.60,.036,0,.48,-.23,base,lost);box(1.24,.045,.50,0,.33,0,wood,lost);
   sign(lost,'분 실 물',.63,.11,0,.82,.272,0,'#d9cfb4','#3c473f');
   const tray=group(0,.435,.22,null,null,lost);box(1.18,.09,.027,0,0,0,oak,tray);box(1.15,.025,.38,0,-.025,-.19,steel,tray);
+  const deposit=washModel.getObjectByName('PropertyRack'),padlock=washModel.getObjectByName('TrayPadlock');
+  lost.add(deposit);tray.add(padlock);padlock.position.set(-.34,.038,.032);
   const tape=group(.04,.01,-.14,'tape','카세트테이프 집기',tray);
   box(.165,.027,.106,0,0,0,black,tape);box(.138,.003,.071,0,.015,0,paper,tape);for(const dx of [-.045,.045])cyl(.014,.004,dx,.018,0,black,tape);
   solid(-5.01,4.0,.55,1.32);
@@ -243,10 +248,13 @@ export function buildSchool(renderer,s){
   const lamp=new T.SpotLight('#f9edca',10,10,.48,.68,1.65);scene.add(lamp,lamp.target);
   let progress=0;
   function update(dt,time,cam,torch){
+    reflection.visible=cam.position.x>-7.55;
+    updateWashroom(dt,time,cam);
     const k=1-Math.exp(-dt*6);const to=(o,f,v)=>o[f]+=(v-o[f])*k;
     to(boardSlide.position,'x',s.board?-1.17:0);film.visible=s.board&&boardSlide.position.x<-.65&&!s.film;
     to(drawer.position,'z',s.drawer?.72:.30);classKey.visible=s.drawer&&drawer.position.z>.58&&!s.roomKey;
     to(tray.position,'z',s.tray?.61:.22);tape.visible=s.tray&&tray.position.z>.47&&!s.tape;
+    to(padlock.rotation,'z',s.tray?-.64:0);
     to(lid.rotation,'y',s.cabinet?-1.55:0);yardKey.visible=s.cabinet&&lid.rotation.y<-.72&&!s.exitKey;
     for(const d of doors){to(d.leaf.position,'x',s[d.p.field]?d.w+.12:0);d.block[d.ax?'x':'z']=d.mid+(d.ax?1:-1)*d.leaf.position.x;}
     ghost.visible=s.dark;inserted.visible=s.mounted;

@@ -1,8 +1,10 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {GLTFLoader} from './public/GLTFLoader.js';
 import * as T from './public/three.module.js';
 import {buildSchool} from './public/school/school-scene.js';
-import {fresh,act,glassCode,holes,PORTALS,walkable,where} from './public/school/school-state.js';
+import {fresh,act,glassCode,holes,PORTALS,walkable,where,keyExposed,advancePlumbing} from './public/school/school-state.js';
 
 test('original classroom and broadcast puzzles open three successive gates',()=>{
   const s=fresh();
@@ -13,7 +15,10 @@ test('original classroom and broadcast puzzles open three successive gates',()=>
   assert.equal(new Set(holes(s.turn,s.back).map(p=>p[1])).size,3);
   assert.equal(glassCode(),'798');
   assert.equal(act(s,'drawer','789'),false);assert.ok(act(s,'drawer',glassCode()));assert.equal(s.roomKey,false);
-  for(const id of ['roomKey','classDoor','boothDoor','tray','tape','load'])assert.ok(act(s,id),id);
+  for(const id of ['roomKey','classDoor','washDoor','stall2','lid','supply','flush2'])assert.ok(act(s,id),id);
+  assert.equal(act(s,'tray'),false);assert.equal(act(s,'lostKey'),false);
+  advancePlumbing(s,2);
+  for(const id of ['lostKey','boothDoor','tray','tape','load'])assert.ok(act(s,id),id);
   assert.equal(act(s,'air','BAC'),false);assert.ok(act(s,'air','CAB'));assert.equal(s.exitKey,false);
   for(const id of ['exitKey','exitDoor','leave'])assert.ok(act(s,id),id);assert.ok(s.escaped);
 });
@@ -26,13 +31,26 @@ test('free exploration opens the actual wall apertures and leaves the yard explo
   }
   assert.equal(where(-6,9),'yard');assert.equal(act(free,'leave'),false);
 });
-test('all required 3D items can be seen and picked from physically reachable positions',()=>{
+test('water fixtures have independent taps, drains, shutoff and reversible refill',()=>{
+  const s=fresh();act(s,'tap1');act(s,'plug1');advancePlumbing(s,9);
+  assert.ok(s.basins[0].basinVolume>.5);assert.equal(s.basins[1].basinVolume,0);
+  act(s,'tap1');act(s,'plug1');advancePlumbing(s,9);assert.equal(s.basins[0].basinVolume,0);
+  act(s,'lid');act(s,'flush2');advancePlumbing(s,12);assert.equal(s.tanks[1],1);assert.equal(keyExposed(s),false);
+  act(s,'supply');act(s,'flush2');advancePlumbing(s,3);assert.equal(s.tanks[1],0);assert.ok(keyExposed(s));
+  act(s,'lid');assert.equal(keyExposed(s),false);act(s,'lid');act(s,'supply');advancePlumbing(s,3);
+  assert.ok(s.tanks[1]>.4);assert.equal(keyExposed(s),false);
+});
+test('all required 3D items can be seen and picked from physically reachable positions',async()=>{
   // Textures are painted by the browser. Geometry, blockers and raycasts use the shipping Three.js objects.
   const previous=globalThis.document;
-  const ctx=new Proxy({createRadialGradient:()=>({addColorStop(){}})}, {get:(target,k)=>target[k]??(()=>{})});
+  const gradient=()=>({addColorStop(){}});
+  const ctx=new Proxy({createRadialGradient:gradient,createLinearGradient:gradient}, {get:(target,k)=>target[k]??(()=>{})});
   globalThis.document={createElement:()=>({getContext:()=>ctx})};
   try {
-    const s=fresh(),lvl=buildSchool({capabilities:{getMaxAnisotropy:()=>1}},s),cam=new T.PerspectiveCamera();
+    const bytes=await readFile(new URL('./public/school/washroom.glb',import.meta.url));
+    const asset=await new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.length),'');
+    assert.match(asset.asset.generator,/Blender/);
+    const s=fresh(),lvl=buildSchool({capabilities:{getMaxAnisotropy:()=>1}},s,asset.scene),cam=new T.PerspectiveCamera();
     const ray=new T.Raycaster();ray.far=2.65;
     let position=[-.75,4.65];
     function sync(){lvl.update(4,0,cam,false);lvl.scene.updateMatrixWorld(true);}
@@ -52,6 +70,7 @@ test('all required 3D items can be seen and picked from physically reachable pos
     function use(id,x,z,point,action=id,val){
       sync();assert.ok(reach(x,z),'walk to '+id);
       const origin=new T.Vector3(x,1.57,z),toward=new T.Vector3(...point).sub(origin).normalize();
+      cam.position.copy(origin);
       ray.set(origin,toward);assert.equal(lvl.pick(ray)?.id,id,'pick '+id);
       if(action)assert.ok(act(s,action,val),action);sync();
     }
@@ -66,6 +85,17 @@ test('all required 3D items can be seen and picked from physically reachable pos
     use('classDoor',-3.88,-3.44,[-4.6,1.35,-3.43]);
     assert.equal(reach(-10,-5),false);
     use('chart',-6.44,.45,[-7.49,1.71,.45],null);
+    assert.equal(reach(-9,5.4),false);
+    use('washDoor',-6.5,5.5,[-7.6,1.36,5.5]);
+    use('washLog',-9,2.35,[-8.97,1.65,.90],null);
+    use('tap1',-12.60,4.57,[-13.582,.999,4.585]);
+    use('plug1',-12.65,4.81,[-13.36,.804,4.69]);
+    use('stall2',-10.78,4.67,[-10.99,1.26,2.95]);
+    use('supply',-10.52,2.03,[-10.410,.655,1.115]);
+    use('flush2',-10.54,1.96,[-10.78,.94,1.31]);
+    use('lid',-10.50,1.63,[-10.99,1.08,1.12]);
+    advancePlumbing(s,2);
+    use('lostKey',-10.49,1.38,[-10.905,.749,1.137]);
     use('tray',-6.12,4.04,[-5.25,.43,4.0]);
     use('tape',-6.08,4.04,[-5.48,.464,4.04]);
     use('boothDoor',-6.48,-6.01,[-7.6,1.36,-6.01]);

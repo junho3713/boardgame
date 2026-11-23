@@ -6,7 +6,7 @@ const tau = Math.PI * 2;
 const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 const cosmetic = mesh => { mesh.raycast = () => {}; return mesh; };
 
-function waterSurface(parent) {
+export function waterSurface(parent, centerX=BASIN_CENTER_X, impactX=BASIN_OUTLET[0]) {
   const radius = new T.Vector2();
   const time = {value: 0}, agitation = {value: 0}, whirl = {value: 0};
   const water = new T.MeshPhysicalMaterial({
@@ -14,14 +14,14 @@ function waterSurface(parent) {
     clearcoatRoughness: .12, envMapIntensity: 1.9, transparent: true, opacity: .63, depthWrite: false
   });
   water.onBeforeCompile = shader => {
-    Object.assign(shader.uniforms, {bowlRadius: {value: radius}, waterTime: time, agitation, whirl});
+    Object.assign(shader.uniforms, {bowlRadius: {value: radius}, impactOffset:{value:impactX-centerX}, waterTime: time, agitation, whirl});
     shader.vertexShader = 'varying vec2 disk;\n' + shader.vertexShader.replace('#include <begin_vertex>',
       '#include <begin_vertex>\n disk = position.xy;');
-    shader.fragmentShader = 'varying vec2 disk; uniform vec2 bowlRadius; uniform float waterTime, agitation, whirl;\n' + shader.fragmentShader;
+    shader.fragmentShader = 'varying vec2 disk; uniform vec2 bowlRadius; uniform float impactOffset, waterTime, agitation, whirl;\n' + shader.fragmentShader;
     shader.fragmentShader = shader.fragmentShader.replace('#include <normal_fragment_maps>', `
       #include <normal_fragment_maps>
       vec2 p = vec2(disk.x, -disk.y) * bowlRadius;
-      vec2 hit = p - vec2(.105, 0.);
+      vec2 hit = p - vec2(impactOffset, 0.);
       float dist = length(hit);
       float slope = sin(dist * 195. - waterTime * 21.) * exp(-dist * 9.) * agitation * .3;
       vec2 ripple = slope * hit / max(.004,dist);
@@ -44,7 +44,7 @@ function waterSurface(parent) {
   parent.add(disk);
   return {disk, update(shape, volume, impact, draining, seconds) {
     disk.visible = volume > .00012;
-    disk.position.set(BASIN_CENTER_X, shape.height + .0008, 0);
+    disk.position.set(centerX, shape.height + .0008, 0);
     radius.set(shape.rx, shape.rz);
     disk.scale.set(shape.rx * .998, shape.rz * .998, 1);
     time.value = seconds;
@@ -81,7 +81,7 @@ function drainHardware(parent, state) {
   return {cap, rod, update};
 }
 
-function fallingJet(parent) {
+export function fallingJet(parent, outlet=BASIN_OUTLET) {
   const rows = 18, sides = 12;
   const geo = new T.PlaneGeometry(1, 1, sides, rows);
   const positions = geo.attributes.position;
@@ -96,12 +96,12 @@ function fallingJet(parent) {
     let idx = 0;
     for (let row = 0; row <= rows; row++) {
       const f = row / rows, y = top + (bottom - top) * f;
-      const fall = BASIN_OUTLET[1] - y, phase = fall * 83 - seconds * 16;
+      const fall = outlet[1] - y, phase = fall * 83 - seconds * 16;
       const r = .014 * Math.sqrt(flow) / Math.pow(1 + fall * 8, .25);
       for (let j = 0; j <= sides; j++) {
         const a = tau * j / sides;
         const radius = r * (1 + .10 * Math.sin(a * 3 + phase) + .06 * Math.sin(a * 5 - phase * 1.7));
-        positions.setXYZ(idx++, BASIN_OUTLET[0] + Math.cos(a) * radius, y, Math.sin(a) * radius);
+        positions.setXYZ(idx++, outlet[0] + Math.cos(a) * radius, y, outlet[2]+Math.sin(a) * radius);
       }
     }
     positions.needsUpdate = true; geo.computeVertexNormals();
