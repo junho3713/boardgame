@@ -50,6 +50,18 @@ test('all required 3D items can be seen and picked from physically reachable pos
     const bytes=await readFile(new URL('./public/school/washroom.glb',import.meta.url));
     const asset=await new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.length),'');
     assert.match(asset.asset.generator,/Blender/);
+    asset.scene.updateMatrixWorld(true);
+    for(const [i,x] of [[1,1.12],[2,2.82]]){
+      const pan=asset.scene.getObjectByName('Pan'+i),tank=asset.scene.getObjectByName('Tank'+i);
+      const foot=new T.Box3().setFromObject(tank).min.y;
+      for(const dx of [-.08,.08]){
+        const down=new T.Raycaster(new T.Vector3(x+dx,.55,.21),new T.Vector3(0,-1,0));
+        const deck=down.intersectObject(pan,true)[0];
+        assert.ok(deck&&Math.abs(foot-deck.point.y)<.003,'cistern sits on the rear deck');
+      }
+      const down=new T.Raycaster(new T.Vector3(x,.50,.492),new T.Vector3(0,-1,0));
+      assert.ok(down.intersectObject(pan,true)[0].point.y<.19,'open well between the seat and trap');
+    }
     const s=fresh(),lvl=buildSchool({capabilities:{getMaxAnisotropy:()=>1}},s,asset.scene),cam=new T.PerspectiveCamera();
     const ray=new T.Raycaster();ray.far=2.65;
     let position=[-.75,4.65];
@@ -91,11 +103,13 @@ test('all required 3D items can be seen and picked from physically reachable pos
     use('tap1',-12.60,4.57,[-13.582,.999,4.585]);
     use('plug1',-12.65,4.81,[-13.36,.804,4.69]);
     use('stall2',-10.78,4.67,[-10.99,1.26,2.95]);
-    use('supply',-10.52,2.03,[-10.410,.655,1.115]);
-    use('flush2',-10.54,1.96,[-10.78,.94,1.31]);
-    use('lid',-10.50,1.63,[-10.99,1.08,1.12]);
+    use('cover2',-10.72,2.37,[-10.98,.46,1.41]);
+    use('cover2',-10.72,2.37,[-10.98,.65,1.16]);
+    use('supply',-10.49,1.52,[-10.661,.382,.996]);
+    use('flush2',-10.54,1.96,[-10.761,.650,1.067]);
+    use('lid',-10.50,1.63,[-10.99,.748,1.005]);
     advancePlumbing(s,2);
-    use('lostKey',-10.49,1.38,[-10.905,.749,1.137]);
+    use('lostKey',-10.55,1.15,[-10.926,.432,1.019]);
     use('tray',-6.12,4.04,[-5.25,.43,4.0]);
     use('tape',-6.08,4.04,[-5.48,.464,4.04]);
     use('boothDoor',-6.48,-6.01,[-7.6,1.36,-6.01]);

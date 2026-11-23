@@ -123,56 +123,130 @@ def pedestal_sink(i,z):
     block('Amber sight glass',(.187,1.37,z-.44),(.018,.112,.048),soap,.008)
     block('Pump tab',(.16,1.19,z-.44),(.11,.035,.076),steel)
 
+# Plan sections run from the flat back, around the right cheek, to the rounded nose.
+# Widths are half-widths. The rear deck and washdown well are part of one casting.
+pan_outline = [(0,0),(.62,.003),(.83,.046),(.88,.22),(.97,.48),
+               (.99,.66),(.87,.83),(.55,.951),(0,1)]
+tank_outline = [(0,0),(.70,.001),(.91,.037),(.98,.17),(1,.49),
+                (.98,.78),(.89,.944),(.60,.989),(0,1)]
+well_outline = [(0,0),(.48,.056),(.79,.175),(.96,.345),(1,.53),
+                (.94,.70),(.78,.84),(.47,.95),(0,1)]
+seat_outline = [(0,0),(.42,.009),(.69,.066),(.89,.21),(.99,.43),
+                (.96,.66),(.80,.835),(.48,.95),(0,1)]
+
+def perimeter(half):
+    points=half+[(-a,b) for a,b in reversed(half[1:-1])]
+    n=len(points)
+    for i in range(n):
+        a,b,c,d=[points[(i+k)%n] for k in (-1,0,1,2)]
+        for step in range(3):
+            t=step/3
+            yield tuple(.5*(2*B+(-A+C)*t+(2*A-5*B+4*C-D)*t*t+
+                            (-A+3*B-3*C+D)*t*t*t) for A,B,C,D in zip(a,b,c,d))
+
+def casting(name,x,rows,mat,group,through=False):
+    # Each row gives the height, half-width and rear/front limits in metres.
+    vertices=[]
+    for height,width,rear,front,shape in rows:
+        vertices.extend(world((x+u*width,height,rear+v*(front-rear))) for u,v in perimeter(shape))
+    n=len(vertices)//len(rows)
+    faces=[]
+    for j in range(len(rows) if through else len(rows)-1):
+        a=j*n; b=((j+1)%len(rows))*n
+        faces.extend((a+i,a+(i+1)%n,b+(i+1)%n,b+i) for i in range(n))
+    if not through:
+        for j in (0,len(rows)-1):
+            y,_,rear,front,_=rows[j]
+            center=len(vertices);vertices.append(world((x,y,(rear+front)/2)))
+            faces.extend((j*n+i,j*n+(i+1)%n,center) for i in range(n))
+    mesh=bpy.data.meshes.new(name)
+    mesh.from_pydata(vertices,[],faces)
+    bm=bmesh.new();bm.from_mesh(mesh)
+    bmesh.ops.recalc_face_normals(bm,faces=list(bm.faces));bm.to_mesh(mesh);bm.free()
+    for face in mesh.polygons: face.use_smooth=True
+    obj=bpy.data.objects.new(name,mesh);bpy.context.collection.objects.link(obj)
+    return register(obj,name,mat,group)
+
 def toilet(i,x):
-    z=.74
-    shell('Vitreous bowl and pedestal',x,z,[
-        (.04,.05,.295,.028),(.105,.15,.325,.045),(.15,.206,.395,.06),
-        (.18,.256,.426,.05),(.207,.281,.412,.035),(.198,.245,.344,.03),
-        (.123,.149,.227,0),(.112,.164,.071,-.025),(.14,.19,.046,-.01),
-        (.14,.19,.021,-.01),(.035,.04,.021,0)],glaze)
-    shell('Pressed seat ring',x,z,[(.149,.211,.433,.051),(.151,.215,.454,.051),
-        (.188,.259,.459,.046),(.199,.271,.443,.040),(.19,.26,.427,.038)],ivory)
-    for dx in [-.084,.084]:
-        block('Seat hinge',(x+dx,.428,.483),(.055,.043,.080),steel)
-    # Four individual tank walls leave the inside accessible after the lid is removed.
-    for dx in [-.244,.244]:
-        block('Cistern cheek',(x+dx,.853,.305),(.038,.33,.327),glaze,.017)
-    for zz in [.151,.46]:
-        block('Cistern face',(x,.853,zz),(.49,.33,.031),glaze,.014)
-    block('Cistern floor',(x,.707,.305),(.49,.047,.32),glaze,.018)
-    # A low-level wall cistern feeds the pan through a separate visible flush elbow.
-    tube('Enamel flush downpipe',[(x,.696,.327),(x,.434,.327),(x,.398,.337),
-         (x,.366,.361),(x,.347,.396),(x,.343,.448),(x,.343,.573)],.041,ivory)
-    for yy,rr in [(.672,.048),(.632,.045),(.426,.044)]:
-        ring('Flush pipe union',(x,yy,.327),(rr,rr),.006,steel)
-    for dx in [-.171,.171]:
-        block('Cast wall bracket',(x+dx,.759,.109),(.068,.091,.193),edge,.009)
-    for dx in [-.105,.105]:
-        block('Floor anchor cap',(x+dx,.060,.708),(.032,.023,.042),ivory,.008)
-    lid=pivot('CisternLid' if i==2 else 'FixedLid',(x,1.042,.30))
-    block('Overhanging porcelain lid',(x,1.044,.30),(.56,.074,.372),glaze,.032,lid)
-    handle=pivot('Flush'+str(i),(x+.159,.93,.49))
-    tube('Flush lever',[(x+.155,.932,.478),(x+.155,.932,.508),(x+.201,.934,.514),(x+.231,.948,.514)],.012,steel,handle)
-    tube('Supply riser',[(x+.08,.68,.26),(x+.08,.589,.26),(x+.125,.55,.26),(x+.53,.55,.26),(x+.57,.589,.26),(x+.57,.655,.26),(x+.57,.655,.075)],.013,steel)
-    valve=pivot('Supply' if i==2 else 'FixedValve',(x+.57,.655,.315))
+    pan='Pan'+str(i);tank='Tank'+str(i)
+    p,w,t,c=pan_outline,well_outline,tank_outline,seat_outline
+    casting('Back-to-wall washdown pan',x,[
+        (.005,.135,.108,.614,p),(.009,.144,.100,.629,p),(.025,.147,.099,.635,p),
+        (.052,.145,.101,.633,p),(.118,.136,.103,.607,p),(.183,.132,.103,.604,p),
+        (.231,.140,.101,.638,p),(.274,.158,.098,.705,p),(.318,.177,.096,.759,p),
+        (.353,.188,.095,.791,p),(.372,.190,.095,.804,p),(.382,.189,.096,.808,p),
+        (.389,.184,.099,.803,p),(.391,.175,.103,.793,p),
+        (.391,.149,.393,.755,w),(.387,.145,.400,.750,w),(.378,.144,.399,.748,w),
+        (.351,.140,.402,.736,w),(.310,.130,.406,.718,w),
+        (.256,.102,.418,.673,w),(.222,.079,.431,.627,w),
+        (.190,.056,.442,.578,w),(.167,.044,.448,.549,w),(.156,.037,.449,.532,w),
+        (.141,.031,.438,.504,w),(.122,.028,.421,.477,w)
+    ],glaze,pan)
+    # Thin seat ring spans the ceramic lip and rests on four rubber buffers.
+    for dx in (-.121,.121):
+        for zz in (.472,.667):
+            block('Seat buffer',(x+dx,.395,zz),(.025,.009,.039),ivory,.004,pan)
+    casting('Thermoset seat ring',x,[
+        (.400,.178,.359,.802,c),(.402,.184,.354,.807,c),(.412,.185,.354,.808,c),
+        (.418,.181,.356,.803,c),(.422,.172,.361,.792,c),
+        (.422,.146,.409,.746,w),(.418,.141,.414,.742,w),(.410,.139,.416,.740,w),
+        (.401,.142,.412,.744,w)],ivory,pan,True)
+    cover=pivot('SeatCover'+str(i),(x,.426,.352))
+    casting('Domed seat cover',x,[
+        (.430,.173,.355,.799,c),(.429,.181,.353,.805,c),(.433,.187,.351,.810,c),
+        (.441,.187,.351,.810,c),(.449,.180,.354,.803,c),
+        (.455,.160,.374,.782,c),(.459,.113,.416,.739,c),
+        (.461,.052,.484,.675,c)],ivory,cover)
+    for dx in (-.075,.075):
+        tube('Chrome hinge foot',[(x+dx,.390,.349),(x+dx,.417,.349)],.019,steel,pan)
+        tube('Hinge axis',[(x+dx-.030,.426,.352),(x+dx+.030,.426,.352)],.009,steel,pan)
+        tube('Cover hinge leaf',[(x+dx,.426,.352),(x+dx,.436,.373)],.012,ivory,cover)
+    for dx in (-.125,.125):
+        block('Lid buffer',(x+dx,.426,.625),(.024,.009,.043),ivory,.004,cover)
+    # Tank foot lands on the cast rear deck. Wall and bottom continue into the interior.
+    casting('Close-coupled hollow cistern',x,[
+        (.390,.147,.120,.292,t),(.394,.153,.115,.296,t),(.407,.156,.114,.299,t),
+        (.430,.165,.110,.304,t),(.490,.177,.103,.309,t),(.663,.195,.091,.317,t),
+        (.707,.198,.089,.318,t),(.716,.197,.090,.317,t),(.718,.192,.092,.314,t),
+        (.718,.181,.104,.303,t),(.713,.178,.106,.301,t),(.695,.178,.106,.301,t),
+        (.483,.157,.120,.287,t),(.437,.147,.126,.281,t),(.424,.137,.132,.275,t)
+    ],glaze,tank)
+    lid=pivot('CisternLid' if i==2 else 'FixedLid',(x,.718,.205))
+    casting('Fitted cistern cap',x,[
+        (.718,.197,.088,.320,t),(.720,.207,.082,.327,t),(.731,.207,.082,.327,t),
+        (.738,.202,.085,.323,t),(.743,.185,.093,.314,t),(.748,.151,.111,.294,t)
+    ],glaze,lid)
+    handle=pivot('Flush'+str(i),(x+.192,.658,.219))
+    tube('Flush spindle',[(x+.188,.658,.219),(x+.207,.658,.219)],.017,steel,tank)
+    tube('Flush paddle',[(x+.205,.658,.219),(x+.217,.658,.222),
+         (x+.219,.653,.258),(x+.219,.647,.281)],.009,steel,handle)
+    tube('Paddle grip',[(x+.219,.650,.263),(x+.219,.647,.281)],.011,steel,handle)
+    # A flexible supply loops from the wall stop to the tank inlet.
+    tube('Braided supply hose',[(x+.147,.437,.186),(x+.166,.411,.185),
+         (x+.186,.343,.181),(x+.210,.292,.171),(x+.244,.273,.164),
+         (x+.277,.281,.160),(x+.304,.323,.158),(x+.319,.382,.157)],.008,steel)
+    tube('Angle stop',[(x+.319,.382,.036),(x+.319,.382,.194)],.014,brass)
+    tube('Wall escutcheon',[(x+.319,.382,.033),(x+.319,.382,.046)],.033,steel)
+    valve=pivot('Supply' if i==2 else 'FixedValve',(x+.319,.382,.196))
     for j in range(3):
         a=j*2*pi/3
-        tube('Gate wheel spoke',[(x+.57,.655,.31),(x+.57+.073*cos(a),.655+.073*sin(a),.31)],.008,red,valve)
-    tube('Red handwheel',[(x+.57+.077*cos(j*pi/16),.655+.077*sin(j*pi/16),.31) for j in range(32)],.011,red,valve,True)
+        tube('Handwheel spoke',[(x+.319,.382,.196),(x+.319+.038*cos(a),.382+.038*sin(a),.196)],.005,red,valve)
+    tube('Red stop wheel',[(x+.319+.043*cos(j*pi/16),.382+.043*sin(j*pi/16),.196)
+         for j in range(32)],.007,red,valve,True)
     if i==2:
-        tube('Overflow standpipe',[(x-.156,.72,.275),(x-.156,.992,.275)],.016,ivory)
-        arm=pivot('FloatArm',(x-.177,.970,.235))
-        tube('Float lever rod',[(x-.177,.970,.235),(x-.112,.967,.237),(x+.005,.950,.239)],.005,brass,arm)
-        bpy.ops.mesh.primitive_uv_sphere_add(segments=16,ring_count=8,location=world((x-.008,.952,.239)))
-        bob=register(bpy.context.object,'Hollow copper float',brass,arm)
-        bob.scale=(.051,.038,.031)
+        tube('Overflow standpipe',[(x-.119,.426,.236),(x-.119,.683,.236)],.012,ivory)
+        arm=pivot('FloatArm',(x-.139,.665,.178))
+        tube('Brass float arm',[(x-.139,.665,.178),(x-.102,.665,.179),(x-.001,.649,.184)],.004,brass,arm)
+        bpy.ops.mesh.primitive_uv_sphere_add(segments=20,ring_count=12,location=world((x-.001,.648,.184)))
+        bob=register(bpy.context.object,'Copper float',brass,arm)
+        bob.scale=(.041,.027,.023)
         for face in bob.data.polygons:face.use_smooth=True
-        key=pivot('LostKey',(x+.075,.741,.337))
-        ring('Key bow',(x+.075,.744,.337),(.027,.021),.0055,brass,key)
-        block('Key blade',(x+.027,.744,.337),(.069,.009,.012),brass,.002,key)
-        for dx in [-.008,.006]:
-            block('Key cut',(x+dx,.744,.344),(.008,.009,.02),brass,.001,key)
-        block('Vermilion locker fob',(x+.117,.745,.347),(.079,.009,.041),red,.004,key)
+        key=pivot('LostKey',(x+.054,.431,.219))
+        ring('Key bow',(x+.054,.432,.219),(.022,.016),.004,brass,key)
+        block('Key blade',(x+.017,.432,.219),(.054,.007,.010),brass,.0015,key)
+        for dx in [-.008,.003]:
+            block('Key cut',(x+dx,.432,.225),(.006,.007,.015),brass,.001,key)
+        block('Enamel locker fob',(x+.091,.432,.226),(.052,.008,.032),red,.003,key)
     panel=pivot('Stall'+str(i),(x-.70,0,2.15))
     block('Laminated stall door',(x-.014,1.135,2.15),(1.367,1.86,.050),mint,.014,panel)
     for dx in [-.678,.647]:
@@ -194,7 +268,12 @@ def toilet(i,x):
 
 pedestal_sink(1,3.68); pedestal_sink(2,5.12)
 toilet(1,1.12); toilet(2,2.82)
-block('Tiled cistern service ledge',(2.252,.995,.295),(.57,.066,.387),ivory,.017)
+for xx in (2.15,2.55):
+    block('Rack wall plate',(xx,.646,.049),(.048,.159,.013),steel,.004)
+    tube('Folded shelf stay',[(xx,.708,.053),(xx,.708,.339),(xx,.685,.339),
+         (xx,.582,.058)],.009,steel)
+for zz in (.088,.160,.231,.304):
+    tube('Rack rail',[(2.143,.711,zz),(2.557,.711,zz)],.007,steel)
 block('End partition',(3.63,1.14,1.13),(.045,1.93,2.07),mint)
 tube('Partition headrail',[(.27,2.14,2.15),(3.64,2.14,2.15)],.027,steel)
 for x in [1.2,2.65,4.16]:

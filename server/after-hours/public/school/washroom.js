@@ -141,9 +141,6 @@ export function buildWashroom(model,s,api){
   function liquid(geometry,material){
     const o=new T.Mesh(geometry,material);root.add(o);o.raycast=()=>{};return o;
   }
-  function disc(x,y,z,mat){
-    const o=liquid(new T.CircleGeometry(1,40),mat);o.rotation.x=-Math.PI/2;o.position.set(x,y,z);return o;
-  }
   const basins=[3.68,5.12].map((z,i)=>{
     const n=i+1,tap=register('Tap'+n,'tap'+n,'십자 수도꼭지'),plug=register('Stopper'+n,'plug'+n,'고무 물마개');
     target(tap,.126,.078,.126);target(plug,.074,.052,.074);
@@ -157,18 +154,24 @@ export function buildWashroom(model,s,api){
   const stalls=[1.12,2.82].map((x,i)=>{
     const o=register('Stall'+(i+1),'stall'+(i+1),(i?'둘째':'첫째')+' 칸 문');
     sign(o,i?'02':'01',.115,.096,.68,1.68,.032,0,'#3e5d52','#ded7ad');
-    const flush=register('Flush'+(i+1),'flush'+(i+1),'물내림 손잡이');target(flush,.15,.085,.07,[.035,0,.008]);
+    const flush=register('Flush'+(i+1),'flush'+(i+1),'물내림 손잡이');target(flush,.044,.046,.085,[.028,-.005,.032]);
+    const cover=register('SeatCover'+(i+1),'cover'+(i+1),'변기 시트 뚜껑');
+    cover.rotation.x=s['cover'+(i+1)]?-1.54:0;
     const collision={w:1.37,d:.061,x:0,z:0,angle:0};blocks.push(collision);
-    solid(washX(x-.806),washZ(1.12),.05,2.08);solid(washX(x),washZ(.77),.41,.56);solid(washX(x),washZ(.305),.54,.34);
+    solid(washX(x-.806),washZ(1.12),.05,2.08);solid(washX(x),washZ(.445),.38,.72);
     for(const edge of [-.79,.79])solid(washX(x+edge),washZ(2.15),.13,.08);
-    const bowl=disc(x,.327,.79,water);
-    return {o,flush,collision,x,bowl};
+    const well=group(x,0,.543,null,null,root),bowl=waterSurface(well,0,0);
+    return {o,flush,cover,collision,x,well,bowl,drawdown:0};
   });
   solid(washX(3.63),washZ(1.13),.05,2.07);solid(washX(1.02),washZ(6.30),.75,.65);
-  const supply=register('Supply','supply','둘째 칸 급수 밸브');target(supply,.18,.18,.055);
+  const supply=register('Supply','supply','둘째 칸 급수 밸브');target(supply,.107,.105,.045);
   const lid=register('CisternLid','lid','물탱크 도기 뚜껑'),seat=lid.position.clone();
-  const key=register('LostKey','lostKey','붉은 꼬리표 열쇠 집기');target(key,.15,.035,.080);
-  const tank=liquid(new T.PlaneGeometry(.447,.273),water);tank.rotation.x=-Math.PI/2;tank.position.set(2.82,.96,.303);
+  const key=register('LostKey','lostKey','붉은 꼬리표 열쇠 집기');target(key,.119,.026,.049);
+  const waterline=new T.Shape();
+  waterline.moveTo(-.75,-1);waterline.lineTo(.75,-1);waterline.quadraticCurveTo(1,-1,1,-.65);
+  waterline.lineTo(1,.65);waterline.quadraticCurveTo(1,1,.75,1);waterline.lineTo(-.75,1);
+  waterline.quadraticCurveTo(-1,1,-1,.65);waterline.lineTo(-1,-.65);waterline.quadraticCurveTo(-1,-1,-.75,-1);
+  const tank=liquid(new T.ShapeGeometry(waterline),water);tank.rotation.x=-Math.PI/2;tank.position.set(2.82,.662,.204);
   const floatArm=node('FloatArm');
   const temp=new T.Object3D();
   return function update(dt,time,camera){
@@ -197,13 +200,17 @@ export function buildWashroom(model,s,api){
       const next=blockAt(angle);
       if(!hitsBlock(camera.position.x,camera.position.z,next)){st.o.rotation.y=angle;}
       Object.assign(st.collision,blockAt(st.o.rotation.y));
-      st.flush.rotation.z=approach(st.flush.rotation.z,s.flushing[i]?-.42:0);
-      st.bowl.scale.set(.099,.135,1);st.bowl.position.y=.332+(s.flushing[i]?Math.sin(time*13)*.009:0);
+      st.flush.rotation.x=approach(st.flush.rotation.x,s.flushing[i]?.42:0);
+      st.cover.rotation.x=approach(st.cover.rotation.x,s['cover'+(i+1)]?-1.54:0);
+      st.drawdown=approach(st.drawdown,s.flushing[i]?1-s.tanks[i]:0);
+      st.well.position.z=.543-.018*st.drawdown;
+      const shape={height:.248-.040*st.drawdown,rx:.105-.031*st.drawdown,rz:.132-.042*st.drawdown};
+      st.bowl.update(shape,.15,s.flushing[i]?.75:0,st.drawdown,time);
     }
     supply.rotation.z=approach(supply.rotation.z,s.supply?0:2.8);
-    lid.position.x=approach(lid.position.x,seat.x+(s.lid?-.56:0));
-    lid.position.y=seat.y+.05*Math.sin(Math.min(1,Math.abs(lid.position.x-seat.x)/.56)*Math.PI);
-    tank.position.y=.735+.245*s.tanks[1];tank.visible=s.tanks[1]>.015;
+    lid.position.x=approach(lid.position.x,seat.x+(s.lid?-.47:0));
+    lid.position.y=seat.y+.05*Math.sin(Math.min(1,Math.abs(lid.position.x-seat.x)/.47)*Math.PI);
+    const fill=s.tanks[1];tank.position.y=.425+.242*fill;tank.scale.set(.144+.033*fill,.078+.020*fill,1);tank.visible=fill>.012;
     floatArm.rotation.z=-1.07*(1-s.tanks[1]);
     key.visible=keyExposed(s)&&lid.position.x<seat.x-.30;
   };

@@ -16,7 +16,7 @@ export function holes(turn,back){return negative.map(p=>orient(p,turn,back));}
 export function glassCode(){return holes(1,true).sort((a,b)=>a[1]-b[1]||a[0]-b[0]).map(([x,y])=>GLASS[(y+1)*3+x+1]).join('');}
 export function fresh(free=false){
   return {free,board:false,film:false,mounted:false,turn:0,back:false,dark:false,drawer:false,roomKey:false,
-    classDoor:free,washDoor:free,stall1:true,stall2:false,lid:false,supply:true,lostKey:false,
+    classDoor:free,washDoor:free,stall1:true,stall2:false,cover1:true,cover2:false,lid:false,supply:true,lostKey:false,
     tanks:[1,1],flushing:[false,false],basins:[0,1].map(()=>({faucetOn:false,drainClosed:false,basinVolume:0})),
     tray:false,tape:false,boothDoor:free,loaded:false,cabinet:false,exitKey:false,exitDoor:free,escaped:false,notes:[]};
 }
@@ -47,7 +47,7 @@ export function act(s,id,value){
     case 'roomKey': if(!s.drawer||s.roomKey)return false;s.roomKey=true;break;
     case 'classDoor': if(!s.roomKey&&!s.free)return false;s.classDoor=true;break;
     case 'washDoor': if(!s.classDoor)return false;s.washDoor=true;break;
-    case 'stall1':case 'stall2':case 'lid':case 'supply':s[id]=!s[id];break;
+    case 'stall1':case 'stall2':case 'cover1':case 'cover2':case 'lid':case 'supply':s[id]=!s[id];break;
     case 'tap1':case 'tap2': {const b=s.basins[id==='tap1'?0:1];b.faucetOn=!b.faucetOn;break;}
     case 'plug1':case 'plug2': {const b=s.basins[id==='plug1'?0:1];b.drainClosed=!b.drainClosed;break;}
     case 'flush1':case 'flush2': {const i=id==='flush1'?0:1;if(s.flushing[i]||s.tanks[i]<.08)return false;s.flushing[i]=true;break;}

@@ -39,6 +39,7 @@ function interact(hit){
       if(!s.boothDoor&&act(s,id)){audio.sound('slide');say('방음문을 밀자 안쪽에서 약한 잡음이 샌다.');}break;
     case 'washDoor':if(!s.washDoor&&act(s,id)){audio.sound('slide');say('문 너머 타일 바닥에서 발소리가 길게 울린다.');}break;
     case 'stall1':case 'stall2':act(s,id);audio.sound('hinge');break;
+    case 'cover1':case 'cover2':act(s,id);audio.sound('click');break;
     case 'lid':act(s,id);audio.sound('china');say(s.lid?'도기 뚜껑을 옆 턱으로 밀었다.':'물탱크 위에 뚜껑을 다시 얹었다.');break;
     case 'supply':act(s,id);audio.sound('hinge');say(s.supply?'관 속에서 물이 밀려오는 소리가 난다.':'붉은 밸브가 끝까지 돌아갔다.');break;
     case 'flush1':case 'flush2':
@@ -102,7 +103,7 @@ function frame(now){
   }
   requestAnimationFrame(frame);
 }
-const washPreview=new URLSearchParams(location.search).get('room')==='washroom';
+const preview=new URLSearchParams(location.search),washPreview=preview.get('room')==='washroom';
 if(washPreview){
   const free=$('free'),story=$('start');
   free.textContent='화장실에서 둘러보기 ↗';free.className='primary';story.className='quiet';story.textContent='교실에서 탈출 시작';
@@ -125,6 +126,9 @@ async function start(free){
     }
     Object.assign(s,fresh(free));yaw=-.10;pitch=-.045;cam.position.set(-.75,1.57,4.64);
     if(free&&washPreview){cam.position.set(-8.34,1.57,6.18);yaw=1.16;pitch=-.085;}
+    if(free&&washPreview&&preview.get('stall')==='2'){
+      s.stall2=true;cam.position.set(-10.49,1.57,2.27);yaw=.48;pitch=-.85;
+    }
     cam.rotation.set(pitch,yaw,0,'YXZ');
     level.update(2,0,cam,false);renderer.render(level.scene,cam);
     playing=true;$('cover').hidden=true;$('end').hidden=true;$('hud').hidden=false;$('pause').hidden=false;$('mode').textContent=free?'자유 탐색':'야간 자율학습 · 탈출';$('load').textContent='';
