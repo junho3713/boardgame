@@ -2,10 +2,10 @@ import {act, GLASS, holes, orient, REGISTERS, TAPE, remember, hint} from './scho
 
 export function schoolConsole(s, audio, say) {
   const dialog=document.querySelector('#dialog'), content=document.querySelector('#detail');
-  let pending=[], hintPhase='', hintLevel=0;
-  const stopTape=()=>{pending.forEach(clearTimeout);pending=[];};
+  let releaseTape, hintPhase='', hintLevel=0;
+  function stopTape(){releaseTape?.();releaseTape=undefined;}
   function close(){stopTape();if(dialog.open)dialog.close();}
-  dialog.addEventListener('close',stopTape);
+  dialog.addEventListener('close',()=>{if(!dialog.open)stopTape();});
   document.querySelector('#close').onclick=close;
   dialog.addEventListener('click',e=>{if(e.target===dialog)close();});
   function element(tag,text,cls,parent=content){
@@ -90,12 +90,42 @@ export function schoolConsole(s, audio, say) {
   function deck(){
     show('교내 방송실 · DECK 01','야간 인계 녹음',s.loaded?'데크 안에 「11월 7일 · 마지막 점검」 테이프가 걸려 있다.':'카세트 덮개에 손가락이 닿은 자리만 깨끗하다.');
     if(!s.loaded){if(s.tape)button('카세트 넣기',()=>{act(s,'load');audio.sound('tape');deck();});return;}
-    const caption=element('div','정지　■','paper');caption.setAttribute('aria-live','polite');
-    button('처음부터 재생　▶',()=>{
-      stopTape();audio.sound('tape');caption.textContent='재생　▶　리더 테이프의 잡음';
-      TAPE.forEach((n,i)=>pending.push(setTimeout(()=>{audio.field(n);caption.textContent='0'+(i+1)+'　'+REGISTERS[n].sound;},650+1800*i)));
-      pending.push(setTimeout(()=>{caption.textContent='끝　■　릴이 멈춘다.';remember(s,'야간 인계 녹음　'+TAPE.map(n=>REGISTERS[n].sound).join(' / '));},6100));
+    const tape=audio.cassette();
+    const status=element('p',tape.muted?'게임 소리 꺼짐 · 녹취록으로도 조사할 수 있다.':'정지　■','response');
+    status.setAttribute('role','status');
+    const cues=[7.24,12.95,18.78]; // First contact of the glass, ball and paper on the recording.
+    const lines=element('ol','','tape-notes');lines.setAttribute('aria-label','테이프 녹취록');
+    lines.setAttribute('aria-live','polite');
+    let shown=0,attempt=0;
+    function reveal(count){
+      while(shown<count){
+        const clue=REGISTERS[TAPE[shown]].sound;
+        element('li',clue,'',lines);shown++;
+        remember(s,'야간 인계 녹음 '+shown+'　'+clue);
+      }
+      s.tapeClues=Math.max(s.tapeClues,shown);
+    }
+    reveal(s.tapeClues);
+    function sync(){reveal(cues.filter(start=>start<=tape.currentTime).length);}
+    function unavailable(){
+      status.textContent='녹음을 재생할 수 없어. 아래 녹취록에 세 소리가 기록되어 있다.';
+      reveal(TAPE.length);
+    }
+    tape.ontimeupdate=sync;
+    tape.onplaying=()=>{status.textContent='재생　▶　“세 소리가 난 곳을 차례로 연결하세요.”';};
+    tape.onended=()=>{reveal(TAPE.length);status.textContent='끝　■　세 단서를 수첩에 옮겼다.';};
+    tape.onerror=()=>{if(attempt)unavailable();};
+    button('처음부터 재생　▶',async()=>{
+      const id=++attempt;
+      try{
+        if(tape.error)tape.load();
+        tape.currentTime=0;status.textContent='테이프를 되감는 중…';await tape.play();
+      }catch{if(attempt===id)unavailable();}
     });
+    button('녹취록 읽기',()=>{reveal(TAPE.length);status.textContent='녹취록을 수첩에 옮겼다.';});
+    releaseTape=()=>{
+      attempt++;tape.onplaying=tape.ontimeupdate=tape.onended=tape.onerror=null;tape.pause();
+    };
   }
   function journal(){
     show('서령고등학교 · 학생 수첩','조사 기록');

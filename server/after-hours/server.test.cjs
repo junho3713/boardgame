@@ -22,6 +22,18 @@ test('hotel assets load under their prefix alongside existing games', async () =
     const school=await fetch(origin+'/after-hours/school/');
     assert.equal(school.status,200);
     assert.match(await school.text(),/마지막 종례/);
+    const cassette = origin + '/after-hours/school/handover-tape.mp3';
+    const audioHead = await fetch(cassette,{method:'HEAD'});
+    assert.equal(audioHead.headers.get('content-type'),'audio/mpeg');
+    const length = Number(audioHead.headers.get('content-length'));
+    assert.ok(length>0);
+    for(const [range,start,end] of [['bytes=0-1',0,1],['bytes=-8',length-8,length-1]]){
+      const chunk = await fetch(cassette,{headers:{Range:range}});
+      assert.equal(chunk.status,206);
+      assert.equal(chunk.headers.get('content-range'),`bytes ${start}-${end}/${length}`);
+      assert.equal((await chunk.arrayBuffer()).byteLength,end-start+1);
+    }
+    assert.equal((await fetch(cassette,{headers:{Range:'bytes='+length+'-'}})).status,416);
     for(const file of ['school-game.js','school-scene.js','school-state.js','school-console.js','school-audio.js','school.css','school-night.jpg','washroom.js','washroom.glb']){
       const resource=await fetch(origin+'/after-hours/school/'+file,{method:'HEAD'});
       assert.equal(resource.status,200,file);

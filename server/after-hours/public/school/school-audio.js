@@ -1,6 +1,6 @@
 import {createBathAudio} from '../bath-audio.js';
 export function schoolAudio(){
-  let ctx,master,bed,noise,on=true,taps,tankHiss,boots;
+  let ctx,master,bed,noise,on=true,taps,tankHiss,boots,tape;
   function wake(){
     const C=window.AudioContext||window.webkitAudioContext;if(!C)return;
     if(!ctx){ctx=new C();master=ctx.createGain();master.gain.value=on?.54:0;master.connect(ctx.destination);
@@ -45,12 +45,11 @@ export function schoolAudio(){
     if(kind==='wrong'){tone(134,103,.19,.10,0,'triangle');}
     if(kind==='tape')rustle(1700,.24,.14);
   }
-  function field(index){
-    if(index===2){tone(1660,1620,.54,.16);tone(2220,2150,.45,.13,.21);}
-    if(index===0)for(const delay of [0,.28,.51]){tone(190,55,.15,.33,delay);rustle(450,.11,.14,delay);}
-    if(index===1){rustle(2600,.35,.31);rustle(1900,.37,.27,.48);}
+  function cassette(){
+    if(!tape)tape=new Audio(new URL('handover-tape.mp3',import.meta.url).href);
+    tape.muted=!on;return tape;
   }
-  function enable(v){on=v;if(ctx)master.gain.setTargetAtTime(on?.54:0,ctx.currentTime,.035);}
+  function enable(v){on=v;if(tape)tape.muted=!v;if(ctx)master.gain.setTargetAtTime(on?.54:0,ctx.currentTime,.035);}
   document.addEventListener('visibilitychange',()=>{if(!ctx)return;if(document.hidden)ctx.suspend().catch(()=>{});else if(on)wake();});
   function plumbing(s,player,yaw,inside,audible){
     if(!ctx||(!taps&&!inside))return;
@@ -65,5 +64,5 @@ export function schoolAudio(){
     const distance=Math.hypot(player.x+11,player.z-1.12);
     tankHiss.gain.setTargetAtTime(filling&&audible?(inside?.16:.015)/(1+.30*distance*distance):0,ctx.currentTime,.08);
   }
-  return {wake,enable,sound,field,guardStep,plumbing,ambience(dark){if(ctx)bed.gain.setTargetAtTime(dark?.043:.027,ctx.currentTime,.14);}};
+  return {wake,enable,sound,cassette,guardStep,plumbing,ambience(dark){if(ctx)bed.gain.setTargetAtTime(dark?.043:.027,ctx.currentTime,.14);}};
 }

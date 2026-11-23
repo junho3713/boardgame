@@ -153,14 +153,14 @@ function frame(now){
   }
   requestAnimationFrame(frame);
 }
-const preview=new URLSearchParams(location.search),washPreview=preview.get('room')==='washroom';
+const preview=new URLSearchParams(location.search),washPreview=preview.get('room')==='washroom',boothPreview=preview.get('room')==='booth';
 if(preview.get('scene')==='patrol'){
   const button=$('patrolStart');button.className='primary';$('start').className='quiet';
   button.parentElement.prepend(button);
 }
-if(washPreview){
+if(washPreview||boothPreview){
   const free=$('free'),story=$('start');
-  free.textContent='화장실에서 둘러보기 ↗';free.className='primary';story.className='quiet';story.textContent='교실에서 탈출 시작';
+  free.textContent=boothPreview?'방송실에서 테이프 듣기 ▶':'화장실에서 둘러보기 ↗';free.className='primary';story.className='quiet';story.textContent='교실에서 탈출 시작';
   free.parentElement.insertBefore(free,story);
 }
 async function start(free,patrolStart=false){
@@ -188,12 +188,14 @@ async function start(free,patrolStart=false){
       patrol=newPatrol(-20.2);patrol.grace=2.8;cam.position.set(-6.10,1.57,-10.75);yaw=.57;pitch=-.06;
     }
     if(free&&washPreview){cam.position.set(-8.34,1.57,6.18);yaw=1.16;pitch=-.085;}
+    if(free&&boothPreview){s.tape=s.loaded=true;cam.position.set(-11.50,1.57,-6.05);yaw=0;pitch=-.46;}
     if(free&&washPreview&&preview.get('stall')==='2'){
       s.stall2=true;cam.position.set(-10.49,1.57,2.27);yaw=.48;pitch=-.85;
     }
     cam.rotation.set(pitch,yaw,0,'YXZ');
     level.update(2,0,cam,false,patrol);renderer.render(level.scene,cam);
     playing=true;$('cover').hidden=true;$('end').hidden=true;$('hud').hidden=false;$('pause').hidden=false;$('mode').textContent=free?'자유 탐색':'야간 자율학습 · 탈출';$('load').textContent='';
+    if(free&&boothPreview){book.deck();return;}
     audio.sound(free&&washPreview?'china':'bell');say(free&&washPreview?'서쪽 화장실 · 문과 수도꼭지는 E로 조작할 수 있다.':free?'자유 탐색 · 복도와 방송실의 문이 열려 있다.':'스피커에서 마지막 종례 예비종이 울렸다. 교실에는 나뿐이다.');canvas.focus();
     if(patrolStart)say('복도 끝에서 구둣소리가 난다. 왼쪽 철제 락커에 E로 숨을 수 있다.');
   }catch(e){console.error(e);$('load').textContent=renderer?'학교 모델을 열지 못했어. 연결을 확인하고 한 번 더 눌러 줘.':'3D 화면을 열지 못했어. WebGL 2를 지원하는 브라우저에서 하드웨어 가속을 켜고 다시 시도해 줘.';}

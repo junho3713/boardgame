@@ -1,6 +1,6 @@
 import {advanceBasin} from '../basin-water.js';
 export const REGISTERS = [
-  {channel:'A', room:'운동장', sound:'체육관 쪽에서 농구공이 세 번 튄다.'},
+  {channel:'A', room:'운동장', sound:'농구공이 바닥에 세 번 튄다.'},
   {channel:'B', room:'도서실', sound:'책장을 천천히 두 번 넘긴다.'},
   {channel:'C', room:'과학실', sound:'유리 비커 둘이 맞닿아 얇게 울린다.'}
 ];
@@ -18,7 +18,7 @@ export function fresh(free=false){
   return {free,board:false,film:false,mounted:false,turn:0,back:false,dark:false,drawer:false,roomKey:false,
     classDoor:free,washDoor:free,stall1:true,stall2:false,cover1:true,cover2:false,lid:false,supply:true,lostKey:false,
     tanks:[1,1],flushing:[false,false],basins:[0,1].map(()=>({faucetOn:false,drainClosed:false,basinVolume:0})),
-    tray:false,tape:false,boothDoor:free,loaded:false,cabinet:false,exitKey:false,exitDoor:free,escaped:false,notes:[]};
+    tray:false,tape:false,tapeClues:0,boothDoor:free,loaded:false,cabinet:false,exitKey:false,exitDoor:free,escaped:false,notes:[]};
 }
 export function advancePlumbing(s,dt){
   if(!Number.isFinite(dt)||dt<=0)return;

@@ -10,6 +10,7 @@ const FILES = new Map([
   ['school/school-state.js', 'text/javascript; charset=utf-8'],
   ['school/school-scene.js', 'text/javascript; charset=utf-8'],
   ['school/school-audio.js', 'text/javascript; charset=utf-8'],
+  ['school/handover-tape.mp3', 'audio/mpeg'],
   ['school/school-console.js', 'text/javascript; charset=utf-8'],
   ['school/school-game.js', 'text/javascript; charset=utf-8'],
   ['school/patrol.js', 'text/javascript; charset=utf-8'],
@@ -98,16 +99,32 @@ function createHandler() {
     const file = path.join(__dirname, 'public', relative);
     let size;
     try { size = (await fs.promises.stat(file)).size; } catch { return reply(404); }
-    res.writeHead(200, {
+    // Some mobile media players probe the first bytes, then request the frame they need.
+    const audio = mime === 'audio/mpeg';
+    const range = audio && req.method === 'GET' && !req.headers['if-range'] &&
+      /^bytes=(\d*)-(\d*)$/.exec(req.headers.range || '');
+    let slice;
+    if (range && (range[1] || range[2])) {
+      const start = range[1] ? Number(range[1]) : Math.max(0, size - Number(range[2]));
+      const end = range[1] && range[2] ? Math.min(size - 1, Number(range[2])) : size - 1;
+      if (start > end || start >= size) {
+        res.writeHead(416, {'Content-Range':'bytes */' + size, 'Cache-Control':'no-store'});
+        return res.end();
+      }
+      slice = {start, end};
+    }
+    res.writeHead(slice ? 206 : 200, {
       'Content-Type': mime,
-      'Content-Length': size,
+      'Content-Length': slice ? slice.end - slice.start + 1 : size,
+      ...(audio ? {'Accept-Ranges':'bytes'} : {}),
+      ...(slice ? {'Content-Range':'bytes ' + slice.start + '-' + slice.end + '/' + size} : {}),
       'Cache-Control': relative === 'three.module.js' ? 'public, max-age=86400' : 'no-store',
       'X-Content-Type-Options': 'nosniff',
       'Referrer-Policy': 'strict-origin-when-cross-origin',
       'Content-Security-Policy': "default-src 'self'; script-src 'self'; connect-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; base-uri 'none'; frame-ancestors 'self'",
     });
     if (req.method === 'HEAD') return res.end();
-    pipeline(fs.createReadStream(file), res, () => {});
+    pipeline(fs.createReadStream(file, slice), res, () => {});
   };
 }
 module.exports = { createHandler };
