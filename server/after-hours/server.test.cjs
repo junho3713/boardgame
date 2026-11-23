@@ -34,7 +34,7 @@ test('hotel assets load under their prefix alongside existing games', async () =
       assert.equal((await chunk.arrayBuffer()).byteLength,end-start+1);
     }
     assert.equal((await fetch(cassette,{headers:{Range:'bytes='+length+'-'}})).status,416);
-    for(const file of ['school-game.js','school-scene.js','school-state.js','school-console.js','school-audio.js','school.css','school-night.jpg','washroom.js','washroom.glb']){
+    for(const file of ['school-game.js','school-scene.js','school-state.js','school-console.js','school-audio.js','school-render.js','school.css','school-night.jpg','washroom.js','washroom.glb']){
       const resource=await fetch(origin+'/after-hours/school/'+file,{method:'HEAD'});
       assert.equal(resource.status,200,file);
       assert.ok(Number(resource.headers.get('content-length'))>100);

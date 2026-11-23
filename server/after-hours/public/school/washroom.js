@@ -1,5 +1,6 @@
 import * as T from '../three.module.js';
 import {Reflector} from '../Reflector.js';
+import {canSeeSurface,limitReflection} from './school-render.js';
 import {basinSurface} from '../basin-water.js';
 import {waterSurface,fallingJet} from '../basin-flow.js';
 import {hitsBlock,keyExposed,ROOMS} from './school-state.js';
@@ -61,8 +62,9 @@ export function buildWashroom(model,s,api){
 
   // The service mirror renders the stall doors and the moving player viewpoint in real time.
   box(.064,.99,2.63,.064,1.72,4.41,glassEdge,root);
-  const mirror=new Reflector(new T.PlaneGeometry(2.56,.93),{color:0x9aada5,textureWidth:512,textureHeight:256,clipBias:.005});
+  const mirror=new Reflector(new T.PlaneGeometry(2.56,.93),{color:0x9aada5,textureWidth:512,textureHeight:256,multisample:0,clipBias:.005});
   mirror.rotation.y=Math.PI/2;mirror.position.set(.101,1.72,4.41);root.add(mirror);
+  const updateMirror=limitReflection(mirror,24);
   const patina=texture(768,256,(a,w,h)=>{
     for(let i=0;i<1800;i++){const x=rand()*w,edge=rand()**3*15,y=rand()<.5?edge:h-edge;a.fillStyle=i%3?'#584e3670':'#cfccaa80';a.fillRect(x,y,1+rand()*4,1+rand()*2);}
     for(let i=0;i<42;i++){const x=rand()*w,length=4+rand()*46;a.fillStyle='#d4dcc124';a.fillRect(x,h-length,1,length);}
@@ -79,6 +81,7 @@ export function buildWashroom(model,s,api){
   overhead.position.set(washX(3.46),3.16,washZ(3.00));
   overhead.target.position.set(washX(2.50),0,washZ(2.6));scene.add(overhead,overhead.target);
   overhead.castShadow=true;overhead.shadow.mapSize.set(512,512);overhead.shadow.bias=-.00045;overhead.shadow.normalBias=.018;
+  overhead.shadow.autoUpdate=false;
 
   const windowTex=texture(640,220,(a,w,h)=>{
     const sky=a.createLinearGradient(0,0,0,h);sky.addColorStop(0,'#293b51');sky.addColorStop(.63,'#69818b');sky.addColorStop(1,'#465e60');a.fillStyle=sky;a.fillRect(0,0,w,h);
@@ -174,10 +177,11 @@ export function buildWashroom(model,s,api){
   const tank=liquid(new T.ShapeGeometry(waterline),water);tank.rotation.x=-Math.PI/2;tank.position.set(2.82,.662,.204);
   const floatArm=node('FloatArm');
   const temp=new T.Object3D();
+  let paintedShadow=[],lastShadow=-Infinity;
   return function update(dt,time,camera){
     const k=1-Math.exp(-6*dt),approach=(v,goal)=>v+(goal-v)*k;
-    mirror.visible=camera.position.x<room.x1+.3&&camera.position.z>room.z0-.3;
-    overhead.castShadow=mirror.visible;
+    const mirrorVisible=canSeeSurface(camera,'washroom',s.washDoor,3,washX(.101),washZ(3.13),washZ(5.69));
+    updateMirror(camera,time,mirrorVisible);
     for(const [i,b] of basins.entries()){
       const state=s.basins[i],profile=basinSurface(state.basinVolume),y=profile.height+.003;
       b.flow=approach(b.flow,Number(state.faucetOn));
@@ -213,5 +217,14 @@ export function buildWashroom(model,s,api){
     const fill=s.tanks[1];tank.position.y=.425+.242*fill;tank.scale.set(.144+.033*fill,.078+.020*fill,1);tank.visible=fill>.012;
     floatArm.rotation.z=-1.07*(1-s.tanks[1]);
     key.visible=keyExposed(s)&&lid.position.x<seat.x-.30;
+    const roomVisible=canSeeSurface(camera,'washroom',s.washDoor,3,washX(.1),room.z0,room.z1);
+    if(roomVisible&&time-lastShadow>=1/18){
+      const pose=[...basins.flatMap(b=>[b.tap.rotation.y,b.plug.position.y]),
+        ...stalls.flatMap(st=>[st.o.rotation.y,st.cover.rotation.x,st.flush.rotation.x]),
+        supply.rotation.z,lid.position.x,floatArm.rotation.z,Number(key.visible)];
+      if(!paintedShadow.length||pose.some((value,i)=>Math.abs(value-paintedShadow[i])>.009)){
+        overhead.shadow.needsUpdate=true;paintedShadow=pose;lastShadow=time;
+      }
+    }
   };
 }

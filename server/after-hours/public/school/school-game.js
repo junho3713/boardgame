@@ -10,6 +10,7 @@ const $=id=>document.getElementById(id),canvas=$('world'),s=fresh(),audio=school
 let captionTimer,renderer,level,playing=false,starting=false,soundOn=true,torch=false;
 let yaw=0,pitch=0,elapsed=0,prev=0,nextPick=0,foot=0,lastZone='',target=null;
 let patrol=newPatrol(),hiding=null;
+let resolution=1,frameCount=0,frameTime=0,fastWindows=0,redraw=true,background=false;
 const held=new Set(),ray=new T.Raycaster(),center=new T.Vector2(),cam=new T.PerspectiveCamera(65,1,.04,60);
 cam.rotation.order='YXZ';ray.far=2.65;
 function say(text){clearTimeout(captionTimer);$('message').textContent=text;captionTimer=setTimeout(()=>{$('message').textContent='';},4200);}
@@ -104,54 +105,78 @@ function interact(hit){
   nextPick=0;held.clear();
 }
 function resize(){
-  if(!renderer)return;renderer.setSize(innerWidth,innerHeight,false);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();
+  if(!renderer)return;
+  const pixelBudget=Math.sqrt((1920*1080)/(innerWidth*innerHeight));
+  renderer.setDrawingBufferSize(innerWidth,innerHeight,Math.min(devicePixelRatio,1.5,pixelBudget)*resolution);
+  cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();redraw=true;
+}
+function tuneResolution(milliseconds){
+  frameTime+=Math.min(50,milliseconds);
+  if(++frameCount<52)return;
+  const average=frameTime/frameCount;
+  frameCount=0;frameTime=0;
+  fastWindows=average<18?fastWindows+1:0;
+  const next=average>23?Math.max(.65,resolution-.12):fastWindows>=3?Math.min(1,resolution+.08):resolution;
+  if(next!==resolution){resolution=next;fastWindows=0;resize();}
 }
 function light(){if(hiding)return;torch=!torch;$('flash').setAttribute('aria-pressed',String(torch));audio.sound('click');}
 function ending(){
   act(s,'leave');playing=false;held.clear();$('hud').hidden=true;$('pause').hidden=true;$('end').hidden=false;$('message').textContent='';audio.sound('bell');$('replay').focus();
 }
 function frame(now){
-  const dt=Math.min(.065,(now-prev)/1000||0);prev=now;elapsed+=dt;
-  if(playing){
-    let moved=false;
-    if(!book.isOpen()&&!document.hidden){
-      yaw+=(Number(held.has('arrowleft'))-Number(held.has('arrowright')))*dt*1.6;
-      pitch=T.MathUtils.clamp(pitch+(Number(held.has('arrowup'))-Number(held.has('arrowdown')))*dt*1.3,-1.39,1.39);
-      const side=Number(held.has('d'))-Number(held.has('a')),forward=Number(held.has('s'))-Number(held.has('w'));
-      const distance=dt*(held.has('shift')?3.25:2.18)/Math.max(1,Math.hypot(side,forward));
-      const dx=distance*(Math.cos(yaw)*side+Math.sin(yaw)*forward),dz=distance*(Math.cos(yaw)*forward-Math.sin(yaw)*side);
-      const p=cam.position;
-      if(hiding){
-        if(hiding.phase==='inside'){
-          yaw=T.MathUtils.clamp(yaw,-Math.PI/2-.55,-Math.PI/2+.55);pitch=T.MathUtils.clamp(pitch,-.23,.23);
-        }else updateLocker(dt);
-      }else{
-        if(dx&&walkable(s,p.x+dx,p.z,level.blocks)){p.x+=dx;moved=true;}
-        if(dz&&walkable(s,p.x,p.z+dz,level.blocks)){p.z+=dz;moved=true;}
-        p.y=1.57+(moved?Math.sin(elapsed*10)*.021:0);
-      }
-      if(moved){foot+=Math.hypot(dx,dz);if(foot>.92){audio.sound(lastZone==='washroom'?'tileStep':'step');foot=0;}}
-      cam.rotation.set(pitch,yaw,0,'YXZ');
-      const zone=where(p.x,p.z);
-      if(zone&&zone!==lastZone){if(!s.free&&zone==='hall'&&lastZone==='classroom'&&!s.notes.some(n=>n.startsWith('복도에'))){remember(s,'복도에 들어서자 빈 방송실 쪽에서 종례 예비종이 한 번 울렸다.');audio.sound('bell');say('빈 복도 끝에서 종례 예비종이 울린다.');}lastZone=zone;$('zone').textContent=ROOMS[zone].label;}
-      advancePlumbing(s,dt);
-      const encounter=advancePatrol(patrol,dt,p,!!hiding,s,level.blocks);
-      if(patrol.step)audio.guardStep(patrol.x-p.x,patrol.z-p.z,yaw,!!hiding||zone!=='hall');
-      if(encounter==='spotted'){audio.sound('spotted');say('“거기, 누구야?” 손전등이 이쪽으로 돌아온다.');}
-      if(encounter==='leaving'&&hiding)say('문틈에서 불빛이 비껴간다. 구둣소리가 멀어진다.');
-      if(encounter==='caught')caught();
-      if(!s.free&&zone==='yard'&&p.z>8.34)ending();
-    }else held.clear();
-    level.update(book.isOpen()||document.hidden?0:dt,elapsed,cam,torch&&!hiding,patrol,hiding);
-    audio.plumbing(s,cam.position,yaw,lastZone==='washroom',playing&&!book.isOpen());
-    renderer.render(level.scene,cam);
-    if(now>=nextPick){
-      nextPick=now+95;target=playing&&!book.isOpen()?lookAtTarget():null;
-      $('use').hidden=!target;
-      if(target)$('use').querySelector('span').textContent=target.label;
-    }
-  }
   requestAnimationFrame(frame);
+  const ms=now-prev,dt=Math.min(.065,ms/1000||0);prev=now;
+  if(!playing)return;
+  const hidden=document.hidden,paused=book.isOpen();
+  if(hidden||paused){
+    held.clear();
+    if(!background){
+      background=true;frameCount=0;frameTime=0;fastWindows=0;
+      $('use').hidden=true;
+      audio.plumbing(s,cam.position,yaw,lastZone==='washroom',false);
+    }
+    if(!hidden&&redraw){renderer.render(level.scene,cam);redraw=false;}
+    return;
+  }
+  if(background){background=false;nextPick=0;}else if(ms>0&&ms<240)tuneResolution(ms);
+  elapsed+=dt;
+  let moved=false;
+  yaw+=(Number(held.has('arrowleft'))-Number(held.has('arrowright')))*dt*1.6;
+  pitch=T.MathUtils.clamp(pitch+(Number(held.has('arrowup'))-Number(held.has('arrowdown')))*dt*1.3,-1.39,1.39);
+  const side=Number(held.has('d'))-Number(held.has('a')),forward=Number(held.has('s'))-Number(held.has('w'));
+  const distance=dt*(held.has('shift')?3.25:2.18)/Math.max(1,Math.hypot(side,forward));
+  const dx=distance*(Math.cos(yaw)*side+Math.sin(yaw)*forward),dz=distance*(Math.cos(yaw)*forward-Math.sin(yaw)*side);
+  const p=cam.position;
+  if(hiding){
+    if(hiding.phase==='inside'){
+      yaw=T.MathUtils.clamp(yaw,-Math.PI/2-.55,-Math.PI/2+.55);pitch=T.MathUtils.clamp(pitch,-.23,.23);
+    }else updateLocker(dt);
+  }else{
+    if(dx&&walkable(s,p.x+dx,p.z,level.blocks)){p.x+=dx;moved=true;}
+    if(dz&&walkable(s,p.x,p.z+dz,level.blocks)){p.z+=dz;moved=true;}
+    p.y=1.57+(moved?Math.sin(elapsed*10)*.021:0);
+  }
+  if(moved){foot+=Math.hypot(dx,dz);if(foot>.92){audio.sound(lastZone==='washroom'?'tileStep':'step');foot=0;}}
+  cam.rotation.set(pitch,yaw,0,'YXZ');
+  const zone=where(p.x,p.z);
+  if(zone&&zone!==lastZone){if(!s.free&&zone==='hall'&&lastZone==='classroom'&&!s.notes.some(n=>n.startsWith('복도에'))){remember(s,'복도에 들어서자 빈 방송실 쪽에서 종례 예비종이 한 번 울렸다.');audio.sound('bell');say('빈 복도 끝에서 종례 예비종이 울린다.');}lastZone=zone;$('zone').textContent=ROOMS[zone].label;}
+  advancePlumbing(s,dt);
+  const encounter=advancePatrol(patrol,dt,p,!!hiding,s,level.blocks);
+  if(patrol.step)audio.guardStep(patrol.x-p.x,patrol.z-p.z,yaw,!!hiding||zone!=='hall');
+  if(encounter==='spotted'){audio.sound('spotted');say('“거기, 누구야?” 손전등이 이쪽으로 돌아온다.');}
+  if(encounter==='leaving'&&hiding)say('문틈에서 불빛이 비껴간다. 구둣소리가 멀어진다.');
+  if(encounter==='caught')caught();
+  if(!s.free&&zone==='yard'&&p.z>8.34)ending();
+  level.update(dt,elapsed,cam,torch&&!hiding,patrol,hiding);
+  audio.plumbing(s,cam.position,yaw,lastZone==='washroom',playing);
+  if(!playing)return;
+  renderer.render(level.scene,cam);
+  redraw=false;
+  if(now>=nextPick){
+    nextPick=now+95;target=lookAtTarget();
+    $('use').hidden=!target;
+    if(target)$('use').querySelector('span').textContent=target.label;
+  }
 }
 const preview=new URLSearchParams(location.search),washPreview=preview.get('room')==='washroom',boothPreview=preview.get('room')==='booth';
 if(preview.get('scene')==='patrol'){
@@ -170,7 +195,7 @@ async function start(free,patrolStart=false){
     if(!renderer){
       renderer=new T.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
       renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;
-      renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.18;
+      renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.18;
       resize();
     }
     if(!level){
@@ -193,7 +218,7 @@ async function start(free,patrolStart=false){
       s.stall2=true;cam.position.set(-10.49,1.57,2.27);yaw=.48;pitch=-.85;
     }
     cam.rotation.set(pitch,yaw,0,'YXZ');
-    level.update(2,0,cam,false,patrol);renderer.render(level.scene,cam);
+    level.update(2,0,cam,false,patrol);renderer.render(level.scene,cam);redraw=false;
     playing=true;$('cover').hidden=true;$('end').hidden=true;$('hud').hidden=false;$('pause').hidden=false;$('mode').textContent=free?'자유 탐색':'야간 자율학습 · 탈출';$('load').textContent='';
     if(free&&boothPreview){book.deck();return;}
     audio.sound(free&&washPreview?'china':'bell');say(free&&washPreview?'서쪽 화장실 · 문과 수도꼭지는 E로 조작할 수 있다.':free?'자유 탐색 · 복도와 방송실의 문이 열려 있다.':'스피커에서 마지막 종례 예비종이 울렸다. 교실에는 나뿐이다.');canvas.focus();

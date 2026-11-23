@@ -1,5 +1,6 @@
 import * as T from '../three.module.js';
 import {Reflector} from '../Reflector.js';
+import {boundInstanceRaycasts,canSeeSurface,limitReflection} from './school-render.js';
 import {GLASS,PORTALS} from './school-state.js';
 import {buildWashroom} from './washroom.js';
 import {LOCKERS} from './patrol.js';
@@ -100,9 +101,10 @@ export function buildSchool(renderer,s,washModel){
     box(.075,.12,.021,4.52,1.48,z-.08,black);
   }
   const windowGroup=group(4.49,1.79,-.02,'window','창틀의 원고걸이');windowGroup.rotation.y=-Math.PI/2;
-  const reflection=new Reflector(new T.PlaneGeometry(1.98,1.38),{color:0x697f85,textureWidth:384,textureHeight:256,clipBias:.004,
+  const reflection=new Reflector(new T.PlaneGeometry(1.98,1.38),{color:0x697f85,textureWidth:384,textureHeight:256,multisample:0,clipBias:.004,
     shader:{...Reflector.ReflectorShader,fragmentShader:Reflector.ReflectorShader.fragmentShader.replace('color ), 1.0','color ), 0.38')}});
   reflection.material.transparent=true;reflection.material.depthWrite=false;windowGroup.add(reflection);reflection.renderOrder=1;
+  const updateWindowReflection=limitReflection(reflection,18);
   box(.73,.025,.05,0,-.5,.018,black,windowGroup);for(const dx of [-.28,.28])box(.035,.064,.05,dx,-.46,.02,steel,windowGroup);
   const ghost=panel(windowGroup,.60,.60,0,-.13,.035,0,(a,w,h)=>{a.clearRect(0,0,w,h);a.fillStyle='#c9efdf';a.font='44px monospace';a.textAlign='center';GLASS.forEach((n,i)=>a.fillText(n,w*(.20+i%3*.30),h*(.24+Math.floor(i/3)*.29)));});
   ghost.material.transparent=true;ghost.material.opacity=.72;ghost.renderOrder=3;
@@ -267,13 +269,14 @@ export function buildSchool(renderer,s,washModel){
   for(let i=0;i<8;i++){const x=-15+i*2.65;box(1.7,1.5+rand()*2,.6,x,.35,14+rand(),silhouette);}
   lit(-6,2.65,9.88,'#9abddd',9,7);
   for(const [g,byMat] of groups)for(const [m,matrices] of byMat){
-    const batch=new T.InstancedMesh(g,m,matrices.length);matrices.forEach((v,i)=>batch.setMatrixAt(i,v));batch.computeBoundingSphere();scene.add(batch);
+    const batch=new T.InstancedMesh(g,m,matrices.length);matrices.forEach((v,i)=>batch.setMatrixAt(i,v));batch.computeBoundingSphere();
+    boundInstanceRaycasts(batch,matrices);scene.add(batch);
   }
   const lamp=new T.SpotLight('#f9edca',10,10,.48,.68,1.65);scene.add(lamp,lamp.target);
   let progress=0;
   let guardView;
   function update(dt,time,cam,torch,patrol,hiding){
-    reflection.visible=cam.position.x>-7.55;
+    updateWindowReflection(cam,time,canSeeSurface(cam,'classroom',s.classDoor,0,4.49,-1.01,.97));
     updateWashroom(dt,time,cam);
     const k=1-Math.exp(-dt*6);const to=(o,f,v)=>o[f]+=(v-o[f])*k;
     to(boardSlide.position,'x',s.board?-1.17:0);film.visible=s.board&&boardSlide.position.x<-.65&&!s.film;

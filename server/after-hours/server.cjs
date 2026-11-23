@@ -10,6 +10,7 @@ const FILES = new Map([
   ['school/school-state.js', 'text/javascript; charset=utf-8'],
   ['school/school-scene.js', 'text/javascript; charset=utf-8'],
   ['school/school-audio.js', 'text/javascript; charset=utf-8'],
+  ['school/school-render.js', 'text/javascript; charset=utf-8'],
   ['school/handover-tape.mp3', 'audio/mpeg'],
   ['school/school-console.js', 'text/javascript; charset=utf-8'],
   ['school/school-game.js', 'text/javascript; charset=utf-8'],
