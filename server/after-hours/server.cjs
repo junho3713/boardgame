@@ -4,6 +4,14 @@ const path = require('node:path');
 const { pipeline } = require('node:stream');
 const PREFIX = '/after-hours';
 const FILES = new Map([
+  ['school/index.html', 'text/html; charset=utf-8'],
+  ['school/school.css', 'text/css; charset=utf-8'],
+  ['school/school-night.jpg', 'image/jpeg'],
+  ['school/school-state.js', 'text/javascript; charset=utf-8'],
+  ['school/school-scene.js', 'text/javascript; charset=utf-8'],
+  ['school/school-audio.js', 'text/javascript; charset=utf-8'],
+  ['school/school-console.js', 'text/javascript; charset=utf-8'],
+  ['school/school-game.js', 'text/javascript; charset=utf-8'],
   ['index.html', 'text/html; charset=utf-8'],
   ['style.css', 'text/css; charset=utf-8'],
   ['puzzles.css', 'text/css; charset=utf-8'],
@@ -73,13 +81,14 @@ function createHandler() {
     let pathname;
     try { pathname = decodeURIComponent(req.url.split('?')[0]); }
     catch { return reply(400); }
-    if (pathname === PREFIX) {
+    if (pathname === PREFIX || pathname === PREFIX + '/school') {
       const query = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
-      res.writeHead(308, {Location: PREFIX + '/' + query, 'Cache-Control': 'no-store'});
+      res.writeHead(308, {Location: pathname + '/' + query, 'Cache-Control': 'no-store'});
       return res.end();
     }
     if (!pathname.startsWith(PREFIX + '/')) return reply(404);
-    const relative = pathname.slice(PREFIX.length + 1) || 'index.html';
+    const asset = pathname.slice(PREFIX.length + 1);
+    const relative = (asset === '' || asset === 'school/') ? asset + 'index.html' : asset;
     const mime = FILES.get(relative);
     if (!mime) return reply(404);
     const file = path.join(__dirname, 'public', relative);

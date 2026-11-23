@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#101a17"><title>마지막 종례 · 서령고등학교</title><link rel="stylesheet" href="school.css"></head>
+<body>
+<canvas id="world" aria-label="서령고등학교 1층 3D 탐색" tabindex="0"></canvas><div class="shade"></div>
+<header><a class="brand" href="../" aria-label="호텔 편으로"><span class="crest">西</span><span>서령고등학교<small>SEORYEONG HIGH SCHOOL</small></span></a><nav><button id="audio">소리 켬</button><button id="pause" hidden>일시정지</button></nav></header>
+<main id="cover">
+ <div class="cover-art"></div>
+ <section class="intro"><div class="issue"><i></i> 야간 방송 기록 <span>/</span> 1997.11.07</div>
+ <h1>마지막 <em>종례</em></h1><div class="subtitle">THE LAST BELL</div>
+ <p>자율학습은 아홉 시에 끝났다.<br>아무도 없는 교실에서, 종례 방송이 다시 켜졌다.</p>
+ <div class="start"><button class="primary" id="start">교실에서 눈뜨기 <b>↗</b></button><button class="quiet" id="free">자유 탐색</button></div>
+ <p id="load" role="status"></p></section>
+ <footer><span>1인칭 3D 방탈출 <i>·</i> 학교 편</span><a href="../">호텔 316호로 ↗</a></footer>
+</main>
+<section id="hud" hidden><div class="location"><small>서령고등학교 &nbsp; / &nbsp; 본관 1층</small><strong id="zone"></strong><span id="mode"></span></div>
+<div class="tools"><button id="journal">수첩 <kbd>J</kbd></button><button id="hint">힌트 <kbd>H</kbd></button><button id="flash">손전등 <kbd>F</kbd></button></div>
+<div class="reticle"></div><button id="use" hidden><kbd>E</kbd><span></span></button><div class="walk-help">WASD 이동　 드래그 · 방향키 시점　 E 조사</div>
+<div class="touch" aria-label="이동"><button data-move="w" aria-label="앞으로">↑</button><button data-move="a" aria-label="왼쪽으로">←</button><button data-move="s" aria-label="뒤로">↓</button><button data-move="d" aria-label="오른쪽으로">→</button></div></section>
+<div id="message" role="status" aria-live="polite"></div>
+<dialog id="dialog"><article><button id="close" aria-label="닫기">×</button><div id="detail"></div></article></dialog>
+<section id="end" hidden><div><div class="issue"><i></i> 방송 종료</div><h1>마지막 학생이<br><em>나갔다.</em></h1><p>빗속으로 한 걸음 나서자 뒤에서 현관문이 닫힌다.<br>이번에는, 아무도 종을 울리지 않는다.</p><button class="primary" id="replay">다시 플레이 <b>↻</b></button><a href="../">호텔 편으로 ↗</a></div></section>
+<script type="module" src="school-game.js"></script></body></html>

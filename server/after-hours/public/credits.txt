@@ -1,5 +1,9 @@
 AFTER HOURS / ROOM 316 — visual assets
 
+The Last Bell / school chapter. Original title photograph generated with OpenAI built-in imagegen.
+Project asset: server/after-hours/public/school/school-night.jpg
+Generation prompt: Original cinematic environmental photograph for a 3D Korean school mystery game. Landscape 16:9. A vacant late-1990s Korean public high school classroom at rainy night, photographed from the back corner looking diagonally toward the long dark green chalkboard and rows of worn amber wood single desks on tubular steel legs, silver aluminum sliding windows down the right with streaks of rain, small rectangular warm red intercom indicator light, a single weak greenish-white fluorescent fixture, faint blue night light along the windows, chiaroscuro but clearly readable. Analog 35mm film grain, photorealistic natural materials, melancholy and hushed, no figures, no gore. Composition with most visual interest and readable desks on the right, dark unobtrusive left third for separate title typography. No letters, typography, logos, dates, watermarks or UI.
+
 PBR materials: Poly Haven, CC0. Downloaded from the official Poly Haven asset API.
 https://polyhaven.com/a/herringbone_parquet
 https://polyhaven.com/a/decrepit_wallpaper

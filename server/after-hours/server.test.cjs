@@ -15,6 +15,18 @@ test('hotel assets load under their prefix alongside existing games', async () =
     assert.equal(page.status, 200);
     assert.match(page.headers.get('content-security-policy'), /connect-src 'self' blob:/);
     const html = await page.text();
+    assert.match(html,/href="school\/"/);
+    const schoolRedirect=await fetch(origin+'/after-hours/school?from=lobby',{redirect:'manual'});
+    assert.equal(schoolRedirect.status,308);
+    assert.equal(schoolRedirect.headers.get('location'),'/after-hours/school/?from=lobby');
+    const school=await fetch(origin+'/after-hours/school/');
+    assert.equal(school.status,200);
+    assert.match(await school.text(),/마지막 종례/);
+    for(const file of ['school-game.js','school-scene.js','school-state.js','school-console.js','school-audio.js','school.css','school-night.jpg']){
+      const resource=await fetch(origin+'/after-hours/school/'+file,{method:'HEAD'});
+      assert.equal(resource.status,200,file);
+      assert.ok(Number(resource.headers.get('content-length'))>100);
+    }
     assert.match(html, /316호에서 눈뜨기/);
     assert.match(html, /name="guestAppearance" value="male" checked/);
     assert.match(html, /name="guestAppearance" value="female"/);
