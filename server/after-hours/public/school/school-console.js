@@ -114,6 +114,6 @@ export function schoolConsole(s, audio, say) {
     show('막혔을 때 · 당번의 메모','접힌 귀퉁이',pair[hintLevel]);
     if(!hintLevel)button('조금 더 펼쳐 보기',()=>{hintLevel=1;hints();});
   }
-  function pause(){show('탐색 일시정지','복도는 조용하다.','WASD 이동 · 드래그 또는 방향키로 시점 조절 · E 조사\nJ 수첩 · H 힌트 · F 손전등');button('이어서 조사하기',close);button('시작 화면으로',()=>location.reload());}
+  function pause(){show('탐색 일시정지','복도는 조용하다.','WASD 이동 · Shift 달리기 · 드래그 또는 방향키로 시점 조절\nE 조사 · 락커에서 E로 숨기와 나오기\nJ 수첩 · H 힌트 · F 손전등');button('이어서 조사하기',close);button('시작 화면으로',()=>location.reload());}
   return {windowView,drawer:()=>dial('교탁의 번호 서랍',false),patch:()=>dial('구내 방송 송출반',true),attendance,chart,deck,washLog,journal,hints,pause,close,isOpen:()=>dialog.open};
 }

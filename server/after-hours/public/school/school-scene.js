@@ -2,6 +2,8 @@ import * as T from '../three.module.js';
 import {Reflector} from '../Reflector.js';
 import {GLASS,PORTALS} from './school-state.js';
 import {buildWashroom} from './washroom.js';
+import {LOCKERS} from './patrol.js';
+import {makeLockers,makeGuard} from './patrol-scene.js';
 
 export function buildSchool(renderer,s,washModel){
   const scene=new T.Scene();scene.background=new T.Color('#14222b');scene.fog=new T.FogExp2('#172629',.033);
@@ -54,7 +56,7 @@ export function buildSchool(renderer,s,washModel){
     for(let X=x-w/2+.6;X<x+w/2;X+=1.2)box(.013,.009,d,X,3.394,z,trim);
     for(let Z=z-d/2+.6;Z<z+d/2;Z+=1.2)box(w,.009,.013,x,3.393,Z,trim);
   }
-  roomFloor(0,0,9.2,10.8);roomFloor(-6.1,-.2,3,15.6);roomFloor(-10.2,-4.825,5.2,6.35);
+  roomFloor(0,0,9.2,10.8);roomFloor(-6.1,-9.7,3,34.6);roomFloor(-10.2,-4.825,5.2,6.35);
   function partition(alongX,x,z,length){
     function layer(y,h,depth,m){box(alongX?length:depth,h,alongX?depth:length,x,y,z,m);}
     layer(1.70,3.4,.095,wall);layer(.58,1.16,.106,mint);layer(1.18,.042,.12,trim);layer(.066,.13,.13,base);
@@ -68,14 +70,15 @@ export function buildSchool(renderer,s,washModel){
     box(ax?len+.10:.18,.065,ax?.18:len+.10,ax?mid:p.at,2.45,ax?p.at:mid,steel);
   }
   partition(true,0,-5.45,9.2);partition(true,0,5.45,9.2);gateWall(PORTALS[0],-5.4,5.4);
-  partition(false,-4.6,-6.7,2.6);partition(false,-4.6,6.5,2.2);partition(true,-6.1,-8.01,3);
+  partition(false,-4.6,6.5,2.2);partition(true,-6.1,-27.01,3);partition(false,-7.6,-17.5,19);
   gateWall(PORTALS[1],-8,-1.65);gateWall(PORTALS[3],-1.65,7.6);gateWall(PORTALS[2],-7.6,-4.6);
   partition(false,-12.82,-4.825,6.35);partition(true,-10.20,-8.02,5.20);partition(true,-10.20,-1.64,5.20);
   function fixture(x,z,m,len=1.55){box(.34,.085,len+.14,x,3.29,z,base);for(const dx of [-.099,.099])cyl(.026,len,x+dx,3.225,z,m,null,Math.PI/2);}
   const coldTube=mat('#768580');
   const lamps=[];for(const x of [-2.0,1.9])for(const z of [-2.95,.05,3.10])fixture(x,z,(x<0&&z===-2.95)||(x>0&&z===3.10)?fluoro:coldTube);
   lamps.push(lit(-2,2.92,-2.95,'#e4dda9',10,7),lit(1.9,2.92,3.1,'#c7dfd6',7,7));
-  for(const z of [-6.2,-1,4.4])fixture(-6.15,z,hallTube,1.26);
+  for(const z of [-25,-19,-13.4,-6.2,-1,4.4])fixture(-6.15,z,hallTube,1.26);
+  lit(-6.12,2.85,-14,'#b7c9b7',10,8);lit(-6.12,2.85,-24,'#c9b08d',9,7);
   lit(-6.05,2.75,-4.60,'#a8cbca',13,8);lit(-6.2,2.78,4.1,'#a6c2a9',10,7);
   fixture(-10.4,-5.2,hallTube);lit(-10.25,2.70,-5.15,'#edcc9a',18,8);
   // Recessed glazing, window catches and a distant opposite wing beyond the east wall.
@@ -107,7 +110,7 @@ export function buildSchool(renderer,s,washModel){
   const inserted=group(0,-.13,.054,null,null,windowGroup);
   box(.65,.016,.006,0,.325,0,steel,inserted);box(.65,.016,.006,0,-.325,0,steel,inserted);
   for(const dx of [-.32,.32])box(.012,.65,.006,dx,0,0,steel,inserted);
-  function desk(x,z,i){
+  function desk(x,z,i,accessible=true){
     box(.90,.047,.61,x,.775,z,wood);box(.89,.022,.60,x,.743,z,base);
     for(const dx of [-.34,.34])for(const dz of [-.22,.22]){
       cyl(.016,.70,x+dx,.37,z+dz,steel);cyl(.022,.037,x+dx,.034,z+dz,black);
@@ -126,9 +129,30 @@ export function buildSchool(renderer,s,washModel){
       for(const dx of [-.09,.09])box(.024,.135,.020,x+.04+dx,.775,cz+.20,black,null,-.16);
     }
     if(i===5||i===13){box(.22,.024,.28,x-.04,.601,z+.05,paper,null,0,-.10);box(.23,.016,.29,x-.02,.624,z+.052,mint,null,0,-.06);}
-    darkPatch(x,z+.13,1.30,1.55);solid(x,z+.18,.90,.98);
+    if(accessible){darkPatch(x,z+.13,1.30,1.55);solid(x,z+.18,.90,.98);}
   }
   let deskId=0;for(const z of [-1.65,-.03,1.61,3.25])for(const x of [-2.9,-1.6,.15,1.45,2.85])desk(x,z,deskId++);
+  const lockedDoors=[];
+  for(const [section,center] of [[2,-10.8],[1,-21.6]]){
+    roomFloor(0,center,9.2,10.8);
+    partition(true,0,center-5.4,9.2);partition(false,4.6,center,10.8);
+    const doorZ=center-2.95,portal={axis:'x',at:-4.6,lo:doorZ-.78,hi:doorZ+.78};
+    // A clear sidelight gives a separate sightline across the rows of desks.
+    const win=center+.45;
+    gateWall(portal,center-5.4,win-1.55);partition(false,-4.6,(win+1.55+center+5.4)/2,center+5.4-win-1.55);
+    box(.10,1.17,3.10,-4.6,.585,win,mint);box(.12,.97,3.10,-4.6,2.915,win,wall);
+    for(const z of [win-1.55,win,win+1.55])box(.12,1.26,.046,-4.6,1.8,z,steel);
+    for(const y of [1.17,2.43])box(.17,.055,3.13,-4.6,y,win,trim);
+    box(.012,1.22,3.07,-4.6,1.8,win,paneGlass);
+    const name='2학년 '+section+'반',door=slider(portal,'locked'+section,name+' 손잡이',oak);
+    lockedDoors.push(door);sign(scene,name,.78,.24,-4.69,2.64,doorZ,-Math.PI/2);
+    box(4.88,1.40,.075,0,2.04,center-5.30,oak);box(4.75,1.29,.05,0,2.04,center-5.24,black);
+    sign(scene,section===2?'금요일  ·  칠판 당번':'야간 자율학습',1.04,.22,-1.22,2.19,center-5.207,0,'#293c33','#bfc7aa');
+    box(1.44,.90,.71,-2.96,.48,center-4.2,oak);box(1.52,.06,.78,-2.96,.96,center-4.2,wood);
+    for(const z of [-1.65,-.03,1.61,3.25])for(const x of [-2.9,-1.6,.15,1.45,2.85])desk(x,center+z,deskId++,false);
+    fixture(-1.8,center-1,hallTube);fixture(1.8,center+2,coldTube);
+    lit(-1.5,2.8,center-.7,section===2?'#c1d7cc':'#bea779',11,7);
+  }
   const attendance=group(.12,.824,3.23,'attendance','야간 점호표');
   attendance.rotation.y=-.12;box(.29,.014,.34,0,0,0,paper,attendance);
   const ledger=sign(attendance,'야간 점호표',.26,.25,0,.009,0,0,'#cfc5a8','#403f34');ledger.rotation.x=-Math.PI/2;
@@ -192,7 +216,7 @@ export function buildSchool(renderer,s,washModel){
     const leaf=group(0,0,0,null,null,g);
     for(const side of [-1,1])box(.115,2.36,.076,side*(w/2-.057),1.20,0,material,leaf);
     box(w-.18,1.13,.070,0,.58,0,material,leaf);box(w-.18,.10,.07,0,2.33,0,material,leaf);
-    box(w-.19,1.12,.028,0,1.72,0,glass,leaf);box(.03,1.16,.058,0,1.72,0,steel,leaf);
+    box(w-.19,1.12,.028,0,1.72,0,id.startsWith('locked')?paneGlass:glass,leaf);box(.03,1.16,.058,0,1.72,0,steel,leaf);
     for(const side of [-1,1])box(.032,.20,.05,w*.35,1.03,side*.054,steel,leaf);
     box(w+.08,.018,.16,0,.011,0,steel,g);
     return {leaf,w,p,mid,ax,block:{x:g.position.x,z:g.position.z,w:ax?w:.08,d:ax?.08:w}};
@@ -215,7 +239,7 @@ export function buildSchool(renderer,s,washModel){
   const tape=group(.04,.01,-.14,'tape','카세트테이프 집기',tray);
   box(.165,.027,.106,0,0,0,black,tape);box(.138,.003,.071,0,.015,0,paper,tape);for(const dx of [-.045,.045])cyl(.014,.004,dx,.018,0,black,tape);
   solid(-5.01,4.0,.55,1.32);
-  for(const z of [1.5,2.25,3.0]){box(.32,1.56,.66,-7.35,.79,z,mint);for(let i=0;i<4;i++)box(.016,.017,.21,-7.18,1.31-i*.043,z,black);box(.045,.055,.075,-7.17,.79,z+.17,steel);solid(-7.35,z,.35,.69);}
+  const lockerDoors=makeLockers(LOCKERS,{group,box,sign,solid,mat});
   sign(scene,'방 송 실',.75,.25,-7.51,2.66,-6.00,Math.PI/2);
   sign(scene,'서 쪽   현 관',.94,.24,-6.1,2.72,7.52,Math.PI,'#355848','#cee5cb');
   box(.20,.06,.02,-6.74,2.73,7.54,exitGreen);
@@ -247,7 +271,8 @@ export function buildSchool(renderer,s,washModel){
   }
   const lamp=new T.SpotLight('#f9edca',10,10,.48,.68,1.65);scene.add(lamp,lamp.target);
   let progress=0;
-  function update(dt,time,cam,torch){
+  let guardView;
+  function update(dt,time,cam,torch,patrol,hiding){
     reflection.visible=cam.position.x>-7.55;
     updateWashroom(dt,time,cam);
     const k=1-Math.exp(-dt*6);const to=(o,f,v)=>o[f]+=(v-o[f])*k;
@@ -257,10 +282,13 @@ export function buildSchool(renderer,s,washModel){
     to(padlock.rotation,'z',s.tray?-.64:0);
     to(lid.rotation,'y',s.cabinet?-1.55:0);yardKey.visible=s.cabinet&&lid.rotation.y<-.72&&!s.exitKey;
     for(const d of doors){to(d.leaf.position,'x',s[d.p.field]?d.w+.12:0);d.block[d.ax?'x':'z']=d.mid+(d.ax?1:-1)*d.leaf.position.x;}
+    for(const door of lockedDoors)to(door.leaf.position,'x',0);
     ghost.visible=s.dark;inserted.visible=s.mounted;
     progress+=(Number(!s.dark)-progress)*k;lamps.forEach((l,i)=>l.intensity=(i?7:10)*progress);
     fluoro.color.setScalar(.12+.84*progress);streak.position.y=-((time*.093)%.19);
     lamp.intensity=torch?15:0;lamp.position.copy(cam.position);cam.getWorldDirection(lamp.target.position);lamp.target.position.multiplyScalar(3).add(cam.position);
+    for(const [id,leaf] of lockerDoors)leaf.rotation.y=hiding?.slot.id===id?-1.48*Math.sin(Math.PI*hiding.motion):0;
+    if(guardView&&patrol)guardView(dt,time,patrol);
   }
   function pick(ray){
     const hits=ray.intersectObjects(scene.children,true);
@@ -272,5 +300,6 @@ export function buildSchool(renderer,s,washModel){
     }
     return null;
   }
-  return {scene,blocks,pick,update};
+  return {scene,blocks,pick,update,installGuard(asset){guardView=makeGuard(asset,scene);},
+    shakeDoor(id){const door=lockedDoors.find(d=>d.leaf.parent.userData.id===id);if(door)door.leaf.position.x=.025;}};
 }

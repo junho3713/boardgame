@@ -76,7 +76,7 @@ export function hint(s){
 }
 export const ROOMS = {
   classroom:{x0:-4.6,x1:4.6,z0:-5.4,z1:5.4,label:'2학년 3반'},
-  hall:{x0:-7.6,x1:-4.6,z0:-8,z1:7.6,label:'본관 서쪽 복도'},
+  hall:{x0:-7.6,x1:-4.6,z0:-27,z1:7.6,label:'본관 서쪽 복도'},
   booth:{x0:-12.8,x1:-7.6,z0:-8,z1:-1.65,label:'교내 방송실'},
   washroom:{x0:-13.8,x1:-7.6,z0:.8,z1:7.6,label:'서쪽 화장실'},
   yard:{x0:-8.45,x1:-3.75,z0:7.6,z1:12.2,label:'서쪽 현관 밖'}

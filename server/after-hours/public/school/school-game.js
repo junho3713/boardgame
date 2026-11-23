@@ -4,10 +4,12 @@ import {GLTFLoader} from '../GLTFLoader.js';
 import {schoolAudio} from './school-audio.js';
 import {schoolConsole} from './school-console.js';
 import {fresh,act,where,walkable,remember,ROOMS,advancePlumbing} from './school-state.js';
+import {LOCKERS,newPatrol,advancePatrol} from './patrol.js';
 
 const $=id=>document.getElementById(id),canvas=$('world'),s=fresh(),audio=schoolAudio();
 let captionTimer,renderer,level,playing=false,starting=false,soundOn=true,torch=false;
 let yaw=0,pitch=0,elapsed=0,prev=0,nextPick=0,foot=0,lastZone='',target=null;
+let patrol=newPatrol(),hiding=null;
 const held=new Set(),ray=new T.Raycaster(),center=new T.Vector2(),cam=new T.PerspectiveCamera(65,1,.04,60);
 cam.rotation.order='YXZ';ray.far=2.65;
 function say(text){clearTimeout(captionTimer);$('message').textContent=text;captionTimer=setTimeout(()=>{$('message').textContent='';},4200);}
@@ -20,11 +22,46 @@ const collect={
   exitKey:['당직 열쇠함에서 서쪽 현관 열쇠를 찾았다.','현관 열쇠를 챙겼다.']
 };
 function lookAtTarget(point=center){
-  cam.updateMatrixWorld();ray.setFromCamera(point,cam);return level.pick(ray);
+  if(hiding)return hiding.phase==='inside'?{id:'leaveLocker',label:'락커에서 나오기'}:null;
+  cam.updateMatrixWorld();ray.setFromCamera(point,cam);
+  const hit=level.pick(ray),slot=hit&&LOCKERS.find(l=>l.id===hit.id);
+  if(slot&&(where(cam.position.x,cam.position.z)!=='hall'||Math.hypot(cam.position.x+6.92,cam.position.z-slot.z)>1.65))return null;
+  return hit;
+}
+function moveLocker(slot,enter){
+  hiding={slot,phase:enter?'enter':'exit',motion:0,from:cam.position.clone(),yaw,pitch};
+  document.body.classList.toggle('concealed',enter);
+  $('flash').setAttribute('aria-pressed',String(!enter&&torch));audio.sound('locker');
+  held.clear();drag=null;nextPick=0;
+}
+function updateLocker(dt){
+  const h=hiding;
+  if(h.phase==='inside')return;
+  h.motion=Math.min(1,h.motion+dt/.82);
+  const t=T.MathUtils.smoothstep(h.motion,.17,.84),enter=h.phase==='enter';
+  cam.position.set(T.MathUtils.lerp(h.from.x,enter?h.slot.insideX:h.slot.exitX,t),
+    T.MathUtils.lerp(h.from.y,enter?1.45:1.57,t),T.MathUtils.lerp(h.from.z,h.slot.z,t));
+  const goal=enter?-Math.PI/2:h.yaw;
+  yaw=h.yaw+Math.atan2(Math.sin(goal-h.yaw),Math.cos(goal-h.yaw))*t;
+  pitch=T.MathUtils.lerp(h.pitch,0,t);
+  if(h.motion===1){
+    if(enter){h.phase='inside';yaw=-Math.PI/2;$('zone').textContent='복도 락커 안';}
+    else{hiding=null;$('zone').textContent=ROOMS.hall.label;}
+    held.clear();nextPick=0;
+  }
+}
+function caught(){
+  held.clear();drag=null;hiding=null;document.body.classList.remove('concealed');
+  patrol=newPatrol(-22);patrol.grace=7;yaw=1.44;pitch=-.04;cam.position.set(-3.66,1.57,-3.44);
+  cam.rotation.set(pitch,yaw,0,'YXZ');lastZone='classroom';$('zone').textContent=ROOMS.classroom.label;
+  nextPick=0;audio.sound('wrong');say('“교실로 돌아가.” 경비원이 문을 닫았다. 챙겨 둔 물건은 그대로다.');
 }
 function interact(hit){
   if(!playing||book.isOpen()||!hit)return;
   const id=hit.id;
+  if(id==='leaveLocker'){if(hiding?.phase==='inside')moveLocker(hiding.slot,false);return;}
+  const slot=LOCKERS.find(l=>l.id===id);
+  if(slot){moveLocker(slot,true);say('철문이 닫힌다. 틈으로 복도가 보인다.');return;}
   if(collect[id]){
     if(act(s,id)){remember(s,collect[id][0]);say(collect[id][1]);audio.sound('key');}
   }else switch(id){
@@ -38,6 +75,7 @@ function interact(hit){
     case 'boothDoor':
       if(!s.boothDoor&&act(s,id)){audio.sound('slide');say('방음문을 밀자 안쪽에서 약한 잡음이 샌다.');}break;
     case 'washDoor':if(!s.washDoor&&act(s,id)){audio.sound('slide');say('문 너머 타일 바닥에서 발소리가 길게 울린다.');}break;
+    case 'locked1':case 'locked2':level.shakeDoor(id);audio.sound('click');say('2학년 '+id.slice(-1)+'반. 손잡이를 당기자 잠금쇠만 달각거린다.');break;
     case 'stall1':case 'stall2':act(s,id);audio.sound('hinge');break;
     case 'cover1':case 'cover2':act(s,id);audio.sound('click');break;
     case 'lid':act(s,id);audio.sound('china');say(s.lid?'도기 뚜껑을 옆 턱으로 밀었다.':'물탱크 위에 뚜껑을 다시 얹었다.');break;
@@ -68,7 +106,7 @@ function interact(hit){
 function resize(){
   if(!renderer)return;renderer.setSize(innerWidth,innerHeight,false);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();
 }
-function light(){torch=!torch;$('flash').setAttribute('aria-pressed',String(torch));audio.sound('click');}
+function light(){if(hiding)return;torch=!torch;$('flash').setAttribute('aria-pressed',String(torch));audio.sound('click');}
 function ending(){
   act(s,'leave');playing=false;held.clear();$('hud').hidden=true;$('pause').hidden=true;$('end').hidden=false;$('message').textContent='';audio.sound('bell');$('replay').focus();
 }
@@ -83,16 +121,28 @@ function frame(now){
       const distance=dt*(held.has('shift')?3.25:2.18)/Math.max(1,Math.hypot(side,forward));
       const dx=distance*(Math.cos(yaw)*side+Math.sin(yaw)*forward),dz=distance*(Math.cos(yaw)*forward-Math.sin(yaw)*side);
       const p=cam.position;
-      if(dx&&walkable(s,p.x+dx,p.z,level.blocks)){p.x+=dx;moved=true;}
-      if(dz&&walkable(s,p.x,p.z+dz,level.blocks)){p.z+=dz;moved=true;}
+      if(hiding){
+        if(hiding.phase==='inside'){
+          yaw=T.MathUtils.clamp(yaw,-Math.PI/2-.55,-Math.PI/2+.55);pitch=T.MathUtils.clamp(pitch,-.23,.23);
+        }else updateLocker(dt);
+      }else{
+        if(dx&&walkable(s,p.x+dx,p.z,level.blocks)){p.x+=dx;moved=true;}
+        if(dz&&walkable(s,p.x,p.z+dz,level.blocks)){p.z+=dz;moved=true;}
+        p.y=1.57+(moved?Math.sin(elapsed*10)*.021:0);
+      }
       if(moved){foot+=Math.hypot(dx,dz);if(foot>.92){audio.sound(lastZone==='washroom'?'tileStep':'step');foot=0;}}
-      p.y=1.57+(moved?Math.sin(elapsed*10)*.021:0);cam.rotation.set(pitch,yaw,0,'YXZ');
+      cam.rotation.set(pitch,yaw,0,'YXZ');
       const zone=where(p.x,p.z);
       if(zone&&zone!==lastZone){if(!s.free&&zone==='hall'&&lastZone==='classroom'&&!s.notes.some(n=>n.startsWith('복도에'))){remember(s,'복도에 들어서자 빈 방송실 쪽에서 종례 예비종이 한 번 울렸다.');audio.sound('bell');say('빈 복도 끝에서 종례 예비종이 울린다.');}lastZone=zone;$('zone').textContent=ROOMS[zone].label;}
       advancePlumbing(s,dt);
+      const encounter=advancePatrol(patrol,dt,p,!!hiding,s,level.blocks);
+      if(patrol.step)audio.guardStep(patrol.x-p.x,patrol.z-p.z,yaw,!!hiding||zone!=='hall');
+      if(encounter==='spotted'){audio.sound('spotted');say('“거기, 누구야?” 손전등이 이쪽으로 돌아온다.');}
+      if(encounter==='leaving'&&hiding)say('문틈에서 불빛이 비껴간다. 구둣소리가 멀어진다.');
+      if(encounter==='caught')caught();
       if(!s.free&&zone==='yard'&&p.z>8.34)ending();
     }else held.clear();
-    level.update(dt,elapsed,cam,torch);
+    level.update(book.isOpen()||document.hidden?0:dt,elapsed,cam,torch&&!hiding,patrol,hiding);
     audio.plumbing(s,cam.position,yaw,lastZone==='washroom',playing&&!book.isOpen());
     renderer.render(level.scene,cam);
     if(now>=nextPick){
@@ -104,12 +154,16 @@ function frame(now){
   requestAnimationFrame(frame);
 }
 const preview=new URLSearchParams(location.search),washPreview=preview.get('room')==='washroom';
+if(preview.get('scene')==='patrol'){
+  const button=$('patrolStart');button.className='primary';$('start').className='quiet';
+  button.parentElement.prepend(button);
+}
 if(washPreview){
   const free=$('free'),story=$('start');
   free.textContent='화장실에서 둘러보기 ↗';free.className='primary';story.className='quiet';story.textContent='교실에서 탈출 시작';
   free.parentElement.insertBefore(free,story);
 }
-async function start(free){
+async function start(free,patrolStart=false){
   if(starting||playing)return;
   starting=true;$('load').textContent='교실을 여는 중…';await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
   try{
@@ -121,22 +175,32 @@ async function start(free){
     }
     if(!level){
       $('load').textContent='학교 시설을 준비하는 중…';
-      const asset=await new GLTFLoader().loadAsync(new URL('washroom.glb',import.meta.url).href);
-      level=buildSchool(renderer,s,asset.scene);
+      const loader=new GLTFLoader();
+      const [asset,guard]=await Promise.all([loader.loadAsync(new URL('washroom.glb',import.meta.url).href),
+        free?null:loader.loadAsync(new URL('../assets/models/mirror-guest.glb',import.meta.url).href)]);
+      const school=buildSchool(renderer,s,asset.scene);
+      if(guard)school.installGuard(guard);
+      level=school;
     }
     Object.assign(s,fresh(free));yaw=-.10;pitch=-.045;cam.position.set(-.75,1.57,4.64);
+    if(patrolStart){
+      Object.assign(s,{board:true,film:true,mounted:true,turn:1,back:true,drawer:true,roomKey:true,classDoor:true});
+      patrol=newPatrol(-20.2);patrol.grace=2.8;cam.position.set(-6.10,1.57,-10.75);yaw=.57;pitch=-.06;
+    }
     if(free&&washPreview){cam.position.set(-8.34,1.57,6.18);yaw=1.16;pitch=-.085;}
     if(free&&washPreview&&preview.get('stall')==='2'){
       s.stall2=true;cam.position.set(-10.49,1.57,2.27);yaw=.48;pitch=-.85;
     }
     cam.rotation.set(pitch,yaw,0,'YXZ');
-    level.update(2,0,cam,false);renderer.render(level.scene,cam);
+    level.update(2,0,cam,false,patrol);renderer.render(level.scene,cam);
     playing=true;$('cover').hidden=true;$('end').hidden=true;$('hud').hidden=false;$('pause').hidden=false;$('mode').textContent=free?'자유 탐색':'야간 자율학습 · 탈출';$('load').textContent='';
     audio.sound(free&&washPreview?'china':'bell');say(free&&washPreview?'서쪽 화장실 · 문과 수도꼭지는 E로 조작할 수 있다.':free?'자유 탐색 · 복도와 방송실의 문이 열려 있다.':'스피커에서 마지막 종례 예비종이 울렸다. 교실에는 나뿐이다.');canvas.focus();
+    if(patrolStart)say('복도 끝에서 구둣소리가 난다. 왼쪽 철제 락커에 E로 숨을 수 있다.');
   }catch(e){console.error(e);$('load').textContent=renderer?'학교 모델을 열지 못했어. 연결을 확인하고 한 번 더 눌러 줘.':'3D 화면을 열지 못했어. WebGL 2를 지원하는 브라우저에서 하드웨어 가속을 켜고 다시 시도해 줘.';}
   finally{starting=false;}
 }
 $('start').onclick=()=>{audio.wake();start(false);};$('free').onclick=()=>{audio.wake();start(true);};
+$('patrolStart').onclick=()=>{audio.wake();start(false,true);};
 $('replay').onclick=()=>location.reload();$('pause').onclick=book.pause;$('journal').onclick=book.journal;$('hint').onclick=book.hints;$('flash').onclick=light;
 $('use').onclick=()=>interact(lookAtTarget());
 $('audio').onclick=()=>{soundOn=!soundOn;audio.enable(soundOn);if(soundOn)audio.wake();$('audio').textContent=soundOn?'소리 켬':'소리 끔';$('audio').setAttribute('aria-pressed',String(soundOn));};

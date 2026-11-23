@@ -4,6 +4,7 @@ import {readFile} from 'node:fs/promises';
 import {GLTFLoader} from './public/GLTFLoader.js';
 import * as T from './public/three.module.js';
 import {buildSchool} from './public/school/school-scene.js';
+import {advancePatrol,newPatrol,LOCKERS} from './public/school/patrol.js';
 import {fresh,act,glassCode,holes,PORTALS,walkable,where,keyExposed,advancePlumbing} from './public/school/school-state.js';
 
 test('original classroom and broadcast puzzles open three successive gates',()=>{
@@ -30,6 +31,30 @@ test('free exploration opens the actual wall apertures and leaves the yard explo
     assert.equal(walkable(free,p.axis==='x'?p.at:p.lo-.4,p.axis==='x'?p.lo-.4:p.at,[]),false);
   }
   assert.equal(where(-6,9),'yard');assert.equal(act(free,'leave'),false);
+});
+test('night patrol gives chase, searches the last sighting and walks away from a concealed player',()=>{
+  const s=fresh(),g=newPatrol(-17),p={x:-6.05,z:-11};
+  const simulate=(seconds,hidden=false)=>{
+    const events=[];
+    for(let i=0;i<seconds*60;i++){
+      const event=advancePatrol(g,1/60,p,hidden,s,[]);
+      if(event)events.push(event);
+    }
+    return events;
+  };
+  assert.deepEqual(simulate(2,true),[]);assert.equal(g.mode,'off');
+  assert.ok(simulate(2.4).includes('spotted'));assert.equal(g.mode,'chase');
+  const sighting=g.lastZ;p.x=LOCKERS[3].insideX;p.z=LOCKERS[3].z;
+  assert.deepEqual(simulate(.2,true),[]);assert.equal(g.mode,'search');assert.equal(g.lastZ,sighting);
+  assert.deepEqual(simulate(9,true),['leaving']);assert.equal(g.mode,'patrol');assert.ok(Math.abs(g.z-p.z)>2);
+  p.x=LOCKERS[3].exitX;assert.ok(!simulate(.5).includes('caught'));
+  const near=newPatrol(p.z);near.grace=0;near.mode='chase';near.x=p.x;
+  assert.equal(advancePatrol(near,.016,p,false,s,[]),'caught');
+  assert.equal(advancePatrol(near,.016,p,true,s,[]),undefined);
+  const free=newPatrol();advancePatrol(free,.1,p,false,fresh(true),[]);assert.equal(free.mode,'off');
+  const behindWall=newPatrol(-11);behindWall.mode='patrol';behindWall.grace=0;
+  for(let i=0;i<120;i++)advancePatrol(behindWall,1/60,{x:-4.1,z:-10.3},false,s,[]);
+  assert.equal(behindWall.notice,0);
 });
 test('water fixtures have independent taps, drains, shutoff and reversible refill',()=>{
   const s=fresh();act(s,'tap1');act(s,'plug1');advancePlumbing(s,9);
@@ -95,6 +120,17 @@ test('all required 3D items can be seen and picked from physically reachable pos
     use('drawer',-2.98,-3.15,[-2.98,.84,-3.87],'drawer',glassCode());
     use('roomKey',-2.98,-3.16,[-2.915,.775,-3.654]);
     use('classDoor',-3.88,-3.44,[-4.6,1.35,-3.43]);
+    for(const [id,z] of [['locked2',-13.75],['locked1',-24.55]]){
+      use(id,-5.54,z,[-4.6,1.03,z],null);
+      for(const state of [s,fresh(true)]){
+        assert.equal(walkable(state,-4.6,z,lvl.blocks),false);
+        assert.equal(walkable(state,-3.8,z,lvl.blocks),false);
+      }
+    }
+    for(const slot of LOCKERS){
+      use(slot.id,slot.exitX,slot.z,[-6.93,1.03,slot.z],null);
+      assert.equal(walkable(s,slot.insideX,slot.z,lvl.blocks),false);
+    }
     assert.equal(reach(-10,-5),false);
     use('chart',-6.44,.45,[-7.49,1.71,.45],null);
     assert.equal(reach(-9,5.4),false);

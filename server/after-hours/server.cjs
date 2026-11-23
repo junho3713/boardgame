@@ -12,6 +12,8 @@ const FILES = new Map([
   ['school/school-audio.js', 'text/javascript; charset=utf-8'],
   ['school/school-console.js', 'text/javascript; charset=utf-8'],
   ['school/school-game.js', 'text/javascript; charset=utf-8'],
+  ['school/patrol.js', 'text/javascript; charset=utf-8'],
+  ['school/patrol-scene.js', 'text/javascript; charset=utf-8'],
   ['school/washroom.js', 'text/javascript; charset=utf-8'],
   ['school/washroom.glb', 'model/gltf-binary'],
   ['index.html', 'text/html; charset=utf-8'],
