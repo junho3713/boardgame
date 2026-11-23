@@ -140,6 +140,15 @@ def toilet(i,x):
     for zz in [.151,.46]:
         block('Cistern face',(x,.853,zz),(.49,.33,.031),glaze,.014)
     block('Cistern floor',(x,.707,.305),(.49,.047,.32),glaze,.018)
+    # A low-level wall cistern feeds the pan through a separate visible flush elbow.
+    tube('Enamel flush downpipe',[(x,.696,.327),(x,.434,.327),(x,.398,.337),
+         (x,.366,.361),(x,.347,.396),(x,.343,.448),(x,.343,.573)],.041,ivory)
+    for yy,rr in [(.672,.048),(.632,.045),(.426,.044)]:
+        ring('Flush pipe union',(x,yy,.327),(rr,rr),.006,steel)
+    for dx in [-.171,.171]:
+        block('Cast wall bracket',(x+dx,.759,.109),(.068,.091,.193),edge,.009)
+    for dx in [-.105,.105]:
+        block('Floor anchor cap',(x+dx,.060,.708),(.032,.023,.042),ivory,.008)
     lid=pivot('CisternLid' if i==2 else 'FixedLid',(x,1.042,.30))
     block('Overhanging porcelain lid',(x,1.044,.30),(.56,.074,.372),glaze,.032,lid)
     handle=pivot('Flush'+str(i),(x+.159,.93,.49))
@@ -152,6 +161,12 @@ def toilet(i,x):
     tube('Red handwheel',[(x+.57+.077*cos(j*pi/16),.655+.077*sin(j*pi/16),.31) for j in range(32)],.011,red,valve,True)
     if i==2:
         tube('Overflow standpipe',[(x-.156,.72,.275),(x-.156,.992,.275)],.016,ivory)
+        arm=pivot('FloatArm',(x-.177,.970,.235))
+        tube('Float lever rod',[(x-.177,.970,.235),(x-.112,.967,.237),(x+.005,.950,.239)],.005,brass,arm)
+        bpy.ops.mesh.primitive_uv_sphere_add(segments=16,ring_count=8,location=world((x-.008,.952,.239)))
+        bob=register(bpy.context.object,'Hollow copper float',brass,arm)
+        bob.scale=(.051,.038,.031)
+        for face in bob.data.polygons:face.use_smooth=True
         key=pivot('LostKey',(x+.075,.741,.337))
         ring('Key bow',(x+.075,.744,.337),(.027,.021),.0055,brass,key)
         block('Key blade',(x+.027,.744,.337),(.069,.009,.012),brass,.002,key)

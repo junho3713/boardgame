@@ -169,6 +169,7 @@ export function buildWashroom(model,s,api){
   const lid=register('CisternLid','lid','물탱크 도기 뚜껑'),seat=lid.position.clone();
   const key=register('LostKey','lostKey','붉은 꼬리표 열쇠 집기');target(key,.15,.035,.080);
   const tank=liquid(new T.PlaneGeometry(.447,.273),water);tank.rotation.x=-Math.PI/2;tank.position.set(2.82,.96,.303);
+  const floatArm=node('FloatArm');
   const temp=new T.Object3D();
   return function update(dt,time,camera){
     const k=1-Math.exp(-6*dt),approach=(v,goal)=>v+(goal-v)*k;
@@ -203,6 +204,7 @@ export function buildWashroom(model,s,api){
     lid.position.x=approach(lid.position.x,seat.x+(s.lid?-.56:0));
     lid.position.y=seat.y+.05*Math.sin(Math.min(1,Math.abs(lid.position.x-seat.x)/.56)*Math.PI);
     tank.position.y=.735+.245*s.tanks[1];tank.visible=s.tanks[1]>.015;
+    floatArm.rotation.z=-1.07*(1-s.tanks[1]);
     key.visible=keyExposed(s)&&lid.position.x<seat.x-.30;
   };
 }
