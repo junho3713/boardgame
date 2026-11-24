@@ -4,6 +4,7 @@
 const SWORD={damage:90,rate:.75,range:90,arc:110*Math.PI/180,windup:.14,recovery:.42,targets:3,ultimateRange:170,ultimateInterval:.5,ultimateDamage:2};
 const FLAME={damage:14.4,rate:.12,range:250,arc:50*Math.PI/180,armor:.65,ultimateRange:420,ultimateArc:70*Math.PI/180,ultimateDamage:2};
 const BALANCE_VERSION=71;
+const PIRATE_REINFORCEMENT={from:360,interval:55};
 const UNIT_TYPE_CAP=8;
 const COMMANDER_REVIVAL={delay:5,protection:3};
 const GUARDIANS={range:460,mageHp:560,mageRate:6,mageDamage:18,windup:.45,radius:145,root:2,laserHp:1500,laserDamage:40,laserTick:.2,respawnDelay:60,shieldNotice:.8,shieldRaise:.18,shieldHold:.35,lessonRange:650,lessonBannerTime:5,laserWindup:0,laserRate:0};
@@ -92,6 +93,7 @@ const TYPES={swordEmpress:{name:'사검의 군주',hp:140800,damage:0,rate:100,r
  sniper:{name:'저격병',icon:'⌖',hp:100,damage:100,rate:2.35,range:560,speed:137,r:11,cost:110,role:'사거리 안에서 최대 체력이 가장 높은 적 자동 조준 · 경장갑 ×1 / 장갑 ×0.5'},
  guntruck:{name:'전투트럭',icon:'▱',hp:280,damage:12,rate:.22,range:265,speed:150,r:22,cost:150,role:'기동 연사 · 경장갑 ×1 / 장갑 ×0.8'},
  tank:{name:'전차',icon:'▰',hp:600,damage:100,rate:2.3,range:310,speed:95,r:26,cost:260,splash:60,role:'장갑 ×1 · 경장갑 ×0.5 · 범위 포격'},
+ pirateCannon:{name:'해적 포탄병',icon:'✹',hp:260,damage:88,rate:6.5,range:425,speed:87,r:24,cost:0,role:'앵무새 점화 3초 · 바퀴 대포 정지 중 요격 · 지연 광역 포격'},
  artillery:{name:'적 포병',icon:'⊕',hp:520,damage:0,rate:99,range:0,speed:0,r:27,cost:0,role:'포격을 지휘하는 장갑 목표'},
  medic:{name:'의무병',icon:'✚',hp:110,damage:0,rate:MEDIC_HEALING.interval,range:280,speed:145,r:11,cost:70,role:'부상 대장 우선 · 기본 10 회복 · 1초 간격 · 중첩 치료 100%/60%/40%'},
  bayonetCaptain:{name:'장난감 병정 대장',icon:'♛',hp:640,damage:32,rate:1.6,range:64,speed:90,r:16,cost:0,windup:.38,stab:true,role:'적 전용 경장갑 · 강화 총검병 · 일반 정예 5분 / 대장 보스 2분부터'},
@@ -177,7 +179,7 @@ class FrontGame{
   this.roomCampaign=null;this.bossIntro=null;this.roomHealthVersion=ROOM_CAMPAIGN.config.combat.healthVersion;this.roomHQAlarm=null;this.roomFenceVersion=0;this.roomEncounterVersion=0;this.enemyLuckySalvos=[];this.balanceVersion=BALANCE_VERSION;this.mode=['duel','crisis'].includes(mode)?mode:'pve';this.world={id:'backyard',width:1600,height:2800,scale:1};this.viewport=null;this.buildings=[];this.buildSerial=0;this.constructionLine=null;this.finalBattle={spawned:false,killed:false};this.roomEvents=0;
   this.mageShieldQuest=null;this.laserExposureQuest=null;this.roomGuardianVersion=0;this.roomFortificationVersion=0;this.roadCaptainVersion=0;this.guardianSiege=null;this.phase='ready';this.time=0;this.runGold=0;this.salvaged=0;this.nextRecoveryAt=0;this.stageSupplied=[];this.lastEnemyGrowth=-1;this.level=1;this.xp=0;this.kills=0;this.losses=[0,0];this.scouts=0;this.turnChoice=null;this.pendingChoice=null;this.navigationCache=new Map();this.cash=[135,135];this.trucks=[2,2];this.tech=[0,1].map(()=>Object.fromEntries(ROSTER.map(t=>[t,t==='rifle'?1:0])));
   this.cardShownCounts={};this.choiceKind='level';this.abilities=Object.fromEntries(Object.keys(ABILITIES).map(k=>[k,0]));this.evolved=Object.fromEntries(ROSTER.map(k=>[k,false]));this.bossState={nextAt:this.waveRules().boss.firstAt,warned:false,spawned:0,killed:0,rewards:0,claimed:0};
-  this.aiHQTarget=null;this.ultimate={readyAt:0,activeUntil:0,startedAt:0,nextShotAt:0,shots:0,angle:-Math.PI/2};this.moveOrder=null;this.focusTarget=null;this.focusAutomatic=false;this.formationFacing=-Math.PI/2;this.formationEnemy=null;this.lastPressure=0;this.barrages=[];this.crisis={phase:this.mode==='duel'?'disabled':'idle',warnAt:this.mode==='crisis'?0:450,startAt:this.mode==='crisis'?15:480,nextSalvo:0,nextEscort:0,salvos:0,hits:0,dodges:0,canceled:0,battery:[]};
+  this.aiHQTarget=null;this.nextPirateCannonAt=PIRATE_REINFORCEMENT.from;this.ultimate={readyAt:0,activeUntil:0,startedAt:0,nextShotAt:0,shots:0,angle:-Math.PI/2};this.moveOrder=null;this.focusTarget=null;this.focusAutomatic=false;this.formationFacing=-Math.PI/2;this.formationEnemy=null;this.lastPressure=0;this.barrages=[];this.crisis={phase:this.mode==='duel'?'disabled':'idle',warnAt:this.mode==='crisis'?0:450,startAt:this.mode==='crisis'?15:480,nextSalvo:0,nextEscort:0,salvos:0,hits:0,dodges:0,canceled:0,battery:[]};
   this.units=[];this.shots=[];this.evolutionAttacks=[];this.evolutionBlasts=[];this.butterflyGusts=[];this.mortarShells=[];this.luckyMines=[];this.luckyGlues=[];this.luckyGlueHistory=[];this.luckySprays=[];this.luckySalvos=[];this.effects=[];this.serial=0;this.scoutUntil=0;this.report=null;this.enemyNext=15;this.enemyTechNext=40;this.enemyAdvanceAt=65;this.enemyPlan=['tank','sniper','guntruck','rocket','machinegun','mortar'][Math.floor(this.random()*6)];this.rallyUntil=0;this.rallyReady=0;this.camera={x:800,y:2170};this.input={x:0,y:0};
   this.bases=[{x:800,y:2600,hp:900,maxHp:900,team:0,base:true,r:85},{x:800,y:200,hp:900,maxHp:900,team:1,base:true,r:85}];
   this.swarm={nextAt:this.waveRules().swarm.firstAt,spawned:0};this.flyingSwarm=this.flyingStart();
@@ -906,7 +908,7 @@ class FrontGame{
   if(this.isRoomCampaign()&&target===this.bases[1]&&amount>0&&source?.team===0)this.roomHQAlarm={until:this.time+8,x:source.x,y:source.y};
   const previousHp=target.hp;target.hp=Math.max(0,target.hp-amount*this.defenseFactor(target,source));
   if(this.isSwordCommander(source)&&source.hp>0&&target.team!==source.team&&target!==source)this.heal(source,Math.max(0,previousHp-target.hp)*.1);
-  const dealt=previousHp-target.hp,heavy=['tank','crimsonAce','rocket','mortar','artillery','rhinoBeetle'].includes(source?.type)||dealt>target.maxHp*.16;
+  const dealt=previousHp-target.hp,heavy=['tank','crimsonAce','rocket','mortar','artillery','rhinoBeetle','pirateCannon'].includes(source?.type)||dealt>target.maxHp*.16;
   const angle=Number.isFinite(source?.x)&&Number.isFinite(source?.y)?Math.atan2(target.y-source.y,target.x-source.x):0,power=clamp(.45+Math.sqrt(dealt/Math.max(1,target.maxHp))*2,.5,1.5);
   const react=dealt>0&&(!target.hitReaction||this.time<target.hitReaction.at||this.time+1e-8>=target.hitReaction.at+.5);
   if(react){
@@ -930,8 +932,8 @@ class FrontGame{
    if(target.type==='artillery'){this.gainXP(60);this.cash[0]+=70;}
    if(source.team===0&&target.team!==0){
     this.kills++;this.awardGold(target.boss&&!target.miniBoss?30:ARMORED.has(target.type)||target.type==='hornet'?5:2);
-    const originalXP={bombBug:20,acidBeetle:22,butterfly:28,crimsonAce:65,bikeRaider:28,bladeGuard:14,bayonetCaptain:35,bayonet:20,honeybee:18,hornet:50,rhinoBeetle:65,stagBeetle:38,bruteBeetle:45,tank:22,beetle:24,soldierAnt:20,ant:13},originalCash={bombBug:18,acidBeetle:18,butterfly:22,crimsonAce:60,bikeRaider:24,bladeGuard:12,bayonetCaptain:25,bayonet:16,honeybee:18,hornet:48,rhinoBeetle:65,stagBeetle:38,bruteBeetle:45,soldierAnt:20,ant:14,beetle:28};
-    const pveCash={bombBug:10,acidBeetle:10,butterfly:16,crimsonAce:40,bikeRaider:16,bladeGuard:7,bayonetCaptain:16,bayonet:10,honeybee:10,hornet:26,rhinoBeetle:28,stagBeetle:20,bruteBeetle:20,soldierAnt:8,ant:6,beetle:12};
+    const originalXP={pirateCannon:28,bombBug:20,acidBeetle:22,butterfly:28,crimsonAce:65,bikeRaider:28,bladeGuard:14,bayonetCaptain:35,bayonet:20,honeybee:18,hornet:50,rhinoBeetle:65,stagBeetle:38,bruteBeetle:45,tank:22,beetle:24,soldierAnt:20,ant:13},originalCash={pirateCannon:16,bombBug:18,acidBeetle:18,butterfly:22,crimsonAce:60,bikeRaider:24,bladeGuard:12,bayonetCaptain:25,bayonet:16,honeybee:18,hornet:48,rhinoBeetle:65,stagBeetle:38,bruteBeetle:45,soldierAnt:20,ant:14,beetle:28};
+    const pveCash={pirateCannon:12,bombBug:10,acidBeetle:10,butterfly:16,crimsonAce:40,bikeRaider:16,bladeGuard:7,bayonetCaptain:16,bayonet:10,honeybee:10,hornet:26,rhinoBeetle:28,stagBeetle:20,bruteBeetle:20,soldierAnt:8,ant:6,beetle:12};
     const xp=originalXP[target.type]||9,cash=(this.mode==='pve'?pveCash:originalCash)[target.type]||8;
     this.gainXP(Math.ceil(xp*(target.ambient?.22:1)));this.cash[0]+=Math.ceil(cash*(target.ambient?.25:1));
    }
@@ -1670,6 +1672,10 @@ class FrontGame{
    if(first&&this.flyingSwarm[countKey])this.notify('toast',`${rule.at}초 경과 · ${TYPES[type].name} ${rule.batch}마리 출현!`);
   }
  }
+ pirateReinforcementReady(){
+  return this.mode==='pve'&&this.time>=Math.max(PIRATE_REINFORCEMENT.from,this.nextPirateCannonAt||0)&&!this.units.some(u=>u.team!==0&&u.type==='pirateCannon'&&u.hp>0);
+ }
+ markPirateReinforcement(){this.nextPirateCannonAt=this.time+PIRATE_REINFORCEMENT.interval;}
  updateSwarm(){
   if(this.isRoomCampaign()){this.updateRoomWaves();return;}
   this.updateFlyingSwarm();
@@ -1678,8 +1684,8 @@ class FrontGame{
   this.swarm.nextAt=this.time+p.swarmInterval;
   for(let i=0;i<count;i++){
    const n=this.swarm.spawned+1,angle=this.formationFacing+((n%7)-3)*.3,radius=380+(n%3)*30;
-   const type=this.waveType(this.waveRules().swarm,n);
-   const spawn=this.isDesktopDefense()?this.desktopEntry():this.northernSpawn(this.serial+1,50);if(!spawn){this.swarm.nextAt=this.time+this.waveRules().retrySeconds;break;}this.swarm.spawned++;const u=this.addUnit(2,type,spawn.x,spawn.y,true);u.assault=true;u.ambient=true;this.stampEvolutionWave(u);
+   const type=i===0&&this.pirateReinforcementReady()?'pirateCannon':this.waveType(this.waveRules().swarm,n);
+   const spawn=this.isDesktopDefense()?this.desktopEntry():this.northernSpawn(this.serial+1,50);if(!spawn){this.swarm.nextAt=this.time+this.waveRules().retrySeconds;break;}this.swarm.spawned++;const u=this.addUnit(type==='pirateCannon'?1:2,type,spawn.x,spawn.y,true);u.assault=true;u.ambient=type!=='pirateCannon';if(type==='pirateCannon')this.markPirateReinforcement();this.stampEvolutionWave(u);
   }
  }
  enterStage(stage){
@@ -1866,6 +1872,7 @@ class FrontGame{
    if((u.roadCaptain||u.roomGarrison)&&!this.updateRoadCaptain(u,dt))continue;
    if(u.type==='lucky'){if(u.team===0)this.updateLuckyUnit(u);else if(this.isRoomCampaign())this.updateEnemyLucky(u);}
    u.flash=Math.max(0,u.flash-dt);u.recoil=Math.max(0,(u.recoil||0)-dt);const s=this.stats(u);u.cooldown-=dt;if(this.time<(u.toyStunUntil||0))continue;
+   if(u.type==='pirateCannon'){this.updatePirateCannon(u,dt,s);continue;}
    if(u.type==='blizzardMage'){this.updateBlizzard(u,dt);continue;}
    if(u.type==='butterfly'){this.updateButterfly(u,dt);continue;}
    if(u.type==='artillery')continue;
@@ -1937,6 +1944,6 @@ class FrontGame{
  finish(result,reason){if(this.phase==='ended')return;this.phase='ended';this.result=result;if(result==='win')this.awardGold(80);this.notify('end',{result,reason});}
 }
 Object.assign(FrontGame.prototype,ROOM_CAMPAIGN.methods);
-if(typeof module!=='undefined'&&module.exports){require('./evolution-combat.js')({FrontGame,TYPES,LUCKY,multiplier,EVOLUTIONS});require('./block-mines.js')({FrontGame,TYPES,multiplier});require('./roster-combat.js')({FrontGame,TYPES,multiplier});require('./lucky-flash.js')({FrontGame,TYPES});require('./field-supplies.js')({FrontGame,TYPES});require('./reinforcement-plan.js')({FrontGame,TYPES,ROSTER});require('./support-toys.js')({FrontGame,TYPES});require('./evolution-links.js')({FrontGame});}
+if(typeof module!=='undefined'&&module.exports){require('./evolution-combat.js')({FrontGame,TYPES,LUCKY,multiplier,EVOLUTIONS});require('./block-mines.js')({FrontGame,TYPES,multiplier});require('./roster-combat.js')({FrontGame,TYPES,multiplier});require('./lucky-flash.js')({FrontGame,TYPES});require('./pirate-cannon.js')({FrontGame});require('./field-supplies.js')({FrontGame,TYPES});require('./reinforcement-plan.js')({FrontGame,TYPES,ROSTER});require('./support-toys.js')({FrontGame,TYPES});require('./evolution-links.js')({FrontGame});}
 root.FrontRoomCampaign=ROOM_CAMPAIGN;root.FrontButterfly=BUTTERFLY;root.FrontMedicCleanse=MEDIC_CLEANSE;root.FrontMedicHealing=MEDIC_HEALING;root.FrontGuardians=GUARDIANS;root.FrontBike=BIKE;root.FrontLucky=LUCKY;root.FrontDesktopItems={art:DESKTOP_ITEM_ART,sprite:desktopItemSprite,bodies:desktopItemBodies,floor:desktopItemFloor};root.FrontUnitTypeCap=UNIT_TYPE_CAP;root.FrontFlame=FLAME;root.FrontSword=SWORD;root.FrontWaveConfigs=WAVE_CONFIGS;root.FrontDesktopNotebook={art:DESKTOP_NOTEBOOK_ART,rect:desktopNotebookRect,bodies:desktopNotebookBodies};root.FrontDesktopProps={art:DESKTOP_PROP_ART,sprite:desktopPropSprite,bodies:desktopPropBodies};root.FrontDesktopCover={art:DESKTOP_COVER_ART,style:desktopCoverStyle,rect:desktopCoverRect};root.FrontRemoteShape=ROOM_REMOTE_SHAPE;root.FrontDesktopRules=DESKTOP_RULES;root.FrontFlyingWaves=FLYING_WAVES;root.FrontUltimate=ULTIMATE;root.FrontBuildings=BUILDINGS;root.FrontRoomRules=ROOM_RULES;root.FrontAbilities=ABILITIES;root.FrontEvolutions=EVOLUTIONS;root.FrontFieldCards=FIELD_CARDS;root.FrontProfile=FrontProfile;root.FrontPermanent=PERMANENT;root.FrontGame=FrontGame;root.FrontTypes=TYPES;root.FrontMultiplier=multiplier;root.FrontRoster=ROSTER;if(typeof module!=='undefined')module.exports={SWORD,BUTTERFLY,MEDIC_CLEANSE,MEDIC_HEALING,GUARDIANS,BIKE,LUCKY,DESKTOP_ITEM_ART,desktopItemSprite,desktopItemBodies,desktopItemFloor,UNIT_TYPE_CAP,FLAME,DESKTOP_NOTEBOOK_ART,desktopNotebookRect,desktopNotebookBodies,DESKTOP_PROP_ART,desktopPropSprite,desktopPropBodies,WAVE_CONFIGS,DESKTOP_COVER_ART,desktopCoverStyle,desktopCoverRect,ROOM_REMOTE_SHAPE,DESKTOP_RULES,FLYING_WAVES,ULTIMATE,BUILDINGS,ROOM_RULES,FrontGame,FrontProfile,PERMANENT,ABILITIES,EVOLUTIONS,FIELD_CARDS,TYPES,multiplier,ROSTER};
 })(typeof window==='undefined'?globalThis:window);

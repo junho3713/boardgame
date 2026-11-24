@@ -30,7 +30,7 @@ class FrontModels{
 
  ensure(type,team){
   // Enemy-only art is shared by both hostile simulation teams, including garrisons.
-  const sharedEnemy=team!==0&&['bombBug','acidBeetle','bladeGuard','bikeRaider','crimsonAce','lucky','ant','soldierAnt','beetle','bruteBeetle','stagBeetle','rhinoBeetle','honeybee','hornet','butterfly'].includes(type);
+  const sharedEnemy=team!==0&&['pirateCannon','bombBug','acidBeetle','bladeGuard','bikeRaider','crimsonAce','lucky','ant','soldierAnt','beetle','bruteBeetle','stagBeetle','rhinoBeetle','honeybee','hornet','butterfly'].includes(type);
   // Roaming mages and their escorts share the hostile support atlases across both enemy teams.
   let key=type+'-'+(['mortar','blizzardMage'].includes(type)&&team!==0?1:sharedEnemy?2:team);if(team!==0&&!this.manifest?.models[key]&&this.manifest?.models[type+'-1'])key=type+'-1';if(this.assets.has(key))return this.assets.get(key);
   const data=this.manifest?.models[key];if(!data)return null;
@@ -175,7 +175,9 @@ class FrontModels{
   if(u.shotgunBurns?.length)window.FrontRosterArt?.burning(ctx,u,time);
   if(u.team===0&&u.type==='medic'&&u.appearance==='rina'){this.ensureRina();if(this.rina?.loaded)return this.rina.draw(ctx,u,time);if(u.hp<=0)return true;}
   const ultimate=u.type==='leader'&&u.team===0&&u.ultimatePose?.active,captain=u.type==='bayonetCaptain';let visual=this.visualFor(u,evolved);let item=this.ensure(visual,visual==='bayonet'?1:u.team);if(!item?.ready&&visual!==u.type){const base=this.visualFor(u,false);if(base!==visual){item=this.ensure(base,u.team);visual=base;}if(!item?.ready&&u.team===0&&['rifle','guntruck','drone'].includes(u.type))return !!window.FrontRosterArt?.model(ctx,u,time,evolved);if(!item?.ready){item=this.ensure(u.type,u.team);visual=u.type;}}if(!item?.ready)return false;if(visual==='commanderShion')return this.drawSword(ctx,u,time,item);if(visual==='commanderHwarin')return this.drawHwarin(ctx,u,time,item);if(visual==='blizzardMage')return this.drawMage(ctx,u,time,item);
-  const vehicle=!!item.layers.turret||!!item.layers.body.vehicle,aimFace=vehicle&&Number.isFinite(u.turretFace)?u.turretFace:Number.isFinite(u.aimFace)?u.aimFace:u.face;
+  const vehicle=!!item.layers.turret||!!item.layers.body.vehicle;
+  const firingPirate=visual==='pirateCannon'&&Number.isFinite(u.pirateFiredAt)&&time>=u.pirateFiredAt&&time-u.pirateFiredAt<.37;
+  const aimFace=visual==='pirateCannon'?(u.pirateFuse?.angle??(firingPirate?u.aimFace:u.moveFace)??u.face??0):vehicle&&Number.isFinite(u.turretFace)?u.turretFace:Number.isFinite(u.aimFace)?u.aimFace:u.face;
   let state=this.motion.get(u);const aim=aimFace+Math.PI/2,fresh=!state,custom=!!item.layers.body.groundShadow;
   if(!state){state={x:u.x,y:u.y,time,body:(Number.isFinite(u.moveFace)?u.moveFace:u.face)+Math.PI/2,walk:u.walk||0};this.motion.set(u,state);}
   const elapsed=Math.max(0,time-state.time),dx=u.x-state.x,dy=u.y-state.y,moved=Math.hypot(dx,dy)>.04||Math.abs((u.walk||0)-state.walk)>.005;
@@ -196,6 +198,13 @@ class FrontModels{
    frame=phase<.2?pump[1]:phase<.56?pump[0]:phase<.78?pump[1]:frame;
   }
   if(item.layers.body.throwFrame!==undefined&&Number.isFinite(u.rosterLastThrowAt)&&time-u.rosterLastThrowAt<.3)frame=item.layers.body.throwFrame;
+  if(visual==='pirateCannon'){
+   if(firingPirate)frame=item.layers.body.fireFrame;
+   else if(u.pirateFuse){
+    const age=time-u.pirateFuse.startedAt;
+    frame=age<.13?0:age<.4||age>2.4?item.layers.body.fuseApproachFrame:item.layers.body.fuseFrame;
+   }
+  }
   if(visual==='acidBeetle'){const spec=item.layers.body,pose=u.acidWindup?spec.throwReadyFrame:time<(u.toyThrowUntil||0)?spec.throwFrame:null;if(Number.isInteger(pose))frame=pose;}
   if(visual==='blizzardMage')frame=u.blizzardCast||time<(u.castUntil||0)?1:0;
   if(visual==='bikeRaider')frame=u.bikeAttack?.phase==='windup'?1:u.bikeAttack?.phase==='charge'?2:0;

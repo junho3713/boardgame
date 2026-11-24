@@ -48,3 +48,20 @@ test('ordinary shield blades gain HP and armor while captain and mini-captain HP
 test('a resumed shield blade keeps its health fraction through the durability migration without reviving corpses',()=>{
  const g=scene();g.time=120;const u=g.addUnit(2,'bladeGuard',1500,6000,true),dead=g.addUnit(2,'bladeGuard',1600,6000,true);u.maxHp=156.24;u.hp=u.maxHp*.4;dead.hp=0;g.roomHealthVersion=141;g.refreshRoomEnemyHealth();near(u.maxHp,178.56);near(u.hp/u.maxHp,.4);a.equal(dead.hp,0);a.equal(g.refreshRoomEnemyHealth(),false);
 });
+
+test('pirate cannons use one existing wave slot from minute six with a shared 55-second interval and one alive limit',()=>{
+ for(const map of ['livingroom-star','desktop-star','bedroom-star','livingroom','desktop','backyard','coop']){
+  const g=map==='coop'?scene(true):new FrontGame({},undefined,{map});g.start();
+  g.units=g.units.filter(u=>u.team===0);g.obstacles=[];
+  g.roomEntry=g.desktopEntry=g.northernSpawn=()=>({x:1100,y:1900,entrySide:0});
+  g.roomCanSpawnMageGroup=()=>false;
+  const cannons=()=>g.units.filter(u=>u.type==='pirateCannon'&&u.hp>0);
+  const wave=at=>{g.time=at;g.swarm.nextAt=at;if(g.roomCampaign){g.roomCampaign.nextSpawnAt=at;g.roomCampaign.antWaveCursor=2;}g.updateSwarm();};
+  wave(359.99);a.equal(cannons().length,0,map);g.units=g.units.filter(u=>u.team===0);
+  wave(360);a.equal(cannons().length,1,map);a.equal(g.nextPirateCannonAt,415,map);
+  const first=cannons()[0];first.hp=0;g.units=g.units.filter(u=>u.team===0);
+  wave(414.99);a.equal(cannons().length,0,map);g.units=g.units.filter(u=>u.team===0);
+  wave(415);a.equal(cannons().length,1,map);
+  wave(480);a.equal(cannons().length,1,map);
+ }
+});

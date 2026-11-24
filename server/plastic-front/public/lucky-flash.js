@@ -5,7 +5,7 @@
 const rules={range:350,radius:125,flight:.45,duration:2,search:520,bombTrigger:65,bombWindup:.9};
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const windups=[
- 'sniperAim','bombFuse','acidWindup','bayonetAttack','bikeAttack','bossAction','bossBarrage',
+ 'sniperAim','bombFuse','pirateFuse','acidWindup','bayonetAttack','bikeAttack','bossAction','bossBarrage',
  'blizzardCast','butterflyCast','laserAttack','swordAttack','swordPose','tankReadyAimAt','tankAimTargetId'
 ];
 const warnings=new Set(['bossSlashWarn','bossDiveWarn','bossBarrageWarn','butterflyWarn','bayonetWarn']);
@@ -152,7 +152,7 @@ function install({FrontGame,TYPES}){
    if(u.type==='bombBug'){
     u.bombFuse={startedAt:this.time,explodeAt:this.time+rules.bombWindup,redirected:true};
     u.route=u.routeGoal=null;
-   }else if(u.cooldown<=0&&(u.type==='artillery'||s.damage>0))redirectedAttack(this,u,reachable,s);
+   }else if(u.type!=='pirateCannon'&&u.cooldown<=0&&(u.type==='artillery'||s.damage>0))redirectedAttack(this,u,reachable,s);
   }else if(close&&s.speed>0)this.navigate(u,close.x,close.y,dt,s.speed);
   return true;
  };
