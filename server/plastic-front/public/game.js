@@ -10,8 +10,18 @@ const profileKey='plastic-front-profile-v1',permanent=window.FrontPermanent;let 
 try{profile=window.FrontProfile.read(localStorage,profileKey);}catch{profile=new window.FrontProfile();profileSaveError='브라우저 저장을 읽을 수 없습니다. 현재 세션의 진행만 유지됩니다.';}
 const worldModels=new window.FrontWorldModels(()=>{if(game.bounds().id!=='livingroom')buildTerrain();});
 const swordView=new window.FrontSwordBossView();
-let battlefield='livingroom';try{if(localStorage.getItem('plastic-front-map')==='factory-star')localStorage.setItem('plastic-front-map','bedroom-star');battlefield=['backyard','desktop','desktop-star','bedroom-star','livingroom-star','livingroom-star3'].includes(localStorage.getItem('plastic-front-map'))?localStorage.getItem('plastic-front-map'):'livingroom';}catch{}
-const mapRequest=new URLSearchParams(location.search).get('map'),requestedMap=mapRequest==='factory-star'?'bedroom-star':mapRequest;if(['livingroom','livingroom-star','livingroom-star3','backyard','desktop','desktop-star','bedroom-star'].includes(requestedMap))battlefield=requestedMap;if(mapRequest==='factory-star'){const currentURL=new URL(location.href);currentURL.searchParams.set('map','bedroom-star');history.replaceState(null,'',currentURL);}
+const availableMaps=['livingroom','backyard','desktop','desktop-star','bedroom-star','livingroom-star'];
+let battlefield='livingroom';
+try{
+ const savedMap=localStorage.getItem('plastic-front-map'),map=window.FrontGame.normalizeBattlefield(savedMap);
+ if(availableMaps.includes(map))battlefield=map;
+ if(savedMap!==map)localStorage.setItem('plastic-front-map',map);
+}catch{}
+const mapRequest=new URLSearchParams(location.search).get('map'),requestedMap=window.FrontGame.normalizeBattlefield(mapRequest);
+if(availableMaps.includes(requestedMap))battlefield=requestedMap;
+if(requestedMap!==mapRequest){
+ const currentURL=new URL(location.href);currentURL.searchParams.set('map',requestedMap);history.replaceState(history.state,'',currentURL);
+}
 let selectedCommander='sarge';try{selectedCommander=['shino','blaze','shion'].includes(localStorage.getItem('plastic-front-commander'))?localStorage.getItem('plastic-front-commander'):'sarge';}catch{}
 let selectedSniperSkin='classic';try{selectedSniperSkin=['kayla','hayeon'].includes(localStorage.getItem('plastic-front-sniper-skin'))?'kayla':'classic';}catch{}
 let selectedMedicSkin='classic';try{selectedMedicSkin=localStorage.getItem('plastic-front-medic-skin')==='rina'?'rina':'classic';}catch{}
@@ -30,7 +40,7 @@ const autoSessionOptions={events:gameEvents,apply:applyAuto,message:toast,busy:(
 let idlePlan=window.FrontAutoCleanPlan(window.FrontAutoPresets[battlefield.startsWith('livingroom')?'roomBalanced':'balanced']);
 let runSave=new window.FrontRunSave({getItem:k=>localStorage.getItem(k),setItem:(k,v)=>localStorage.setItem(k,v),removeItem:k=>localStorage.removeItem(k)});
 const normalRunSave=runSave;
-function refreshManualSave(){const v=runSave.read(),idle=selectedMode==='idle';$('manualContinue').hidden=idle||!v;for(const id of ['saveRunBtn','saveMenuBtn','manualSaveStatus'])$(id).hidden=idle||!!waveTestBackup;if(v){const f=v.engine.fields,t=Math.floor(f.time||0);$('manualSaveSummary').textContent=`${(f.bedroomStar||f.factoryStar)?'방바닥 · 2성':f.desktopStar?'책상 전초기지 · 2성':f.starExperiment?(f.starMax===3?'거실 · 3성 실험':'거실 · 2성 실험'):({livingroom:'거실',backyard:'뒷마당',desktop:'책상 디펜스'})[f.world?.id]||'작전'} · ${String(Math.floor(t/60)).padStart(2,'0')}:${String(t%60).padStart(2,'0')} · Lv.${f.level} · ${new Date(v.savedAt).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})} 저장`;}
+function refreshManualSave(){const v=runSave.read(),idle=selectedMode==='idle';$('manualContinue').hidden=idle||!v;for(const id of ['saveRunBtn','saveMenuBtn','manualSaveStatus'])$(id).hidden=idle||!!waveTestBackup;if(v){const f=v.engine.fields,t=Math.floor(f.time||0);$('manualSaveSummary').textContent=`${(f.bedroomStar||f.factoryStar)?'방바닥 · 2성':f.desktopStar?'책상 전초기지 · 2성':f.starExperiment?'거실 · 2성 실험':({livingroom:'거실',backyard:'뒷마당',desktop:'책상 디펜스'})[f.world?.id]||'작전'} · ${String(Math.floor(t/60)).padStart(2,'0')}:${String(t%60).padStart(2,'0')} · Lv.${f.level} · ${new Date(v.savedAt).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})} 저장`;}
  $('manualStorageStatus').textContent=runSave.error||'일반 작전은 수동 저장 · 저장하기를 누르면 이전 진행 저장을 교체합니다.';$('manualStorageStatus').classList.toggle('save-error',!!runSave.error);$('manualSaveStatus').textContent=runSave.error||'일반 작전은 수동 저장입니다. 나가기 전에 저장하기를 눌러주세요.';$('manualSaveStatus').classList.toggle('save-error',!!runSave.error);}
 function manualCheckpoint(report=false){if(selectedMode==='idle'||!['playing','paused','choice','resupply'].includes(game.phase))return false;const ok=runSave.save(game,selectedMode);refreshManualSave();if(report)toast(ok?'이 브라우저에 작전 저장 완료':runSave.error||'저장할 진행 중인 작전이 없습니다.');return ok;}
 $('saveRunBtn').onclick=()=>manualCheckpoint(true);
@@ -213,7 +223,7 @@ function toast(text){$('toast').textContent=text;$('toast').classList.add('show'
 function clearInput(){keys={};aim=null;movePointer=null;pageTouch=null;stickPointer=null;stickInput={x:0,y:0};game.input={x:0,y:0};$('stick').style.transform='';}
 function makeProduction(){
  $('productionButtons').innerHTML=production.map(t=>`<div class="queue-slot"><button data-buy="${t}" class="produce-btn" aria-label="${t==='truck'?'채집 트럭':types[t].name} 수량 추가"><span>${t==='truck'?'▰':unitArt.icon(t,types[t].icon)}</span><div><b>${t==='truck'?'채집 트럭':types[t].name}</b><small id="prodState-${t}"></small><em>${t==='truck'?'화면 밖 자원 채집':types[t].role}</em></div><strong id="prodCost-${t}"></strong><i>＋</i></button><div class="quantity"><button data-minus="${t}" aria-label="${t==='truck'?'채집 트럭':types[t].name} 수량 감소">−</button><b id="quantity-${t}">0</b><span>선택</span></div></div>`).join('');
- $('productionButtons').addEventListener('click',e=>{const b=e.target.closest('[data-buy]'),minus=e.target.closest('[data-minus]');if(minus){queue[minus.dataset.minus]=Math.max(0,queue[minus.dataset.minus]-1);updateQueue();return;}if(b){const t=b.dataset.buy,proposed={...queue,[t]:queue[t]+1};const troops=Object.entries(proposed).filter(([k])=>k!=='truck').reduce((n,[k,q])=>n+q,0);const count=game.units.filter(u=>u.team===0&&u.hp>0&&!u.patrol&&u.type!=='leader'&&(!COOP?.active||u.coopOwner===game.coopOwner)).length;if((proposed[t]||0)>game.recruitmentRemaining(t)){$('queueNote').textContent=game.starExperiment?`${types[t].name}은 ${game.isThreeStarExperiment()?'3성 최대 1기':'2성 최대 3기'}까지 편성할 수 있습니다. 남은 충원 ${game.recruitmentRemaining(t)}기.`:`${types[t].name}은 살아 있는 유닛 최대 ${game.unitTypeCap()}기까지 편성할 수 있습니다.`;return;}if(game.queueCost(proposed)>game.cash[0]){$('queueNote').textContent='보유 자원을 초과했습니다. 선택 수량을 조정하세요.';return;}if(count+troops>game.capacity()){$('queueNote').textContent=`지휘관을 제외하고 병력 최대 ${game.capacity()}기까지 편성할 수 있습니다.`;return;}queue=proposed;updateQueue();}});
+ $('productionButtons').addEventListener('click',e=>{const b=e.target.closest('[data-buy]'),minus=e.target.closest('[data-minus]');if(minus){queue[minus.dataset.minus]=Math.max(0,queue[minus.dataset.minus]-1);updateQueue();return;}if(b){const t=b.dataset.buy,proposed={...queue,[t]:queue[t]+1};const troops=Object.entries(proposed).filter(([k])=>k!=='truck').reduce((n,[k,q])=>n+q,0);const count=game.units.filter(u=>u.team===0&&u.hp>0&&!u.patrol&&u.type!=='leader'&&(!COOP?.active||u.coopOwner===game.coopOwner)).length;if((proposed[t]||0)>game.recruitmentRemaining(t)){$('queueNote').textContent=game.starExperiment?`${types[t].name}은 ${game.threeStarCount(t)?'3성 최대 1기':'2성 최대 3기'}까지 편성할 수 있습니다. 남은 충원 ${game.recruitmentRemaining(t)}기.`:`${types[t].name}은 살아 있는 유닛 최대 ${game.unitTypeCap()}기까지 편성할 수 있습니다.`;return;}if(game.queueCost(proposed)>game.cash[0]){$('queueNote').textContent='보유 자원을 초과했습니다. 선택 수량을 조정하세요.';return;}if(count+troops>game.capacity()){$('queueNote').textContent=`지휘관을 제외하고 병력 최대 ${game.capacity()}기까지 편성할 수 있습니다.`;return;}queue=proposed;updateQueue();}});
 }
 function updateQueue(){const cost=game.queueCost(queue),total=Object.values(queue).reduce((a,b)=>a+b,0);$('budgetCash').textContent=Math.floor(game.cash[0]);$('budgetCost').textContent=cost;$('budgetAfter').textContent=Math.floor(game.cash[0]-cost);Object.keys(queue).forEach(t=>{$('quantity-'+t).textContent=queue[t];const add=document.querySelector(`[data-buy="${t}"]`),alive=game.alive(0).filter(u=>u.type!=='leader').length;add.disabled=!game.tech[0][t]||game.phase!=='choice'||!!game.turnChoice||queue[t]>=game.recruitmentRemaining(t)||alive+total>=game.capacity()||cost+types[t].cost>game.cash[0];document.querySelector(`[data-minus="${t}"]`).disabled=queue[t]===0;document.querySelector(`[data-buy="${t}"]`).closest('.queue-slot').classList.toggle('has-quantity',queue[t]>0);});$('requestSupport').disabled=total===0||cost>game.cash[0]||!game.supportValid(queue);$('requestSupport').innerHTML=total?`이 편성 선택 · ${total}기 / ◆ ${cost} <span>→</span>`:'지원할 병력을 선택하세요 <span>→</span>';$('queueNote').textContent=total?'이 편성을 선택한 뒤 ‘확정하고 진격’을 누르면 자원 차감 후 합류합니다.':'병력 슬롯을 누르면 수량이 늘어납니다. − 버튼으로 줄일 수 있습니다.';}
 $('supportMenuBtn').onclick=()=>{if(game.phase!=='choice'||game.turnChoice)return;document.querySelector('.support-disclaimer').textContent=game.choiceKind==='periodic'?'1분부터 매분 제공되는 병력 지원입니다. 보유 자원만 사용하며 레벨·강화 기회를 소비하지 않습니다. 취소하면 다음 회차는 다음 분에 제공됩니다.':game.choiceKind==='supply'?'지원 보급 +400 자원 · 강화 기회 소모 없음 · 남은 자원은 계속 보유합니다.':game.choiceKind==='recovery'?'취소하면 자원과 대기시간을 소비하지 않습니다. 확정 시 생산 자원만 차감되며 90초 뒤 다시 긴급 지원을 요청할 수 있습니다. XP·레벨·강화 기회는 소비하지 않습니다.':'취소하면 자원과 강화 기회가 유지됩니다. 확정하고 진격할 때 자원과 강화 기회가 소비됩니다. 채집 트럭은 2대로 고정이며 전투트럭은 전장에 합류하는 전투 병력입니다.';queue=game.pendingChoice?.type==='support'?{...game.pendingChoice.queue}:emptyQueue();updateUI();updateQueue();$('supportOverlay').hidden=false;};$('cancelSupport').onclick=()=>{$('supportOverlay').hidden=true;};$('requestSupport').onclick=()=>{const total=Object.values(queue).reduce((a,b)=>a+b,0);if(game.stageChoice('support',queue)){toast(`${total}기 지원 편성 선택 · 진격 전까지 변경할 수 있습니다.`);$('supportOverlay').hidden=true;choiceDone('support');}else $('queueNote').textContent='자원과 병력 한도를 확인하고 수량을 조정하세요.';};
@@ -224,20 +234,34 @@ function updateIntel(){
  if($('intelContent').innerHTML!==html){$('intelContent').innerHTML=html;$('intelContent').classList.toggle('revealed',!!seen.length);$('mobileIntelContent').innerHTML=`<div class="intel-content ${seen.length?'revealed':''}">${html}</div>`;}
 }
 let fusionReturn='playing';
-function renderFusion(){const three=game.isThreeStarExperiment();$('fusionTitle').textContent=three?'정예병 3명이 모이면 3성으로.':'3명이 모이면 자동으로 정예병.';$('fusionRules').innerHTML=three?'1성 3기 → 2성 1기 · 2성 3기 → 3성 1기 자동 합성<br>2성: 공격 ×3 · 체력 ×2.5 · 의무병 치료 ×2.5<br>3성: 1성 기준 공격 ×7.2 · 체력 ×7.8 · 의무병 치료 ×7.2<br>병과별 3성 최대 1기 · 완성된 병과는 추가 생산 불가<br>저격병: 총 피해량을 절반씩 나눈 2발 동시 발사<br>레토나: 룰렛 3개 유지 · 4초 주기 · 당첨 한 번의 위력 유지<br>룰렛별 일반 / 진화 확률: 777 6% / 14% · 스프레이 24% / 41%<br>끈끈이 44% / 29% · 지뢰 20% / 13% · 꽝 6% / 3%<br>공속·이속·방어·사거리 동일 · 합성 전 체력 비율 유지<br>일반·AI 모드 모두 자동 합성합니다.':'살아 있는 같은 병과 1성 3기 → 자동으로 2성 1기<br>공격 ×3 · 체력 ×2.5 · 의무병 치료 ×2.5<br>럭키 레토나: 독립 룰렛 3개 · 룰렛 피해 배율 추가 없음<br>공속·이속·방어·사거리 동일 · 합성 전 체력 비율 유지<br>일반·AI 모드 모두 자동 합성합니다.<br>병과별 2성 최대 3기 · 3기 완성 시 해당 병과 추가 생산 불가.';$('fusionRules').innerHTML+='<br>2성 전사 시 같은 병과 1성 1기 복귀 · 체력 100% · 장비 회수 자원 없음.';$('fusionGrid').innerHTML=roster.map(type=>{const complete=three?game.threeStarCount(type)>0:game.twoStarCount(type)>=3;return `<div class="fusion-status"><b>${types[type].name}</b><span>${game.starRosterLabel(type)}</span><small>${complete?'최대 편성 · 추가 생산 불가':three?'1성 3기 → 2성 · 2성 3기 → 3성':'1성 3기 → 자동 2성 합성'}</small></div>`;}).join('');}
+function renderFusion(){
+ const destiny=game.starExperiment&&game.mode==='pve';
+ $('fusionTitle').textContent=destiny?'병과 합성과 운명의 별':'병과 합성';
+ const rules=[
+  '같은 병과 1성 3기가 모이면 2성 1기로 자동 합성됩니다.',
+  '2성 공격력 ×3 · 체력과 치료량 ×2.5 · 럭키 레토나 룰렛 3개',
+  '2성이 전사하면 같은 병과 1성 1기가 최대 체력으로 복귀합니다.'
+ ];
+ if(destiny)rules.push('14분 정식 보스를 처치한 뒤 운명의 별을 주우세요. 같은 병과 2성 3기가 모인 병과마다 3성 1기로 합성됩니다.','3성 공격력과 치료량 ×7.2 · 체력 ×7.8 · 병과별 최대 1기');
+ $('fusionRules').innerHTML=rules.join('<br>');
+ $('fusionGrid').innerHTML=roster.map(type=>{
+  const status=game.threeStarCount(type)?'3성 완성':game.twoStarCount(type)>=3?(destiny?'운명의 별로 3성 합성 가능':'2성 최대 편성'):'같은 병과 1성 3기 → 2성';
+  return `<div class="fusion-status"><b>${types[type].name}</b><span>${game.starRosterLabel(type)}</span><small>${status}</small></div>`;
+ }).join('');
+}
 $('fusionBtn').onclick=()=>{if(!game.starExperiment||!['playing','paused'].includes(game.phase))return;fusionReturn=game.phase;game.phase='paused';clearInput();renderFusion();$('fusionOverlay').hidden=false;};
 $('closeFusion').onclick=()=>{$('fusionOverlay').hidden=true;game.phase=fusionReturn;updateUI();};
 
 function updateUI(){if(game.phase!=='ready')unitModels.prefetch(game);
  fieldSupplyUI.update();reinforcementUI?.update();
- $('fusionBtn').hidden=!game.starExperiment||game.mode!=='pve';$('fusionBtn').disabled=!['playing','paused'].includes(game.phase);if(game.starExperiment)$('fusionBtn').textContent=(game.isThreeStarExperiment()?'★★★':'★★')+' 자동 합성';
- const room=game.bounds().id==='livingroom',desk=game.isDesktopDefense();$('mapName').textContent=game.bedroomStar&&desk?'BEDROOM FLOOR ★★':game.desktopStar&&desk?'DESK OUTPOST ★★':desk?'DESK DEFENSE 03':room?(game.isThreeStarExperiment()?'LIVING ROOM ★★★':game.starExperiment?'LIVING ROOM ★★':'LIVING ROOM 02'):'BACKYARD 01';$('mapSubtitle').textContent=game.bedroomStar&&desk?'마루 · 러그 · 생활용품 / 2성 방바닥':game.desktopStar&&desk?'책상 전초기지 · 사방 공세 / 2성 분대':desk?'책상 위 방어선 · 북쪽 공세 / 20분 생존':room?'확장 거실 · 20분 혼합 공세':'작전 구역 · 뒷마당';$('constructionCount').textContent=game.buildings.filter(b=>b.hp>0).length;$('constructionBtn').disabled=game.mode!=='pve'||!['playing','paused'].includes(game.phase);renderBattlefieldChoice();
+ $('fusionBtn').hidden=!game.starExperiment||game.mode!=='pve';$('fusionBtn').disabled=!['playing','paused'].includes(game.phase);if(game.starExperiment)$('fusionBtn').textContent='★★ 병과 합성';
+ const room=game.bounds().id==='livingroom',desk=game.isDesktopDefense();$('mapName').textContent=game.bedroomStar&&desk?'BEDROOM FLOOR ★★':game.desktopStar&&desk?'DESK OUTPOST ★★':desk?'DESK DEFENSE 03':room?(game.starExperiment?'LIVING ROOM ★★':'LIVING ROOM 02'):'BACKYARD 01';$('mapSubtitle').textContent=game.bedroomStar&&desk?'마루 · 러그 · 생활용품 / 2성 방바닥':game.desktopStar&&desk?'책상 전초기지 · 사방 공세 / 2성 분대':desk?'책상 위 방어선 · 북쪽 공세 / 20분 생존':room?'확장 거실 · 20분 혼합 공세':'작전 구역 · 뒷마당';$('constructionCount').textContent=game.buildings.filter(b=>b.hp>0).length;$('constructionBtn').disabled=game.mode!=='pve'||!['playing','paused'].includes(game.phase);renderBattlefieldChoice();
  renderBuild();updateIntel();
  $('headerGold').textContent=Math.floor(profile.gold);$('startGold').textContent=Math.floor(profile.gold);$('cash').textContent=Math.floor(game.cash[0]);$('supportCash').textContent=Math.floor(game.cash[0]);$('truckCount').textContent=game.trucks[0];$('income').textContent=`+${game.income(0).toFixed(1)} / 초`;
  $('levelLabel').textContent=`LV. ${pad(game.level)}`;$('xpFill').style.width=`${Math.min(100,game.xp/game.neededXP()*100)}%`;$('xpText').textContent=`다음 선택까지 ${Math.max(0,Math.ceil(game.neededXP()-game.xp))} XP`;
  const duel=game.mode==='duel',practice=game.mode==='crisis',clock=desk?Math.max(0,Math.ceil(1200-game.time)):duel?Math.max(0,Math.ceil(180-game.time)):Math.floor(game.time);$('timer').textContent=`${pad(Math.floor(clock/60))}:${pad(clock%60)}`;
  $('startDescription').innerHTML=practice?'준비된 분대로 포격을 피하고 북쪽 포병을 돌파하세요.<br><strong>승리: 포병 2기 파괴</strong> · 부대 이동과 집중 공격을 시험하세요.':duel?'상대의 테크와 편성을 읽고 분대로 대결하세요.<br><strong>승리: 상대 본진 파괴</strong> · 3분 후 남은 본진 체력으로 판정':'벌레 사냥 → 전초기지 2곳 → 최종 기지 파괴.<br><strong>7:30 포병 예고 · 8:00 포격 개시</strong> · 시간 제한 없음';
- if(room&&game.mode==='pve')$('startDescription').innerHTML='16분부터 보스 2기씩 연전을 돌파하고, 20분 이후 최종 보스를 처치하면 승리합니다. 최전방 포탈을 파괴하면 보상과 함께 증원이 줄어듭니다.<br><strong>약 20분 혼합 공세 · 4:00 첫 사슴벌레 보스 · 7:30 포격 예고</strong><br>15:00 장수말벌 · 16:00부터 매분 보스 2기씩 · 19:00 전차 보스 · 20분 이후 연전 완료 시 사검의 군주 · 포탈이 남으면 15분부터 증원 폭주<br>레이저 포탑 → 얼음 마녀 순서로 박격포병·저격병 해금 퀘스트를 경험하세요.';
+ if(room&&game.mode==='pve')$('startDescription').innerHTML='16분부터 보스 2기씩 연전을 돌파하고, 20분 이후 최종 보스를 처치하면 승리합니다. 최전방 포탈을 파괴하면 보상과 함께 증원이 줄어듭니다.<br><strong>약 20분 혼합 공세 · 4:00 첫 사슴벌레 보스 · 7:30 포격 예고</strong><br>13:00 미드보스 · 14:00 장수말벌 · 16:00부터 매분 보스 2기씩 · 19:00 전차 보스 · 20분 이후 연전 완료 시 사검의 군주 · 포탈이 남으면 15분부터 증원 폭주<br>레이저 포탑 → 얼음 마녀 순서로 박격포병·저격병 해금 퀘스트를 경험하세요.';
  $('startSubtitle').textContent=practice?'고정 분대 9기 · 15초 준비 · 전사한 분대원은 복귀하지 않음':duel?'1대1 훈련 3분 · 채집 트럭 양측 2대 고정':room&&game.mode==='pve'?'3분부터 미드 보스 · 4분 첫 정식 보스 · 16분부터 2기씩 연전':'적 무리 지속 유입 · 2분마다 보스 / 처치 시 추가 강화';
  $('modeName').textContent=practice?'포병 위기 연습':duel?'1대1 훈련':'돌파 작전';$('modeTime').textContent=room?'20분 최종 보스':practice?'포병 격파':duel?'03:00':'기지 파괴';$('headerMode').textContent=COOP?.active?'2인 협동 · 2성 거실 · 개인 성장':practice?'부대 이동 · 포격 회피 훈련':duel?'선택 모드 · 컴퓨터와 1대1':'기본 모드 · 스테이지 돌파';$('greenLabel').textContent=COOP?.active?`${game.coopOwner?'BLUE':'GREEN'} / 내 분대 · 기회 ${Math.max(0,3-game.retreated)}회`:duel?'GREEN / 아군 본진':`GREEN / ${game.commanderId==='blaze'&&game.flameSkinId==='hwarin'?'화린':game.commanderId==='shion'?'시온':game.commanderId==='shino'?'시노':'대장'} · 기회 ${Math.max(0,3-game.retreated)}회`;$('redLabel').textContent=room?'최전방 포탈 / 폐쇄 시 증원 감소':practice?'적 포병 / 2기 파괴하면 승리':duel?'상대 본진 / CORAL':game.baseShielded()?'최종 기지 / 방어막':'최종 기지 / 파괴하면 승리';
  $('startRules').innerHTML=practice?'<div><b>01</b><span>전장을 눌러<strong>부대 이동</strong></span></div><div><b>02</b><span>포격 원 밖으로<strong>전체 회피</strong></span></div><div><b>03</b><span>집중 공격으로<strong>포병 2기 격파</strong></span></div>':'<div><b>01</b><span>부대 이동 명령<strong>공격은 자동</strong></span></div><div><b>02</b><span>레벨업마다<strong>강화 1개 선택</strong></span></div><div><b>03</b><span>매분 병력 지원<strong>첫 지원은 1분 뒤</strong></span></div>';
@@ -260,13 +284,17 @@ function updateUI(){if(game.phase!=='ready')unitModels.prefetch(game);
   $('modeName').textContent='방바닥 · 2성';$('headerMode').textContent='방바닥 · 2성 분대 · 사방 공세';
   $('startRules').innerHTML='<div><b>01</b><span>같은 병과 3기<strong>2성 자동 합성</strong></span></div><div><b>02</b><span>생활용품 사이<strong>이동·엄폐·요격</strong></span></div><div><b>03</b><span>중앙 기지를 지켜<strong>20분 생존</strong></span></div>';
  }
+ const commandFire=game.starExperiment&&game.mode==='pve';
+ $('focusOrderBtn').textContent=commandFire?'⌖ 박격포 표적':'⌖ 집중 공격';
+ $('battle').setAttribute('aria-label',commandFire?'분대 전투 지도. 방향키나 이동 명령으로 대장의 사격 방향을 정합니다. 적이 보이면 분대가 그 방향으로 사격합니다. 박격포 표적은 따로 지정할 수 있습니다.':'분대 전투 지도. WASD 또는 방향키로 이동합니다. 부대 이동으로 목적지를 지정하거나 집중 공격으로 적을 지정할 수 있습니다.');
+ if(commandFire)$('startDescription').innerHTML+='<br><strong>대장이 바라보는 방향으로 사격</strong> · 박격포병은 적 위치에 포격합니다. 14분 정식 보스가 운명의 별을 떨어뜨립니다.';
  if(game.hasInvulnerableHQ())$('startSubtitle').textContent+=' · 대장 5초 뒤 제자리 부활 · 부활 후 3초 보호 · 3회 후퇴 시 패배 / HQ 보호';
  if(practice){$('levelLabel').textContent='고정 편성';$('xpFill').style.width='0%';$('xpText').textContent='성장 없이 이동·집중 공격 연습';}
  const c=game.crisis;const incoming=c.phase==='warning',active=c.phase==='active';$('crisisBanner').hidden=!(incoming||active)||game.phase==='ready'||game.phase==='ended';$('crisisBanner').classList.toggle('active',active);
  $('crisisTitle').textContent=incoming?`포병 출현까지 ${Math.max(0,Math.ceil(c.startAt-game.time))}초`:`포병 ${game.artilleryUnits().length}기 가동 · 포격 위치 고정`;
  const next=game.barrages.length?Math.max(0,Math.min(...game.barrages.map(b=>b.landAt))-game.time):0;
  $('crisisText').textContent=incoming?'부대를 모으고 북쪽 돌파를 준비하세요.':next?`착탄까지 ${next.toFixed(1)}초 · 부대 전체를 붉은 원 밖으로 이동!`:'포격 사이에 접근 → 포병 집중 공격 → 파괴하면 포격 중단';
- $('orderStatus').textContent=orderMode==='focus'?'공격할 적을 누르세요':game.moveOrder?'지정 위치로 이동 · 직접 이동하면 추종 복귀':'전장을 눌러 부대 전체 이동';
+ $('orderStatus').textContent=orderMode==='focus'?(commandFire?'박격포로 포격할 적을 누르세요':'공격할 적을 누르세요'):game.moveOrder?'지정 위치로 이동 · 직접 이동하면 추종 복귀':'전장을 눌러 부대 전체 이동';
  for(const id of ['moveOrderBtn','focusOrderBtn','followOrderBtn'])$(id).disabled=game.phase!=='playing';
  $('matchStatus').textContent=game.phase==='ready'?'작전 대기':game.phase==='ended'?'작전 종료':game.phase==='playing'?(desk?'남은 방어 시간':duel?`남은 대결 시간`:'경과 시간 · 제한 없음'):'전술 검토 중';
  const lessons=[['mage',game.mageQuestView()],['laser',game.laserQuestView()]];
@@ -428,13 +456,21 @@ function drawUnit(u,airbornePass=false){
  else if(s.time!==game.time){s.px=s.x;s.py=s.y;s.x=u.x;s.y=u.y;s.time=game.time;s.at=now;}
  const alpha=clamp((now-s.at)/50,0,1);ctx.save();ctx.translate((s.px-s.x)*(1-alpha),(s.py-s.y)*(1-alpha));drawUnitRaw(u);ctx.restore();
 }
+function drawCommandHeading(ctx,u){
+ const angle=u.commandFireFacing??u.face;
+ if(!Number.isFinite(angle))return;
+ ctx.save();ctx.rotate(angle);ctx.beginPath();
+ ctx.moveTo(44,0);ctx.lineTo(32,-5);ctx.lineTo(34,0);ctx.lineTo(32,5);ctx.closePath();
+ ctx.lineJoin='round';ctx.lineWidth=2.5;ctx.strokeStyle='#254537';ctx.stroke();
+ ctx.fillStyle='#fff3ad';ctx.fill();ctx.restore();
+}
 function drawUnitRaw(u){
  if(game.isSupportEntity?.(u)&&window.FrontSupportToyView){window.FrontSupportToyView.draw(ctx,u,game);return;}
  const t=u.team,alive=u.hp>0,evolved=window.FrontUnitLabels.isEvolved(game,u);if(!alive){if(u.type==='medic'&&t===0&&u.appearance==='rina'&&Number.isFinite(u.diedAt)){ctx.save();ctx.translate(u.x,u.y);unitModels.draw(ctx,u,game.time);ctx.restore();}if(u.guardianRespawn&&Number.isFinite(u.respawnAt)&&game.mission.stage>=3&&game.visible(u))text(ctx,'얼음 마녀 귀환 · '+Math.max(0,Math.ceil(u.respawnAt-game.time))+'초',u.x,u.y+28,11,'#acdfff');if(u.type==='leader'&&t===0){const p=point(u);text(ctx,u.deadUntil>game.time?'제자리 부활 '+Math.ceil(u.deadUntil-game.time)+'초':'부활 기회 소진',u.x,u.y-25,13,'#f5edc6');}return;}
  if(t&&!game.visible(u))return;window.FrontToyInsects?.warning?.(ctx,u,game.time);
  const col=t===2?'#77543a':t?'#bd6e55':'#5f863e',light=t===2?'#a17b4d':t?'#d88c71':'#84a953',dark=t===2?'#493c2b':t?'#82472f':'#36592b';ctx.save();ctx.translate(u.x,u.y);window.FrontHitFeedback.transform(ctx,u,game.time);
 
- if(u.type==='leader'&&t===0){circle(ctx,0,0,25,null,'#edf6cb99');ctx.setLineDash([3,7]);circle(ctx,0,0,30,null,'#edf6cb55');ctx.setLineDash([]);if(game.commanderReviveProtected(u)){circle(ctx,0,-26,43,'#83e8ff20','#9eefff');text(ctx,`부활 보호 ${Math.ceil(u.reviveProtectionUntil-game.time)}초`,0,-82,11,'#b8f4ff');}}
+ if(u.type==='leader'&&t===0){circle(ctx,0,0,25,null,'#edf6cb99');ctx.setLineDash([3,7]);circle(ctx,0,0,30,null,'#edf6cb55');ctx.setLineDash([]);if(game.starExperiment&&game.mode==='pve')drawCommandHeading(ctx,u);if(game.commanderReviveProtected(u)){circle(ctx,0,-26,43,'#83e8ff20','#9eefff');text(ctx,`부활 보호 ${Math.ceil(u.reviveProtectionUntil-game.time)}초`,0,-82,11,'#b8f4ff');}}
  if(evolved){circle(ctx,0,0,types[u.type].r+9,null,'#e9c76b');}
  if(u.boss){circle(ctx,0,0,48,null,'#e5a251');ctx.setLineDash([5,5]);circle(ctx,0,0,54,null,'#e5a25188');ctx.setLineDash([]);}
  if(game.isSupplyTroop(u)){if(u.type==='titan')ctx.scale(1.2,1.2);ctx.filter=u.type==='spectre'?'saturate(.35) brightness(1.4)':u.type==='titan'?'sepia(.5) hue-rotate(150deg) saturate(1.6) brightness(1.05)':'grayscale(.8) brightness('+(0.7+(window.FrontHitFeedback.pose(u,game.time)?.flash||0)*.7)+') contrast(1.2)';}
@@ -517,12 +553,27 @@ function drawFog(){
  for(const u of [...game.alive(0),...game.buildings.filter(b=>b.hp>0&&b.kind==='repairBot'&&b.buildUntil<=game.time),game.bases[0]]){const p=point(u),sight=game.visionRadius(u),longRange=sight>380,r=(longRange?sight+32:u.base?335:sight)*scale;const g=fc.createRadialGradient(p.x,p.y,longRange?sight*scale:r*.64,p.x,p.y,r);g.addColorStop(0,'#000');g.addColorStop(1,'#0000');fc.fillStyle=g;fc.beginPath();fc.arc(p.x,p.y,r,0,Math.PI*2);fc.fill();}
  fc.globalCompositeOperation='source-over';ctx.setTransform(1,0,0,1,0,0);ctx.drawImage(fog,0,0);ctx.setTransform(DPR,0,0,DPR,0,0);
 }
+function drawDestinyStar(context,x,y,r){
+ const points=Array.from({length:10},(_,i)=>{
+  const angle=i*Math.PI/5-Math.PI/2,length=i%2?r*.47:r;
+  return [Math.cos(angle)*length,Math.sin(angle)*length];
+ });
+ context.save();context.translate(x,y);context.lineJoin='round';
+ context.beginPath();points.forEach(([px,py],i)=>i?context.lineTo(px,py):context.moveTo(px,py));context.closePath();
+ context.strokeStyle='#764318';context.lineWidth=r*.16;context.stroke();context.fillStyle='#ffcf54';context.fill();
+ for(let i=0;i<points.length;i++){
+  context.beginPath();context.moveTo(0,0);context.lineTo(...points[i]);context.lineTo(...points[(i+1)%10]);
+  context.closePath();context.fillStyle=i%2?'#e69a2d':'#fff1a1';context.fill();
+ }
+ context.restore();
+}
 function drawMini(){
  const sx=132/game.bounds().width,sy=175/game.bounds().height;mc.clearRect(0,0,132,175);mc.fillStyle=game.bedroomStar&&game.isDesktopDefense()?'#d7b78c':game.isDesktopDefense()?'#b9956e':game.bounds().id==='livingroom'?'#a08c70':'#4d6346';mc.fillRect(0,0,132,175);mc.fillStyle=game.bounds().id==='livingroom'?'#687e7b':'#7a8460';if(game.bedroomStar&&game.isDesktopDefense()){const r=window.FrontBedroom.config.rug;mc.fillStyle='#9eafa3';mc.fillRect(r.x*sx,r.y*sy,r.w*sx,r.h*sy);}else if(game.desktopStar){mc.fillStyle='#35596b';mc.fillRect(630*sx,800*sy,1540*sx,1740*sy);}else mc.fillRect(59,0,15,175);for(const o of game.obstacles){mc.fillStyle=game.bounds().id==='livingroom'?'#5d655c':'#889172';mc.fillRect(o.x*sx,o.y*sy,o.w*sx,o.h*sy);}mc.strokeStyle='#b7c09a22';mc.beginPath();mc.moveTo(0,88);mc.lineTo(132,88);mc.stroke();
  for(const b of game.bases.filter(b=>!b.hidden)){mc.fillStyle=b.team?'#d48c72':'#c5dda0';mc.fillRect(b.x*sx-5,b.y*sy-4,10,8);}
  for(const p of [...game.structures,...game.defenses,...game.buildings]){mc.fillStyle=p.hp>0?(p.team===0?'#c3df9c':'#e3b18d'):'#82906d';mc.fillRect(p.x*sx-4,p.y*sy-3,8,6);}
  for(const u of game.units){if(u.hp<=0||!game.visible(u))continue;mc.fillStyle=COOP?.active&&u.team===0&&u.coopOwner===1?'#54b9ff':u.team===2?'#d5b273':u.team?'#e0a082':u.type==='leader'?'#f3e2a0':'#c1d89b';mc.beginPath();mc.arc(u.x*sx,u.y*sy,u.type==='leader'?3:1.7,0,Math.PI*2);mc.fill();}
  for(const p of game.pickups)if(p.active&&p.rareSupply&&game.time<p.expires){mc.fillStyle='#dcb0ff';mc.strokeStyle='#47265d';mc.lineWidth=1;mc.beginPath();mc.moveTo(p.x*sx,p.y*sy-5);mc.lineTo(p.x*sx+4,p.y*sy);mc.lineTo(p.x*sx,p.y*sy+5);mc.lineTo(p.x*sx-4,p.y*sy);mc.closePath();mc.fill();mc.stroke();}
+ for(const p of game.pickups)if(p.active&&p.destinyStar)drawDestinyStar(mc,p.x*sx,p.y*sy,6);
  mc.strokeStyle='#e8ecd199';mc.lineWidth=.8;mc.strokeRect((game.camera.x-W/scale/2)*sx,(game.camera.y-H/scale/2)*sy,W/scale*sx,H/scale*sy);
 }
 function draw(dt){
@@ -546,13 +597,21 @@ function draw(dt){
   if(!p.active)continue;
   const pulse=(Math.sin(game.time*2.2+p.x)+1)/2,bob=Math.sin(game.time*2+p.x)*2;
   ctx.save();ctx.translate(p.x,p.y);
+  if(p.destinyStar){
+   const glow=ctx.createRadialGradient(0,-17,1,0,-17,54+pulse*5);
+   glow.addColorStop(0,'#ffed9eba');glow.addColorStop(1,'#ffd45e00');
+   ctx.fillStyle=glow;ctx.fillRect(-60,-78,120,120);
+   ctx.save();ctx.scale(1,.45);circle(ctx,0,0,32+pulse*5,'#e5b84944','#ffe791');ctx.restore();
+   drawDestinyStar(ctx,0,-25+bob*2,23);text(ctx,'운명의 별',0,-60+bob,16,'#fff1ac');
+   text(ctx,'같은 병과 2성 3기',0,31,12,'#fff3cc');ctx.restore();continue;
+  }
   ctx.save();ctx.scale(1,.72);circle(ctx,0,0,34+pulse*3,'#ddbd6320','#e8d28a80');circle(ctx,0,0,26,null,'#f4df9c50');ctx.restore();
   const beacon=ctx.createLinearGradient(0,-90,0,0);beacon.addColorStop(0,'#f8df8c00');beacon.addColorStop(1,'#f8df8c25');ctx.fillStyle=beacon;ctx.fillRect(-14,-90,28,82);
   if(!worldModels.draw(ctx,'supply',0,-5+bob)){rr(ctx,-23,-31,46,31,4,'#678448');rr(ctx,-25,-34,50,7,2,'#90a467');text(ctx,'+',0,-13,18,'#eedc8c');}
   if(p.rareSupply){circle(ctx,0,0,44+pulse*6,null,'#cf9eff');const g=ctx.createLinearGradient(0,-200,0,0);g.addColorStop(0,'#ba72ff00');g.addColorStop(1,'#ba72ff65');ctx.fillStyle=g;ctx.fillRect(-22,-200,44,185);text(ctx,'✦',0,-66+bob,24,'#e9ceff');text(ctx,'희귀 보급 · '+Math.max(0,Math.ceil((p.expires-game.time)))+'초',0,43,13,'#eddbff');const guards=game.rareSupplyGuards(p).length;text(ctx,guards?'호위 '+guards+'기 · 접근해 획득':'확보 가능',0,61,12,guards?'#ffb0af':'#c6ffd4');}else{text(ctx,'◆',0,-53+bob,14,'#f6dc89');text(ctx,'보급',0,35,11,'#f5e5ab');}ctx.restore();
  }
  if(game.moveOrder){const p=game.moveOrder;circle(ctx,p.x,p.y,25,null,'#f7efb7');circle(ctx,p.x,p.y,5,'#f7efb7');text(ctx,'집결 지점',p.x,p.y+44,13,'#fff3bc');}
- if(game.focusTarget){const u=game.focusTarget;circle(ctx,u.x,u.y,(u.r||types[u.type]?.r||20)+14,null,'#fff1a5');text(ctx,'집중 공격',u.x,u.y-52,13,'#fff1a5');}
+ if(game.focusTarget){const u=game.focusTarget;circle(ctx,u.x,u.y,(u.r||types[u.type]?.r||20)+14,null,'#fff1a5');text(ctx,game.starExperiment&&game.mode==='pve'?'박격포 표적':'집중 공격',u.x,u.y-52,13,'#fff1a5');}
  for(const u of game.units)if(u.team===0&&u.type==='leader'&&u.hp>0&&u.ultimatePose?.active)battleFx.drawUltimateArea(ctx,u,u===player?game.ultimate:u.ultimatePose,game.time);
  if(game.isDesktopDefense()){
   const view=window.FrontDesktop,visibleTroops=game.units.filter(u=>u.hp>0),props=game.obstacles.filter(o=>view.visible(o,game.camera,halfW,halfH)),entities=[...game.units.filter(u=>!types[u.type].flying).map(u=>({depth:u.y,u})),...props.map(o=>({depth:view.depth(o),o}))].sort((a,b)=>a.depth-b.depth);
@@ -569,7 +628,7 @@ function draw(dt){
   for(const e of entities)if(e.u)drawUnit(e.u);else if(e.grass)view.grass(ctx,e.grass,visibleTroops,game.time);else view.obstacle(ctx,e.o,e.i,worldModels,view.opacity(e.o,e.i,visibleTroops));
  }
  for(const u of game.units.filter(u=>types[u.type].flying).sort((a,b)=>a.y-b.y))drawUnit(u);
- for(const u of game.units.filter(u=>u.hp>0&&u.type==='sniper'&&game.visible(u)&&u.sniperAim&&game.visible(u.sniperAim.target)).slice(0,12))battleFx.drawLaser(ctx,u,game.time,{crouched:unitModels.crouched(u),muzzle:unitModels.weaponPoint(u)});
+ for(const u of game.units.filter(u=>u.hp>0&&u.type==='sniper'&&game.visible(u)&&u.sniperAim&&(u.sniperAim.target.commandShot||game.visible(u.sniperAim.target))).slice(0,12))battleFx.drawLaser(ctx,u,game.time,{crouched:unitModels.crouched(u),muzzle:unitModels.weaponPoint(u)});
  window.FrontGuardianFX.air(ctx,game);battleFx.drawLuckySprays(ctx,game,fxVisible);
  for(const p of game.mortarShells){const pose=battleFx.mortarPose(p,game.time);if(fxVisible(pose))battleFx.drawMortar(ctx,p,game.time); }
  for(const p of game.shots){if(!fxVisible(p))continue;battleFx.drawShot(ctx,p,game.coop&&p.source.team===0?game.withOwner(p.source.coopOwner,()=>game.evolved[p.source.type]):game.evolved[p.source.type]);}

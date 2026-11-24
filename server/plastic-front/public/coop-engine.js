@@ -52,7 +52,14 @@ class CoopGame extends Game{
  updateFormationFacing(dt){if(!this.coop)return super.updateFormationFacing(dt);for(const owner of [0,1])this.withOwner(owner,()=>this.scoped(()=>{if(this.coopChoosing[owner]){this.input={x:0,y:0};this.moveOrder=null;}if(this.input.x||this.input.y)this.moveOrder=null;if(this.focusTarget?.hp<=0)this.focusTarget=null;super.updateFormationFacing(dt);}));}
  updateUltimate(){if(!this.coop)return super.updateUltimate();for(const owner of [0,1])this.withOwner(owner,()=>super.updateUltimate());}
  coopIncome(dt){for(const owner of [0,1])this.withOwner(owner,()=>{this.cash[0]+=this.income(0)*dt;super.gainXP(dt*1.3);});}
- coopCollectPickups(){for(const p of this.pickups){if(!p.active)continue;const leader=this.units.filter(u=>u.team===0&&u.type==='leader'&&u.hp>0&&Math.hypot(p.x-u.x,p.y-u.y)<60).sort((a,b)=>Math.hypot(p.x-a.x,p.y-a.y)-Math.hypot(p.x-b.x,p.y-b.y))[0];if(leader)this.withOwner(leader.coopOwner,()=>{this.collectFieldSupply(p);});}}
+ coopCollectPickups(){
+  for(const p of this.pickups){
+   if(!p.active)continue;
+   const nearby=this.units.filter(u=>u.team===0&&u.type==='leader'&&u.hp>0&&Math.hypot(p.x-u.x,p.y-u.y)<60)
+    .sort((a,b)=>Math.hypot(p.x-a.x,p.y-a.y)-Math.hypot(p.x-b.x,p.y-b.y));
+   for(const leader of nearby)if(this.withOwner(leader.coopOwner,()=>this.collectFieldSupply(p))||!p.destinyStar)break;
+  }
+ }
  levelCheck(){
   if(!this.coop)return super.levelCheck();if(this.phase!=='playing')return;
   for(const owner of [0,1])this.withOwner(owner,()=>{if(this.coopChoosing[owner])return;super.levelCheck();if(this.phase==='choice'){this.coopChoosing[owner]=true;this.coopRounds[owner]++;this.coopInvulnerable[owner]=this.time+5;this.moveOrder=null;this.input={x:0,y:0};this.phase='playing';}});

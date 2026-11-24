@@ -1,7 +1,7 @@
 'use strict';
 const {test}=require('node:test'),a=require('node:assert/strict');
 const {FrontGame}=require('./public/engine.js'),room=require('./public/room-campaign.js').config;
-function scene(){const g=new FrontGame({},undefined,{map:'livingroom-star'});g.start();g.mission.stage=3;g.units=[];g.obstacles=[];g.buildings=[];g.defenses=[];g.structures=[];g.tech[0].sniper=1;g.visible=()=>true;return g;}
+function scene(map='livingroom-star'){const g=new FrontGame({},undefined,{map});g.start();g.mission.stage=3;g.units=[];g.obstacles=[];g.buildings=[];g.defenses=[];g.structures=[];g.tech[0].sniper=1;g.visible=()=>true;return g;}
 test('snipers prioritize a reachable live ice mage over closer threats, but skip blocked, distant and inactive mages',()=>{
  const g=scene(),sniper=g.addUnit(0,'sniper',1500,6000),ant=g.addUnit(2,'ant',1510,6000),mage=g.addUnit(2,'blizzardMage',1700,6000);mage.activeStage=1;mage.mobileMage=true;
  a.equal(g.selectCombatTarget(sniper,[ant,mage],new Set([ant])),mage);
@@ -10,7 +10,7 @@ test('snipers prioritize a reachable live ice mage over closer threats, but skip
  mage.hp=100;mage.fixedGuard=true;mage.activeStage=4;a.equal(g.selectCombatTarget(sniper,[ant,mage]),ant);
 });
 test('sniper priority is mage, mortar, then ordinary targets, within real range, visibility and firing lines',()=>{
- const g=scene(),sniper=g.addUnit(0,'sniper',1500,6000),ant=g.addUnit(2,'ant',1510,6000),mortar=g.addUnit(2,'mortar',1700,6000),mage=g.addUnit(2,'blizzardMage',1800,6000);
+ const g=scene('livingroom'),sniper=g.addUnit(0,'sniper',1500,6000),ant=g.addUnit(2,'ant',1510,6000),mortar=g.addUnit(2,'mortar',1700,6000),mage=g.addUnit(2,'blizzardMage',1800,6000);
  const candidates=[ant,mortar,mage];mage.activeStage=1;
  a.equal(g.selectCombatTarget(sniper,candidates,new Set([ant])),mage);mage.hp=0;a.equal(g.selectCombatTarget(sniper,candidates,new Set([ant])),mortar);
  g.visible=u=>u!==mortar;a.equal(g.selectCombatTarget(sniper,candidates,new Set([ant])),ant);g.visible=()=>true;

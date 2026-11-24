@@ -2,8 +2,8 @@
 const {test}=require('node:test'),a=require('node:assert/strict');
 const {FrontGame,TYPES}=require('./public/engine.js');
 const {CoopGame}=require('./public/coop-engine.js'),{pack,unpack}=require('./public/autoplay.js');
-function scene(time=180,coop=false){
- const g=coop?new CoopGame():new FrontGame({},undefined,{map:'livingroom-star'});g.start();g.time=time;
+function scene(time=180,coop=false,map='livingroom-star'){
+ const g=coop?new CoopGame():new FrontGame({},undefined,{map});g.start();g.time=time;
  g.units=g.units.filter(u=>u.type==='leader'&&u.team===0);g.obstacles=[];g.buildings=[];g.defenses=[];g.structures=[];g.pickups=[];
  for(const c of g.units)Object.assign(c,{x:1500,y:6000,cooldown:1e6});g.camera={x:1500,y:6000};g.viewport={width:1000,height:700};
  g.visible=g.lineClear=()=>true;g.levelCheck=g.gainXP=()=>{};g.random=()=>.99;return g;
@@ -90,14 +90,14 @@ test('cooperative saves keep ant escorts, cooldown and player-owned chain reward
  const bomb=copy.units.find(u=>u.id===group[0].id),ants=copy.units.filter(u=>u.roomBombLeaderId===bomb.id);a.equal(ants.length,4);a.equal(copy.roomCanSpawn('bombBug'),true);a.equal(copy.followRoomEscort(ants[0],.05,copy.stats(ants[0])),true);
  const blue=copy.withOwner(1,()=>copy.commander(0)),before=copy.withOwner(1,()=>copy.profile.gold);copy.damage(bomb,1e6,blue);a.ok(ants.every(u=>u.hp===0));a.ok(copy.withOwner(1,()=>copy.profile.gold)>before);
 });
-test('real automatic gunfire hits the bomb first and its explosion clears the accompanying ants',()=>{
- const g=scene(),rifle=g.addUnit(0,'rifle',1500,6000),bomb=g.addUnit(2,'bombBug',1700,6000,true),ants=Array.from({length:4},(_,i)=>g.addUnit(2,'ant',1700+Math.cos(i*Math.PI/2)*60,6000+Math.sin(i*Math.PI/2)*60,true));
+test('ordinary-map automatic gunfire hits the bomb first and its explosion clears the accompanying ants',()=>{
+ const g=scene(180,false,'livingroom'),rifle=g.addUnit(0,'rifle',1500,6000),bomb=g.addUnit(2,'bombBug',1700,6000,true),ants=Array.from({length:4},(_,i)=>g.addUnit(2,'ant',1700+Math.cos(i*Math.PI/2)*60,6000+Math.sin(i*Math.PI/2)*60,true));
  rifle.cooldown=0;bomb.hp=1;for(const method of ['updateMission','updateSwarm','updateBosses','updateArtillery','updateDefenses','updateBuildings','updateMageQuest','updateLaserQuest'])g[method]=()=>{};
  g.update(.05);a.equal(g.shots.find(p=>p.source===rifle)?.target,bomb);
  for(let i=0;i<40&&!bomb.bombDetonated;i++)g.update(.025);a.equal(bomb.bombDetonated,true);a.ok(ants.every(u=>u.hp===0));
 });
-test('an explicit focus order still overrides automatic bomb preference',()=>{
- const g=scene(),rifle=g.addUnit(0,'rifle',1500,6000),bomb=g.addUnit(2,'bombBug',1700,6000,true),ant=g.addUnit(2,'ant',1650,6000,true);rifle.cooldown=0;
+test('an explicit focus order on an ordinary map still overrides automatic bomb preference',()=>{
+ const g=scene(180,false,'livingroom'),rifle=g.addUnit(0,'rifle',1500,6000),bomb=g.addUnit(2,'bombBug',1700,6000,true),ant=g.addUnit(2,'ant',1650,6000,true);rifle.cooldown=0;
  for(const method of ['updateMission','updateSwarm','updateBosses','updateArtillery','updateDefenses','updateBuildings','updateMageQuest','updateLaserQuest'])g[method]=()=>{};
  g.setFocus(ant);g.update(.05);a.equal(g.shots.find(p=>p.source===rifle)?.target,ant);a.ok(bomb.hp>0);
 });

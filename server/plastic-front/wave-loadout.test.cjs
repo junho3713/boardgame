@@ -1,7 +1,7 @@
 'use strict';
 const {test}=require('node:test'),a=require('node:assert/strict');
 const {FrontGame,ROSTER}=require('./public/engine.js');require('./public/two-star.js');const wave=require('./public/wave-test.js'),{pack}=require('./public/autoplay.js');
-test('every minute recommendation produces a legal, growing army on all three room variants',()=>{
+test('every minute recommendation produces a legal, growing army on both rooms and the legacy URL',()=>{
  for(const map of ['livingroom','livingroom-star','livingroom-star3']){
   const original=new FrontGame({},undefined,{map,medicSkin:'rina'}),before=JSON.stringify(pack(original));let lastLevel=0;
   for(let time=0;time<=1200;time+=60){const g=wave.fork(original),c=wave.recommended(g,time),v=wave.validateLoadout(g,c);wave.seek(g,time);wave.applyLoadout(g,c);
@@ -11,11 +11,11 @@ test('every minute recommendation produces a legal, growing army on all three ro
  }
 });
 test('custom upgrades, stars, evolution and cooldown readiness affect actual combat stats without changing permanent upgrades',()=>{
- for(const [map,stars]of [['livingroom-star',2],['livingroom-star3',3]]){
+ for(const map of ['livingroom-star','livingroom-star3']){
   const g=wave.fork(new FrontGame({},undefined,{map}));wave.seek(g,900);const c=wave.recommended(g,900);c.counts=Object.fromEntries(ROSTER.map(t=>[t,t==='lucky'||t==='medic'?9:0]));c.tech.lucky=c.tech.medic=5;c.abilities.speed=c.abilities.defense=5;
   const permanent={...g.profile.upgrades};wave.applyLoadout(g,c);a.equal(g.evolved.lucky,true);a.equal(g.evolved.medic,true);a.deepEqual(g.profile.upgrades,permanent);
-  const lucky=g.alive(0).find(u=>u.type==='lucky');a.equal(lucky.star,stars);a.equal(g.stats(lucky).name,'슈퍼 럭키 레토나');a.equal(g.ultimate.readyAt,g.time);
-  a.equal(g.alive(0).filter(u=>u.type==='lucky').length,stars===2?3:1);
+  const lucky=g.alive(0).find(u=>u.type==='lucky');a.equal(lucky.star,2);a.equal(g.stats(lucky).name,'슈퍼 럭키 레토나');a.equal(g.ultimate.readyAt,g.time);
+  a.equal(g.alive(0).filter(u=>u.type==='lucky').length,3);
  }
 });
 test('invalid custom setups reject atomically rather than silently dropping troops or upgrades',()=>{

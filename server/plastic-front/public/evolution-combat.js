@@ -59,12 +59,12 @@ function install(api){
    }return;
   }
   if(!b.evoStyle)return impact.call(this,b);
-  const center={x:b.target.x,y:b.target.y},origin=b.evoOrigin||b.source,angle=Math.atan2(center.y-origin.y,center.x-origin.x),enemies=this.evolutionEnemies(b.source);
+  const center={x:b.target.x,y:b.target.y},origin=b.evoOrigin||b.source,angle=b.commandAngle??Math.atan2(center.y-origin.y,center.x-origin.x),enemies=this.evolutionEnemies(b.source);
   const initialHits=b.evoStyle==='siege'?enemies.filter(t=>t===b.target||distance(t,center)<b.splash).map(t=>t.id):null;
   impact.call(this,b);
   if(['pierce','heatPierce'].includes(b.evoStyle)){
    const along=t=>(t.x-origin.x)*Math.cos(angle)+(t.y-origin.y)*Math.sin(angle),start=along(center);
-   const extra=enemies.filter(t=>t!==b.target&&t.hp>0&&along(t)>start+3&&along(t)<=b.evoRange&&Math.abs((t.x-origin.x)*Math.sin(angle)-(t.y-origin.y)*Math.cos(angle))<Math.min(26,(TYPES[t.type]?.r||18)+7)).sort((a,c)=>along(a)-along(c)).slice(0,2);
+   const extra=enemies.filter(t=>t!==b.target&&t.hp>0&&along(t)>start+3&&along(t)<=b.evoRange&&Math.abs((t.x-origin.x)*Math.sin(angle)-(t.y-origin.y)*Math.cos(angle))<Math.min(26,(TYPES[t.type]?.r||18)+7)&&(b.commandAngle===undefined||this.lineClear(origin,t,0,{fireTeam:b.team}))).sort((a,c)=>along(a)-along(c)).slice(0,2);
    let from=origin;for(const [i,t]of [b.target,...extra].entries()){
     if(i)this.damage(t,b.damage*[1,.5,.25][i]*multiplier(b.source.type,kind(t)),b.source);
     this.effects.push({kind:'evoBeam',x:from.x,y:from.y,tx:t.x,ty:t.y,width:[6,3,1.5][i],style:b.evoStyle,t:.3,max:.3,team:0});from=t;
@@ -122,6 +122,15 @@ function install(api){
  p.updateEvolutionCombat=function(){
   const pending=[];for(const a of this.evolutionAttacks||[]){if(a.at>this.time+1e-8){pending.push(a);continue;}if(a.source.hp<=0)continue;
    if(a.kind==='mortar')this.evolutionMortar(a.source,a.target,a.attack,a.radius,2);
+   else if(a.target.commandShot){
+    const fire=()=>{
+     const c=this.commander(0);
+     if(!this.commandEnemyInView(c,this.combatCandidates()))return;
+     this.evolutionBullet(a.source,this.commandFirePoint(a.source,a.spec.range,c.commandFireFacing),a.attack,a.spec,a.style);
+     this.notify('fire',a.source);
+    };
+    if(this.coop)this.withOwner(a.source.coopOwner,fire);else fire();
+   }
    else if(a.target.hp>0&&this.canTarget(a.source,a.target)&&distance(a.source,a.target)<=a.spec.range){this.evolutionBullet(a.source,a.target,a.attack,a.spec,a.style);this.notify('fire',a.source);}
   }this.evolutionAttacks=pending;
   this.evolutionBlasts=(this.evolutionBlasts||[]).filter(g=>{while(g.index<g.points.length&&g.points[g.index].at<=this.time+1e-8)this.evolutionArea(g,g.points[g.index++]);return g.index<g.points.length;});

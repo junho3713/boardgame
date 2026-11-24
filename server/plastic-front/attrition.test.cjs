@@ -13,7 +13,7 @@ test('the actual enemy mortar attack lands at the infantry cluster, with the exi
 });
 test('midgame wave pressure applies only to solo two-star troops, while mortar damage and count stay bounded',()=>{
  const g=scene(),u=g.addUnit(2,'ant',1500,6000);u.roomWave=true;g.time=599;const base=g.stats(u).damage;g.time=600;a.ok(Math.abs(g.stats(u).damage-base*1.2)<1e-7);u.roomWave=false;a.equal(g.stats(u).damage,base);u.roomWave=true;g.coop=true;a.equal(g.stats(u).damage,base);g.coop=false;
- for(const map of ['livingroom','livingroom-star3']){const other=scene(map),e=other.addUnit(2,'ant',1500,6000);e.roomWave=true;other.time=599;const damage=other.stats(e).damage;other.time=600;a.equal(other.stats(e).damage,damage);}
+ for(const [map,multiplier] of [['livingroom',1],['livingroom-star3',1.2]]){const other=scene(map),e=other.addUnit(2,'ant',1500,6000);e.roomWave=true;other.time=599;const damage=other.stats(e).damage;other.time=600;a.ok(Math.abs(other.stats(e).damage-damage*multiplier)<1e-7);}
  const m=g.addUnit(2,'mortar',1500,6000);m.roomWave=true;a.ok(Math.abs(g.enemyDamageScale(m)-1.25*.6)<1e-7);a.equal(config.caps.mortar,4);
 });
 test('late portal surges remain stronger than closed waves with a reduced spike',()=>{

@@ -3,7 +3,7 @@
 const node=typeof module!=='undefined'&&module.exports,engine=node?require('./engine.js'):root,state=node?require('./autoplay.js'):root.FrontGameState,room=node?require('./room-campaign.js').config:root.FrontRoomCampaign.config;
 function memoryStorage(){const values=new Map();return{getItem:k=>values.get(k)??null,setItem:(k,v)=>values.set(k,String(v)),removeItem:k=>values.delete(k)};}
 const roster=node?engine.ROSTER:root.FrontRoster,abilities=node?engine.ABILITIES:root.FrontAbilities;
-function slots(game,count){return !game.starExperiment?count:game.starMax===3&&count===9?1:Math.floor(count/3)+count%3;}
+function slots(game,count){return !game.starExperiment?count:Math.floor(count/3)+count%3;}
 function capacity(game,levels){return 20+game.profile.upgrades.capacity+(game.starExperiment?[1,1,2,2,3].slice(0,levels.capacity).reduce((a,b)=>a+b,0):levels.capacity*2);}
 function current(game){return{level:game.level,cash:Math.floor(game.cash[0]),tech:{...game.tech[0]},abilities:{...game.abilities},counts:Object.fromEntries(roster.map(t=>[t,game.alive(0).filter(u=>u.type===t).reduce((n,u)=>n+(game.starExperiment?3**((u.star||1)-1):1),0)]))};}
 function recommended(game,seconds){

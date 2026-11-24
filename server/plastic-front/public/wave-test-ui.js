@@ -15,8 +15,8 @@ class FrontWaveTestSetup{
  summary(){
   $('waveTestHeal').disabled=this.mode!=='current';
   $('waveLoadoutGuide').textContent=this.mode==='current'?'현재 분대의 별·병과 강화·능력·자원을 그대로 복사합니다.':'시간대 추천은 성장 예시입니다. 실제 플레이를 재현한 기록은 아닙니다. 수치를 바꾸면 직접 조절로 전환합니다.';
-  if(this.game.starExperiment)$('waveLoadoutGuide').textContent+=this.game.starMax===3?' 1성 3기 → 2성, 9기 → 3성으로 자동 합성합니다.':' 1성 3기 → 2성으로 자동 합성합니다.';
-  try{const d=api.validateLoadout(this.game,this.draft),evolved=roster.filter(t=>d.tech[t]===5&&d.abilities[window.FrontEvolutions[t].ability]===5).map(t=>window.FrontEvolutions[t].name);$('waveLoadoutSummary').textContent=`Lv.${d.level} · 대장 제외 ${d.size}/${d.capacity}기 · 능력 ${Object.values(d.abilities).filter(Boolean).length}/5종`+(evolved.length?' · 진화: '+evolved.join(', '):'');$('waveLoadoutSummary').classList.remove('save-error');}catch(e){$('waveLoadoutSummary').textContent=e.message;$('waveLoadoutSummary').classList.add('save-error');}
+  if(this.mode!=='current'&&this.game.starExperiment)$('waveLoadoutGuide').textContent+=' 편성 수량은 1성 기준입니다. 3기마다 2성 1기로 합성하며, 9기를 배치하면 2성 3기로 시작합니다.';
+  try{const d=this.mode==='current'?{...this.draft,size:this.game.alive(0).filter(u=>roster.includes(u.type)).length,capacity:this.game.capacity()}:api.validateLoadout(this.game,this.draft),evolved=roster.filter(t=>d.tech[t]===5&&d.abilities[window.FrontEvolutions[t].ability]===5).map(t=>window.FrontEvolutions[t].name);$('waveLoadoutSummary').textContent=`Lv.${d.level} · 대장 제외 ${d.size}/${d.capacity}기 · 능력 ${Object.values(d.abilities).filter(Boolean).length}/5종`+(evolved.length?' · 진화: '+evolved.join(', '):'');$('waveLoadoutSummary').classList.remove('save-error');}catch(e){$('waveLoadoutSummary').textContent=e.message;$('waveLoadoutSummary').classList.add('save-error');}
  }
  value(){return this.mode==='current'?null:api.validateLoadout(this.game,this.draft);}
 }

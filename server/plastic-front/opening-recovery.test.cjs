@@ -51,7 +51,7 @@ test('ordinary troops, three-stars, enemies, training and regular-room rules do 
 test('fusion consumes units without creating survivors, and a recovered recruit can join the next fusion',()=>{
  const g=scene();for(let i=0;i<3;i++)g.addUnit(0,'rifle',1500+i*20,7500);g.autoFuseUnits();const u=g.alive(0)[0];a.equal(u.star,2);a.equal(g.alive(0).length,1);
  g.damage(u,1e9,enemy);for(let i=0;i<2;i++)g.addUnit(0,'rifle',1500+i*20,7500);g.autoFuseUnits();a.equal(g.alive(0).length,1);a.equal(g.alive(0)[0].star,2);a.equal(g.losses[0],1);
- const three=scene('livingroom-star3');for(let i=0;i<3;i++)elite(three,'rifle');three.autoFuseUnits();a.equal(three.alive(0).length,1);a.equal(three.alive(0)[0].star,3);a.equal(three.losses[0],0);
+ const three=scene('livingroom-star3');for(let i=0;i<3;i++)elite(three,'rifle');three.autoFuseUnits();a.equal(three.alive(0).length,3);a.equal(three.twoStarCount('rifle'),3);a.equal(three.losses[0],0);
 });
 
 test('co-op recovery preserves the defeated squad owner, upgrades and skin while commander death spares survivors',()=>{

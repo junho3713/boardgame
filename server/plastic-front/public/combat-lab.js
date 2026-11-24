@@ -17,7 +17,7 @@
  }
  class Lab extends Game{
   constructor(options={},events={}){
-   const config=clean(options);super(events,undefined,{map:'livingroom-star3',commander:config.commander==='hwarin'?'blaze':config.commander,flameSkin:config.commander==='hwarin'?'hwarin':'classic'});this.lab=config;this.labStats={damage:0,healing:0,hits:0,casts:0,affected:new Set()};
+   const config=clean(options);super(events,undefined,{map:'livingroom-star',commander:config.commander==='hwarin'?'blaze':config.commander,flameSkin:config.commander==='hwarin'?'hwarin':'classic'});this.lab=config;this.labStats={damage:0,healing:0,hits:0,casts:0,affected:new Set()};
    this.start();this.units=this.units.filter(u=>u.type==='leader'&&u.team===0);for(const k of ['obstacles','defenses','structures','buildings','pickups','effects'])this[k]=[];
    this.bases.forEach(b=>{b.hp=0;b.hidden=true;});this.bossIntro=null;this.level=config.mode==='ultimate'?Math.max(10,config.level):config.level;this.world={id:'livingroom',width:3000,height:8000,scale:1};this.camera={x:1500,y:6000};this.input={x:0,y:0};
    const leader=this.commander(0);Object.assign(leader,{x:1200,y:6000,face:0,cooldown:1e6});leader.hp=leader.maxHp=this.stats(leader).hp;
