@@ -124,9 +124,11 @@ function install(api){
    if(a.kind==='mortar')this.evolutionMortar(a.source,a.target,a.attack,a.radius,2);
    else if(a.target.commandShot){
     const fire=()=>{
-     const c=this.commander(0);
-     if(!this.commandEnemyInView(c,this.combatCandidates()))return;
-     this.evolutionBullet(a.source,this.commandFirePoint(a.source,a.spec.range,c.commandFireFacing),a.attack,a.spec,a.style);
+     const c=this.commander(0),candidates=this.combatCandidates(),angle=this.manualAimAngle();
+     const target=angle===null?this.selectCombatTarget(a.source,candidates,null,a.spec)
+      :this.commandEnemyInView(c,candidates)&&this.commandFirePoint(a.source,a.spec.range,angle);
+     if(!target)return;
+     this.evolutionBullet(a.source,target,a.attack,a.spec,a.style);
      this.notify('fire',a.source);
     };
     if(this.coop)this.withOwner(a.source.coopOwner,fire);else fire();

@@ -21,10 +21,18 @@ function createCoopHandler({now=Date.now,automatic=true}={}){
    const value=type==='toast'?String(data):type==='end'?{result:data.result,reason:data.reason}:type==='fire'?{type:data.type,team:data.team,x:data.x,y:data.y,appearance:data.appearance}:type==='explosion'?{x:data.x,y:data.y,kind:data.kind,team:data.team}:null;
    if(type!=='level'){r.events.push({id:++r.eventId,type,data:value,...(type==='toast'?{owner:r.game?.coopOwner}: {})});if(r.events.length>45)r.events.shift();}
  }]));}
+ function clearInput(r,p){
+  r.game.withOwner(p.owner,()=>{r.game.input={x:0,y:0};r.game.setManualAim(null);});
+  p.inputAt=undefined;r.cached=null;
+ }
+ function pause(r,reason){
+  if(!r.paused)for(const p of r.players)clearInput(r,p);
+  r.paused=true;r.pauseReason=reason;
+ }
  function step(){prune();for(const r of rooms.values()){
    if(!r.started||r.game.phase==='ended')continue;
-   if(r.players.length!==2||r.players.some(p=>!connected(p))){r.paused=true;r.pauseReason='친구의 연결을 기다립니다. 재접속 후 함께 재개하세요.';}
-   if(!r.paused){try{for(const p of r.players)if(now()-(p.inputAt||0)>500)r.game.withOwner(p.owner,()=>{r.game.input={x:0,y:0};});r.game.coopSelectOwner(0);r.game.update(.05);}catch(error){r.paused=true;r.pauseReason='작전 처리 오류로 멈췄습니다. 새 방에서 다시 시작해 주세요.';console.error('Plastic Front coop simulation failed',error.stack);}}
+   if(r.players.length!==2||r.players.some(p=>!connected(p)))pause(r,'친구의 연결을 기다립니다. 재접속 후 함께 재개하세요.');
+   if(!r.paused){try{for(const p of r.players)if(p.inputAt!==undefined&&now()-p.inputAt>500)clearInput(r,p);r.game.coopSelectOwner(0);r.game.update(.05);}catch(error){r.paused=true;r.pauseReason='작전 처리 오류로 멈췄습니다. 새 방에서 다시 시작해 주세요.';console.error('Plastic Front coop simulation failed',error.stack);}}
   }}
  const timer=automatic?setInterval(step,50):null;timer?.unref();
  async function handler(req,res){
@@ -49,7 +57,7 @@ function createCoopHandler({now=Date.now,automatic=true}={}){
    if(route==='/state'&&req.method==='GET')return json(req,res,200,publicRoom(r,p));
    if(route==='/leave'&&req.method==='POST'){
     if(!r.started){if(p.owner===0){rooms.delete(r.code);for(const q of r.players)sessions.delete(q.token);}else{r.players=r.players.filter(q=>q!==p);sessions.delete(p.token);}}
-    else{p.seen=-Infinity;r.paused=true;r.pauseReason='친구가 방을 나갔습니다.';}
+    else{p.seen=-Infinity;pause(r,'친구가 방을 나갔습니다.');}
     return json(req,res,200,{ok:true});
    }
    if(route!=='/command'||req.method!=='POST')fail(404,'지원하지 않는 요청입니다.');
@@ -62,10 +70,20 @@ function createCoopHandler({now=Date.now,automatic=true}={}){
     r.game=new CoopGame(events(r),{medicSkins:r.players.map(p=>p.medicSkinId),reinforcementPlans:r.players.map(p=>p.reinforcementPlan)});r.started=true;r.game.start();
    }else{
     if(!r.started)fail(409,'아직 출격하지 않았습니다.');const g=r.game;
-    if(action==='pause'){r.paused=true;r.pauseReason='대장이 작전을 일시정지했습니다.';}
+    if(action==='pause')pause(r,'대장이 작전을 일시정지했습니다.');
     else if(action==='resume'){if(r.players.some(q=>!connected(q)))fail(409,'친구가 다시 연결되면 재개할 수 있습니다.');r.paused=false;r.pauseReason='';}
     else if(action==='input'){
-     const x=Number(body.x),y=Number(body.y);if(!Number.isFinite(x)||!Number.isFinite(y)||Math.abs(x)>1||Math.abs(y)>1)fail(400,'잘못된 이동 입력입니다.');g.withOwner(p.owner,()=>{g.input={x,y};});p.inputAt=now();return json(req,res,200,{ok:true});
+     const x=Number(body.x),y=Number(body.y),aim=body.aim??null;
+     if(!Number.isFinite(x)||!Number.isFinite(y)||Math.abs(x)>1||Math.abs(y)>1)fail(400,'잘못된 이동 입력입니다.');
+     if(aim!==null&&(!Number.isFinite(aim.x)||!Number.isFinite(aim.y)||Math.abs(aim.x)>1||Math.abs(aim.y)>1||Math.hypot(aim.x,aim.y)===0))fail(400,'잘못된 조준 입력입니다.');
+     if(r.paused||g.phase!=='playing'||g.coopChoosing[p.owner])clearInput(r,p);
+     else{
+      g.withOwner(p.owner,()=>{
+       const previous=g.manualAimAngle();g.input={x,y};g.setManualAim(aim);
+       if(g.manualAimAngle()!==previous)r.cached=null;
+      });p.inputAt=now();
+     }
+     return json(req,res,200,{ok:true});
     }else{
      if(r.paused||r.players.some(q=>!connected(q)))fail(409,'연결 후 작전을 재개해 주세요.');
      g.withOwner(p.owner,()=>{

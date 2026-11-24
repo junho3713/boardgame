@@ -63,18 +63,24 @@ test('escorting ants stay with the slow bomb then resume their own pursuit after
  const g=scene(),[bomb,ant]=g.spawnRoomAntGroup();ant.x=bomb.x+250;const steps=[];g.navigate=(u,x,y,dt,speed)=>steps.push({u,x,y,speed});a.equal(g.followRoomEscort(ant,.05,g.stats(ant)),true);a.equal(steps.length,1);a.ok(steps[0].speed<=g.stats(bomb).speed*1.15);a.ok(Math.hypot(steps[0].x-bomb.x,steps[0].y-bomb.y)<125);
  bomb.hp=0;a.equal(g.followRoomEscort(ant,.05,g.stats(ant)),false);a.equal(ant.roomBombLeaderId,undefined);
 });
-test('ranged troops choose reachable bombs over closer ordinary ants and prefer a dense blast opportunity',()=>{
- const g=scene(),u=g.addUnit(0,'machinegun',1500,6000),ant=g.addUnit(2,'ant',1540,6000,true),bomb=g.addUnit(2,'bombBug',1700,6000,true);a.equal(g.selectCombatTarget(u,[ant,bomb],new Set([ant])),bomb);
- const dense=g.addUnit(2,'bombBug',1720,6100,true);for(let i=0;i<3;i++)g.addUnit(2,'ant',1750+i*10,6150,true);a.equal(g.selectCombatTarget(u,[bomb,dense],new Set()),dense);
- bomb.bombFuse={explodeAt:g.time+.2};a.equal(g.selectCombatTarget(u,[bomb,dense],new Set()),bomb);
- g.lineClear=(_,t)=>t!==bomb;a.equal(g.selectCombatTarget(u,[ant,bomb],new Set()),ant);
- g.lineClear=()=>true;g.visible=t=>t!==bomb;a.equal(g.selectCombatTarget(u,[ant,bomb],new Set()),ant);
+test('ordinary ranged auto-aim chooses the closest enemy it can see and hit',()=>{
+ const g=scene(),u=g.addUnit(0,'machinegun',1500,6000),ant=g.addUnit(2,'ant',1540,6000,true),bomb=g.addUnit(2,'bombBug',1700,6000,true),targets=[bomb,ant];
+ a.equal(g.selectCombatTarget(u,targets),ant);
+ g.visible=t=>t!==ant;
+ a.equal(g.selectCombatTarget(u,targets),bomb);
+ g.visible=()=>true;g.lineClear=(_,t)=>t!==ant;
+ a.equal(g.selectCombatTarget(u,targets),bomb);
+ g.lineClear=()=>false;
+ a.equal(g.selectCombatTarget(u,targets),null);
 });
-test('bomb priority respects firing range, mortar minimum range, specialist counters and HQ defense',()=>{
- const g=scene(),u=g.addUnit(0,'rifle',1500,6000),ant=g.addUnit(2,'ant',1540,6000,true),bomb=g.addUnit(2,'bombBug',2000,6000,true);a.equal(g.selectCombatTarget(u,[ant,bomb],new Set()),ant);
- const mortar=g.addUnit(0,'mortar',1500,6000);bomb.x=1550;ant.x=1800;a.equal(g.selectCombatTarget(mortar,[ant,bomb],new Set()),ant);
- const sniper=g.addUnit(0,'sniper',1500,6000),mage=g.addUnit(2,'blizzardMage',1750,6000,true);bomb.x=1700;a.equal(g.selectCombatTarget(sniper,[mage,bomb],new Set()),mage);
- ant.x=1650;g.aiHQTarget=ant;a.equal(g.selectCombatTarget(u,[ant,bomb],new Set()),ant);
+test('auto mortars keep safe minimum range and bomb priorities during manual aim',()=>{
+ const g=scene(),mortar=g.addUnit(0,'mortar',1500,6000),ant=g.addUnit(2,'ant',1760,6000,true),bomb=g.addUnit(2,'bombBug',1550,6000,true),targets=[ant,bomb];
+ g.setManualAim({x:-1,y:0});
+ a.equal(g.selectCombatTarget(mortar,targets),ant);
+ bomb.x=1850;
+ a.equal(g.selectCombatTarget(mortar,targets),bomb);
+ g.lineClear=(_,t)=>t!==bomb;
+ a.equal(g.selectCombatTarget(mortar,targets),ant);
 });
 test('an early, middle or late bomb kill clears nearby ordinary ants and credits the player once',()=>{
  for(const time of [180,480,720,1140,1200]){const g=scene(time),c=g.commander(0),bomb=g.addUnit(2,'bombBug',1800,6000,true);bomb.roomWave=true;const ants=Array.from({length:4},(_,i)=>{const u=g.addUnit(2,'ant',1800+Math.cos(i*Math.PI/2)*70,6000+Math.sin(i*Math.PI/2)*70,true);u.roomWave=true;return u;});
@@ -90,14 +96,20 @@ test('cooperative saves keep ant escorts, cooldown and player-owned chain reward
  const bomb=copy.units.find(u=>u.id===group[0].id),ants=copy.units.filter(u=>u.roomBombLeaderId===bomb.id);a.equal(ants.length,4);a.equal(copy.roomCanSpawn('bombBug'),true);a.equal(copy.followRoomEscort(ants[0],.05,copy.stats(ants[0])),true);
  const blue=copy.withOwner(1,()=>copy.commander(0)),before=copy.withOwner(1,()=>copy.profile.gold);copy.damage(bomb,1e6,blue);a.ok(ants.every(u=>u.hp===0));a.ok(copy.withOwner(1,()=>copy.profile.gold)>before);
 });
-test('ordinary-map automatic gunfire hits the bomb first and its explosion clears the accompanying ants',()=>{
- const g=scene(180,false,'livingroom'),gunner=g.addUnit(0,'machinegun',1500,6000),bomb=g.addUnit(2,'bombBug',1700,6000,true),ants=Array.from({length:4},(_,i)=>g.addUnit(2,'ant',1700+Math.cos(i*Math.PI/2)*60,6000+Math.sin(i*Math.PI/2)*60,true));
+test('ordinary-map automatic gunfire hits the closest bomb and clears accompanying ants',()=>{
+ const g=scene(180,false,'livingroom'),gunner=g.addUnit(0,'machinegun',1500,6000),bomb=g.addUnit(2,'bombBug',1700,6000,true);
+ const ants=[-1.3,-.45,.45,1.3].map(angle=>g.addUnit(2,'ant',1700+Math.cos(angle)*60,6000+Math.sin(angle)*60,true));
  gunner.cooldown=0;bomb.hp=1;for(const method of ['updateMission','updateSwarm','updateBosses','updateArtillery','updateDefenses','updateBuildings','updateMageQuest','updateLaserQuest'])g[method]=()=>{};
  g.update(.05);a.equal(g.shots.find(p=>p.source===gunner)?.target,bomb);
  for(let i=0;i<40&&!bomb.bombDetonated;i++)g.update(.025);a.equal(bomb.bombDetonated,true);a.ok(ants.every(u=>u.hp===0));
 });
-test('an explicit focus order on an ordinary map still overrides automatic bomb preference',()=>{
- const g=scene(180,false,'livingroom'),gunner=g.addUnit(0,'machinegun',1500,6000),bomb=g.addUnit(2,'bombBug',1700,6000,true),ant=g.addUnit(2,'ant',1650,6000,true);gunner.cooldown=0;
- for(const method of ['updateMission','updateSwarm','updateBosses','updateArtillery','updateDefenses','updateBuildings','updateMageQuest','updateLaserQuest'])g[method]=()=>{};
- g.setFocus(ant);g.update(.05);a.equal(g.shots.find(p=>p.source===gunner)?.target,ant);a.ok(bomb.hp>0);
+test('manual straight-line gunfire can detonate a bomb past a closer off-axis ant',()=>{
+ const g=scene(180,false,'livingroom'),gunner=g.addUnit(0,'machinegun',1500,6000),bomb=g.addUnit(2,'bombBug',1700,6000,true),ant=g.addUnit(2,'ant',1680,6050,true);
+ gunner.cooldown=0;bomb.hp=1;
+ for(const method of ['updateMission','updateSwarm','updateBosses','updateArtillery','updateDefenses','updateBuildings','updateMageQuest','updateLaserQuest','move','navigate'])g[method]=()=>{};
+ a.equal(g.selectCombatTarget(gunner,[bomb,ant]),ant);
+ g.setManualAim({x:1,y:0});g.update(.05);
+ a.equal(g.shots.find(p=>p.source===gunner)?.commandAngle,0);
+ for(let i=0;i<40&&!bomb.bombDetonated;i++)g.update(.025);
+ a.equal(bomb.bombDetonated,true);a.equal(ant.hp,0);
 });

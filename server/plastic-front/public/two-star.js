@@ -94,10 +94,10 @@ p.updateLuckyUnit=function(u){
 // Three full roulette draws are the lucky jeep's star bonus; do not multiply payloads again.
 p.luckyOdds=function(u){return this.starExperiment&&u?.team===0&&u.star===3?this.evolutionLuckyOdds(u,RULES.three.lucky[this.evolutionEnabled(u)?'evolved':'normal']):odds.call(this,u);};
 p.luckyScale=function(u){return scale.call(this,u)/(this.starExperiment&&u.team===0&&u.star>=2?(u.star===3?RULES.three.damage:RULES.damage):1);};
-// One attack budget split into two bullets. Direct focus orders still concentrate fire.
+// Split one damage budget across the two highest-health eligible enemies.
 p.fireUnitProjectiles=function(u,target,attack,s=this.stats(u)){
  if(!(this.starExperiment&&u.team===0&&u.star===3&&u.type==='sniper'))return projectiles.call(this,u,target,attack,s);
- const other=target.commandShot||this.focusTarget&&!this.focusAutomatic?target:this.selectCombatTarget(u,this.combatCandidates().filter(t=>t!==target),this.attackingEnemies(),s)||target,targets=[target,other],shots=[];
+ const other=this.selectCombatTarget(u,this.combatCandidates().filter(t=>t!==target),null,s)||target,targets=[target,other],shots=[];
  for(const [i,t] of targets.entries()){const bullet=projectiles.call(this,u,t,{...attack,damage:attack.damage/RULES.three.sniperShots},s)[0],angle=Math.atan2(t.y-u.y,t.x-u.x),side=i?3:-3;bullet.x-=Math.sin(angle)*side;bullet.y+=Math.cos(angle)*side;shots.push(bullet);}
  this.effects.push({kind:'tracer',x:shots[1].x,y:shots[1].y,tx:other.x,ty:other.y,t:.12,max:.12,team:u.team});return shots;
 };

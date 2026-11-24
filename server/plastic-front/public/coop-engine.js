@@ -2,7 +2,7 @@
 (function(root){'use strict';
 const node=typeof module!=='undefined'&&module.exports,api=node?require('./engine.js'):root;if(node){require('./sword-boss.js');require('./two-star.js');}
 const Game=api.FrontGame,Profile=api.FrontProfile;
-const controls=['input','moveOrder','focusTarget','focusAutomatic','formationFacing','formationEnemy','ultimate','cash','tech','abilities','evolved','profile','level','xp','runGold','losses','salvaged','nextRecoveryAt','cardShownCounts','choiceKind','currentOptions','turnChoice','pendingChoice','retreated','lastCommanderLoss','stageSupplied','rallyUntil','rallyReady','constructionLine','mageShieldQuest','laserExposureQuest','medicSkinId','fieldSupplyState'];
+const controls=['input','manualAim','moveOrder','focusTarget','focusAutomatic','formationFacing','formationEnemy','ultimate','cash','tech','abilities','evolved','profile','level','xp','runGold','losses','salvaged','nextRecoveryAt','cardShownCounts','choiceKind','currentOptions','turnChoice','pendingChoice','retreated','lastCommanderLoss','stageSupplied','rallyUntil','rallyReady','constructionLine','mageShieldQuest','laserExposureQuest','medicSkinId','fieldSupplyState'];
 class CoopGame extends Game{
  constructor(events={},settings={}){
   super(events,new Profile(),{map:'livingroom-star',medicSkin:settings.medicSkins?.[0]});
@@ -49,7 +49,7 @@ class CoopGame extends Game{
  starCount(...args){return this.scoped(()=>super.starCount(...args));}
  twoStarCount(...args){return this.scoped(()=>super.twoStarCount(...args));}
  autoFuseUnits(){if(!this.coop||this.coopScoped)return super.autoFuseUnits();for(const owner of [0,1])this.withOwner(owner,()=>this.scoped(()=>super.autoFuseUnits()));}
- updateFormationFacing(dt){if(!this.coop)return super.updateFormationFacing(dt);for(const owner of [0,1])this.withOwner(owner,()=>this.scoped(()=>{if(this.coopChoosing[owner]){this.input={x:0,y:0};this.moveOrder=null;}if(this.input.x||this.input.y)this.moveOrder=null;if(this.focusTarget?.hp<=0)this.focusTarget=null;super.updateFormationFacing(dt);}));}
+ updateFormationFacing(dt){if(!this.coop)return super.updateFormationFacing(dt);for(const owner of [0,1])this.withOwner(owner,()=>this.scoped(()=>{if(this.coopChoosing[owner]){this.input={x:0,y:0};this.moveOrder=null;this.setManualAim(null);}if(this.input.x||this.input.y)this.moveOrder=null;if(this.focusTarget?.hp<=0)this.focusTarget=null;super.updateFormationFacing(dt);}));}
  updateUltimate(){if(!this.coop)return super.updateUltimate();for(const owner of [0,1])this.withOwner(owner,()=>super.updateUltimate());}
  coopIncome(dt){for(const owner of [0,1])this.withOwner(owner,()=>{this.cash[0]+=this.income(0)*dt;super.gainXP(dt*1.3);});}
  coopCollectPickups(){
@@ -62,7 +62,7 @@ class CoopGame extends Game{
  }
  levelCheck(){
   if(!this.coop)return super.levelCheck();if(this.phase!=='playing')return;
-  for(const owner of [0,1])this.withOwner(owner,()=>{if(this.coopChoosing[owner])return;super.levelCheck();if(this.phase==='choice'){this.coopChoosing[owner]=true;this.coopRounds[owner]++;this.coopInvulnerable[owner]=this.time+5;this.moveOrder=null;this.input={x:0,y:0};this.phase='playing';}});
+  for(const owner of [0,1])this.withOwner(owner,()=>{if(this.coopChoosing[owner])return;super.levelCheck();if(this.phase==='choice'){this.coopChoosing[owner]=true;this.coopRounds[owner]++;this.coopInvulnerable[owner]=this.time+5;this.moveOrder=null;this.input={x:0,y:0};this.setManualAim(null);this.phase='playing';}});
  }
  recoveryReady(){return !this.coopChoosing?.[this.coopOwner]&&this.scoped(()=>super.recoveryReady());}
  beginRecovery(){const ok=super.beginRecovery();if(ok&&this.coop){this.coopChoosing[this.coopOwner]=true;this.coopRounds[this.coopOwner]++;this.phase='playing';}return ok;}

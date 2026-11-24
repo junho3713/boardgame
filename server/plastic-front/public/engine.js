@@ -89,7 +89,7 @@ const TYPES={swordEmpress:{name:'사검의 군주',hp:140800,damage:0,rate:100,r
  machinegun:{name:'기관총병',icon:'≋',hp:160,damage:9,rate:.2,range:280,speed:126,r:12,cost:95,role:'빠른 연사 · 경장갑 ×1 / 장갑 ×0.8'},
  mortar:{name:'박격포병',icon:'◉',hp:90,damage:64,rate:3.6,range:700,minRange:135,speed:116,r:12,cost:140,splash:70,role:'레이저 포탑 우선 · 고정 낙탄 2초 · 건물 ×1.2 · 사거리 135~700'},
  rocket:{name:'바주카병',icon:'⌁',hp:120,damage:80,rate:1.85,range:295,speed:128,r:12,cost:120,splash:38,role:'장갑 ×1 · 경장갑 ×0.5 · 소형 폭발'},
- sniper:{name:'저격병',icon:'⌖',hp:100,damage:100,rate:2.35,range:560,speed:137,r:11,cost:110,role:'경장갑 ×1 / 장갑 ×0.5 · 얼음 마녀 → 박격포병 우선 사격'},
+ sniper:{name:'저격병',icon:'⌖',hp:100,damage:100,rate:2.35,range:560,speed:137,r:11,cost:110,role:'사거리 안에서 최대 체력이 가장 높은 적 자동 조준 · 경장갑 ×1 / 장갑 ×0.5'},
  guntruck:{name:'전투트럭',icon:'▱',hp:280,damage:12,rate:.22,range:265,speed:150,r:22,cost:150,role:'기동 연사 · 경장갑 ×1 / 장갑 ×0.8'},
  tank:{name:'전차',icon:'▰',hp:600,damage:100,rate:2.3,range:310,speed:95,r:26,cost:260,splash:60,role:'장갑 ×1 · 경장갑 ×0.5 · 범위 포격'},
  artillery:{name:'적 포병',icon:'⊕',hp:520,damage:0,rate:99,range:0,speed:0,r:27,cost:0,role:'포격을 지휘하는 장갑 목표'},
@@ -106,11 +106,12 @@ const TYPES={swordEmpress:{name:'사검의 군주',hp:140800,damage:0,rate:100,r
  beetle:{name:'갑충',icon:'●',hp:420,damage:24,rate:1.4,range:30,speed:74.4,r:17,cost:0,role:'느리고 튼튼한 일반 생물'}
 };
 const ENEMY_REPLACED_TYPES={rifle:TYPES.rifle,guntruck:TYPES.guntruck};
-TYPES.rifle={...TYPES.rifle,name:'산탄총병',enemyName:TYPES.rifle.name,icon:'✦',hp:145,damage:22,rate:1,range:210,role:'대장 방향 5갈래 산탄 · 기본 펌프 1초 · 4발 후 재장전'};
-TYPES.guntruck={...TYPES.guntruck,name:'주사위 투척병',enemyName:TYPES.guntruck.name,icon:'⚄',hp:200,damage:38,rate:1.8,range:355,speed:133,r:13,role:'대장 방향으로 굴리는 주사위 · 눈금별 폭발·파편·분열'};
+TYPES.rifle={...TYPES.rifle,name:'산탄총병',enemyName:TYPES.rifle.name,icon:'✦',hp:145,damage:22,rate:1,range:210,role:'자동·수동 조준 5갈래 산탄 · 기본 펌프 1초 · 4발 후 재장전'};
+TYPES.guntruck={...TYPES.guntruck,name:'주사위 투척병',enemyName:TYPES.guntruck.name,icon:'⚄',hp:200,damage:38,rate:1.8,range:355,speed:133,r:13,role:'자동·수동 조준으로 주사위 투척 · 눈금별 폭발·파편·분열'};
 TYPES.drone={name:'미니 RC 드론',icon:'✜',hp:130,damage:9,rate:.20,range:330,speed:175,r:12,cost:125,flying:true,flightHeight:54,role:'부대 상공을 선회하며 가장 가까운 적에게 자동 연사'};
 const ROSTER=['rifle','machinegun','sniper','guntruck','rocket','mortar','tank','medic','lucky','drone'];
 const MELEE=new Set(['bladeGuard','bayonetCaptain','bayonet','honeybee','hornet','ant','soldierAnt','beetle','bruteBeetle','stagBeetle','rhinoBeetle']);
+const MANUAL_AIM_TYPES=new Set(['rifle','machinegun','rocket','tank','guntruck']);
 const ARMORED=new Set(['crimsonAce','bikeRaider','repairBot','hornet','tank','guntruck','stagBeetle','rhinoBeetle','base','structure','artillery']);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
@@ -172,6 +173,7 @@ class FrontGame{
  setMedicSkin(id){if(!['classic','rina'].includes(id)||this.phase!=='ready')return false;this.medicSkinId=id;for(const u of this.units)if(u.type==='medic'&&u.team===0)u.appearance=id;return true;}
  random(){return Math.random();}
  reset(mode=this.mode||'pve'){
+  this.manualAim=null;
   this.roomCampaign=null;this.bossIntro=null;this.roomHealthVersion=ROOM_CAMPAIGN.config.combat.healthVersion;this.roomHQAlarm=null;this.roomFenceVersion=0;this.roomEncounterVersion=0;this.enemyLuckySalvos=[];this.balanceVersion=BALANCE_VERSION;this.mode=['duel','crisis'].includes(mode)?mode:'pve';this.world={id:'backyard',width:1600,height:2800,scale:1};this.viewport=null;this.buildings=[];this.buildSerial=0;this.constructionLine=null;this.finalBattle={spawned:false,killed:false};this.roomEvents=0;
   this.mageShieldQuest=null;this.laserExposureQuest=null;this.roomGuardianVersion=0;this.roomFortificationVersion=0;this.roadCaptainVersion=0;this.guardianSiege=null;this.phase='ready';this.time=0;this.runGold=0;this.salvaged=0;this.nextRecoveryAt=0;this.stageSupplied=[];this.lastEnemyGrowth=-1;this.level=1;this.xp=0;this.kills=0;this.losses=[0,0];this.scouts=0;this.turnChoice=null;this.pendingChoice=null;this.navigationCache=new Map();this.cash=[135,135];this.trucks=[2,2];this.tech=[0,1].map(()=>Object.fromEntries(ROSTER.map(t=>[t,t==='rifle'?1:0])));
   this.cardShownCounts={};this.choiceKind='level';this.abilities=Object.fromEntries(Object.keys(ABILITIES).map(k=>[k,0]));this.evolved=Object.fromEntries(ROSTER.map(k=>[k,false]));this.bossState={nextAt:this.waveRules().boss.firstAt,warned:false,spawned:0,killed:0,rewards:0,claimed:0};
@@ -528,6 +530,19 @@ class FrontGame{
  }
  bossArmorPenetration(source){if(!this.isRoomCampaign()||!source?.boss||source.team===0)return 0;return clamp(ROOM_CAMPAIGN.config.combat.bossArmorPenetration?.[source.type]||0,0,1);}
  defenseFactor(target,source=null){if(target.fencePost)return 1;const defense=target.built?(this.buildingStats(target.kind,target.team)?.defense??10):TYPES[target.type]?this.stats(target).defense:target.base?18:target.structure?10:0,cover=target.team===0&&!target.structure?Math.max(this.buildings.some(b=>b.hp>0&&b.kind==='barricade'&&b.buildUntil<=this.time&&dist(b,target)<100)?20:0,this.isDesktopDefense()&&this.obstacles.some(slot=>{if(!slot.cover)return false;const o=slot.kind==='deskCover'?desktopCoverRect(slot):slot;return Math.hypot(Math.max(0,Math.abs(target.x-o.x-o.w/2)-o.w/2),Math.max(0,Math.abs(target.y-o.y-o.h/2)-o.h/2))<85;})?12:0):0;return 100/(100+(defense+(!TYPES[target.type]?(this.roomDefenseRules(target)?.defense||0):0))*(1-this.bossArmorPenetration(source))+cover);}
+ setManualAim(value){
+  if(value!=null&&(!Number.isFinite(value.x)||!Number.isFinite(value.y)))return false;
+  const length=value?Math.hypot(value.x,value.y):0;
+  if(!Number.isFinite(length))return false;
+  this.manualAim=length>1e-6?{x:value.x/length,y:value.y/length}:null;
+  const commander=this.commander(0);
+  if(commander?.type==='leader')commander.manualAimAngle=this.manualAimAngle();
+  return true;
+ }
+ manualAimAngle(){
+  const aim=this.manualAim;
+  return aim&&(aim.x||aim.y)&&Number.isFinite(aim.x)&&Number.isFinite(aim.y)?Math.atan2(aim.y,aim.x):null;
+ }
  commandFirePoint(u,range,angle){
   return {commandShot:true,angle,range,x:u.x+Math.cos(angle)*range,y:u.y+Math.sin(angle)*range};
  }
@@ -597,11 +612,24 @@ class FrontGame{
   const density=t=>targets.reduce((n,a)=>n+(dist(a,t)<=(s.splash||70)?1:0),0);
   return targets.sort((a,b)=>density(b)-density(a)||Number(b.type==='medic')-Number(a.type==='medic')||this.targetDistance(u,a)-this.targetDistance(u,b))[0]||null;
  }
- selectCombatTarget(u,candidates=this.combatCandidates(),threats=this.attackingEnemies(),s=this.stats(u)){
-  if(u.team===0&&u.type==='sniper'){
-   const priority=candidates.filter(a=>['blizzardMage','mortar'].includes(a.type)&&this.canTarget(u,a)&&this.visible(a)&&this.targetDistance(u,a)<s.range&&this.targetDistance(u,a)>=(s.minRange||0)&&this.lineClear(u,a,0,{fireTeam:u.team}));
-   priority.sort((a,b)=>Number(a.type!=='blizzardMage')-Number(b.type!=='blizzardMage')||this.targetDistance(u,a)-this.targetDistance(u,b)||a.hp-b.hp);if(priority.length)return priority[0];
+ selectCombatTarget(u,candidates=this.combatCandidates(),threats=null,s=this.stats(u)){
+  if(u.team!==0||u.built)return this.selectPriorityTarget(u,candidates,threats||this.attackingEnemies(),s);
+  let best=null,bestDistance=Infinity,bestHealth=-Infinity;
+  const inReach=[];
+  for(const t of candidates){
+   if(!t||t.team===u.team||t.hidden||t.hp<=0||!this.canTarget(u,t)||t.base&&this.baseShielded()||t.structure&&this.mission.stage<(t.activeStage||2))continue;
+   const distance=this.targetDistance(u,t),extra=this.isSwordCommander(u)?0:t.base?45:t.structure?35:0;
+   if(distance<(s.minRange||0)||distance>=s.range+extra||!this.visible(t)||!this.lineClear(u,t,0,{fireTeam:u.team}))continue;
+   if(u.type==='mortar'){inReach.push(t);continue;}
+   const health=u.type==='sniper'?(t.maxHp??t.hp):0;
+   if(health>bestHealth||health===bestHealth&&distance<bestDistance){
+    best=t;bestDistance=distance;bestHealth=health;
+   }
   }
+  if(u.type==='mortar')return this.selectPriorityTarget(u,inReach,threats||this.attackingEnemies(),s);
+  return best;
+ }
+ selectPriorityTarget(u,candidates,threats,s){
   // Mortars neutralize reachable lasers before spending slow shells on mobile foes.
   // Only target selection changes; movement, minimum range and manual focus stay intact.
   if(u.team===0&&u.type==='mortar'){
@@ -613,11 +641,14 @@ class FrontGame{
    }
    if(laser)return laser;
   }
-  const hq=this.aiHQTarget;if(hq&&this.canTarget(u,hq)&&this.targetDistance(u,hq)<s.range&&this.targetDistance(u,hq)>=(s.minRange||0)&&this.lineClear(u,hq,0,{fireTeam:0}))return hq;
+  const hq=this.aiHQTarget;if(hq&&candidates.includes(hq)&&this.canTarget(u,hq)&&this.targetDistance(u,hq)<s.range&&this.targetDistance(u,hq)>=(s.minRange||0)&&this.lineClear(u,hq,0,{fireTeam:0}))return hq;
   if(u.team===0){
    const bombs=candidates.filter(t=>t.type==='bombBug'&&this.canTarget(u,t)&&this.visible(t)&&this.targetDistance(u,t)<s.range&&this.targetDistance(u,t)>=(s.minRange||0)&&this.lineClear(u,t,0,{fireTeam:0}));
    if(bombs.length){const nearby=t=>this.units.filter(a=>a.team!==0&&a.hp>0&&a.type==='ant'&&dist(a,t)<=INSECTS.bomb.radius).length;
     bombs.sort((a,b)=>Number(!!b.bombFuse)-Number(!!a.bombFuse)||nearby(b)-nearby(a)||a.hp-b.hp||this.targetDistance(u,a)-this.targetDistance(u,b));return bombs[0];}
+  }
+  if(u.team===0&&u.type==='mortar'&&!u.built){
+   return candidates.reduce((near,t)=>!near||this.targetDistance(u,t)<this.targetDistance(u,near)?t:near,null);
   }
   let best=null,rank=null;
   for(const a of candidates){if(!this.canTarget(u,a))continue;const d=this.targetDistance(u,a),extra=this.isSwordCommander(u)?0:a.base?45:a.structure?35:0;if(d<(s.minRange||0)||d>=s.range+extra)continue;
@@ -1258,9 +1289,6 @@ class FrontGame{
  }
  updateFormationFacing(dt){
   const c=this.commander(0);let angle=this.formationFacing;
-  if(this.input.x||this.input.y)c.commandFireFacing=Math.atan2(this.input.y,this.input.x);
-  else if(this.moveOrder&&dist(c,this.moveOrder)>8)c.commandFireFacing=this.moveOrder.facing??Math.atan2(this.moveOrder.y-c.y,this.moveOrder.x-c.x);
-  else c.commandFireFacing??=c.face;
   const threats=[...this.units,...this.activeDefenses(),...this.structures,...this.bases.filter(b=>b.team!==0&&this.mode!=='crisis'&&(this.mode==='duel'||this.mission.stage===3)&&!this.baseShielded())].filter(u=>u.team!==0&&u.hp>0&&this.visible(u)&&dist(c,u)<520&&(!u.structure||this.mission.stage>=(u.activeStage||2)));
   const nearest=threats.sort((a,b)=>dist(c,a)-dist(c,b))[0],locked=this.formationEnemy,focus=threats.includes(this.focusTarget)?this.focusTarget:null;
   // A small change in nearest enemy must not spin the whole formation.
@@ -1445,7 +1473,7 @@ class FrontGame{
 
  luckyOdds(){return this.evolved.lucky?LUCKY.evolved:LUCKY.normal;}
  luckyOutcome(value=this.random(),odds=this.luckyOdds()){let total=0;for(const[k,p]of Object.entries(odds)){total+=p;if(value<total)return k;}return'blank';}
- luckyEnemy(source,range=LUCKY.range){return this.selectCombatTarget(source,this.combatCandidates(),this.attackingEnemies(),{...this.stats(source),range,minRange:0});}
+ luckyEnemy(source,range=LUCKY.range){return this.selectPriorityTarget(source,this.combatCandidates(),this.attackingEnemies(),{...this.stats(source),range,minRange:0});}
  updateLuckyInterval(u){
   const interval=this.luckyRouletteInterval?.(u)??LUCKY.interval;
   if(u.luckyInterval!==interval){
@@ -1866,10 +1894,10 @@ class FrontGame{
     target=patients[0]||null;if(target)nearest=dist(u,target);
     if(u.team!==0)this.updateMedicHealing(u,s);
    }else{
-    const commandFire=u.team===0&&(['rifle','guntruck'].includes(u.type)||this.starExperiment&&this.mode==='pve'&&!['mortar','sniper','drone'].includes(u.type));
-    if(commandFire){
+    const manualAngle=u.team===0&&MANUAL_AIM_TYPES.has(u.type)?this.manualAimAngle():null;
+    if(manualAngle!==null){
      if(!commandEngaged.has(player))commandEngaged.set(player,this.commandEnemyInView(player,combatCandidates));
-     if(commandEngaged.get(player))target=this.commandFirePoint(u,s.range,player.commandFireFacing);
+     if(commandEngaged.get(player))target=this.commandFirePoint(u,s.range,manualAngle);
     }else if(u.team===0&&u.type==='drone')target=this.droneTarget(u,s.range);
     else if(u.team===0)target=this.selectCombatTarget(u,combatCandidates,combatThreats,s);else for(const a of [...this.units,...this.buildings.filter(b=>b.hp>0)]){if(!this.canTarget(u,a))continue;const d=this.targetDistance(u,a),score=d/Math.max(.25,multiplier(u.type,combatKind(a)));if(d<s.range&&d>=(s.minRange||0)&&score<nearest){target=a;nearest=score;}}
     // Finish the turret's aim before reconsidering almost equidistant moving targets.
@@ -1881,7 +1909,6 @@ class FrontGame{
     const decoy=this.supportDecoyTarget?.(u);if(decoy)target=this.canTarget(u,decoy)&&dist(u,decoy)<=Math.min(65,s.range*.85)?decoy:null;
     if(target&&target.type!=='toyDecoy'&&u.team!==0&&u.type!=='mortar'&&!tankLocked){const screen=this.screeningUnit(u,target);if(screen&&dist(u,screen)<s.range)target=screen;}
     const b=(u.team===1||u.team!==0&&(this.isDesktopDefense()||TYPES[u.type]?.stab))?this.bases[0]:null;if(!target&&b&&this.canTarget(u,b)&&(!this.starDefense()||!this.isDesktopDefense()||this.pursuitTarget(u)===b)&&(TYPES[u.type]?.stab||this.isDesktopDefense()&&MELEE.has(u.type)?this.targetDistance(u,b)<s.range:dist(u,b)>=(s.minRange||0)&&dist(u,b)<s.range+45))target=b;
-    if(!commandFire&&u.team===0&&u.type!=='drone'&&(u.type!=='sniper'||!['blizzardMage','mortar'].includes(target?.type))&&this.focusTarget&&!this.focusAutomatic&&dist(u,this.focusTarget)>=(s.minRange||0)&&dist(u,this.focusTarget)<s.range+(this.focusTarget.base||this.focusTarget.structure?35:0))target=this.focusTarget;
     if(u.team!==0&&u.type==='tank'){u.tankAimTargetId=target?.id??null;if(!target||u.cooldown>0)u.tankReadyAimAt=null;else u.tankReadyAimAt??=this.time;}
     if(u.type==='sniper'){const windup=Math.min(ROOM_RULES.sniperAim,s.rate*.7);if(!target)u.sniperAim=null;else if(u.sniperAim&&target.commandShot)u.sniperAim.target=target;else if(u.cooldown<=windup&&(!u.sniperAim||u.sniperAim.target!==target)){u.sniperAim={target,started:this.time,fireAt:this.time+windup};u.cooldown=Math.max(u.cooldown,windup);}}
     if(TYPES[u.type]?.stab){if(u.bossPattern!=='wideSlash')this.updateBayonet(u,target,s);}

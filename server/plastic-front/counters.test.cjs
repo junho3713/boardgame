@@ -2,22 +2,29 @@
 const {test}=require('node:test'),a=require('node:assert/strict');
 const {FrontGame}=require('./public/engine.js'),room=require('./public/room-campaign.js').config;
 function scene(map='livingroom-star'){const g=new FrontGame({},undefined,{map});g.start();g.mission.stage=3;g.units=[];g.obstacles=[];g.buildings=[];g.defenses=[];g.structures=[];g.tech[0].sniper=1;g.visible=()=>true;return g;}
-test('snipers prioritize a reachable live ice mage over closer threats, but skip blocked, distant and inactive mages',()=>{
- const g=scene(),sniper=g.addUnit(0,'sniper',1500,6000),ant=g.addUnit(2,'ant',1510,6000),mage=g.addUnit(2,'blizzardMage',1700,6000);mage.activeStage=1;mage.mobileMage=true;
- a.equal(g.selectCombatTarget(sniper,[ant,mage],new Set([ant])),mage);
- const before=g.lineClear;g.lineClear=()=>false;a.equal(g.selectCombatTarget(sniper,[ant,mage],new Set([ant])),ant);g.lineClear=before;
- mage.x=2500;a.equal(g.selectCombatTarget(sniper,[ant,mage]),ant);mage.x=1700;mage.hp=0;a.equal(g.selectCombatTarget(sniper,[ant,mage]),ant);
- mage.hp=100;mage.fixedGuard=true;mage.activeStage=4;a.equal(g.selectCombatTarget(sniper,[ant,mage]),ant);
+test('snipers choose the highest max HP within range, vision and a clear firing line',()=>{
+ const g=scene(),sniper=g.addUnit(0,'sniper',1500,6000),ant=g.addUnit(2,'ant',1510,6000),mage=g.addUnit(2,'blizzardMage',1680,6000);
+ const heavy=g.addUnit(2,'tank',1790,6000),candidates=[ant,mage,heavy];
+ Object.assign(heavy,{maxHp:5000,hp:1});mage.activeStage=1;mage.maxHp=1500;
+ a.equal(g.selectCombatTarget(sniper,candidates),heavy);
+ g.visible=t=>t!==heavy;
+ a.equal(g.selectCombatTarget(sniper,candidates),mage);
+ g.visible=()=>true;g.lineClear=(_,t)=>t!==heavy;
+ a.equal(g.selectCombatTarget(sniper,candidates),mage);
+ g.lineClear=()=>true;heavy.x=2500;
+ a.equal(g.selectCombatTarget(sniper,candidates),mage);
+ heavy.x=1790;heavy.hp=0;mage.fixedGuard=true;mage.activeStage=4;
+ a.equal(g.selectCombatTarget(sniper,candidates),ant);
 });
-test('sniper priority is mage, mortar, then ordinary targets, within real range, visibility and firing lines',()=>{
+test('snipers resolve equal maximum HP by distance and keep auto-aim during manual control',()=>{
  const g=scene('livingroom'),sniper=g.addUnit(0,'sniper',1500,6000),ant=g.addUnit(2,'ant',1510,6000),mortar=g.addUnit(2,'mortar',1700,6000),mage=g.addUnit(2,'blizzardMage',1800,6000);
- const candidates=[ant,mortar,mage];mage.activeStage=1;
- a.equal(g.selectCombatTarget(sniper,candidates,new Set([ant])),mage);mage.hp=0;a.equal(g.selectCombatTarget(sniper,candidates,new Set([ant])),mortar);
- g.visible=u=>u!==mortar;a.equal(g.selectCombatTarget(sniper,candidates,new Set([ant])),ant);g.visible=()=>true;
- g.lineClear=(u,t)=>t!==mortar;a.equal(g.selectCombatTarget(sniper,candidates,new Set([ant])),ant);g.lineClear=()=>true;
- mortar.x=2500;a.equal(g.selectCombatTarget(sniper,candidates,new Set([ant])),ant);mortar.x=1700;
- const leader=g.addUnit(0,'leader',1500,6100);g.focusTarget=ant;g.focusAutomatic=false;g.updateRoomWaves=()=>{};g.updateBosses=()=>{};g.updateMission=()=>{};
- g.update(.05);a.equal(sniper.sniperAim.target,mortar);a.ok(leader.hp>0);
+ mage.activeStage=1;mortar.maxHp=mage.maxHp=3000;ant.maxHp=100;
+ const candidates=[mage,ant,mortar];
+ a.equal(g.selectCombatTarget(sniper,candidates),mortar);
+ g.addUnit(0,'leader',1500,6100);g.setManualAim({x:-1,y:0});g.setFocus(ant);
+ g.updateRoomWaves=g.updateBosses=g.updateMission=()=>{};
+ g.update(.05);
+ a.equal(sniper.sniperAim.target,mortar);
 });
 test('mage groups spawn atomically with four mortar escorts, including cooperative caps',()=>{
  const {CoopGame}=require('./public/coop-engine.js');

@@ -3,6 +3,7 @@ const active=new URLSearchParams(location.search).get('coop')==='1';
 const api={active};root.FrontCoopClient=api;if(!active)return;
 const $=id=>document.getElementById(id),base='/plastic-front/api/coop';
 let bridge,token='',state=null,connected=false,busy=false,queue=Promise.resolve(),lastInput=0,inputBusy=false,move=null,lastEvent=0,shownRound=-1,lastPhase='',lastApply=0,positions=new Map(),leaving=false;
+let desiredMove={x:0,y:0},desiredAim=null,aimEdge=false;
 try{token=sessionStorage.getItem('plastic-front-coop-token')||'';}catch{}
 const style=document.createElement('link');style.rel='stylesheet';style.href='coop.css?v=20261105';document.head.append(style);
 async function request(route,body){const response=await fetch(base+route,{method:body?'POST':'GET',headers:{...(body?{'Content-Type':'application/json'}:{}),...(token?{Authorization:'Bearer '+token}:{})},...(body?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(5000)});const data=await response.json();if(!response.ok)throw Object.assign(new Error(data.error||'연결하지 못했습니다.'),{status:response.status});return data;}
@@ -38,8 +39,26 @@ function bindGame(game){
  call('setMoveOrder','move');call('setFocus','focus',target=>({target:target.base?'enemy-base':target.id}));call('followCommander','follow',()=>({}));call('useUltimate','ultimate',()=>({}));
  call('stageChoice','stage',(type,queue)=>({type,queue}));call('confirmChoice','confirm',()=>({}));call('beginRecovery','recovery',()=>({}));call('useMedkit','medkit',()=>({}));call('useArtilleryTicket','artillery',(x,y)=>({x,y}));call('cancelRecovery','cancelRecovery',()=>({}));call('build','build',kind=>({kind}));call('resolveSupportToyOffer','supportToy',id=>({id}));
 }
+function inputAllowed(){return !!(connected&&state?.started&&state.phase==='playing'&&!state.paused&&!state.choosing&&!leaving);}
+function clearLocalInput(){desiredMove={x:0,y:0};desiredAim=null;aimEdge=false;move=null;}
+function sendInput(){
+ if(inputBusy||!inputAllowed())return;
+ const now=performance.now();if(!aimEdge&&now-lastInput<100)return;
+ lastInput=now;inputBusy=true;aimEdge=false;
+ request('/command',{action:'input',...desiredMove,aim:desiredAim})
+  .catch(()=>{connected=false;clearLocalInput();bridge.clearInput();})
+   .finally(()=>{inputBusy=false;if(aimEdge)sendInput();});
+ return true;
+}
+api.setAim=vector=>{
+ const next=inputAllowed()?vector:null;
+ if(!!desiredAim!==!!next)aimEdge=true;
+ desiredAim=next;desiredMove=bridge.getGame().input;
+ if(aimEdge)sendInput();
+};
 function apply(data){
  if(leaving||!bridge)return;connected=true;const previousRound=state?.round;state=data;
+ if(!inputAllowed())clearLocalInput();
  if(data.game){
   const game=bridge.getGame(),camera={...game.camera},viewport=game.viewport;
   positions=new Map(game.units.map(u=>[u.id,{x:u.x,y:u.y}]));lastApply=performance.now();
@@ -62,7 +81,7 @@ function apply(data){
 }
 async function poll(){
  if(leaving||!token||busy)return;busy=true;
- try{apply(await request('/state'));}catch(e){connected=false;if(e.status===401){token='';try{sessionStorage.removeItem('plastic-front-coop-token');}catch{}$('coopEntry').hidden=false;$('coopWaiting').hidden=true;modal(true);}else updateRoom();error(e.message);}
+ try{apply(await request('/state'));}catch(e){connected=false;clearLocalInput();bridge.clearInput();if(e.status===401){token='';try{sessionStorage.removeItem('plastic-front-coop-token');}catch{}$('coopEntry').hidden=false;$('coopWaiting').hidden=true;modal(true);}else updateRoom();error(e.message);}
  finally{busy=false;}
 }
 function mount(){
@@ -90,11 +109,9 @@ api.configureReinforcement=plan=>{if(!globalThis.FrontReinforcementPlan.valid(pl
 api.install=value=>{bridge=value;mount();};
 api.pause=()=>{bridge.clearInput();command('pause');};
 api.frame=game=>{
- if(!state?.started||state.phase==='ended'||!connected||state.paused||leaving)return;
- const now=performance.now();if(now-lastInput<100||inputBusy)return;lastInput=now;inputBusy=true;
- const input=state.choosing?{x:0,y:0}:game.input;
- request('/command',{action:'input',x:input.x,y:input.y}).catch(()=>{connected=false;}).finally(()=>{inputBusy=false;});
- if(move){const target=move;move=null;command('move',target);}
+ if(!inputAllowed())return;
+ desiredMove=game.input;
+ if(sendInput()&&move){const target=move;move=null;command('move',target);}
 };
 api.drawUnit=(ctx,u,draw)=>{
  const previous=positions.get(u.id),alpha=Math.max(0,Math.min(1,(performance.now()-lastApply)/100));ctx.save();

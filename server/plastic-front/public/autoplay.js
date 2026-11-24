@@ -325,10 +325,6 @@ class FrontAutoPilot{
   const supply=g.supplyState();if(supply.medkits&&g.supplySquad().some(u=>u.hp/u.maxHp<.4))g.useMedkit();const strike=g.units.find(u=>u.team!==0&&u.hp>0&&g.visible(u)&&dist(u,c)<700);if(supply.artillery&&strike)g.useArtilleryTicket(strike.x,strike.y);
   if(g.recoveryReady()){g.beginRecovery();this.choice();return;}
   const enemies=g.units.filter(u=>u.team!==0&&u.hp>0&&g.visible(u)).sort((a,b)=>dist(a,c)-dist(b,c)),nearest=enemies[0];
-  if(g.mode==='pve'){
-   const aim=g.focusTarget?.hp>0&&g.visible(g.focusTarget)?g.focusTarget:nearest;
-   if(aim)c.commandFireFacing=Math.atan2(aim.y-c.y,aim.x-c.x);
-  }
   if(this.defendBase())return;
   if(dodging)return;
   if(this.siegeGuardians())return;

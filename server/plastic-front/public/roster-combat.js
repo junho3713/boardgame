@@ -117,9 +117,10 @@ function install({FrontGame,TYPES,multiplier}){
  }
  function throwDice(g,u,target,attack,s){
   const golden=g.evolutionEnabled(u),angle=target.commandShot?target.angle:heading(u,target);
+  const range=target.commandShot?s.range:Math.max(1,Math.min(s.range,distance(u,target)));
   u.rosterLastThrowAt=g.time;
   const id=g.rosterThrowSerial=(g.rosterThrowSerial||0)+1;
-  for(const offset of golden?[-.15,.15]:[0])roll(g,u,u,angle+offset,s.range,attack.damage,g.diceFace(u,golden),golden,false,id);
+  for(const offset of golden?[-.15,.15]:[0])roll(g,u,u,angle+offset,range,attack.damage,g.diceFace(u,golden),golden,false,id);
   return [];
  }
  function settle(g,d){
