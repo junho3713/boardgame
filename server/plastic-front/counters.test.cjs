@@ -17,7 +17,7 @@ test('sniper priority is mage, mortar, then ordinary targets, within real range,
  g.lineClear=(u,t)=>t!==mortar;a.equal(g.selectCombatTarget(sniper,candidates,new Set([ant])),ant);g.lineClear=()=>true;
  mortar.x=2500;a.equal(g.selectCombatTarget(sniper,candidates,new Set([ant])),ant);mortar.x=1700;
  const leader=g.addUnit(0,'leader',1500,6100);g.focusTarget=ant;g.focusAutomatic=false;g.updateRoomWaves=()=>{};g.updateBosses=()=>{};g.updateMission=()=>{};
- g.update(.05);a.equal(sniper.sniperAim.target,ant);a.ok(leader.hp>0);
+ g.update(.05);a.equal(sniper.sniperAim.target,mortar);a.ok(leader.hp>0);
 });
 test('mage groups spawn atomically with four mortar escorts, including cooperative caps',()=>{
  const {CoopGame}=require('./public/coop-engine.js');

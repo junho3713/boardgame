@@ -40,7 +40,7 @@ test('a saved armed bomb preserves its remaining fuse and paused updates cannot 
  a.equal(b.bombFuse.explodeAt,u.bombFuse.explodeAt);restored.phase='paused';restored.update(.05);a.equal(b.bombDetonated,undefined);restored.time=b.bombFuse.explodeAt;restored.updateBombBug(b,.05);a.equal(b.bombDetonated,true);
 });
 test('midrange toy beetles lift a wooden ball, face forward and leave a dodgeable throw',()=>{
- const g=scene(),u=bug(g,'acidBeetle'),c=g.commander(0);c.x=u.x+190;g.updateAcidBeetle(u,.05);a.ok(u.acidWindup);a.ok(TYPES.acidBeetle.range<TYPES.rifle.range);a.ok(TYPES.acidBeetle.range>TYPES.bayonet.range*3);
+ const g=scene(),u=bug(g,'acidBeetle'),c=g.commander(0);c.x=u.x+190;g.updateAcidBeetle(u,.05);a.ok(u.acidWindup);a.ok(TYPES.acidBeetle.range<g.stats({type:'rifle',team:2}).range);a.ok(TYPES.acidBeetle.range>TYPES.bayonet.range*3);
  g.time+=.3;g.updateAcidBeetle(u,.05);a.equal(g.mortarShells.length,1);const p=g.mortarShells[0];a.equal(p.kind,'toyBall');a.equal(p.x,c.x);a.ok(Math.abs(p.landAt-g.time-.4)<1e-7);
  const hp=c.hp;c.x+=100;g.time=p.landAt;g.updateMortars();a.equal(c.hp,hp);a.equal(g.mortarShells.length,0);
 });

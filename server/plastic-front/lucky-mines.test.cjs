@@ -7,6 +7,14 @@ const {pack,unpack}=require('./public/autoplay.js');
 function scene(coop=false){const g=coop?new CoopGame():new FrontGame({},undefined,{map:'livingroom-star'});g.start();g.units=[];g.obstacles=[];g.buildings=[];g.defenses=[];g.structures=[];return g;}
 function forceRoll(g,kinds,owner=0){return g.withOwner?g.withOwner(owner,()=>roll(g,kinds)):roll(g,kinds);}
 function roll(g,kinds){const u=g.addUnit(0,'lucky',1500,7000);u.star=2;u.face=0;u.luckyInterval=LUCKY.interval;u.nextLuckyAt=4;u.luckyChannels=kinds.map(kind=>({roll:{kind,startedAt:0,endsAt:.6,resolved:false},next:4}));g.time=.6;g.updateLuckyUnit(u);return u;}
+test('Retona skills choose nearby threats independently of the commander heading',()=>{
+ const g=scene(),leader=g.addUnit(0,'leader',1500,7010),u=g.addUnit(0,'lucky',1500,7000),target=g.addUnit(2,'ant',1650,7000);
+ leader.commandFireFacing=Math.PI;u.moveFace=Math.PI;g.visible=g.lineClear=()=>true;
+ g.castLucky(u,'mine');a.ok(g.luckyMines[0].x>u.x);
+ g.castLucky(u,'glue');a.equal(g.luckyGlues[0].x,target.x);
+ g.castLucky(u,'spray');a.equal(g.luckySprays[0].target,target);
+ g.castLucky(u,'missiles');a.equal(g.luckyMissileTarget(u).target,target);
+});
 function separated(mines){for(let i=0;i<mines.length;i++)for(let j=i+1;j<mines.length;j++)a.ok(Math.hypot(mines[i].x-mines[j].x,mines[i].y-mines[j].y)>=26-1e-8,'mines must not stack');}
 
 test('each winning two-star reel places a separate armed mine, once, in solo and both coop squads',()=>{

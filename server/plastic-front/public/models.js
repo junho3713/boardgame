@@ -165,7 +165,9 @@ class FrontModels{
   ctx.restore();
  }
  visualFor(u){const ultimate=u.type==='leader'&&u.team===0&&u.ultimatePose?.active,captain=u.type==='bayonetCaptain';let visual=u.type==='leader'&&u.team===0&&u.appearance==='shion'?'commanderShion':captain?'bayonet':u.type==='leader'&&u.team===0&&u.appearance==='blaze'?(u.flameSkin==='hwarin'?'commanderHwarin':'commanderBlaze'):ultimate?(u.appearance==='shino'?'commanderShinoUltimate':'commanderSargeUltimate'):u.type==='leader'&&u.team===0&&u.appearance==='shino'?'commanderShino':u.type==='sniper'&&u.team===0&&['kayla','hayeon'].includes(u.appearance)?'sniperKayla':u.defenseKind==='laserTower'?'laserTower':u.type;visual=({commando:'machinegun',spectre:'sniper',titan:'rocket'})[u.type]||visual;return visual;}
- draw(ctx,u,time){
+ draw(ctx,u,time,evolved=false){
+  if(u.shotgunBurns?.length)window.FrontRosterArt?.burning(ctx,u,time);
+  if(window.FrontRosterArt?.model(ctx,u,time,evolved))return true;
   if(u.team===0&&u.type==='medic'&&u.appearance==='rina'){this.ensureRina();if(this.rina?.loaded)return this.rina.draw(ctx,u,time);if(u.hp<=0)return true;}
   const ultimate=u.type==='leader'&&u.team===0&&u.ultimatePose?.active,captain=u.type==='bayonetCaptain';let visual=this.visualFor(u);let item=this.ensure(visual,visual==='bayonet'?1:u.team);if(!item?.ready&&visual!==u.type){item=this.ensure(u.type,u.team);visual=u.type;}if(!item?.ready)return false;if(visual==='commanderShion')return this.drawSword(ctx,u,time,item);if(visual==='commanderHwarin')return this.drawHwarin(ctx,u,time,item);if(visual==='blizzardMage')return this.drawMage(ctx,u,time,item);
   const vehicle=!!item.layers.turret||!!item.layers.body.vehicle,aimFace=vehicle&&Number.isFinite(u.turretFace)?u.turretFace:Number.isFinite(u.aimFace)?u.aimFace:u.face;

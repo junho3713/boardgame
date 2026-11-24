@@ -10,7 +10,7 @@ function recommended(game,seconds){
  if(!Number.isFinite(seconds)||seconds<0||seconds>1200)throw Error('0:00부터 20:00 사이를 선택하세요.');
  const minutes=seconds/60,level=1+Math.floor(minutes*2),pastBosses=room.bosses.filter(b=>b.at<seconds).length+room.bossRush.pairs.filter(b=>b.at<seconds).length*2;
  const tech=Object.fromEntries(roster.map(t=>[t,t==='rifle'?1:0])),growth=Object.fromEntries(Object.keys(abilities).map(k=>[k,0]));let budget=level-1+pastBosses;
- const unlocks={rocket:1,medic:2,lucky:3,machinegun:4,tank:5,sniper:6,mortar:7,guntruck:9};
+ const unlocks={rocket:1,medic:2,lucky:3,machinegun:4,tank:5,sniper:6,mortar:7,guntruck:9,drone:10};
  for(const [type,at]of Object.entries(unlocks))if(minutes>=at&&budget>0){tech[type]=1;budget--;}
  const focus=['rifle','lucky','tank','medic','mortar'],keys=['damage','health','speed','defense','capacity'];
  for(let rank=1;rank<=5;rank++){
@@ -18,7 +18,7 @@ function recommended(game,seconds){
   for(const type of focus)if(tech[type]>0&&tech[type]<rank&&budget>0){tech[type]++;budget--;}
  }
  for(const type of roster)while(budget>0&&tech[type]>0&&tech[type]<5){tech[type]++;budget--;}
- const counts=Object.fromEntries(roster.map(t=>[t,0])),limit=game.starExperiment?9:8,max=capacity(game,growth),weights=['rifle','medic','rocket','lucky','rifle','tank','machinegun','mortar','sniper','guntruck'];
+ const counts=Object.fromEntries(roster.map(t=>[t,0])),limit=game.starExperiment?9:8,max=capacity(game,growth),weights=['rifle','medic','rocket','lucky','rifle','tank','machinegun','mortar','sniper','guntruck','drone'];
  // Recruits use the same 3-to-1 fusion as the real operation. Limit the final
  // standing army, rather than comparing raw recruit copies to capacity.
  const desired=game.starExperiment?Math.min(roster.length*9,2+Math.floor(minutes*4)):Math.min(max,2+Math.floor(minutes*1.5));
@@ -28,8 +28,8 @@ function recommended(game,seconds){
 function validateLoadout(game,loadout){
  const whole=(n,min,max,label)=>{if(!Number.isInteger(n)||n<min||n>max)throw Error(label+' 값을 확인하세요.');return n;};
  const result={level:whole(loadout?.level,1,100,'대장 레벨'),cash:whole(loadout?.cash,0,100000,'자원'),tech:{},abilities:{},counts:{}};
- for(const type of roster){result.tech[type]=whole(loadout?.tech?.[type],0,5,'병과 강화');result.counts[type]=whole(loadout?.counts?.[type],0,game.starExperiment?9:8,'투입 수');if(result.counts[type]&&!result.tech[type])throw Error('투입할 병과는 Lv.1 이상으로 해금하세요.');}
- for(const key of Object.keys(abilities))result.abilities[key]=whole(loadout?.abilities?.[key],0,5,'작전 능력');
+ for(const type of roster){result.tech[type]=whole(loadout?.tech?.[type]??(type==='drone'?0:undefined),0,5,'병과 강화');result.counts[type]=whole(loadout?.counts?.[type]??(type==='drone'?0:undefined),0,game.starExperiment?9:8,'투입 수');if(result.counts[type]&&!result.tech[type])throw Error('투입할 병과는 Lv.1 이상으로 해금하세요.');}
+ for(const key of Object.keys(abilities))result.abilities[key]=whole(loadout?.abilities?.[key]??(key==='xpGain'?0:undefined),0,5,'작전 능력');
  if(Object.values(result.abilities).filter(Boolean).length>5)throw Error('작전 능력은 최대 5종까지 선택하세요.');
  const count=roster.reduce((n,t)=>n+slots(game,result.counts[t]),0),cap=capacity(game,result.abilities);
  if(count>cap)throw Error(`합성 후 병력 ${count}기가 편성 한도 ${cap}기를 넘습니다.`);

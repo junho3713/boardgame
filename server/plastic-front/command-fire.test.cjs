@@ -24,13 +24,13 @@ const from=(g,u)=>g.shots.find(p=>p.source===u);
 
 test('all three star maps wait for a visible hostile, then fire parallel even when focused away',()=>{
  for(const map of ['livingroom-star','desktop-star','bedroom-star']){
-  const g=field(map),c=g.commander(0),rifle=add(g,'rifle',1080,1325);
+  const g=field(map),c=g.commander(0),gun=add(g,'machinegun',1080,1325);
   g.input={x:1,y:0};g.update(.02);
-  assert.equal(from(g,rifle),undefined,map);
+  assert.equal(from(g,gun),undefined,map);
   const enemy=add(g,'rifle',1100,200,1);
-  g.update(.02);assert.equal(from(g,rifle),undefined,map);
+  g.update(.02);assert.equal(from(g,gun),undefined,map);
   g.input={x:0,y:0};Object.assign(enemy,{x:985,y:1300});g.setFocus(enemy);c.cooldown=0;g.update(.02);
-  for(const unit of [c,rifle]){
+  for(const unit of [c,gun]){
    const shot=from(g,unit);assert.equal(shot?.commandAngle,0,map);assert.ok(shot.x<shot.target.x);
   }
   assert.equal(enemy.hp,enemy.maxHp); // The enemy is behind both shooters.
@@ -38,7 +38,7 @@ test('all three star maps wait for a visible hostile, then fire parallel even wh
 });
 
 test('swept contact selects the first body along the ray and honors movement, range and cover',()=>{
- const g=field(),source=add(g,'rifle',1000,1300),rear=add(g,'rifle',1170,1300,1),front=add(g,'rifle',1100,1300,1);
+ const g=field(),source=add(g,'machinegun',1000,1300),rear=add(g,'rifle',1170,1300,1),front=add(g,'rifle',1100,1300,1);
  const make=()=>g.fireUnitProjectiles(source,g.commandFirePoint(source,250,0),{damage:10},g.stats(source))[0];
  const hit=make();g.advanceCommandShot(hit,.25,[rear,front]);
  assert.equal(hit.target,front);assert.ok(front.hp<front.maxHp);assert.equal(rear.hp,rear.maxHp);
@@ -50,19 +50,19 @@ test('swept contact selects the first body along the ray and honors movement, ra
  g.advanceCommandShot(covered,.2,[front]);assert.equal(covered.life,0);assert.equal(front.hp,hp);
 });
 
-test('mortars keep targeting enemies behind the squad while snipers finish their directional windup',()=>{
+test('mortars and snipers independently target enemies behind the squad through windup and firing',()=>{
  const g=field(),mortar=add(g,'mortar',1100,1300),sniper=add(g,'sniper',1100,1340),enemy=add(g,'rifle',850,1300,1);
  g.moveOrder={x:1400,y:1300,facing:0};g.update(.02);
  assert.ok(g.mortarShells.some(s=>s.source===mortar&&Math.abs(s.x-enemy.x)<5));
- assert.equal(sniper.sniperAim.target.commandShot,true);
+ assert.equal(sniper.sniperAim.target,enemy);
  const fireAt=sniper.sniperAim.fireAt;
  g.update(.02);assert.equal(sniper.sniperAim.fireAt,fireAt);
  for(let i=0;i<60&&!from(g,sniper);i++)g.update(.025);
- assert.ok(from(g,sniper)?.target.commandShot);
+ assert.equal(from(g,sniper)?.target,enemy);
 });
 
 test('each cooperative squad uses its own commander, with straight flight surviving save and restore',()=>{
- const g=field('coop'),a=add(g,'rifle',1090,1330),b=g.withOwner(1,()=>add(g,'rifle',1200,1340));
+ const g=field('coop'),a=add(g,'machinegun',1090,1330),b=g.withOwner(1,()=>add(g,'machinegun',1200,1340));
  add(g,'rifle',1130,1170,1);
  g.withOwner(0,()=>{g.input={x:1,y:0};});
  g.withOwner(1,()=>{g.input={x:0,y:1};});g.update(.02);
@@ -82,12 +82,14 @@ test('a distant cooperative squad reacts to its own play area with the other cam
  assert.equal(from(g,first),undefined);assert.ok(from(g,second)?.target.commandShot);
 });
 
-test('evolved rifle bursts finish in clear air and stop emitting when the last enemy disappears',()=>{
- const g=field(),rifle=add(g,'rifle',1100,1320),enemy=add(g,'rifle',980,1300,1);
- g.commander(0).commandFireFacing=0;g.evolved.rifle=true;
- g.update(.01);for(let i=0;i<4;i++)g.update(.05);
- assert.deepEqual(g.shots.filter(s=>s.source===rifle).map(s=>s.evoStyle),['burst','burst','burstFinal']);
- assert.ok(g.shots.filter(s=>s.source===rifle).every(s=>s.commandAngle===0));assert.equal(enemy.hp,enemy.maxHp);
- g.shots=[];rifle.cooldown=0;g.update(.01);enemy.hp=0;
- for(let i=0;i<4;i++)g.update(.05);assert.equal(g.shots.filter(s=>s.source===rifle).length,1);
+test('shotgun and dice fire along the commander heading even on ordinary maps and stop when threats disappear',()=>{
+ for(const map of ['livingroom','livingroom-star']){
+  const g=field(map),shotgun=add(g,'rifle',1100,1320),dice=add(g,'guntruck',1130,1340),enemy=add(g,'rifle',980,1300,1);
+  g.commander(0).commandFireFacing=0;g.evolved.rifle=true;g.setFocus(enemy);
+  g.update(.01);const pellets=g.shots.filter(s=>s.source===shotgun);
+  assert.equal(pellets.length,5);assert.equal(pellets[2].commandAngle,0);assert.ok(pellets.every(s=>s.hot));
+  assert.equal(g.rosterDice.find(d=>d.source===dice).angle,0);assert.equal(enemy.hp,enemy.maxHp);
+  g.shots=[];enemy.hp=0;shotgun.cooldown=dice.cooldown=0;g.update(.01);
+  assert.equal(g.shots.filter(s=>s.source===shotgun).length,0);assert.equal(g.rosterDice.length,1);
+ }
 });

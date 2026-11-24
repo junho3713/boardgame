@@ -92,9 +92,9 @@ test('all refined action frames and anchors fit their actual atlas dimensions wi
 test('evolution glyph bottoms sit exactly four pixels above star tops across infantry, vehicles, skins and stars',()=>{
  const g=new CoopGame();g.start();
  const ctx={font:'original',save(){this.saved=this.font;},restore(){this.font=this.saved;},measureText(t){return t.startsWith('★')?{actualBoundingBoxAscent:9.5}:{actualBoundingBoxDescent:1.5};}};
- for(const type of ['rifle','tank','guntruck','lucky','medic'])for(const star of [2,3])for(const rina of type==='medic'?[false,true]:[false]){
+ for(const type of ['rifle','tank','guntruck','lucky','medic','drone'])for(const star of [2,3])for(const rina of type==='medic'?[false,true]:[false]){
   g.evolved[type]=true;const u=g.addUnit(0,type,100,200);Object.assign(u,{star,...(rina?{appearance:'rina'}:{})});
-  const label=labels.evolution(g,u,ctx),vehicle=['tank','guntruck','lucky'].includes(type),healthY=u.y-((vehicle?79:rina?86:66)-(vehicle?10:8));
+  const label=labels.evolution(g,u,ctx),vehicle=['tank','lucky'].includes(type),healthY=u.y-((type==='drone'?96:vehicle?79:rina?86:66)-(vehicle?10:8));
   aGap(healthY-6-9.5-(label.y+1.5));aFont();
  }
  function aGap(gap){assert.equal(gap,4);}function aFont(){assert.equal(ctx.font,'original');}

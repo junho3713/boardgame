@@ -6,20 +6,29 @@ const links=[
  {id:'barrage',types:['mortar','tank'],name:'집중 포화',detail:'포격에 맞은 적에게 전차 강화탄 +15% · 분대 재사용 6초'},
  {id:'breach',types:['tank','rocket'],name:'장갑 분쇄',detail:'전차가 낸 균열에 바주카 강화탄 +20% · 분대 재사용 6초'},
  {id:'suppress',types:['rocket','machinegun'],name:'제압 포화',detail:'과열 기관총에 맞은 일반 적 2초간 15% 둔화 · 바주카 폭발 범위 +20% / 분대 재사용 6초'},
- {id:'crossfire',types:['rifle','machinegun'],name:'교차 탄막',detail:'서로 다른 두 병과가 같은 적을 2초 안에 공격하면 후속 피해 +10%'},
- {id:'escort',types:['rifle','guntruck'],name:'기동 호위',detail:'전투트럭 300 이내 소총병 이동속도 +12%'},
- {id:'pursuit',types:['rifle','sniper'],name:'표적 추격',detail:'저격 표식 4초 · 소총병 우선 조준 / 표식 피해 +10% · 교차 탄막과 피해 중첩 없음'},
+ {id:'crossfire',types:['rifle','machinegun'],name:'교차 탄막',detail:'기관총병 과열 중 산탄총병 재장전 시간 −25%'},
+ {id:'pursuit',types:['rifle','sniper'],name:'표적 추격',detail:'저격 표식이 남은 적을 산탄총병이 맞히면 피해 +15%'},
+ {id:'breakthrough',types:['rifle','medic'],name:'전선 돌파',detail:'의무병에게 치료받은 산탄총병의 다음 탄창 4발 피해 +15%'},
  {id:'medicalFire',types:['machinegun','medic'],name:'전선 유지',detail:'진화 의무병에게 치료받은 기관총병은 2초간 받는 피해 12% 감소'},
  {id:'volatile',types:['rocket','lucky'],name:'연쇄 폭약',detail:'레토나가 맞힌 적에게 바주카 명중 시 0.2초 뒤 20% 추가 폭발 · 반경 65 / 분대 재사용 6초'},
- {id:'mobileBarrage',types:['mortar','guntruck'],name:'이동 탄막',detail:'전투트럭 300 이내 박격포병 이동속도 +15% · 최소 사거리 20 감소'},
  {id:'fieldRepair',types:['tank','medic'],name:'야전 수리',detail:'진화 의무병의 전차 치료량 +15% · 치료 간격 유지'},
- {id:'ambulance',types:['guntruck','medic'],name:'구급 수송',detail:'전투트럭 300 이내 의무병 이동속도 +15% · 치료 사거리 +35'}
+ {id:'gamblers',types:['guntruck','lucky'],name:'행운의 도박단',detail:'777 또는 보스킬러 당첨 후 5초간 같은 분대 주사위병은 6 고정'},
+ {id:'chainBombard',types:['guntruck','mortar'],name:'연쇄 폭격',detail:'주사위 폭발에 맞은 적을 3초 안에 박격포로 포격하면 해당 포탄의 폭발 피해 +15%'},
+ {id:'brawl',types:['guntruck','rifle'],name:'근접 난타',detail:'산탄총 네 번째 탄에 밀려난 적은 3초간 주사위 폭발 피해 +20%'},
+ {id:'airObserver',types:['drone','sniper'],name:'공중 관측',detail:'드론 레이저는 저격 표식 대상을 우선 조준하며 해당 대상 피해 +20%'},
+ {id:'tacticalSupply',types:['drone','machinegun'],name:'전술 보급',detail:'기관총병 과열 중 드론 레이저 발사 주기 −20%'},
+ {id:'airSupport',types:['drone','lucky'],name:'공중 지원',detail:'진화 드론이 살아 있으면 럭키 레토나 룰렛 주기 4초 → 3.5초'}
 ];
 const byId=Object.fromEntries(links.map(l=>[l.id,l]));
 function install({FrontGame:Game}){
  const p=Game.prototype;if(p.evolutionLinksVersion)return;p.evolutionLinksVersion=1;
  const reset=p.reset,damage=p.damage,impact=p.impact,select=p.selectCombatTarget,mortar=p.launchMortar,twin=p.evolutionMortar,missile=p.luckyMissileTarget,boss=p.bossKillerTarget,stats=p.stats,update=p.updateEvolutionCombat,heal=p.heal;
  const owner=u=>u?.coopOwner||0,dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+ const {shotgunReloadTime,diceFace,droneLaserPeriod,droneLaserTarget,rosterBlast,rosterBlastDamage,droneLaserDamage,markShotgunKnockback,castLucky}=p;
+ const diceBlasts=new Set(['dice','diceChild']);
+ const overheated=(game,u,id)=>game.hasEvolutionLink(u,id)&&game.units.some(gunner=>
+  gunner.type==='machinegun'&&gunner.team===0&&gunner.hp>0&&owner(gunner)===owner(u)&&gunner.overheatUntil>game.time
+ );
  p.reset=function(){reset.call(this);this.evolutionLinkState={owners:[{ready:{},announced:{}},{ready:{},announced:{}}],bursts:[]};};
  p.linkState=function(id=0){const state=this.evolutionLinkState??={owners:[]};return state.owners[id]??={ready:{},announced:{}};};
  p.evolutionLinks=function(id=this.coopOwner||0){
@@ -31,45 +40,47 @@ function install({FrontGame:Game}){
   const idOwner=owner(u),evolved=this.coop&&idOwner!==this.coopOwner?this.coopStates?.[idOwner]?.evolved:this.evolved;
   return l.types.every(type=>evolved?.[type]&&this.units.some(v=>v.team===0&&v.type===type&&v.hp>0&&(!this.coop||owner(v)===idOwner)));
  };
- p.nearLinkPartner=function(u,id,range=300){const l=byId[id];return this.hasEvolutionLink(u,id)&&this.units.some(v=>v!==u&&v.team===0&&v.hp>0&&l.types.includes(v.type)&&v.type!==u.type&&(!this.coop||owner(v)===owner(u))&&dist(u,v)<=range);};
  p.linkMark=function(target,u,key,duration=4){const marks=target.evolutionLinkMarks??={};(marks[owner(u)]??={})[key]=this.time+duration;};
  p.linkMarked=function(target,u,key){return this.time<(target?.evolutionLinkMarks?.[owner(u)]?.[key]||0);};
  p.linkCue=function(u,t,id){const visual=this.linkState(owner(u)).visual??={};if(this.time<(visual[id]||0))return;visual[id]=this.time+.3;this.effects.push({kind:'evolutionLink',link:id,x:u.x,y:u.y,tx:t.x,ty:t.y,t:.65,max:.65,team:0});};
  p.damage=function(target,amount,source){
   let bonus=0;
   if(source?.type==='lucky'&&this.hasEvolutionLink(source,'hunter')&&this.linkMarked(target,source,'snipe'))bonus=.1;
-  if(source?.type==='rifle'&&this.hasEvolutionLink(source,'pursuit')&&this.linkMarked(target,source,'snipe'))bonus=.1;
-  const crossfire=['rifle','machinegun'].includes(source?.type)&&this.hasEvolutionLink(source,'crossfire')&&this.linkMarked(target,source,source.type==='rifle'?'machinegunFire':'rifleFire');
-  if(crossfire)bonus=Math.max(bonus,.1);
+  const pursuit=source?.type==='rifle'&&this.hasEvolutionLink(source,'pursuit')&&this.linkMarked(target,source,'snipe');
+  if(pursuit)bonus=.15;
   amount*=1+bonus;
   if(target?.type==='machinegun'&&this.time<(target.linkBracedUntil||0)&&this.hasEvolutionLink(target,'medicalFire'))amount*=.88;
   const hp=target.hp,result=damage.call(this,target,amount,source);
   if(target.hp>=hp||source?.team!==0||!this.evolutionEnabled(source))return result;
-  if(crossfire)this.linkCue(source,target,'crossfire');
-  if(source.type==='sniper'&&(this.hasEvolutionLink(source,'precision')||this.hasEvolutionLink(source,'hunter')||this.hasEvolutionLink(source,'pursuit'))){this.linkMark(target,source,'snipe');if(this.time>=(source.nextLinkCue||0)){this.linkCue(source,target,'mark');source.nextLinkCue=this.time+.5;}}
+  if(pursuit)this.linkCue(source,target,'pursuit');
+  if(source.type==='sniper'&&['precision','hunter','pursuit','airObserver'].some(id=>this.hasEvolutionLink(source,id))){this.linkMark(target,source,'snipe');if(this.time>=(source.nextLinkCue||0)){this.linkCue(source,target,'mark');source.nextLinkCue=this.time+.5;}}
   if(source.type==='mortar'&&this.hasEvolutionLink(source,'barrage'))this.linkMark(target,source,'bombard',3);
   if(source.type==='tank'&&this.hasEvolutionLink(source,'breach'))this.linkMark(target,source,'armor');
   if(source.type==='machinegun'&&this.time<(source.overheatUntil||0)&&!target.boss&&this.hasEvolutionLink(source,'suppress'))this.linkMark(target,source,'suppress',2);
-  if(['rifle','machinegun'].includes(source.type)&&this.hasEvolutionLink(source,'crossfire'))this.linkMark(target,source,source.type==='rifle'?'rifleFire':'machinegunFire',2);
   if(source.type==='lucky'&&this.hasEvolutionLink(source,'volatile'))this.linkMark(target,source,'volatile',3);
   return result;
  };
  p.stats=function(u){
   const s=stats.call(this,u);if(u.team!==0&&!u.boss&&Object.values(u.evolutionLinkMarks||{}).some(m=>this.time<(m.suppress||0)))s.speed*=.85;
-  if(u.type==='rifle'&&this.nearLinkPartner(u,'escort'))s.speed*=1.12;
-  if(u.type==='mortar'&&this.nearLinkPartner(u,'mobileBarrage')){s.speed*=1.15;s.minRange=Math.max(0,(s.minRange||0)-20);}
-  if(u.type==='medic'&&this.nearLinkPartner(u,'ambulance')){s.speed*=1.15;s.range+=35;}
   return s;
  };
  p.heal=function(target,amount,source=null){
   const ownMedic=source?.team===0&&source.type==='medic'&&source.hp>0&&(!this.coop||owner(source)===owner(target));
   const repair=ownMedic&&target?.type==='tank'&&this.hasEvolutionLink(target,'fieldRepair');
   const result=heal.call(this,target,amount*(repair?1.15:1),source);
-  if(result>0&&ownMedic){if(repair)this.linkCue(source,target,'fieldRepair');if(target.type==='machinegun'&&this.hasEvolutionLink(target,'medicalFire')){target.linkBracedUntil=this.time+2;this.linkCue(source,target,'medicalFire');}}
+  if(result>0&&ownMedic){
+   if(repair)this.linkCue(source,target,'fieldRepair');
+   if(target.type==='machinegun'&&this.hasEvolutionLink(target,'medicalFire')){
+    target.linkBracedUntil=this.time+2;this.linkCue(source,target,'medicalFire');
+   }
+   if(target.type==='rifle'&&this.hasEvolutionLink(target,'breakthrough')){
+    target.shotgunBoostPending=true;this.linkCue(source,target,'breakthrough');
+   }
+  }
   return result;
  };
  p.selectCombatTarget=function(u,candidates,threats,s=this.stats(u)){
-  const normal=select.call(this,u,candidates,threats,s),linked=u.type==='mortar'&&this.hasEvolutionLink(u,'precision')||u.type==='rifle'&&this.hasEvolutionLink(u,'pursuit');if(!linked||normal?.defenseKind==='laserTower'||normal===this.focusTarget)return normal;
+  const normal=select.call(this,u,candidates,threats,s),linked=u.type==='mortar'&&this.hasEvolutionLink(u,'precision');if(!linked||normal?.defenseKind==='laserTower'||normal===this.focusTarget)return normal;
   return (candidates||this.combatCandidates()).filter(t=>this.linkMarked(t,u,'snipe')&&this.canTarget(u,t)&&this.visible(t)&&dist(u,t)<s.range&&dist(u,t)>=(s.minRange||0)&&this.lineClear(u,t,0,{fireTeam:0})).sort((a,b)=>Number(b.boss)-Number(a.boss)||dist(u,a)-dist(u,b))[0]||normal;
  };
  p.launchMortar=function(u,target,attack){const precise=this.hasEvolutionLink(u,'precision')&&this.linkMarked(target,u,'snipe');if(precise)this.linkCue(u,target,'precision');return mortar.call(this,u,target,precise?{...attack,linkPrecision:true}:attack);};
@@ -79,6 +90,75 @@ function install({FrontGame:Game}){
   return missile.call(this,u,salvo,range);
  };
  p.bossKillerTarget=function(u){const normal=boss.call(this,u);if(!this.hasEvolutionLink(u,'hunter'))return normal;return this.evolutionEnemies(u).filter(t=>t.boss&&this.linkMarked(t,u,'snipe')&&dist(u,t)<=480&&this.visible(t)&&this.lineClear(u,t,0,{fireTeam:0})).sort((a,b)=>dist(u,a)-dist(u,b))[0]||normal;};
+ p.shotgunReloadTime=function(u,s){
+  return shotgunReloadTime.call(this,u,s)*(overheated(this,u,'crossfire')?.75:1);
+ };
+ p.shotgunShotMultiplier=function(u){
+  const linked=this.hasEvolutionLink(u,'breakthrough');
+  if(u.shotgunRounds===4){
+   if(linked&&u.shotgunBoostPending)u.shotgunBoostMagazine=true;
+   else delete u.shotgunBoostMagazine;
+   delete u.shotgunBoostPending;
+  }
+  return linked&&u.shotgunBoostMagazine?1.15:1;
+ };
+ p.markShotgunKnockback=function(u,target){
+  markShotgunKnockback.call(this,u,target);
+  if(this.hasEvolutionLink(u,'brawl'))this.linkMark(target,u,'shotgunPush',3);
+ };
+ p.diceFace=function(u,evolved){
+  if(this.hasEvolutionLink(u,'gamblers')&&this.time<(this.linkState(owner(u)).diceSixUntil||0))return 6;
+  return diceFace.call(this,u,evolved);
+ };
+ p.rosterBlast=function(u,point,radius,damage,push,style){
+  const hits=rosterBlast.call(this,u,point,radius,damage,push,style);
+  if(diceBlasts.has(style)&&this.hasEvolutionLink(u,'chainBombard')){
+   for(const target of hits)this.linkMark(target,u,'diceExplosion',3);
+  }
+  return hits;
+ };
+ p.rosterBlastDamage=function(u,target,amount,style){
+  const damage=rosterBlastDamage.call(this,u,target,amount,style);
+  if(diceBlasts.has(style)&&this.hasEvolutionLink(u,'brawl')&&this.linkMarked(target,u,'shotgunPush'))return damage*1.2;
+  return damage;
+ };
+ p.mortarLinkDamageScale=function(shell,targets){
+  const source=shell.source;
+  if(!source||!this.hasEvolutionLink(source,'chainBombard'))return 1;
+  const tagged=targets.find(target=>this.linkMarked(target,source,'diceExplosion'));
+  if(!tagged)return 1;
+  this.linkCue(source,tagged,'chainBombard');return 1.15;
+ };
+ p.droneLaserTarget=function(u,range,target){
+  if(this.hasEvolutionLink(u,'airObserver')){
+   const tagged=this.droneTargetCandidates(u,range).filter(target=>this.linkMarked(target,u,'snipe'));
+   tagged.sort((a,b)=>dist(u,a)-dist(u,b));
+   if(tagged.length)return tagged[0];
+  }
+  return droneLaserTarget.call(this,u,range,target);
+ };
+ p.droneLaserDamage=function(u,target,amount){
+  const damage=droneLaserDamage.call(this,u,target,amount);
+  if(!this.hasEvolutionLink(u,'airObserver')||!this.linkMarked(target,u,'snipe'))return damage;
+  this.linkCue(u,target,'airObserver');return damage*1.2;
+ };
+ p.droneLaserPeriod=function(u){
+  return droneLaserPeriod.call(this,u)*(overheated(this,u,'tacticalSupply')?.8:1);
+ };
+ p.luckyRouletteInterval=function(u){
+  return this.hasEvolutionLink(u,'airSupport')?3.5:4;
+ };
+ p.castLucky=function(u,result){
+  if((result!=='missiles'&&result!=='bossKiller')||!this.hasEvolutionLink(u,'gamblers'))return castLucky.call(this,u,result);
+  const salvos=this.luckySalvos.length,shots=this.shots.length;
+  const outcome=castLucky.call(this,u,result);
+  if(this.luckySalvos.length>salvos||this.shots.slice(shots).some(shot=>shot.kind==='bossKiller'&&shot.source===u)){
+   this.linkState(owner(u)).diceSixUntil=this.time+5;
+   const partner=this.units.find(v=>v.type==='guntruck'&&v.team===0&&v.hp>0&&owner(v)===owner(u));
+   if(partner)this.linkCue(u,partner,'gamblers');
+  }
+  return outcome;
+ };
  p.impact=function(b){
   const u=b.source,t=b.target,ready=this.linkState(owner(u)).ready;let link=null;
   if(b.team===0&&u?.hp>0&&t?.hp>0&&this.canTarget(u,t)&&!b.linkApplied){

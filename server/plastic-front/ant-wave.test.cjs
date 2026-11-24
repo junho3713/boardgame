@@ -64,7 +64,7 @@ test('escorting ants stay with the slow bomb then resume their own pursuit after
  bomb.hp=0;a.equal(g.followRoomEscort(ant,.05,g.stats(ant)),false);a.equal(ant.roomBombLeaderId,undefined);
 });
 test('ranged troops choose reachable bombs over closer ordinary ants and prefer a dense blast opportunity',()=>{
- const g=scene(),u=g.addUnit(0,'rifle',1500,6000),ant=g.addUnit(2,'ant',1540,6000,true),bomb=g.addUnit(2,'bombBug',1700,6000,true);a.equal(g.selectCombatTarget(u,[ant,bomb],new Set([ant])),bomb);
+ const g=scene(),u=g.addUnit(0,'machinegun',1500,6000),ant=g.addUnit(2,'ant',1540,6000,true),bomb=g.addUnit(2,'bombBug',1700,6000,true);a.equal(g.selectCombatTarget(u,[ant,bomb],new Set([ant])),bomb);
  const dense=g.addUnit(2,'bombBug',1720,6100,true);for(let i=0;i<3;i++)g.addUnit(2,'ant',1750+i*10,6150,true);a.equal(g.selectCombatTarget(u,[bomb,dense],new Set()),dense);
  bomb.bombFuse={explodeAt:g.time+.2};a.equal(g.selectCombatTarget(u,[bomb,dense],new Set()),bomb);
  g.lineClear=(_,t)=>t!==bomb;a.equal(g.selectCombatTarget(u,[ant,bomb],new Set()),ant);
@@ -91,13 +91,13 @@ test('cooperative saves keep ant escorts, cooldown and player-owned chain reward
  const blue=copy.withOwner(1,()=>copy.commander(0)),before=copy.withOwner(1,()=>copy.profile.gold);copy.damage(bomb,1e6,blue);a.ok(ants.every(u=>u.hp===0));a.ok(copy.withOwner(1,()=>copy.profile.gold)>before);
 });
 test('ordinary-map automatic gunfire hits the bomb first and its explosion clears the accompanying ants',()=>{
- const g=scene(180,false,'livingroom'),rifle=g.addUnit(0,'rifle',1500,6000),bomb=g.addUnit(2,'bombBug',1700,6000,true),ants=Array.from({length:4},(_,i)=>g.addUnit(2,'ant',1700+Math.cos(i*Math.PI/2)*60,6000+Math.sin(i*Math.PI/2)*60,true));
- rifle.cooldown=0;bomb.hp=1;for(const method of ['updateMission','updateSwarm','updateBosses','updateArtillery','updateDefenses','updateBuildings','updateMageQuest','updateLaserQuest'])g[method]=()=>{};
- g.update(.05);a.equal(g.shots.find(p=>p.source===rifle)?.target,bomb);
+ const g=scene(180,false,'livingroom'),gunner=g.addUnit(0,'machinegun',1500,6000),bomb=g.addUnit(2,'bombBug',1700,6000,true),ants=Array.from({length:4},(_,i)=>g.addUnit(2,'ant',1700+Math.cos(i*Math.PI/2)*60,6000+Math.sin(i*Math.PI/2)*60,true));
+ gunner.cooldown=0;bomb.hp=1;for(const method of ['updateMission','updateSwarm','updateBosses','updateArtillery','updateDefenses','updateBuildings','updateMageQuest','updateLaserQuest'])g[method]=()=>{};
+ g.update(.05);a.equal(g.shots.find(p=>p.source===gunner)?.target,bomb);
  for(let i=0;i<40&&!bomb.bombDetonated;i++)g.update(.025);a.equal(bomb.bombDetonated,true);a.ok(ants.every(u=>u.hp===0));
 });
 test('an explicit focus order on an ordinary map still overrides automatic bomb preference',()=>{
- const g=scene(180,false,'livingroom'),rifle=g.addUnit(0,'rifle',1500,6000),bomb=g.addUnit(2,'bombBug',1700,6000,true),ant=g.addUnit(2,'ant',1650,6000,true);rifle.cooldown=0;
+ const g=scene(180,false,'livingroom'),gunner=g.addUnit(0,'machinegun',1500,6000),bomb=g.addUnit(2,'bombBug',1700,6000,true),ant=g.addUnit(2,'ant',1650,6000,true);gunner.cooldown=0;
  for(const method of ['updateMission','updateSwarm','updateBosses','updateArtillery','updateDefenses','updateBuildings','updateMageQuest','updateLaserQuest'])g[method]=()=>{};
- g.setFocus(ant);g.update(.05);a.equal(g.shots.find(p=>p.source===rifle)?.target,ant);a.ok(bomb.hp>0);
+ g.setFocus(ant);g.update(.05);a.equal(g.shots.find(p=>p.source===gunner)?.target,ant);a.ok(bomb.hp>0);
 });

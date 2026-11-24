@@ -5,7 +5,7 @@ function install(api){
  if(p.evolutionRewardsVersion)return;p.evolutionRewardsVersion=1;
  const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y),kind=t=>t.base?'base':t.structure?'structure':t.type;
  const shot=p.fireUnitProjectiles,impact=p.impact,mortar=p.launchMortar,stats=p.stats,odds=p.luckyOdds,cast=p.castLucky,check=p.checkEvolutions;
- const details={rifle:'3점사 · 마지막 강화탄',machinegun:'3초 예열 → 4초 과열 관통',sniper:'최대 3명 관통 · 100/50/25%',rocket:'착탄 뒤 5개 분열탄',mortar:'비행 1초 · 0.25초 간격 2발 · 각 70%',tank:'전방 연쇄 폭발 · 100/60/40% · 중복 적중 없음',guntruck:'최대 4명 도탄 · 100/70/50/35%',lucky:'보스킬러 기본 5000 · 방어력 65% 무시 · 보스 출현 시 꽝 일부 전환',medic:'기존 상태이상 정화 · 파동·연결 연출'};
+ const details={machinegun:'3초 예열 → 4초 과열 관통',sniper:'최대 3명 관통 · 100/50/25%',rocket:'착탄 뒤 5개 분열탄',mortar:'비행 1초 · 0.25초 간격 2발 · 각 70%',tank:'전방 연쇄 폭발 · 100/60/40% · 중복 적중 없음',lucky:'보스킬러 기본 5000 · 방어력 65% 무시 · 보스 출현 시 꽝 일부 전환',medic:'기존 상태이상 정화 · 파동·연결 연출'};
  EVOLUTIONS.mortar.detail=EVOLUTIONS.mortar.detail.replace('낙탄 시간 2초 유지','진화 포탄 비행 1초');
  for(const [type,detail]of Object.entries(details))EVOLUTIONS[type].detail+=' · '+detail;
  p.evolutionEnabled=function(u){if(!u||u.team!==0)return false;return !!(this.coop?this.withOwner(u.coopOwner,()=>this.evolved[u.type]):this.evolved[u.type]);};
@@ -117,7 +117,7 @@ function install(api){
   if(k>=1){b.life=0;this.impact(b);}
  };
  p.checkEvolutions=function(){const before={...this.evolved};check.call(this);for(const type of Object.keys(EVOLUTIONS))if(this.evolved[type]&&!before[type]){
-  const owner=this.coopOwner,c=this.commander(0);for(const u of this.alive(0))if(u.type===type&&(!this.coop||u.coopOwner===owner)){u.cooldown=Math.min(u.cooldown,0);if(type==='lucky')u.nextLuckyAt=this.time;}this.effects.push({kind:'evoAwaken',x:c.x,y:c.y,unitType:type,name:EVOLUTIONS[type].name,detail:details[type],coopOwner:owner,t:2,max:2,team:0});this.notify('explosion',{x:c.x,y:c.y,team:0,kind:'evolution'});
+  const owner=this.coopOwner,c=this.commander(0);for(const u of this.alive(0))if(u.type===type&&(!this.coop||u.coopOwner===owner)){u.cooldown=Math.min(u.cooldown,0);if(type==='lucky')u.nextLuckyAt=this.time;}this.effects.push({kind:'evoAwaken',x:c.x,y:c.y,unitType:type,name:EVOLUTIONS[type].name,detail:details[type]??EVOLUTIONS[type].detail,coopOwner:owner,t:2,max:2,team:0});this.notify('explosion',{x:c.x,y:c.y,team:0,kind:'evolution'});
  }};
  p.updateEvolutionCombat=function(){
   const pending=[];for(const a of this.evolutionAttacks||[]){if(a.at>this.time+1e-8){pending.push(a);continue;}if(a.source.hp<=0)continue;

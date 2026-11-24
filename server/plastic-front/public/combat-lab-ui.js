@@ -44,7 +44,7 @@
  function text(value,x,y,color='#f2edd0',size=11){c.save();c.font='650 '+size+'px system-ui';c.textAlign='center';c.lineWidth=3;c.strokeStyle='#19352bd9';c.strokeText(value,x,y);c.fillStyle=color;c.fillText(value,x,y);c.restore();}
  function unit(u){
   if(game.isSupportEntity(u)){FrontSupportToyView.draw(c,u,game);return;}if(u.hp<=0)return;
-  c.save();c.translate(u.x,u.y);FrontHitFeedback.transform(c,u,game.time);if(!models.draw(c,u,game.time)){c.fillStyle=u.team?'#bc7151':'#9ccf92';c.beginPath();c.arc(0,-10,12,0,Math.PI*2);c.fill();}c.restore();
+  c.save();c.translate(u.x,u.y);FrontHitFeedback.transform(c,u,game.time);if(!models.draw(c,u,game.time,!!game.evolved[u.type])){c.fillStyle=u.team?'#bc7151':'#9ccf92';c.beginPath();c.arc(0,-10,12,0,Math.PI*2);c.fill();}c.restore();
   const y=u.y-(['ant','rhinoBeetle','hornet'].includes(u.type)?u.boss?95:40:80),w=u.boss?70:36;c.fillStyle='#18362c';c.fillRect(u.x-w/2,y,w,4);c.fillStyle=u.team?'#f1b37b':'#b8de9f';c.fillRect(u.x-w/2,y,w*Math.max(0,u.hp/u.maxHp),4);
   if(u.boss)text(api.ENEMIES[u.type],u.x,y-8,'#ffdda1',10);
   else if(u===game.actor){text(game.stats(u).name+' '+ '★'.repeat(u.star||1),u.x,y-8,'#ffe7a4');}
@@ -58,7 +58,7 @@
   fx.ground(c);fx.luckyGround(c,game);c.strokeStyle='#d3f5a5';c.lineWidth=2;c.beginPath();c.ellipse(leader.x,leader.y,25,15,0,0,Math.PI*2);c.stroke();if(game.moveOrder){c.beginPath();c.arc(game.moveOrder.x,game.moveOrder.y,16,0,Math.PI*2);c.stroke();}
   if(game.actor.type==='leader'&&game.ultimateStatus().active)fx.drawUltimateArea?.(c,game.actor,game.ultimate,game.time);
   for(const u of [...game.units].sort((a,b)=>a.y-b.y||a.id-b.id)){if(FrontHitFeedback.airborne(u,game.time))continue;unit(u);if(u.type==='lucky')fx.luckyReels(c,u,game);}
-  fx.drawLuckySprays(c,game);for(const p of game.mortarShells)fx.drawMortar(c,p,game.time);for(const p of game.shots)fx.drawShot(c,p,game.evolved[p.source.type]);
+  window.FrontRosterArt?.field(c,game);fx.drawLuckySprays(c,game);for(const p of game.mortarShells)fx.drawMortar(c,p,game.time);for(const p of game.shots)fx.drawShot(c,p,game.evolved[p.source.type]);
   for(const e of game.effects)if(!FrontSupportToyView.event(c,e,game))fx.drawEvent(c,e);for(const u of game.units.filter(u=>FrontHitFeedback.airborne(u,game.time)).sort((a,b)=>a.y-b.y||a.id-b.id))unit(u);fx.drawParticles(c);c.restore();
  }
  function clearControls(){keys.clear();stick={x:0,y:0};if(game)game.input={x:0,y:0};$('joy').querySelector('i').style.transform='';}

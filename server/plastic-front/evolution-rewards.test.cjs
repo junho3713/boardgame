@@ -9,10 +9,18 @@ function scene(coop=false,map='livingroom-star3'){
 function actor(g,type,x=1000,y=6000,owner=0){const u=g.coop?g.withOwner(owner,()=>g.addUnit(0,type,x,y)):g.addUnit(0,type,x,y);if(g.coop)g.withOwner(owner,()=>g.evolved[type]=true);else g.evolved[type]=true;return u;}
 function enemy(g,x=1200,y=6000,type='rifle'){const t=g.addUnit(2,type,x,y);t.hp=t.maxHp=1e6;t.cooldown=1e6;return t;}
 function near(x,y){a.ok(Math.abs(x-y)<1e-7,`${x} != ${y}`);}
-test('evolved rifle fires a timed 40/40/60% burst, and death cancels unlaunched follow-ups',()=>{
- const g=scene(),u=actor(g,'rifle'),t=enemy(g);g.fireUnitProjectiles(u,t,{damage:100},g.stats(u));a.equal(g.shots.length,1);a.equal(g.shots[0].damage,40);
- g.time=.089;g.updateEvolutionCombat();a.equal(g.shots.length,1);g.time=.09;g.updateEvolutionCombat();a.equal(g.shots.length,2);g.time=.18;g.updateEvolutionCombat();a.deepEqual(g.shots.map(b=>b.damage),[40,40,60]);
- g.fireUnitProjectiles(u,t,{damage:100},g.stats(u));u.hp=0;g.time=1;g.updateEvolutionCombat();a.equal(g.shots.length,4);a.equal(g.evolutionAttacks.length,0);
+test('evolved shotgun uses a four-shell magazine, burning pellets and a single explosive fourth shot',()=>{
+ const g=scene(),u=actor(g,'rifle'),t=enemy(g,1090),s=g.stats(u);
+ for(let i=0;i<4;i++){
+  const shots=g.fireUnitProjectiles(u,t,{damage:100},s);
+  a.equal(shots.length,5);a.equal(u.shotgunRounds,3-i);a.ok(shots.every(b=>b.hot&&b.damage===20));
+  a.equal(shots.filter(b=>b.exploding).length,i===3?1:0);
+  for(const b of shots)g.advanceCommandShot(b,1,[t]);g.time+=s.rate;
+ }
+ a.ok(t.x>1090);a.equal(g.effects.filter(e=>e.kind==='rosterBlast'&&e.style==='shotgun').length,1);
+ const hp=t.hp;g.updateEvolutionCombat();a.ok(t.hp<hp);
+ a.equal(g.fireUnitProjectiles(u,t,{damage:100},s).length,0);
+ g.time=u.shotgunReloadUntil;a.equal(g.fireUnitProjectiles(u,t,{damage:100},s).length,5);a.equal(u.shotgunRounds,3);
 });
 test('sniper pierces only two aligned enemies behind the first with 100/50/25% and honors armor',()=>{
  const g=scene(),u=actor(g,'sniper'),targets=[enemy(g,1200),enemy(g,1300),enemy(g,1400),enemy(g,1500),enemy(g,1350,6060)],hits=[];g.damage=(t,d)=>hits.push([t.id,d]);
@@ -29,10 +37,30 @@ test('machinegun heats for three seconds, pierces for four, then restarts; pause
  g.phase='paused';const before=JSON.stringify(u);g.update(.05);a.equal(JSON.stringify(u),before);g.time=7;g.updateEvolutionCombat();a.equal(u.overheatUntil,0);a.equal(u.evolutionHeat,0);
  const h=scene(),v=actor(h,'machinegun'),q=enemy(h);h.fireUnitProjectiles(v,q,{damage:100},h.stats(v));h.time=.5;h.fireUnitProjectiles(v,q,{damage:100},h.stats(v));h.time=1.3;h.updateEvolutionCombat();a.equal(v.evolutionHeat,0);
 });
-test('truck ricochets to at most four distinct enemies with 100/70/50/35%, and stops without a neighbor',()=>{
- const g=scene(),u=actor(g,'guntruck'),ts=[enemy(g,1200),enemy(g,1280),enemy(g,1360),enemy(g,1440),enemy(g,1520)],hits=[];g.damage=(t,d)=>hits.push([t.id,d]);g.fireUnitProjectiles(u,ts[0],{damage:100},g.stats(u));
- for(let i=0;i<g.shots.length;i++)g.impact(g.shots[i]);a.deepEqual(hits,ts.slice(0,4).map((t,i)=>[t.id,[100,70,50,35][i]]));a.equal(g.shots.length,4);
- const solo=scene(),v=actor(solo,'guntruck'),t=enemy(solo);solo.fireUnitProjectiles(v,t,{damage:100},solo.stats(v));solo.impact(solo.shots[0]);a.equal(solo.shots.length,1);
+test('all six die faces resolve their own explosions, fragments and child dice',()=>{
+ for(let face=1;face<=6;face++){
+  const g=scene(),u=g.addUnit(0,'guntruck',1000,6000),s=g.stats(u),t=enemy(g,1000+s.range),hp=t.hp;
+  g.random=()=>0;g.diceFace=()=>face;g.fireUnitProjectiles(u,t,{damage:100},s);a.equal(g.rosterDice.length,1);
+  g.time=1;g.updateEvolutionCombat();a.equal(g.shots.length,face===4?6:face===5?8:0);
+  if(face===6){a.equal(g.rosterDice.length,2);a.ok(g.rosterDice.every(d=>d.child));g.time=2;g.updateEvolutionCombat();a.equal(g.effects.filter(e=>e.style==='diceChild').length,2);}
+  else{a.equal(g.rosterDice.length,0);near(hp-t.hp,100*(.6+.2*face)*g.defenseFactor(t,u));}
+ }
+});
+test('two golden dice roll only 3–6, producing a single connecting shockwave for doubles',()=>{
+ for(const same of [true,false]){
+  const g=scene(),u=actor(g,'guntruck'),t=enemy(g,1340),s=g.stats(u);
+  for(const [roll,face] of [[0,3],[.26,4],[.51,5],[.999,6]]){g.random=()=>roll;a.equal(g.diceFace(u),face);}
+  const sample=[0,same?0:.3];g.random=()=>sample.shift()??0;g.fireUnitProjectiles(u,t,{damage:100},s);
+  a.equal(g.rosterDice.length,2);g.time=1;g.updateEvolutionCombat();a.equal(g.effects.filter(e=>e.kind==='rosterDiceWave').length,same?1:0);
+ }
+});
+test('an evolved drone circles its commander, shoots the nearest visible enemy and sweeps a piercing laser on a cooldown',()=>{
+ const g=scene(),u=actor(g,'drone'),c=g.addUnit(0,'leader',1000,6100),behind=enemy(g,970,6000),a1=enemy(g,1120),a2=enemy(g,1220),off=enemy(g,1130,6150);
+ const firstPoint=g.dronePatrolPoint(u,c);g.time=.3;a.notDeepEqual(g.dronePatrolPoint(u,c),firstPoint);
+ a.equal(g.droneTarget(u,330),behind);behind.hp=0;a.equal(g.droneTarget(u,330),a1);
+ const b=g.fireUnitProjectiles(u,a1,{damage:10},g.stats(u))[0];a.equal(b.rosterKind,'droneBullet');a.equal(b.target,a1);
+ const until=g.rosterLasers[0].until;g.time=until;g.updateEvolutionCombat();a.ok(a1.hp<a1.maxHp&&a2.hp<a2.maxHp);a.equal(off.hp,off.maxHp);
+ g.fireUnitProjectiles(u,a1,{damage:10},g.stats(u));a.equal(g.rosterLasers.length,0);g.time=u.nextDroneLaserAt;g.fireUnitProjectiles(u,a1,{damage:10},g.stats(u));a.equal(g.rosterLasers.length,1);
 });
 test('siege explosions extend forward at .15/.30 seconds and never hit an enemy twice',()=>{
  const g=scene(),u=actor(g,'tank'),first=enemy(g,1200),overlap=enemy(g,1280),second=enemy(g,1305),third=enemy(g,1430),hits=[];g.damage=(t,d)=>hits.push([t.id,d]);
@@ -47,7 +75,7 @@ test('evolved mortar releases two 70% shells with one-second flights and .25-sec
  t.x=1800;g.time=.249;g.updateEvolutionCombat();a.equal(g.mortarShells.length,1);g.time=.25;g.updateEvolutionCombat();a.equal(g.mortarShells.length,2);a.deepEqual(g.mortarShells.map(p=>[p.x,p.delay,p.landAt,p.damage]),[[1400,1,1,70],[1400,1,1.25,70]]);
 });
 test('ordinary and hostile weapons retain one bullet, one two-second mortar shell, and original roulette odds',()=>{
- for(const team of [0,1,2]){const g=scene(),u=g.addUnit(team,'rifle',1000,6000),t=enemy(g);if(team)g.evolved.rifle=true;g.fireUnitProjectiles(u,t,{damage:100},g.stats(u));a.equal(g.shots.length,1);a.equal(g.shots[0].evoStyle,undefined);const m=g.addUnit(team,'mortar',1000,6000);g.launchMortar(m,t,{damage:100});a.equal(g.mortarShells[0].delay,2);}
+ for(const team of [0,1,2]){const g=scene(),t=enemy(g);for(const type of team?['rifle','guntruck']:['machinegun']){const u=g.addUnit(team,type,1000,6000);if(team)g.evolved[type]=true;const bullets=g.fireUnitProjectiles(u,t,{damage:100},g.stats(u));a.equal(bullets.length,1);a.equal(bullets[0].evoStyle,undefined);a.equal(bullets[0].target,t);}const m=g.addUnit(team,'mortar',1000,6000);g.launchMortar(m,t,{damage:100});a.equal(g.mortarShells[0].delay,2);}
  const g=scene(),u=g.addUnit(0,'lucky',1000,6000);a.deepEqual(g.luckyOdds(u),LUCKY.normal);
 });
 test('boss-killer odds consume only blank probability, preserve 777, and require an evolved owner and reachable boss',()=>{
@@ -71,7 +99,7 @@ test('boss-killer ignores 65% of boss defense through ordinary damage handling i
   const before=boss.hp;g.castLucky(u,'bossKiller');const missile=g.shots.at(-1);near(missile.damage,5000*scale);g.impact(missile);
   near(before-boss.hp,5000*scale*100/(100+defense*.35));near(g.defenseFactor(boss,u),100/(100+defense));
   a.equal(missile.source,u);a.ok(g.effects.some(e=>e.kind==='hit'));
-  const ordinary=g.addUnit(0,'rifle',1000,6000),hp=boss.hp;g.impact(g.fireUnitProjectiles(ordinary,boss,{damage:100},g.stats(ordinary))[0]);
+  const ordinary=g.addUnit(0,'machinegun',1000,6000),hp=boss.hp;g.impact(g.fireUnitProjectiles(ordinary,boss,{damage:100},g.stats(ordinary))[0]);
   near(hp-boss.hp,100*(type==='rifle'?1:.8)*100/(100+defense));
   g.castLucky(u,'missiles');a.equal(g.luckySalvos.at(-1).remaining,7);near(g.luckySalvos.at(-1).damage,700*scale);
  }
@@ -84,7 +112,11 @@ test('boss-killer preserves boss invulnerability, groggy multipliers and ordinar
  boss.hp=1;const kills=g.kills,rewards=g.bossState.rewards;g.impact(b);a.equal(boss.hp,0);a.equal(g.kills,kills+1);a.equal(g.bossState.rewards,rewards+1);a.ok(g.effects.some(e=>e.kind==='burst'));
 });
 test('saved delayed attacks and siege groups restore exact source references, hit history and coop ownership',()=>{
- const g=scene(true),u=actor(g,'rifle',1000,6000,1),t=enemy(g);g.fireUnitProjectiles(u,t,{damage:100},g.stats(u));const tank=actor(g,'tank',1000,6200,1),q=enemy(g,1200,6200);g.impact(g.fireUnitProjectiles(tank,q,{damage:100},g.stats(tank))[0]);
- const restored=unpack(scene(true),pack(g));const pending=restored.evolutionAttacks[0];a.equal(pending.source,restored.units.find(v=>v.id===u.id));a.equal(pending.source.coopOwner,1);a.ok(restored.evolutionBlasts[0].hitIds.includes(q.id));restored.time=.3;restored.updateEvolutionCombat();a.equal(restored.evolutionAttacks.length,0);
- const old=pack(scene());delete old.fields.evolutionAttacks;delete old.fields.evolutionBlasts;unpack(restored,old);a.deepEqual(restored.evolutionAttacks,[]);a.deepEqual(restored.evolutionBlasts,[]);
+ const g=scene(true),u=actor(g,'guntruck',1000,6000,1),t=enemy(g);g.fireUnitProjectiles(u,t,{damage:100},g.stats(u));const tank=actor(g,'tank',1000,6200,1),q=enemy(g,1200,6200);g.impact(g.fireUnitProjectiles(tank,q,{damage:100},g.stats(tank))[0]);
+ const restored=unpack(scene(true),pack(g));const pending=restored.rosterDice[0];a.equal(pending.source,restored.units.find(v=>v.id===u.id));a.equal(pending.source.coopOwner,1);a.ok(restored.evolutionBlasts[0].hitIds.includes(q.id));restored.time=.3;restored.updateEvolutionCombat();a.equal(restored.evolutionAttacks.length,0);
+ const old=pack(scene());
+ for(const key of ['evolutionAttacks','evolutionBlasts','rosterDice','rosterLasers','rosterThrowSerial'])delete old.fields[key];
+ restored.rosterLasers=[{source:u}];unpack(restored,old);
+ for(const key of ['evolutionAttacks','evolutionBlasts','rosterDice','rosterLasers'])a.deepEqual(restored[key],[]);
+ a.equal(restored.rosterThrowSerial,0);
 });
