@@ -106,7 +106,7 @@ const TYPES={swordEmpress:{name:'사검의 군주',hp:140800,damage:0,rate:100,r
  beetle:{name:'갑충',icon:'●',hp:420,damage:24,rate:1.4,range:30,speed:74.4,r:17,cost:0,role:'느리고 튼튼한 일반 생물'}
 };
 const ENEMY_REPLACED_TYPES={rifle:TYPES.rifle,guntruck:TYPES.guntruck};
-TYPES.rifle={...TYPES.rifle,name:'산탄총병',enemyName:TYPES.rifle.name,icon:'✦',hp:145,damage:22,rate:.54,range:210,role:'대장 방향 산탄 · 약한 밀치기 · 4발 후 재장전'};
+TYPES.rifle={...TYPES.rifle,name:'산탄총병',enemyName:TYPES.rifle.name,icon:'✦',hp:145,damage:22,rate:1,range:210,role:'대장 방향 5갈래 산탄 · 기본 펌프 1초 · 4발 후 재장전'};
 TYPES.guntruck={...TYPES.guntruck,name:'주사위 투척병',enemyName:TYPES.guntruck.name,icon:'⚄',hp:200,damage:38,rate:1.8,range:355,speed:133,r:13,role:'대장 방향으로 굴리는 주사위 · 눈금별 폭발·파편·분열'};
 TYPES.drone={name:'미니 RC 드론',icon:'✜',hp:130,damage:9,rate:.20,range:330,speed:175,r:12,cost:125,flying:true,flightHeight:54,role:'부대 상공을 선회하며 가장 가까운 적에게 자동 연사'};
 const ROSTER=['rifle','machinegun','sniper','guntruck','rocket','mortar','tank','medic','lucky','drone'];

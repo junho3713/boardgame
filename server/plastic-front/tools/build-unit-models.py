@@ -56,7 +56,7 @@ class Mesh:
  def path(self,c,pts,r=1.2):
   for a,b in zip(pts,pts[1:]):self.tube(c,a,b,r,n=8)
 
-def infantry(kind,team,phase,ultimate=None):
+def infantry(kind,team,phase,ultimate=None,*,arms=None,weapon=True):
  m=Mesh();c=GREEN if team==0 else RED;light=shade(c,1.13);dark=shade(c,.72);step=[0,1,-1][phase]
  # Human proportions: narrow shoulders, long articulated legs and a fitted M1 shell.
  for side in [-1,1]:
@@ -74,6 +74,7 @@ def infantry(kind,team,phase,ultimate=None):
   if kind=='medic':hand=(side*9,-9,37);elbow=(side*11,-2,42)
   if ultimate is not None:
    kick=ultimate==side;elbow=(side*11,-8,47+(4 if kick else 0));hand=(side*10,-19+(4 if kick else 0),48+(10 if kick else 0))
+  if arms is not None and side in arms:elbow,hand=arms[side]
   m.ball(c,shoulder,(3.6,4,4),n=10,rings=5);m.tube(c,shoulder,elbow,2.8,2.3,n=10)
   m.ball(c,elbow,(2.4,2.5,2.5),n=8,rings=4);m.tube(light,elbow,hand,2.2,1.8,n=10);m.ball(c,hand,(2.2,2.4,2.2),n=8,rings=4)
  m.box(dark,(0,7,43),(11,5,14),1.5);m.box(light,(0,9.8,44),(9,1,9),1)
@@ -85,6 +86,7 @@ def infantry(kind,team,phase,ultimate=None):
  if kind=='leader':
   m.star((0,-1,71.5),2.8,GOLD);m.box(dark,(-5,7,47),(4,4,8),.7);m.tube(CHAR,(-5,7,51),(-6,7,73),.45,n=6)
   m.box(GOLD,(-8,-2,51),(3.5,3,1.2))
+ if not weapon:return m
  if ultimate is not None:
   for side in [-1,1]:
    kick=ultimate==side;x=side*10;y=-19+(4 if kick else 0);z=48+(10 if kick else 0)

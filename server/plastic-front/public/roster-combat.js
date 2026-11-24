@@ -11,7 +11,7 @@ function install({FrontGame,TYPES,multiplier}){
  p.reset=function(...args){
   const result=reset.apply(this,args);this.rosterDice=[];this.rosterLasers=[];this.rosterThrowSerial=0;return result;
  };
- p.shotgunReloadTime=function(u,s=this.stats(u)){return 1.8*s.rate/.54;};
+ p.shotgunReloadTime=function(u,s=this.stats(u)){return 1.8*s.rate/TYPES.rifle.rate;};
  p.shotgunShotMultiplier=function(){return 1;};
  p.markShotgunKnockback=function(){};
  p.rosterBlastDamage=function(u,t,amount){return amount;};
@@ -73,17 +73,18 @@ function install({FrontGame,TYPES,multiplier}){
   return hit;
  };
  function shotgun(g,u,target,attack,s){
-  if(u.shotgunReloadUntil>g.time+1e-8)return [];
+  if(u.shotgunReloadUntil>g.time+1e-8||u.shotgunPumpUntil>g.time+1e-8)return [];
   if(!u.shotgunRounds)u.shotgunRounds=4;
   const damage=attack.damage*g.shotgunShotMultiplier(u),hot=g.evolutionEnabled(u),finisher=hot&&u.shotgunRounds===1;
   const angle=target.commandShot?target.angle:heading(u,target),seq=u.shotgunSequence=(u.shotgunSequence||0)+1;
+  u.shotgunPumpStartedAt=g.time;u.shotgunPumpUntil=g.time+s.rate;
   const bullets=[];
   for(let i=-2;i<=2;i++){
    const shot=forwardShot(g,u,u,angle+i*Math.PI/36,s.range,damage/5,attack.critical,'shotgunPellet',850);
-   Object.assign(shot,{hot,finisher,sequence:seq,shellDamage:damage,exploding:finisher&&i===0});
+   Object.assign(shot,{hot,finisher,muzzleAngle:angle,sequence:seq,shellDamage:damage,exploding:finisher&&i===0});
    bullets.push(shot);
   }
-  effect(g,'rosterShotgun',u,{source:u,angle,hot,finisher},.2);u.shotgunRounds--;
+  effect(g,'rosterShotgun',u,{source:u,angle,hot,finisher},.38);u.shotgunRounds--;
   if(!u.shotgunRounds){
    const reload=g.shotgunReloadTime(u,s);u.shotgunReloadUntil=g.time+reload;u.cooldown=reload;
    effect(g,'rosterReload',u,{source:u},reload);
@@ -116,12 +117,14 @@ function install({FrontGame,TYPES,multiplier}){
  }
  function throwDice(g,u,target,attack,s){
   const golden=g.evolutionEnabled(u),angle=target.commandShot?target.angle:heading(u,target);
+  u.rosterLastThrowAt=g.time;
   const id=g.rosterThrowSerial=(g.rosterThrowSerial||0)+1;
   for(const offset of golden?[-.15,.15]:[0])roll(g,u,u,angle+offset,s.range,attack.damage,g.diceFace(u,golden),golden,false,id);
   return [];
  }
  function settle(g,d){
   d.settled=true;
+  effect(g,'rosterDieResult',d,{source:d.source,face:d.face,golden:d.golden,child:d.child,throwId:d.throwId,angle:d.angle},1.1);
   if(d.face===6&&!d.child){
    for(const side of [-1,1])roll(g,d.source,d,d.angle+side*.72,78,d.damage*.72,1+Math.min(2,Math.floor(g.random()*3)),d.golden,true,d.throwId);
    effect(g,'rosterBlast',d,{source:d.source,style:'diceSplit',radius:38,face:6},.35);

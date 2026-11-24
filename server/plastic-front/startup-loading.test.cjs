@@ -14,8 +14,17 @@ function models(options={}){
 }
 test('startup loads four core models and no unselected skin atlases',async()=>{
  const h=models(),m=h.create();await m.ready;
- assert.deepEqual([...m.assets.keys()].sort(),['ant-2','bayonet-1','leader-0','rifle-0']);
+ assert.deepEqual([...m.assets.keys()].sort(),['ant-2','bayonet-1','leader-0','shotgun-0']);
  assert.equal(h.rina(),0);assert.equal(h.requests.some(x=>/Hwarin|Shino|Kayla|Shion/i.test(x)),false);
+});
+test('specialist models load the correct friendly rank while enemy rifles and trucks keep their own sprites',async()=>{
+ const h=models(),m=h.create();await m.ready;
+ for(const [type,base,elite] of [['rifle','shotgun','shotgunDragon'],['guntruck','diceTrooper','diceGold'],['drone','droneScout','droneLaser']]){
+  const ally={team:0,type,hp:10};
+  assert.equal(m.visualFor(ally),base);assert.equal(m.visualFor(ally,true),elite);
+  assert.equal(m.visualFor({...ally,team:1},true),type);
+  await m.prepare({units:[ally],evolved:{[type]:true}});assert.equal(m.ensure( elite,0).ready,true);
+ }
 });
 test('selected skins and restored commander are prepared once, without other heroes',async()=>{
  const h=models(),m=h.create();await m.ready;

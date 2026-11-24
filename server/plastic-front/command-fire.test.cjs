@@ -93,3 +93,21 @@ test('shotgun and dice fire along the commander heading even on ordinary maps an
   assert.equal(g.shots.filter(s=>s.source===shotgun).length,0);assert.equal(g.rosterDice.length,1);
  }
 });
+
+test('five-pellet volleys pump for one base second and reload the fourth shell for 1.8 seconds in live combat',()=>{
+ const g=field(),c=g.commander(0),u=add(g,'rifle',1100,1320),enemy=add(g,'rifle',980,1300,1);
+ c.commandFireFacing=0;g.move=()=>{};const fired=[];
+ for(let i=0;i<540&&fired.length<5;i++){
+  const before=u.shotgunSequence||0;g.update(.01);
+  if(u.shotgunSequence>before){
+   fired.push(g.time);assert.ok(Math.abs(u.shotgunPumpUntil-u.shotgunPumpStartedAt-1)<1e-7);
+   assert.equal(g.shots.filter(p=>p.source===u&&p.sequence===u.shotgunSequence).length,5);
+  }
+ }
+ assert.equal(fired.length,5);
+ assert.deepEqual(fired.slice(1).map((t,i)=>Number((t-fired[i]).toFixed(2))),[1,1,1,1.8]);
+ assert.equal(enemy.hp,enemy.maxHp);assert.equal(u.shotgunRounds,3);
+ const basic=g.stats(u);assert.equal(basic.rate,1);assert.equal(g.shotgunReloadTime(u),1.8);
+ g.abilities.haste=3;const faster=g.stats(u);assert.ok(faster.rate<basic.rate);
+ assert.ok(Math.abs(g.shotgunReloadTime(u)-1.8*faster.rate)<1e-8);
+});
