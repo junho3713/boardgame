@@ -1,0 +1,709 @@
+{
+ "frames": [
+  {
+   "filename": "dice-impact-v20261124 0",
+   "frame": {
+    "x": 0,
+    "y": 0,
+    "w": 256,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 256,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 256,
+    "h": 224
+   },
+   "duration": 50
+  },
+  {
+   "filename": "dice-impact-v20261124 1",
+   "frame": {
+    "x": 256,
+    "y": 0,
+    "w": 256,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 256,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 256,
+    "h": 224
+   },
+   "duration": 50
+  },
+  {
+   "filename": "dice-impact-v20261124 2",
+   "frame": {
+    "x": 512,
+    "y": 0,
+    "w": 256,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 256,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 256,
+    "h": 224
+   },
+   "duration": 50
+  },
+  {
+   "filename": "dice-impact-v20261124 3",
+   "frame": {
+    "x": 768,
+    "y": 0,
+    "w": 256,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 256,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 256,
+    "h": 224
+   },
+   "duration": 50
+  },
+  {
+   "filename": "dice-impact-v20261124 4",
+   "frame": {
+    "x": 1024,
+    "y": 0,
+    "w": 256,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 256,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 256,
+    "h": 224
+   },
+   "duration": 50
+  },
+  {
+   "filename": "dice-impact-v20261124 5",
+   "frame": {
+    "x": 1280,
+    "y": 0,
+    "w": 256,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 256,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 256,
+    "h": 224
+   },
+   "duration": 50
+  },
+  {
+   "filename": "dice-impact-v20261124 6",
+   "frame": {
+    "x": 0,
+    "y": 224,
+    "w": 256,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 256,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 256,
+    "h": 224
+   },
+   "duration": 50
+  },
+  {
+   "filename": "dice-impact-v20261124 7",
+   "frame": {
+    "x": 256,
+    "y": 224,
+    "w": 256,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 256,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 256,
+    "h": 224
+   },
+   "duration": 50
+  },
+  {
+   "filename": "dice-impact-v20261124 8",
+   "frame": {
+    "x": 512,
+    "y": 224,
+    "w": 256,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 256,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 256,
+    "h": 224
+   },
+   "duration": 50
+  },
+  {
+   "filename": "dice-impact-v20261124 9",
+   "frame": {
+    "x": 768,
+    "y": 224,
+    "w": 256,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 256,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 256,
+    "h": 224
+   },
+   "duration": 50
+  },
+  {
+   "filename": "dice-impact-v20261124 10",
+   "frame": {
+    "x": 1024,
+    "y": 224,
+    "w": 256,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 256,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 256,
+    "h": 224
+   },
+   "duration": 50
+  },
+  {
+   "filename": "dice-impact-v20261124 11",
+   "frame": {
+    "x": 1280,
+    "y": 224,
+    "w": 256,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 256,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 256,
+    "h": 224
+   },
+   "duration": 50
+  },
+  {
+   "filename": "dice-impact-v20261124 12",
+   "frame": {
+    "x": 0,
+    "y": 448,
+    "w": 256,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 256,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 256,
+    "h": 224
+   },
+   "duration": 50
+  },
+  {
+   "filename": "dice-impact-v20261124 13",
+   "frame": {
+    "x": 256,
+    "y": 448,
+    "w": 256,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 256,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 256,
+    "h": 224
+   },
+   "duration": 50
+  },
+  {
+   "filename": "dice-impact-v20261124 14",
+   "frame": {
+    "x": 512,
+    "y": 448,
+    "w": 256,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 256,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 256,
+    "h": 224
+   },
+   "duration": 50
+  },
+  {
+   "filename": "dice-impact-v20261124 15",
+   "frame": {
+    "x": 768,
+    "y": 448,
+    "w": 256,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 256,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 256,
+    "h": 224
+   },
+   "duration": 50
+  },
+  {
+   "filename": "dice-impact-v20261124 16",
+   "frame": {
+    "x": 1024,
+    "y": 448,
+    "w": 256,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 256,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 256,
+    "h": 224
+   },
+   "duration": 50
+  },
+  {
+   "filename": "dice-impact-v20261124 17",
+   "frame": {
+    "x": 1280,
+    "y": 448,
+    "w": 256,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 256,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 256,
+    "h": 224
+   },
+   "duration": 50
+  },
+  {
+   "filename": "dice-impact-v20261124 18",
+   "frame": {
+    "x": 0,
+    "y": 672,
+    "w": 256,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 256,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 256,
+    "h": 224
+   },
+   "duration": 50
+  },
+  {
+   "filename": "dice-impact-v20261124 19",
+   "frame": {
+    "x": 256,
+    "y": 672,
+    "w": 256,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 256,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 256,
+    "h": 224
+   },
+   "duration": 50
+  },
+  {
+   "filename": "dice-impact-v20261124 20",
+   "frame": {
+    "x": 512,
+    "y": 672,
+    "w": 256,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 256,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 256,
+    "h": 224
+   },
+   "duration": 50
+  },
+  {
+   "filename": "dice-impact-v20261124 21",
+   "frame": {
+    "x": 768,
+    "y": 672,
+    "w": 256,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 256,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 256,
+    "h": 224
+   },
+   "duration": 50
+  },
+  {
+   "filename": "dice-impact-v20261124 22",
+   "frame": {
+    "x": 1024,
+    "y": 672,
+    "w": 256,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 256,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 256,
+    "h": 224
+   },
+   "duration": 50
+  },
+  {
+   "filename": "dice-impact-v20261124 23",
+   "frame": {
+    "x": 1280,
+    "y": 672,
+    "w": 256,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 256,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 256,
+    "h": 224
+   },
+   "duration": 50
+  },
+  {
+   "filename": "dice-impact-v20261124 24",
+   "frame": {
+    "x": 0,
+    "y": 896,
+    "w": 256,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 256,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 256,
+    "h": 224
+   },
+   "duration": 50
+  },
+  {
+   "filename": "dice-impact-v20261124 25",
+   "frame": {
+    "x": 256,
+    "y": 896,
+    "w": 256,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 256,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 256,
+    "h": 224
+   },
+   "duration": 50
+  },
+  {
+   "filename": "dice-impact-v20261124 26",
+   "frame": {
+    "x": 512,
+    "y": 896,
+    "w": 256,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 256,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 256,
+    "h": 224
+   },
+   "duration": 50
+  },
+  {
+   "filename": "dice-impact-v20261124 27",
+   "frame": {
+    "x": 768,
+    "y": 896,
+    "w": 256,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 256,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 256,
+    "h": 224
+   },
+   "duration": 50
+  },
+  {
+   "filename": "dice-impact-v20261124 28",
+   "frame": {
+    "x": 1024,
+    "y": 896,
+    "w": 256,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 256,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 256,
+    "h": 224
+   },
+   "duration": 50
+  }
+ ],
+ "meta": {
+  "app": "https://github.com/patch-gg/pixelfx",
+  "version": "1",
+  "image": "dice-impact-v20261124.png",
+  "format": "RGBA8888",
+  "size": {
+   "w": 1536,
+   "h": 1120
+  },
+  "scale": "1",
+  "frameTags": [
+   {
+    "name": "dice-impact-v20261124",
+    "from": 0,
+    "to": 28,
+    "direction": "forward"
+   }
+  ],
+  "pixelfx": {
+   "id": "explosions/small-explosion",
+   "name": "Explosion",
+   "fps": 20,
+   "loop": false,
+   "frames": 29,
+   "frameSize": [
+    256,
+    224
+   ],
+   "pivot": [
+    128,
+    178
+   ],
+   "columns": 6
+  },
+  "source": {
+   "repository": "https://github.com/patch-gg/pixelfx",
+   "commit": "5294518ce7c72e48b6100a744596e0acf57f2826",
+   "effect": "explosions/small-explosion",
+   "options": {
+    "size": 0.72,
+    "seed": 37,
+    "stone": "#918b6b",
+    "palette": [
+     "#473d31",
+     "#83532e",
+     "#bc783c",
+     "#e9a54d",
+     "#f8cf76",
+     "#ffe7a7",
+     "#fff5d5",
+     "#fffef5"
+    ]
+   },
+   "capture": {
+    "size": [
+     256,
+     224
+    ],
+    "origin": [
+     128,
+     178
+    ],
+    "duration": 1.4,
+    "fps": 20
+   }
+  }
+ }
+}

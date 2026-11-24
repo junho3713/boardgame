@@ -109,13 +109,15 @@ function grounded(c,game,visible=()=>true){
   miniature(c,m.x,m.y-bounce,angle,Number(!!m.evolved));
   const view=brickView(angle),frontOnX=Math.abs(view.sn)>Math.abs(view.cs);
   const [lx,ly]=view.project(frontOnX?Math.sign(view.sn)*17.35:0,frontOnX?0:Math.sign(view.cs)*10.85,5.3);
-  const x=m.x+lx,y=m.y+ly-bounce,wave=linked?1:.5+.5*Math.sin((game.time-m.armAt)*3.5+(m.index||0));
-  const lamp=linked?'#ffd273':m.evolved?'#ffe49a':'#d2f596';
-  ellipse(c,x,y,2.55,1.40,'#303c2a');
-  if(ready){
-   c.save();c.globalAlpha*=.29+wave*.2;glow(c,x,y,3.5,lamp,linked?'#e9a75555':'#88c95645');c.restore();
-   ellipse(c,x,y,1.65,.87,lamp);
-  }else if(arming>.3)ellipse(c,x,y,1.25,.72,'#bfa264');
+  const x=m.x+lx,y=m.y+ly-bounce;
+  const phase=linked?Math.max(0,m.chainAt-game.time)%.24:(age+(m.index||0)*.14)%1.06;
+  const lit=phase<(linked?.13:.23),lamp=linked?'#ff8757':m.evolved?'#ffdc75':'#ffb95f';
+  ellipse(c,x,y,2.75,1.52,'#222c20');
+  if(ready&&lit){
+   glow(c,x,y,5,lamp,linked?'#ff843f88':'#ffad556f');
+   ellipse(c,x,y,1.9,1,lamp);
+   ellipse(c,x-.25,y-.21,.75,.39,'#fff4d0');
+  }else if(ready||arming>.3)ellipse(c,x,y,1.55,.78,'#8a6039');
  }
 }
 function air(c,game,visible=()=>true){

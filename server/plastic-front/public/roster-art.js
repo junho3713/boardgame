@@ -168,6 +168,26 @@ function ring(c,x,y,r,k,color){
 }
 const unit=(n)=>Math.max(0,Math.min(1,n)),ease=n=>1-Math.pow(1-unit(n),3),smooth=(a,b,n)=>{const t=unit((n-a)/(b-a));return t*t*(3-2*t);};
 const variation=(i,seed)=>{let n=Math.imul(i+19,374761393)^Math.imul(seed|0,668265263);n=Math.imul(n^(n>>>13),1274126177);return((n^(n>>>16))>>>0)/4294967295;};
+let diceAtlas=null,diceAtlasPromise;
+function prepareDiceEffects(){
+ if(diceAtlasPromise)return diceAtlasPromise;
+ if(typeof root.Image!=='function')return Promise.resolve(false);
+ diceAtlasPromise=new Promise(resolve=>{
+  const image=new root.Image();
+  image.onload=()=>{if(image.naturalWidth===1536&&image.naturalHeight===1120)diceAtlas=image;resolve(!!diceAtlas);};
+  image.onerror=()=>resolve(false);
+  image.src='assets/effects/pixelfx/dice-impact-v20261124.png';
+ });return diceAtlasPromise;
+}
+function pixelDiceImpact(c,x,y,p,width,alpha=1){
+ if(!diceAtlas)return false;
+ // One seeded PixelFX ground simulation: flash, fire bloom, cooled dust.
+ // Simulation time is supplied by the event; paused frames never advance.
+ const frame=Math.min(28,Math.floor(unit(p)*29)),scale=width/256;
+ c.save();c.globalAlpha*=alpha;c.imageSmoothingEnabled=true;
+ c.drawImage(diceAtlas,frame%6*256,Math.floor(frame/6)*224,256,224,x-128*scale,y-178*scale,256*scale,224*scale);
+ c.restore();return true;
+}
 let diceMaterials;
 function materials(){
  if(diceMaterials)return diceMaterials;if(!root.document?.createElement)return null;
@@ -198,6 +218,7 @@ function chip(c,x,y,size,angle,teal=false,gold=false,pip=false){
 }
 function diceImpact(c,e,p){
  const m=materials(),split=e.style==='diceSplit',child=e.style==='diceChild',r=Math.max(12,e.radius||48),seed=Math.round(e.x*3+e.y*7+(e.face||1)*83),spread=ease(p),fade=1-smooth(.48,1,p);
+ const hasPixels=!!diceAtlas;
  // A short contact flash gives way to floor dust, then tumbling solid chips.
  // The result-face labels are rendered later by results(), above this material.
  if(m){
@@ -205,12 +226,13 @@ function diceImpact(c,e,p){
    const a=i*2.39996+variation(i,seed)*.45,d=r*(.15+spread*.7),w=r*(.29+p*.35)*(1+variation(i+30,seed)*.3);
    stamp(c,m.dust,e.x+Math.cos(a)*d,e.y+Math.sin(a)*d*.68,w,w*.48,a*.12,fade*(split?.48:.6));
   }
-  for(let i=0;i<(child?3:5);i++){
+  for(let i=0;i<(hasPixels?2:child?3:5);i++){
    const a=i*2.39996,d=r*(.06+spread*.22),w=r*(.44+p*.33),rise=p*r*(.22+variation(i+51,seed)*.2);
-   stamp(c,i%2?m.smoke:m.warm,e.x+Math.cos(a)*d,e.y-6+Math.sin(a)*d*.4-rise,w,w*.78,a+p*.15,Math.sin(p*Math.PI)*.36);
+   stamp(c,i%2?m.smoke:m.warm,e.x+Math.cos(a)*d,e.y-6+Math.sin(a)*d*.4-rise,w,w*.78,a+p*.15,Math.sin(p*Math.PI)*(hasPixels?.12:.36));
   }
-  stamp(c,m.flash,e.x,e.y-5,r*(split?.95:1.38),r*.79,0,(1-smooth(.025,.23,p))*(child?.6:.82),'lighter');
+  stamp(c,m.flash,e.x,e.y-5,r*(split?.95:1.38),r*.79,0,(1-smooth(.025,hasPixels?.12:.23,p))*(hasPixels?.32:child?.6:.82),'lighter');
  }
+ pixelDiceImpact(c,e.x,e.y,p,r*(split?2.7:3.05),child?.84:.96);
  const count=child?7:split?13:10+(e.face>=4?3:0);
  for(let i=0;i<count;i++){
   const a=i*2.39996+variation(i+4,seed)*.75,d=r*(.25+variation(i+6,seed)*.72)*ease(p*.92),groundY=e.y+Math.sin(a)*d*.66,h=Math.sin(p*Math.PI)*(r*.3+variation(i+8,seed)*r*.35),x=e.x+Math.cos(a)*d,size=(child?1.4:2.1)+variation(i+9,seed)*(split?3.4:2.1);
@@ -231,6 +253,9 @@ function diceFragments(c,e,p){
 }
 function diceWave(c,e,p){
  const a=Math.atan2(e.ty-e.y,e.tx-e.x),distance=Math.hypot(e.tx-e.x,e.ty-e.y),x=e.x+(e.tx-e.x)*p,y=e.y+(e.ty-e.y)*p,width=(e.width||24),m=materials(),fade=1-smooth(.65,1,p);
+ // The double-roll ignition stays at the contact point while its pressure
+ // front travels, so the fire does not slide along the floor with the wave.
+ pixelDiceImpact(c,e.x,e.y,p,width*3.1,.76);
  c.save();c.translate(x,y);c.rotate(a);
  // A low rolling pressure front connects the matching golden dice. Rounded
  // plastic flakes tumble beside its crest instead of three flat bracket lines.
@@ -317,6 +342,7 @@ function field(c,game,visible=()=>true){
   c.save();c.globalCompositeOperation='lighter';rod(c,[x,y],[tx,ty],7,'#39ffcd42');rod(c,[x,y],[tx,ty],3.4,'#59f3dbb0');rod(c,[x,y],[tx,ty],1.3,'#d5fff0');ellipse(c,tx,ty,3,2,'#8affd8');c.restore();
  }
 }
-root.FrontRosterArt={model,shot,event,field,results,burning};
+root.FrontRosterArt={model,shot,event,field,results,burning,prepareDiceEffects};
+if(typeof root.Image==='function')prepareDiceEffects();
 })(typeof window==='undefined'?globalThis:window);
 
