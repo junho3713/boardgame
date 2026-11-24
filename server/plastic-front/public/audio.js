@@ -1,6 +1,7 @@
 /* Sample-based combat mixer. Files are local and decoded only after a user gesture. */
 ((root)=>{'use strict';
 const SOUNDS={
+ upgradeOpen:{file:'upgrade-cards-pop',ext:'wav',gain:.59,gap:0,priority:3,phase:'choice'},
  bikeRaider:{file:'bike-rev',ext:'wav',gain:.32,gap:.6,priority:2},
  bladeGuard:{file:'blade-swish',ext:'wav',gain:.28,gap:.12,priority:1},
  slotBlank:{file:'lucky-blank',ext:'wav',gain:.22,gap:.18,priority:1},
@@ -72,9 +73,10 @@ class FrontAudio{
  }
  impact(event,listener){return this.play('impact',event,listener,{rate:event.armor?1.9:1.6,gain:.15,priorityBoost:-2,channel:'hitFeedback'});}
  explosion(event,listener){const key=['artillery','bossKiller','evolution','pirateCannon'].includes(event.kind)?'artillery':'impact';return this.play(key,event,listener,{rate:event.kind==='bossKiller'?.68:event.kind==='evolution'?1.3:event.kind==='tank'?.8:event.kind==='mortar'?.85:event.kind==='rocket'?1.12:1});}
+ upgradeOpen(){return this.play('upgradeOpen',undefined,undefined,{exactRate:true});}
  play(key,position={x:0,y:0},listener={x:0,y:0},options={}){
   const c=this.context,s=SOUNDS[key],preview=!!options.preview;
-  if(!s||!c||c.state!=='running'||this.muted||!this.volume||(!preview&&this.phase!=='playing')||!this.buffers.has(key))return false;
+  if(!s||!c||c.state!=='running'||this.muted||!this.volume||(!preview&&this.phase!==(s.phase||'playing'))||!this.buffers.has(key))return false;
   const distance=preview?0:Math.hypot(position.x-listener.x,position.y-listener.y);if(distance>950)return false;
   const now=c.currentTime,channel=options.channel||key,stamp=this.lastKind.get(channel);
   if(!preview&&stamp!==undefined&&now-stamp<s.gap){this.dropped++;return false;}
