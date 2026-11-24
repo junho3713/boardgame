@@ -70,3 +70,10 @@ first single report and natural tail extracted at 0.132–0.982 s, normalized,
 Ultimate repeats this same report every 0.2 simulated seconds with its own
 mixer channel/priority. Source supplied by user; no additional license claim.
 Reproduce with tools/refresh-rifle-sfx.py; original at art/sfx/user-gunshot-350315.mp3.
+
+2026-11-24 sniper-suppressed.mp3: user-supplied 6690986_output.mp3,
+used as supplied for allied sniper fire. No new license is assigned.
+
+2026-11-24 machinegun-user-burst.wav: first two reports (0–0.148 s) from
+user-supplied 6691111_output.mp3, with short fades at the cut edges.
+Used for allied machine gunners and machine gun turrets. No new license is assigned.

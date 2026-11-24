@@ -9,8 +9,10 @@ const SOUNDS={
  flame:{file:'flame',ext:'wav',gain:.40,gap:.18,priority:2},
  rifle:{file:'rifle',gain:.38,gap:.04,priority:1,revision:2},
  machinegun:{file:'machinegun',gain:.29,gap:.035,priority:1,revision:2},
+ machinegunBurst:{file:'machinegun-user-burst',ext:'wav',gain:.29,gap:.035,priority:1},
  guntruck:{file:'truck',gain:.36,gap:.045,priority:1},
  sniper:{file:'sniper',gain:.59,gap:.09,priority:2,revision:3},
+ sniperSuppressed:{file:'sniper-suppressed',gain:.59,gap:.09,priority:2},
  crimsonAce:{file:'tank',gain:.7,gap:.1,priority:3},
  tank:{file:'tank',gain:.65,gap:.1,priority:3},
  rocket:{file:'rocket',gain:.58,gap:.08,priority:2,revision:2},
@@ -50,7 +52,13 @@ class FrontAudio{
  sync(phase){if(this.phase!==phase){this.phase=phase;if(phase!=='playing')this.stop();}}
  stop(){for(const v of [...this.voices]){try{v.source.stop();}catch{}this.release(v);}this.lastKind.clear();}
  release(v){if(!this.voices.delete(v))return;v.source.disconnect();v.gain.disconnect();if(v.pan)v.pan.disconnect();}
- fire(unit,listener){if(unit.luckySound==='bossKiller')return this.play('rocket',unit,listener,{rate:.68,priorityBoost:2,channel:'bossKiller'});if(unit.luckySound)return this.play(unit.luckySound,unit,listener);return this.play(unit.sword||unit.type==='leader'&&unit.appearance==='shion'?'bladeGuard':unit.flame||unit.type==='leader'&&unit.appearance==='blaze'?'flame':unit.type==='leader'||unit.type==='lucky'?'rifle':({commando:'machinegun',spectre:'sniper',titan:'rocket',pirateCannon:'mortar'})[unit.type]||unit.type,unit,listener,unit.ultimate?{channel:'ultimate',priorityBoost:2,exactRate:true}:{});}
+ fire(unit,listener){
+  if(unit.luckySound==='bossKiller')return this.play('rocket',unit,listener,{rate:.68,priorityBoost:2,channel:'bossKiller'});
+  if(unit.luckySound)return this.play(unit.luckySound,unit,listener);
+  if(unit.team===0&&unit.type==='sniper')return this.play('sniperSuppressed',unit,listener);
+  if(unit.team===0&&unit.type==='machinegun')return this.play('machinegunBurst',unit,listener);
+  return this.play(unit.sword||unit.type==='leader'&&unit.appearance==='shion'?'bladeGuard':unit.flame||unit.type==='leader'&&unit.appearance==='blaze'?'flame':unit.type==='leader'||unit.type==='lucky'?'rifle':({commando:'machinegun',spectre:'sniper',titan:'rocket',pirateCannon:'mortar'})[unit.type]||unit.type,unit,listener,unit.ultimate?{channel:'ultimate',priorityBoost:2,exactRate:true}:{});
+ }
  impact(event,listener){return this.play('impact',event,listener,{rate:event.armor?1.9:1.6,gain:.15,priorityBoost:-2,channel:'hitFeedback'});}
  explosion(event,listener){const key=['artillery','bossKiller','evolution','pirateCannon'].includes(event.kind)?'artillery':'impact';return this.play(key,event,listener,{rate:event.kind==='bossKiller'?.68:event.kind==='evolution'?1.3:event.kind==='tank'?.8:event.kind==='mortar'?.85:event.kind==='rocket'?1.12:1});}
  play(key,position={x:0,y:0},listener={x:0,y:0},options={}){
