@@ -49,6 +49,99 @@ const config={version:116,duration:1200,enemyLuckyInterval:5,recoverySeconds:16,
  patterns:{soldierDash:{hpScale:1.75,every:2,duration:1,speed:2.2,damageMultiplier:3},wideSlash:{range:220,arc:1.9,windup:.7,damageMultiplier:2},rhinoCharge:{range:420,cooldown:8,windup:1,distance:360,speed:800,halfWidth:30,recovery:3,vulnerable:1.3,damageScale:.6,infantryHpDamage:.5},rapidBike:{cooldown:4.2},venomDive:{cooldown:8,rise:.25,warning:.6,descent:.1,recovery:2,height:145,lowHeight:24,damage:1.6,maxHpDamage:.5,poisonDuration:4,poisonRate:.25,poisonPerSecond:.12},rearBarrage:{cooldown:7,warning:1.5,radius:100,damage:1.35,bossDamageMultiplier:.85,range:650,shots:3,spacing:220}}
 };
 const d=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y),clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+
+const meleeWaveTypes=new Set(['bombBug','ant','bayonet','bladeGuard','stagBeetle','rhinoBeetle']);
+const ordinaryRotation=Object.freeze(['mixed','ants','troops']);
+
+// One encounter is shared by all battlefields. Only the batch for the current tick is mutable.
+class TroopEncounter{
+ get antExtrasOnly(){return false;}
+ eligible(game,type){
+  if(type==='bombBug')return false;
+  return type==='blizzardMage'?game.roomCanSpawnMageGroup():game.roomCanSpawn(type);
+ }
+ forcedType({game,phase,plan,slot}){
+  return slot===0&&game.roomCanSpawnMageGroup()&&phase.mix.blizzardMage>0?'blizzardMage':plan.forced[slot];
+ }
+ chooseType(batch){
+  const {game,phase,slot,mix}=batch,forced=this.forcedType(batch);
+  if(this.preferPirate(batch,forced))return 'pirateCannon';
+  if(forced&&phase.mix[forced]>0&&this.eligible(game,forced,batch))return forced;
+  const pool=Object.entries(mix).filter(([type])=>this.eligible(game,type,batch)&&(slot<4||meleeWaveTypes.has(type)));
+  const total=pool.reduce((sum,[,weight])=>sum+weight,0);
+  if(!total)return null;
+  let roll=game.random()*total;
+  for(const [type,weight] of pool){roll-=weight;if(roll<0)return type;}
+  return pool.at(-1)[0];
+ }
+ preferPirate({game,slot},forced){return slot===0&&forced!=='blizzardMage'&&game.roomCanSpawn('pirateCannon');}
+ spawnSlot(batch){
+  const {game,plan,slot}=batch,type=this.chooseType(batch);
+  if(!type)return 0;
+  const spawnedSoFar=batch.startCount+slot,lanes=config.surges.lanes;
+  const lane=plan.surge?lanes[(slot+spawnedSoFar)%lanes.length]:null;
+  const count=this.spawnType(batch,type,lane);
+  if(!count)batch.retry=true;
+  return count;
+ }
+ spawnType({game},type,lane){
+  if(type==='blizzardMage')return game.spawnRoomMageGroup(lane)?.length||0;
+  return game.spawnRoomEnemy(type,lane)?1:0;
+ }
+ deploy(game,phase,plan,budget){
+  const batch={game,phase,plan,budget,slot:0,startCount:game.roomCampaign.spawned,packets:0,retry:false,mix:game.evolutionWaveMix(phase.mix)};
+  while(batch.slot<budget){
+   const added=this.spawnSlot(batch);
+   if(!added)break;
+   batch.slot+=added;
+  }
+  return {count:batch.slot,retry:batch.retry};
+ }
+}
+
+class AntOnlyEncounter extends TroopEncounter{
+ get antExtrasOnly(){return true;}
+ forcedType(){return 'ant';}
+ preferPirate(){return false;}
+}
+
+class BombAntEncounter extends TroopEncounter{
+ preferPirate(){return false;}
+ eligible(game,type,batch){
+  if(type==='bombBug')return batch.packets<2&&game.roomCanSpawn(type);
+  return super.eligible(game,type,batch);
+ }
+ spawnPacket(game,lane,budget,point=null){return game.spawnRoomAntGroup(lane,budget,point).length;}
+ spawnSlot(batch){
+  const remaining=batch.budget-batch.slot;
+  if(remaining>=4&&this.eligible(batch.game,'bombBug',batch)){
+   const count=this.spawnPacket(batch.game,null,remaining);
+   if(count){batch.packets++;return count;}
+  }
+  return super.spawnSlot(batch);
+ }
+ spawnType(batch,type,lane){
+  if(type==='bombBug'){
+   const count=this.spawnPacket(batch.game,lane,batch.budget-batch.slot);
+   if(count){batch.packets++;return count;}
+   type='ant';
+  }
+  return super.spawnType(batch,type,lane);
+ }
+}
+
+class OpeningBombAntEncounter extends BombAntEncounter{
+ deploy(game){
+  const point=game.roomOpeningAntEntry();
+  const count=point?this.spawnPacket(game,null,config.insects.opening.ants+1,point):0;
+  return {count,retry:!count};
+ }
+}
+const encounters=Object.freeze({
+ troops:Object.freeze(new TroopEncounter()),ants:Object.freeze(new AntOnlyEncounter()),
+ mixed:Object.freeze(new BombAntEncounter()),opening:Object.freeze(new OpeningBombAntEncounter())
+});
+
 const methods={
  isRoomCampaign(){return this.mode==='pve'&&(this.world?.id==='livingroom'||this.mapId==='livingroom');},
  roomPortalAlive(){return this.bases[1].hp>0;},
@@ -262,36 +355,20 @@ const methods={
   if(openingPending&&this.time<opening.at)s.nextSpawnAt=Math.min(s.nextSpawnAt,opening.at);
   if(this.time<s.nextSpawnAt)return;s.nextSpawnAt=this.time+plan.interval;
   const debt=s.waveSpawnDebt||0,count=Math.max(0,plan.count-debt);s.waveSpawnDebt=Math.max(0,debt-plan.count);
-  if(openingPending&&this.time>=opening.at&&count>0){
-   const point=this.roomOpeningAntEntry(),group=point?this.spawnRoomAntGroup(null,opening.ants+1,point):[];
-   if(!group.length){s.nextSpawnAt=Math.min(s.nextSpawnAt,this.time+2);return;}
-   s.openingAntWave=true;s.spawned+=group.length;s.waveSpawnDebt+=Math.max(0,group.length-count);
-   this.notify('toast','폭탄개미를 먼저 노려! · 주변 개미도 폭발에 휩쓸립니다.');
+  const isOpening=openingPending&&this.time>=opening.at&&count>0;
+  const mid=config.insects.midgame,rotation=this.time>=mid.from&&this.time<mid.until?mid.rotation:ordinaryRotation;
+  const varied=!isOpening&&this.time>=config.insects.from&&count>=4&&this.roomBeat().density>=.6&&this.time>=(s.recoveryUntil||0);
+  const encounter=isOpening?encounters.opening:varied?encounters[rotation[(s.antWaveCursor||0)%rotation.length]]:encounters.troops;
+  const result=encounter.deploy(this,p,plan,count);
+  if(result.retry)s.nextSpawnAt=isOpening?Math.min(s.nextSpawnAt,this.time+2):this.time+2;
+  s.spawned+=result.count;
+  s.waveSpawnDebt+=Math.max(0,result.count-count);
+  if(isOpening){
+   if(result.count){s.openingAntWave=true;this.notify('toast','폭탄개미를 먼저 노려! · 주변 개미도 폭발에 휩쓸립니다.');}
    return;
   }
-  const mid=config.insects.midgame,rotation=this.time>=mid.from&&this.time<mid.until?mid.rotation:['mixed','ants','troops'];
-  const varied=this.time>=config.insects.from&&count>=4&&this.roomBeat().density>=.6&&this.time>=(s.recoveryUntil||0),pattern=varied?rotation[(s.antWaveCursor||0)%rotation.length]:'troops';
-  const mix=this.evolutionWaveMix(p.mix),eligible=type=>type==='bombBug'&&(pattern!=='mixed'||antGroups>=2)?false:type==='blizzardMage'?this.roomCanSpawnMageGroup():this.roomCanSpawn(type);
-  const melee=['bombBug','ant','bayonet','bladeGuard','stagBeetle','rhinoBeetle'],beforeSpawned=s.spawned;
-  let antGroups=0;
-  for(let i=0;i<count;i++){
-   if(pattern==='mixed'&&antGroups<2&&count-i>=4&&this.roomCanSpawn('bombBug')){
-    const group=this.spawnRoomAntGroup(null,count-i);if(group.length){antGroups++;s.spawned+=group.length;i+=group.length-1;continue;}
-   }
-   const forced=pattern==='ants'?'ant':i===0&&this.roomCanSpawnMageGroup()&&p.mix.blizzardMage>0?'blizzardMage':plan.forced[i];
-   const pirate=pattern==='troops'&&i===0&&forced!=='blizzardMage'&&this.roomCanSpawn('pirateCannon');
-   let type=pirate?'pirateCannon':forced&&p.mix[forced]>0&&eligible(forced)?forced:null;
-   if(!type){const pool=Object.entries(mix).filter(([t])=>eligible(t)&&(i<4||melee.includes(t))),total=pool.reduce((n,[,w])=>n+w,0);if(!total)break;let roll=this.random()*total;type=pool.at(-1)[0];for(const [t,w]of pool){roll-=w;if(roll<0){type=t;break;}}}
-   const lane=plan.surge?config.surges.lanes[(i+s.spawned)%config.surges.lanes.length]:null;
-   if(type==='bombBug'){
-    const group=this.spawnRoomAntGroup(lane,count-i);if(group.length){antGroups++;s.spawned+=group.length;i+=group.length-1;continue;}
-    type='ant';
-   }
-   if(type==='blizzardMage'){const group=this.spawnRoomMageGroup(lane);if(!group){s.nextSpawnAt=this.time+2;break;}s.spawned+=group.length;s.waveSpawnDebt+=Math.max(0,group.length-(count-i));i+=group.length-1;continue;}
-   if(!this.spawnRoomEnemy(type,lane)){s.nextSpawnAt=this.time+2;break;}s.spawned++;
-  }
-  if(varied&&s.spawned>beforeSpawned)s.antWaveCursor=(s.antWaveCursor||0)+1;
-  this.addRoomWeakReinforcements(s.spawned-beforeSpawned,pattern==='ants');
+  if(varied&&result.count)s.antWaveCursor=(s.antWaveCursor||0)+1;
+  this.addRoomWeakReinforcements(result.count,encounter.antExtrasOnly);
  },
  addRoomWeakReinforcements(spawned,antOnly=false){
   const s=this.roomCampaign,r=config.weakReinforcements;if(this.time<r.from||spawned<=0)return;

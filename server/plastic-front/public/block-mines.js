@@ -1,7 +1,7 @@
 /* Thrown interlocking toy blocks. Arming, contact and chains use simulation time. */
 (function(root){'use strict';
 function install({FrontGame}){
- const p=FrontGame.prototype,reset=p.reset,update=p.update,fire=p.fireUnitProjectiles,impact=p.impact,select=p.selectCombatTarget;
+ const p=FrontGame.prototype,reset=p.reset,fire=p.fireUnitProjectiles,impact=p.impact,select=p.selectCombatTarget;
  const limit=54,life=30,linkRange=98,linkDelay=.16;
  const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
  const ground=(g,t)=>!!t.type&&!t.base&&!t.structure&&!t.built&&!g.isFlying(t);
@@ -109,12 +109,9 @@ function install({FrontGame}){
   }
   this.blockMines=mines.filter(m=>!m.spent&&m.expiresAt>now);
  };
- p.update=function(dt){
-  const since=this.time;
-  const previous=this.phase==='playing'&&this.blockMines?.length?new Map(this.units.filter(t=>t.team!==0&&t.hp>0&&ground(this,t)).map(t=>[t,{x:t.x,y:t.y}])):null;
-  const result=update.call(this,dt);
-  if(this.time>since)this.updateBlockMines(previous,since);
-  return result;
+ p.captureBlockMineTargets=function(){
+  if(this.phase!=='playing'||!this.blockMines?.length)return null;
+  return new Map(this.units.filter(t=>t.team!==0&&t.hp>0&&ground(this,t)).map(t=>[t,{x:t.x,y:t.y}]));
  };
 }
 if(typeof module!=='undefined'&&module.exports)module.exports=install;

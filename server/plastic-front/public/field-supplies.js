@@ -6,7 +6,7 @@ function install({FrontGame:Game,TYPES}){
  const specialTypes=['commando','spectre','titan'],specialRewards={special:'commando',spectre:'spectre',titan:'titan'},armor={commando:24,spectre:12,titan:44};
  const openingSupply=pickup=>pickup.spawnedAt>=120-1e-8&&pickup.spawnedAt<240;
  const fresh=()=>({medkits:0,artillery:0,boostUntil:0,pendingSupport:0,collected:0,supportMinute:0,pendingMinute:null});
- const reset=p.reset,stats=p.stats,capacity=p.capacity,levelCheck=p.levelCheck,cancel=p.cancelRecovery,shot=p.fireUnitProjectiles,update=p.update,refresh=p.refreshCommanderHealth,defense=p.defenseFactor,select=p.selectCombatTarget;
+ const reset=p.reset,stats=p.stats,capacity=p.capacity,levelCheck=p.levelCheck,cancel=p.cancelRecovery,shot=p.fireUnitProjectiles,refresh=p.refreshCommanderHealth,defense=p.defenseFactor,select=p.selectCombatTarget;
  TYPES.commando={...TYPES.machinegun,name:'블랙베어 특전병',icon:'✦',hp:480,damage:22,rate:.13,range:360,speed:138,r:14,cost:0,role:'희귀 보급 전용 · 중장갑 조끼 · 미니건 3명 관통 · 별도 병력 슬롯'};
  TYPES.spectre={...TYPES.sniper,name:'고스트 특임저격수',icon:'⌖',hp:320,damage:200,rate:1,range:620,speed:128,r:13,cost:0,role:'특수 저격 · 방어력 35% 무시 · 보스·정예 우선 · 3명 관통'};
  TYPES.titan={...TYPES.rocket,name:'타이탄 중장갑 강습병',icon:'⬢',hp:1000,damage:105,rate:.38,range:390,splash:100,speed:100,r:17,cost:0,role:'최상위 특수부대 · 중장갑 · 고속 범위 포탄 · 별도 병력 슬롯'};
@@ -134,7 +134,6 @@ function install({FrontGame:Game,TYPES}){
   this.addSupplyGuards(pickup,guardTypes,positions);
   this.pickups.push(pickup);this.notify('toast','희귀 보급 도착 · 보급 옆 호위 '+guardTypes.length+'기 · 처치 없이 접근 획득 · 접근 시 '+(opening?2:4)+'기 추가 출동 · 보라색 신호를 확인하세요');this.effects.push({kind:'fieldSupply',...point,reward:'airdrop',t:1.2,max:1.2,team:0});
  };
- p.update=function(dt){if(this.phase==='playing'){this.updateSupplyStrikes();this.expireRareSupplies();this.updateRareSupplySecurity();}const result=update.call(this,dt);this.updateRareSupplies();return result;};
  root.FrontFieldSupplies={config,specialTypes};return {config,specialTypes};
 }
 if(typeof module!=='undefined'&&module.exports)module.exports=install;else install({FrontGame:root.FrontGame,TYPES:root.FrontTypes});

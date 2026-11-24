@@ -3,7 +3,7 @@
 const api=typeof module!=='undefined'&&module.exports?require('./engine.js'):root,Game=api.FrontGame,roster=api.ROSTER||root.FrontRoster;
 const RULES={copies:3,maxTwoStars:3,capacityGains:[1,1,2,2,3],damage:3,hp:2.5,heal:2.5,roulettes:3,
  three:{damage:7.2,hp:7.8,heal:7.2,roulettes:3,sniperShots:2,lucky:{normal:{glue:.44,mine:.20,spray:.24,missiles:.06,blank:.06},evolved:{glue:.29,mine:.13,spray:.41,missiles:.14,blank:.03}}}};
-const p=Game.prototype,stats=p.stats,update=p.update,upgrade=p.upgradeBalance,buy=p.buy,bonus=p.abilityBonus,remaining=p.recruitmentRemaining,lucky=p.updateLuckyUnit,scale=p.luckyScale,odds=p.luckyOdds,projectiles=p.fireUnitProjectiles;
+const p=Game.prototype,stats=p.stats,upgrade=p.upgradeBalance,buy=p.buy,bonus=p.abilityBonus,remaining=p.recruitmentRemaining,lucky=p.updateLuckyUnit,scale=p.luckyScale,odds=p.luckyOdds,projectiles=p.fireUnitProjectiles;
 p.isThreeStarExperiment=function(){return false;}; // Legacy callers checking for the retired battlefield.
 p.battlefieldId=function(){return this.bedroomStar?'bedroom-star':this.desktopStar?'desktop-star':this.starExperiment?'livingroom-star':this.bounds().id;};
 p.starCount=function(type,star){return this.alive(0).filter(u=>u.type===type&&(u.star||1)===star).length;};
@@ -102,6 +102,5 @@ p.fireUnitProjectiles=function(u,target,attack,s=this.stats(u)){
  for(const [i,t] of targets.entries()){const bullet=projectiles.call(this,u,t,{...attack,damage:attack.damage/RULES.three.sniperShots},s)[0],angle=Math.atan2(t.y-u.y,t.x-u.x),side=i?3:-3;bullet.x-=Math.sin(angle)*side;bullet.y+=Math.cos(angle)*side;shots.push(bullet);}
  this.effects.push({kind:'tracer',x:shots[1].x,y:shots[1].y,tx:other.x,ty:other.y,t:.12,max:.12,team:u.team});return shots;
 };
-p.update=function(dt){if(this.phase==='playing'){this.refreshTwoStarHealth();this.autoFuseUnits();}return update.call(this,dt);};
 root.FrontTwoStar={RULES};if(typeof module!=='undefined'&&module.exports)module.exports=root.FrontTwoStar;
 })(typeof window==='undefined'?globalThis:window);

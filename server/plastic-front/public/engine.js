@@ -1,6 +1,7 @@
 /* Original prototype rules. Engine is DOM independent for repeatable simulation checks. */
 (function(root){
 'use strict';
+const BATTLE_SYSTEMS=typeof module!=='undefined'&&module.exports?require('./battle-systems.js'):root.FrontBattleSystems;
 const SWORD={damage:90,rate:.75,range:90,arc:110*Math.PI/180,windup:.14,recovery:.42,targets:3,ultimateRange:170,ultimateInterval:.5,ultimateDamage:2};
 const FLAME={damage:14.4,rate:.12,range:250,arc:50*Math.PI/180,armor:.65,ultimateRange:420,ultimateArc:70*Math.PI/180,ultimateDamage:2};
 const BALANCE_VERSION=71;
@@ -1851,16 +1852,8 @@ class FrontGame{
   u.cooldown=s.rate;u.bayonetAttack={target,angle:u.face,startedAt:this.time,hitAt:this.time+s.windup};
   this.effects.push({kind:'bayonetWarn',x:u.x,y:u.y,angle:u.face,range:s.range,slash:!!s.slash,team:u.team,t:s.windup,max:s.windup});
  }
- update(dt){
-  if(this.phase!=='playing')return;dt=Math.min(dt,.05);if(this.bossIntro?.remaining>0){this.bossIntro.remaining=Math.max(0,this.bossIntro.remaining-dt);return;}this.time+=dt;this.updateLuckyFlashes?.();this.syncEnemyGrowth();this.updateGuardianRespawns();this.updateMageQuest();this.updateLaserQuest();
-  if(this.coop)this.coopIncome(dt);else for(let t=0;t<2;t++)this.cash[t]+=this.income(t)*dt;
-  if(!this.coop&&this.mode!=='crisis')this.gainXP(dt*(this.mode==='pve'?1.3:3.1));if(this.mode==='duel')this.enemyAct();else if(this.mode==='pve')this.updateMission(dt);if(this.phase!=='playing')return;
-  this.updateSwarm();this.updateBosses();if(this.bossIntro?.remaining>0)return;this.updateArtillery();if(this.mode==='pve')this.updateDefenses(dt);this.updateBuildings(dt);this.coopSelectOwner?.(0);if(this.phase!=='playing')return;
-  if(this.focusTarget&&(this.focusTarget.hp<=0||!this.visible(this.focusTarget)))this.focusTarget=null;
-  if(this.input.x||this.input.y)this.moveOrder=null;
-  const player=this.commander(0),enemy=this.commander(1);this.updateFormationFacing(dt);this.updateUltimate();if(this.phase!=='playing')return;
-  const pressure=this.pressure().tier;if(pressure>this.lastPressure){this.lastPressure=pressure;this.notify('toast',`위협 Lv.${pressure+1} · 증원 증가 / 강한 적 출현 / 새 적의 체력·공격력 상승`);}
-  this.updateEvolutionCombat();this.updateSupportToys?.(dt);
+ update(dt){return BATTLE_SYSTEMS.update(this,dt);}
+ updateBattleUnits(dt,enemy){
   const combatThreats=this.attackingEnemies(),combatCandidates=this.combatCandidates(),commandEngaged=new Map();
   for(const u of this.units){
    this.coopSelectOwner?.(u.team===0?u.coopOwner:0);
@@ -1922,24 +1915,10 @@ class FrontGame{
     if(dist(u,goal)>12)this.navigate(u,goal.x,goal.y,dt,this.squadFollowSpeed(u,u.regroup?.goal||goal,s.speed*(dist(u,c)>280?1.3:1)));
    }
   }
-  this.coopSelectOwner?.(0);
-  if(player.ultimatePose?.active)player.face=player.aimFace=player.ultimatePose.angle;
-  const live=this.units.filter(u=>u.hp>0);
-  this.updateLuckyObjects(dt);
-  this.separateCrowd(live);
-  live.forEach(u=>this.resolvePosition(u));
-  // Heal against the final positions after every squad has moved, independent of unit ordering.
-  for(const u of live)if(u.team===0&&u.type==='medic'){
-   const pulse=()=>this.updateMedicHealing(u);if(this.coop)this.withOwner(u.coopOwner,pulse);else pulse();
-  }
-  if(this.coop)this.coopCollectPickups();
-  for(const p of this.pickups){if(!this.coop&&p.active&&player.hp>0&&dist(p,player)<60){this.collectFieldSupply(p);}}
+  return combatCandidates;
+ }
+ updateBattleProjectiles(dt,combatCandidates){
   for(const p of this.shots){p.life-=dt;if(p.commandAngle!==undefined){this.advanceCommandShot(p,dt,combatCandidates);continue;}if(p.target.hp<=0&&p.kind==='bossKiller'&&p.guidedFlight?.hovering){const next=this.bossKillerTarget(p.source);if(next)p.target=next;}if(p.target.hp<=0){p.life=0;continue;}if(p.kind==='bossKiller'&&p.guidedFlight&&this.updateBossKillerFlight){this.updateBossKillerFlight(p,dt);continue;}const d=dist(p,p.target),step=p.speed*dt;if(d<step+10){this.impact(p);p.life=0;}else{p.x+=(p.target.x-p.x)/d*step;p.y+=(p.target.y-p.y)/d*step;}}
-  this.updateMortars();this.updateButterflyGusts();this.updateMedicCleanses();this.updatePoisons();
-  this.units=this.units.filter(u=>this.isSupportToy?.(u)&&!u.toyRetired||u.type==='leader'||u.guardianRespawn||u.hp>0||u.diedAt===undefined||this.time-u.diedAt<(u.type==='medic'&&u.team===0&&u.appearance==='rina'?1.2:.8));
-  this.shots=this.shots.filter(p=>p.life>0);this.effects.forEach(e=>e.t-=dt);this.effects=this.effects.filter(e=>e.t>0);
-  if(this.mode==='duel'&&this.time>=180&&this.phase==='playing'){const d=this.bases[0].hp-this.bases[1].hp;this.finish(d>0?'win':d<0?'lose':'draw','time');return;}
-  this.levelCheck();
  }
  finish(result,reason){if(this.phase==='ended')return;this.phase='ended';this.result=result;if(result==='win')this.awardGold(80);this.notify('end',{result,reason});}
 }
