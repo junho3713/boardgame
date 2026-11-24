@@ -32,7 +32,7 @@ const gameAssetsReady=unitModels.waitFor([unitModels.ready,swordView.ready,windo
 gameAssetsReady.then(()=>{window.FrontSupportToyView?.prepareCharacter?.('toyStunner');battleFx.prepareCombatMaterials();return battleFx.prepareCommanderMaterials();}).catch(()=>{});
 async function prepareGameAssets(){const b=$('startBtn'),label=b.textContent;b.disabled=true;b.textContent='선택한 분대 준비 중…';try{await gameAssetsReady;if(game.bedroomStar)await Promise.all([window.FrontBedroom.prepare(),window.FrontLivingRoom.ready]);await unitModels.prepare(game);}finally{b.disabled=false;b.textContent=label;}}
 let selectedMode='pve',autoPilot=null,waveTestBackup=null,waveTestReturn='ready',waveTestFocus=null;const directProfile=profile;
-const gameEvents={level:showUpgrade,change:updateUI,toast:toast,end:data=>{if(autoPilot)autoPilot.lastEnd=data;showResult(data);},fire:weaponSound,explosion:explosionSound,profile:persistProfile};
+const gameEvents={level:showUpgrade,change:updateUI,toast:toast,end:data=>{if(autoPilot)autoPilot.lastEnd=data;showResult(data);},fire:weaponSound,shotgunReload:reloadSound,explosion:explosionSound,profile:persistProfile};
 let game=COOP?.active?new window.FrontCoopGame(gameEvents):new window.FrontGame(gameEvents,profile,{map:battlefield,commander:selectedCommander,sniperSkin:selectedSniperSkin,medicSkin:selectedMedicSkin,flameSkin:selectedFlameSkin});
 let reinforcementUI=null;
 const fieldSupplyUI=window.FrontSupplyUI.create({getGame:()=>game,toast,clearInput});
@@ -46,7 +46,7 @@ function refreshManualSave(){const v=runSave.read(),idle=selectedMode==='idle';$
 function manualCheckpoint(report=false){if(selectedMode==='idle'||!['playing','paused','choice','resupply'].includes(game.phase))return false;const ok=runSave.save(game,selectedMode);refreshManualSave();if(report)toast(ok?'이 브라우저에 작전 저장 완료':runSave.error||'저장할 진행 중인 작전이 없습니다.');return ok;}
 $('saveRunBtn').onclick=()=>manualCheckpoint(true);
 $('saveMenuBtn').onclick=()=>{if(manualCheckpoint(true))newGame(false);};
-$('manualContinue').onclick=async()=>{enableAudio();await gameAssetsReady;let latest;try{latest=window.FrontProfile.read(localStorage,profileKey);}catch{toast('개인 강화 저장을 읽지 못했습니다. 기존 저장은 유지합니다.');return;}directProfile.gold=latest.gold;Object.assign(directProfile.upgrades,latest.upgrades);const restored=runSave.load(gameEvents,directProfile);if(!restored){refreshManualSave();toast(runSave.error||'저장된 작전이 없습니다.');return;}
+$('manualContinue').onclick=async()=>{enableAudio(true);await gameAssetsReady;let latest;try{latest=window.FrontProfile.read(localStorage,profileKey);}catch{toast('개인 강화 저장을 읽지 못했습니다. 기존 저장은 유지합니다.');return;}directProfile.gold=latest.gold;Object.assign(directProfile.upgrades,latest.upgrades);const restored=runSave.load(gameEvents,directProfile);if(!restored){refreshManualSave();toast(runSave.error||'저장된 작전이 없습니다.');return;}
  if(selectedMode==='idle')autoSession.detach();selectedMode=restored.mode;autoPilot=null;game=restored.game;await unitModels.prepare(game);profile=directProfile;battlefield=game.battlefieldId();selectedCommander=game.commanderId||'sarge';selectedSniperSkin=game.sniperSkinId||'classic';selectedMedicSkin=game.medicSkinId||'classic';selectedFlameSkin=game.flameSkinId||'classic';document.body.classList.remove('auto-mode');for(const id of ['startOverlay','idleConfig','autoState','displayOverlay','constructionOverlay','resultOverlay','upgradeOverlay','pauseOverlay','helpOverlay','intelOverlay','supportOverlay','permanentOverlay','evolutionOverlay','fusionOverlay','battleSquadOverlay','battleMenuOverlay'])$(id).hidden=true;
  cursorAimEnabled=false;clearInput();rosterKey='';queue=emptyQueue();renderCommanderChoice();renderSniperChoice();renderMedicChoice();renderBattlefieldChoice();buildTerrain();resize();updateIntel();if(game.phase==='choice'){showUpgrade(game.currentOptions||[]);if(game.pendingChoice){queue={...emptyQueue(),...game.pendingChoice.queue};choiceDone(game.pendingChoice.type);}}else $('pauseOverlay').hidden=false;refreshManualSave();updateUI();toast('저장된 작전 복구 · 준비되면 계속 진격하세요.');};
 setInterval(()=>{if(waveTestBackup)normalRunSave.claim();if(!COOP?.active&&selectedMode!=='idle'&&['playing','paused','choice','resupply'].includes(game.phase)&&!runSave.claim()){refreshManualSave();}},3000);
@@ -141,7 +141,7 @@ function adjustIdlePlan(e){const button=e.target.closest('[data-auto-delta]');if
 $('idlePlanGrid').onclick=adjustIdlePlan;$('idleGrowthGrid').onclick=adjustIdlePlan;
 $('idleStrategy').onchange=()=>{idlePlan=window.FrontAutoCleanPlan({counts:idlePlan.counts,strategy:$('idleStrategy').value,construction:idlePlan.construction});renderIdlePlan();};
 $('autoBusyContinue').onclick=()=>autoSession.cancelCatchup();
-$('idleContinue').onclick=async()=>{enableAudio();await gameAssetsReady;const saved=autoSession.read();if(saved)await unitModels.prepare({...saved.snapshot.engine.fields,units:[]});$('startOverlay').hidden=true;await autoSession.resume();};
+$('idleContinue').onclick=async()=>{enableAudio(true);await gameAssetsReady;const saved=autoSession.read();if(saved)await unitModels.prepare({...saved.snapshot.engine.fields,units:[]});$('startOverlay').hidden=true;await autoSession.resume();};
 function startAuto(){autoPilot.start(idlePlan);if(!autoSession.attach(autoPilot)){toast('다른 창에서 방치 작전 진행 중 · 저장된 작전 이어하기를 선택하세요.');autoPilot.active=false;game.phase='ready';return false;}return true;}
 function autoCheckpoint(){if(selectedMode==='idle'&&autoPilot?.active){autoSession.tick();autoSession.save();}}
 setInterval(()=>{if(selectedMode==='idle'&&autoPilot?.active)autoSession.tick();},1000);
@@ -204,19 +204,54 @@ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 window.addEventListener('front-room-art-ready',()=>buildTerrain());
 const groundTexture=new Image();groundTexture.onload=()=>buildTerrain();groundTexture.src='assets/backyard-ground-calm-v112.webp';
 const combatAudio=new window.FrontAudio({onStatus:status=>{
- const messages={loading:'효과음 불러오는 중…',ready:'전투 효과음 9종 준비됨',partial:'일부 효과음을 불러오지 못했습니다. 새로 접속해 주세요.',unsupported:'이 브라우저에서 소리를 사용할 수 없습니다.',unavailable:'소리를 시작하지 못했습니다. 소리 버튼을 다시 눌러주세요.'};
+ const messages={loading:'효과음 불러오는 중…',ready:'전투 효과음 준비됨',partial:'일부 효과음을 불러오지 못했습니다. 새로 접속해 주세요.',unsupported:'이 브라우저에서 소리를 사용할 수 없습니다.',unavailable:'소리를 시작하지 못했습니다. 소리 버튼을 다시 눌러주세요.'};
  $('audioStatus').textContent=messages[status]||'';
 }});let muted=false,lastImpactAudioAt=-1;battleFx.impactSound=e=>{if(game.time<lastImpactAudioAt-1)lastImpactAudioAt=-1;if(e.at>lastImpactAudioAt&&game.phase==='playing'){lastImpactAudioAt=e.at;combatAudio.impact(e,game.camera);}};
-try{muted=localStorage.getItem('plastic-front-muted')==='true';const saved=localStorage.getItem('plastic-front-volume');if(saved!==null)combatAudio.setVolume(Number(saved));}catch{}
-combatAudio.setMuted(muted);
-function soundUI(){$('soundBtn').textContent=muted?'음소거':'소리 켬';$('soundBtn').setAttribute('aria-pressed',String(!muted));$('pauseSoundBtn').textContent=muted?'음소거 해제':'음소거';$('pauseSoundBtn').setAttribute('aria-pressed',String(muted));$('sfxVolume').value=Math.round(combatAudio.volume*100);$('sfxVolumeValue').textContent=`${Math.round(combatAudio.volume*100)}%`;$('sfxMuteStatus').textContent=muted?'음소거 중 · 해제하면 설정한 음량으로 재생됩니다.':combatAudio.volume?'현재 음량이 모든 전투 효과음에 적용됩니다.':'0% · 무음 상태입니다.';$('sfxVolume').setAttribute('aria-valuetext',`${Math.round(combatAudio.volume*100)}퍼센트${muted?' · 음소거 중':''}`);}
-function enableAudio(){if(!muted)combatAudio.unlock();}
+const battleMusic=new window.FrontMusic(),musicVolumeKey='plastic-front-music-volume';
+try{
+ muted=localStorage.getItem('plastic-front-muted')==='true';
+ const effects=localStorage.getItem('plastic-front-volume'),music=localStorage.getItem(musicVolumeKey);
+ if(effects!==null)combatAudio.setVolume(Number(effects));
+ if(music!==null)battleMusic.setVolume(Number(music));
+}catch{}
+combatAudio.setMuted(muted);battleMusic.setMuted(muted);
+function soundUI(){
+ $('soundBtn').textContent=muted?'음소거':'소리 켬';
+ $('soundBtn').setAttribute('aria-pressed',String(!muted));
+ $('pauseSoundBtn').textContent=muted?'음소거 해제':'전체 음소거';
+ $('pauseSoundBtn').setAttribute('aria-pressed',String(muted));
+ const effects=Math.round(combatAudio.volume*100),music=Math.round(battleMusic.volume*100);
+ $('sfxVolume').value=effects;$('sfxVolumeValue').textContent=`${effects}%`;
+ $('bgmVolume').value=music;$('bgmVolumeValue').textContent=`${music}%`;
+ $('sfxMuteStatus').textContent=muted?'음소거 중 · 해제하면 설정한 음량으로 재생됩니다.':'';
+ $('sfxVolume').setAttribute('aria-valuetext',`${effects}퍼센트`);
+ $('bgmVolume').setAttribute('aria-valuetext',`${music}퍼센트`);
+}
+function syncBattleMusic(){battleMusic.sync(window.frontMusicForBattle(game,document.hidden));}
+function enableAudio(primeMusic=false){
+ if(muted)return;
+ combatAudio.unlock();
+ battleMusic.unlock(combatAudio.context,primeMusic);
+ syncBattleMusic();
+}
 function weaponSound(u){combatAudio.sync(game.phase);combatAudio.fire(u,game.camera);}
+function reloadSound(e){combatAudio.sync(game.phase);combatAudio.reload(e,game.camera);}
 function explosionSound(e){combatAudio.sync(game.phase);combatAudio.explosion(e,game.camera);}
-$('soundBtn').onclick=()=>{muted=!muted;combatAudio.setMuted(muted);try{localStorage.setItem('plastic-front-muted',String(muted));}catch{}enableAudio();soundUI();};
+$('soundBtn').onclick=()=>{muted=!muted;combatAudio.setMuted(muted);battleMusic.setMuted(muted);try{localStorage.setItem('plastic-front-muted',String(muted));}catch{}enableAudio();soundUI();};
 $('pauseSoundBtn').onclick=()=>$('soundBtn').onclick();
 $('sfxVolume').oninput=()=>{combatAudio.setVolume(Number($('sfxVolume').value)/100);try{localStorage.setItem('plastic-front-volume',String(combatAudio.volume));}catch{}soundUI();};
+$('bgmVolume').oninput=()=>{
+ const wasSilent=!battleMusic.volume;
+ battleMusic.setVolume(Number($('bgmVolume').value)/100);
+ try{localStorage.setItem(musicVolumeKey,String(battleMusic.volume));}catch{}
+ if(wasSilent&&battleMusic.volume)enableAudio(game.phase==='paused');
+ soundUI();
+};
 $('previewSfx').onclick=async()=>{if(muted||!combatAudio.volume){$('audioStatus').textContent='효과음을 켜고 음량을 올려주세요.';return;}const played=await combatAudio.audition($('sfxSample').value);if(played)$('audioStatus').textContent=`${$('sfxSample').selectedOptions[0].textContent} 재생 중`;};
+document.addEventListener('visibilitychange',syncBattleMusic);
+window.addEventListener('pointerdown',()=>{
+ if(COOP?.active&&!battleMusic.media&&game.phase==='playing')enableAudio(true);
+},{passive:true});
 soundUI();
 
 function pad(n){return String(n).padStart(2,'0');}
@@ -259,7 +294,7 @@ function renderFusion(){
 $('fusionBtn').onclick=()=>{if(!game.starExperiment||!['playing','paused'].includes(game.phase))return;fusionReturn=game.phase;game.phase='paused';clearInput();renderFusion();$('fusionOverlay').hidden=false;};
 $('closeFusion').onclick=()=>{$('fusionOverlay').hidden=true;game.phase=fusionReturn;updateUI();};
 
-function updateUI(){if(game.phase!=='ready')unitModels.prefetch(game);
+function updateUI(){syncBattleMusic();if(game.phase!=='ready')unitModels.prefetch(game);
  fieldSupplyUI.update();reinforcementUI?.update();
  $('fusionBtn').hidden=!game.starExperiment||game.mode!=='pve';$('fusionBtn').disabled=!['playing','paused'].includes(game.phase);if(game.starExperiment)$('fusionBtn').textContent='★★ 병과 합성';
  const room=game.bounds().id==='livingroom',desk=game.isDesktopDefense();$('mapName').textContent=game.bedroomStar&&desk?'BEDROOM FLOOR ★★':game.desktopStar&&desk?'DESK OUTPOST ★★':desk?'DESK DEFENSE 03':room?(game.starExperiment?'LIVING ROOM ★★':'LIVING ROOM 02'):'BACKYARD 01';$('mapSubtitle').textContent=game.bedroomStar&&desk?'마루 · 러그 · 생활용품 / 2성 방바닥':game.desktopStar&&desk?'책상 전초기지 · 사방 공세 / 2성 분대':desk?'책상 위 방어선 · 북쪽 공세 / 20분 생존':room?'확장 거실 · 20분 혼합 공세':'작전 구역 · 뒷마당';$('constructionCount').textContent=game.buildings.filter(b=>b.hp>0).length;$('constructionBtn').disabled=game.mode!=='pve'||!['playing','paused'].includes(game.phase);renderBattlefieldChoice();
@@ -370,13 +405,13 @@ $('upgradeCards').addEventListener('click',e=>{const b=e.target.closest('[data-u
 $('continueBattle').onclick=()=>{if(game.confirmChoice()){$('upgradeOverlay').hidden=true;clearInput();game.phase='playing';game.levelCheck();updateUI();}else{toast('선택과 자원을 확인하고 다시 확정하세요.');}};
 
 function showResult({result,reason}){cursorAimEnabled=false;if(!COOP?.active&&selectedMode!=='idle'){runSave.clear(game);refreshManualSave();}clearInput();$('upgradeOverlay').hidden=true;$('resultTitle').textContent=result==='win'?'작전 성공.':result==='lose'?'작전 실패.':'팽팽한 대치.';const elapsed=`${Math.floor(game.time/60)}분 ${Math.floor(game.time%60)}초`;$('resultText').textContent=game.isDesktopDefense()?(result==='win'?`20분 동안 기지를 지켰습니다! ${game.bedroomStar?'방바닥':'책상'} 방어 성공 · 남은 기지 체력 ${Math.ceil(game.bases[0].hp)}/${game.bases[0].maxHp}.`:`아군 방어 기지가 파괴되었습니다. 생존 시간 ${elapsed} / 목표 20분.`):game.mode==='crisis'?(result==='win'?`포병 2기를 파괴해 포격이 중단되었습니다. 피격 ${game.crisis.hits}회 · 완전 회피 ${game.crisis.dodges}회 · 작전 시간 ${elapsed}.`:`지휘관이 세 번 후퇴해 연습이 종료되었습니다. 피격 ${game.crisis.hits}회 · 다음에는 포격 원이 고정된 뒤 부대 전체를 이동하세요.`):game.mode==='pve'?(result==='win'?(game.isRoomCampaign()?`최종 보스를 처치했습니다. 거실 작전 성공 · 작전 시간 ${elapsed}.`:`최종 기지를 파괴했습니다. 사냥 구역과 전초기지를 모두 돌파했습니다. 작전 시간 ${elapsed}.`):`지휘관의 후퇴 기회 3회를 모두 사용했습니다. 도달 단계 ${game.mission.stage}/3 · 작전 시간 ${elapsed}.`):reason==='base'?(result==='win'?'상대 본진을 파괴했습니다.':'아군 본진이 파괴되었습니다.'):'3분 대결이 끝나 남은 본진 체력으로 판정했습니다.';$('resultText').textContent+=` 분대원 전사 ${game.losses[0]}기.`;$('runGoldText').textContent=`이번 작전 획득 ◈ ${Math.floor(game.runGold)} · 보유 골드 ${Math.floor(profile.gold)}`;$('resultStats').innerHTML=`<div><b>${game.mode==='crisis'?game.crisis.hits:game.level}</b><span>${game.mode==='crisis'?'포격 피격 횟수':'최종 레벨'}</span></div><div><b>${game.kills}</b><span>처치 수</span></div><div><b>${pad(Math.floor(game.time/60))}:${pad(Math.floor(game.time%60))}</b><span>작전 시간</span></div>`;$('resultOverlay').hidden=false;updateUI();}
-async function newGame(start=true){if(COOP?.active)return;if(waveTestBackup)stopWaveTest(false);if(start&&selectedMode!=='idle'&&!runSave.claim()){toast(runSave.error);return;}if(start){enableAudio();await gameAssetsReady;}if(selectedMode==='idle')autoSession.detach();cursorAimEnabled=false;clearInput();for(const id of ['displayOverlay','constructionOverlay','resultOverlay','upgradeOverlay','pauseOverlay','helpOverlay','intelOverlay','supportOverlay','permanentOverlay','evolutionOverlay','fusionOverlay','battleSquadOverlay','battleMenuOverlay'])$(id).hidden=true;game.commanderId=selectedCommander;game.sniperSkinId=selectedSniperSkin;game.medicSkinId=selectedMedicSkin;game.flameSkinId=selectedFlameSkin;game.reset();if(start&&selectedMode!=='idle')runSave.begin(game);if(selectedMode==='idle'){if(start){if(!startAuto())return;}else{autoPilot=new window.FrontAutoPilot(game,idlePlan);autoPilot.prepare();renderIdlePlan();}}rosterKey='';updateIntel();buildTerrain();if(start){$('startOverlay').hidden=true;if(selectedMode!=='idle')game.start();toast((game.desktopStar||game.bedroomStar)&&game.isDesktopDefense()?'2성 분대 합성 · 사방 공세 / 중앙 기지를 20분 지키세요':game.isDesktopDefense()?'20분 동안 버티세요 · 북쪽 공세 / 건설 한도 2배':selectedMode==='idle'?'AI 지휘 시작 · 기존 돌파 작전 규칙으로 진행합니다.':game.mode==='crisis'?'15초 뒤 포병 도착 · 부대를 이동해 포격을 피하고 적 포병을 격파하세요.':(game.reinforcementPlan().enabled?'채집 트럭 2대가 자원을 생산합니다. 자동충원은 30초마다 목표 편성을 확인합니다.':'채집 트럭 2대가 고정 수입을 생산합니다. 첫 병력 지원은 1분 뒤 제공됩니다.'));}else{$('startOverlay').hidden=false;runSave.release();}refreshManualSave();updateUI();}
- $('startBtn').onclick=async()=>{enableAudio();await prepareGameAssets();if(selectedMode!=='idle'&&!runSave.begin(game)){toast(runSave.error);return;}if(selectedMode==='idle'&&!startAuto())return;$('startOverlay').hidden=true;if(selectedMode!=='idle')game.start();toast((game.desktopStar||game.bedroomStar)&&game.isDesktopDefense()?'2성 분대 합성 · 사방 공세 / 중앙 기지를 20분 지키세요':game.isDesktopDefense()?'20분 동안 버티세요 · 북쪽 공세 / 건설 한도 2배':selectedMode==='idle'?'AI 지휘 시작 · 기존 돌파 작전 규칙으로 진행합니다.':game.mode==='crisis'?'15초 뒤 포병 도착 · 부대를 이동해 포격을 피하고 포병을 파괴하세요.':game.isRoomCampaign()?'거실 전체 개방 · 20분 이후 최종 보스 처치로 승리 · 포탈 폐쇄 시 증원 감소':game.mode==='pve'?'목표 1/3 · 벌레 무리 8회를 처치하고 전방 구역을 개방하세요.':'1대1 훈련 · 상대 본진을 파괴하세요. 3분 후 체력으로 판정합니다.');refreshManualSave();updateUI();};
+async function newGame(start=true){if(COOP?.active)return;if(waveTestBackup)stopWaveTest(false);if(start&&selectedMode!=='idle'&&!runSave.claim()){toast(runSave.error);return;}battleMusic.reset();if(start){enableAudio(true);await gameAssetsReady;}if(selectedMode==='idle')autoSession.detach();cursorAimEnabled=false;clearInput();for(const id of ['displayOverlay','constructionOverlay','resultOverlay','upgradeOverlay','pauseOverlay','helpOverlay','intelOverlay','supportOverlay','permanentOverlay','evolutionOverlay','fusionOverlay','battleSquadOverlay','battleMenuOverlay'])$(id).hidden=true;game.commanderId=selectedCommander;game.sniperSkinId=selectedSniperSkin;game.medicSkinId=selectedMedicSkin;game.flameSkinId=selectedFlameSkin;game.reset();if(start&&selectedMode!=='idle')runSave.begin(game);if(selectedMode==='idle'){if(start){if(!startAuto())return;}else{autoPilot=new window.FrontAutoPilot(game,idlePlan);autoPilot.prepare();renderIdlePlan();}}rosterKey='';updateIntel();buildTerrain();if(start){$('startOverlay').hidden=true;if(selectedMode!=='idle')game.start();toast((game.desktopStar||game.bedroomStar)&&game.isDesktopDefense()?'2성 분대 합성 · 사방 공세 / 중앙 기지를 20분 지키세요':game.isDesktopDefense()?'20분 동안 버티세요 · 북쪽 공세 / 건설 한도 2배':selectedMode==='idle'?'AI 지휘 시작 · 기존 돌파 작전 규칙으로 진행합니다.':game.mode==='crisis'?'15초 뒤 포병 도착 · 부대를 이동해 포격을 피하고 적 포병을 격파하세요.':(game.reinforcementPlan().enabled?'채집 트럭 2대가 자원을 생산합니다. 자동충원은 30초마다 목표 편성을 확인합니다.':'채집 트럭 2대가 고정 수입을 생산합니다. 첫 병력 지원은 1분 뒤 제공됩니다.'));}else{$('startOverlay').hidden=false;runSave.release();}refreshManualSave();updateUI();}
+ $('startBtn').onclick=async()=>{battleMusic.reset();enableAudio(true);await prepareGameAssets();if(selectedMode!=='idle'&&!runSave.begin(game)){toast(runSave.error);return;}if(selectedMode==='idle'&&!startAuto())return;$('startOverlay').hidden=true;if(selectedMode!=='idle')game.start();toast((game.desktopStar||game.bedroomStar)&&game.isDesktopDefense()?'2성 분대 합성 · 사방 공세 / 중앙 기지를 20분 지키세요':game.isDesktopDefense()?'20분 동안 버티세요 · 북쪽 공세 / 건설 한도 2배':selectedMode==='idle'?'AI 지휘 시작 · 기존 돌파 작전 규칙으로 진행합니다.':game.mode==='crisis'?'15초 뒤 포병 도착 · 부대를 이동해 포격을 피하고 포병을 파괴하세요.':game.isRoomCampaign()?'거실 전체 개방 · 20분 이후 최종 보스 처치로 승리 · 포탈 폐쇄 시 증원 감소':game.mode==='pve'?'목표 1/3 · 벌레 무리 8회를 처치하고 전방 구역을 개방하세요.':'1대1 훈련 · 상대 본진을 파괴하세요. 3분 후 체력으로 판정합니다.');refreshManualSave();updateUI();};
  document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{selectMode(b.dataset.mode);});$('toMenuBtn').onclick=()=>{if(waveTestBackup)stopWaveTest();else newGame(false);};
  $('againBtn').onclick=()=>{if(waveTestBackup){stopWaveTest(false);openWaveTest();}else newGame();};$('restartBtn').onclick=()=>{if(game.phase==='ready')return;openPause('restart');};
 function openPause(){if(COOP?.active){COOP.pause();return;}if(game.phase!=='playing')return;if(selectedMode==='idle')autoSession.tick();clearInput();game.phase='paused';combatAudio.sync(game.phase);$('pauseOverlay').hidden=false;autoCheckpoint();updateUI();}
  $('pauseBtn').onclick=()=>{if(game.phase==='paused'&&!$('pauseOverlay').hidden){$('resumeBtn').click();return;}openPause();};
- $('resumeBtn').onclick=()=>{enableAudio();$('pauseOverlay').hidden=true;game.phase='playing';if(selectedMode==='idle'){autoSession.at=Date.now();autoSession.save();}updateUI();};
+ $('resumeBtn').onclick=()=>{enableAudio(true);$('pauseOverlay').hidden=true;game.phase='playing';if(selectedMode==='idle'){autoSession.at=Date.now();autoSession.save();}updateUI();};
  const resetButton=document.createElement('button');resetButton.textContent='새 작전으로 다시 시작';resetButton.className='pause-reset';resetButton.onclick=()=>newGame();$('pauseOverlay').querySelector('.modal').append(resetButton);const menuButton=document.createElement('button');menuButton.textContent='작전 선택으로';menuButton.className='pause-reset';menuButton.onclick=()=>newGame(false);$('pauseOverlay').querySelector('.modal').append(menuButton);
 function openModal(id){if(game.phase==='ended')return;returnPhase=game.phase;clearInput();if(game.phase==='playing')game.phase='paused';$(id).hidden=false;updateUI();}
 function closeModal(id){$(id).hidden=true;if(game.phase==='paused')game.phase=returnPhase;updateUI();}

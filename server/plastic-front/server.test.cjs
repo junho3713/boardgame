@@ -54,3 +54,28 @@ test('static hosting rejects traversal, source files and unsupported methods', a
   assert.ok(Number(head.headers.get('content-length')) > 1000);
   assert.equal((await head.arrayBuffer()).byteLength, 0);
 }));
+
+test('battle tracks can stream and seek through single audio byte ranges', async () => withApp(async origin => {
+  for (const track of ['maple-toy.mp3', 'toy-survival-95bpm.mp3']) {
+    const url = origin + '/plastic-front/assets/bgm/' + track;
+    const head = await fetch(url, {method: 'HEAD'});
+    const size = Number(head.headers.get('content-length'));
+    assert.equal(head.status, 200);
+    assert.equal(head.headers.get('content-type'), 'audio/mpeg');
+    assert.equal(head.headers.get('accept-ranges'), 'bytes');
+    assert.ok(size > 1000000);
+    for (const [request, start, end] of [
+      ['bytes=0-99', 0, 99],
+      ['bytes=-50', size - 50, size - 1],
+      ['bytes=' + (size - 100) + '-', size - 100, size - 1],
+    ]) {
+      const response = await fetch(url, {headers: {Range: request}});
+      assert.equal(response.status, 206);
+      assert.equal(response.headers.get('content-range'), `bytes ${start}-${end}/${size}`);
+      assert.equal((await response.arrayBuffer()).byteLength, end - start + 1);
+    }
+    const beyond = await fetch(url, {headers: {Range: 'bytes=' + size + '-'}});
+    assert.equal(beyond.status, 416);
+    assert.equal(beyond.headers.get('content-range'), 'bytes */' + size);
+  }
+}));

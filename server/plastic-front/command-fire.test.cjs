@@ -127,6 +127,8 @@ test('shotgun and dice alternate between independent nearest targets and a held 
 
 test('five-pellet volleys pump for one base second and reload the fourth shell for 1.8 seconds in live combat',()=>{
  const g=field(),c=g.commander(0),u=add(g,'rifle',1100,1320),enemy=add(g,'rifle',980,1300,1);
+ const reloads=[];
+ g.events.shotgunReload=event=>reloads.push({...event,sequence:u.shotgunSequence});
  g.setManualAim({x:1,y:0});g.move=()=>{};const fired=[];
  for(let i=0;i<540&&fired.length<5;i++){
   const before=u.shotgunSequence||0;g.update(.01);
@@ -137,6 +139,7 @@ test('five-pellet volleys pump for one base second and reload the fourth shell f
  }
  assert.equal(fired.length,5);
  assert.deepEqual(fired.slice(1).map((t,i)=>Number((t-fired[i]).toFixed(2))),[1,1,1,1.8]);
+ assert.deepEqual(reloads,[{id:u.id,team:0,x:u.x,y:u.y,duration:1.8,sequence:4}]);
  assert.equal(enemy.hp,enemy.maxHp);assert.equal(u.shotgunRounds,3);
  const basic=g.stats(u);assert.equal(basic.rate,1);assert.equal(g.shotgunReloadTime(u),1.8);
  g.abilities.haste=3;const faster=g.stats(u);assert.ok(faster.rate<basic.rate);

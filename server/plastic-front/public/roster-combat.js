@@ -88,6 +88,7 @@ function install({FrontGame,TYPES,multiplier}){
   if(!u.shotgunRounds){
    const reload=g.shotgunReloadTime(u,s);u.shotgunReloadUntil=g.time+reload;u.cooldown=reload;
    effect(g,'rosterReload',u,{source:u},reload);
+   g.notify('shotgunReload',{id:u.id,team:u.team,x:u.x,y:u.y,duration:reload});
   }
   return bullets;
  }

@@ -12,6 +12,15 @@ const TYPES = {
   '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.txt': 'text/plain; charset=utf-8',
 };
 
+function audioRange(header, size) {
+  const match = /^bytes=(\d*)-(\d*)$/.exec(header || '');
+  if (!match || (!match[1] && !match[2])) return undefined;
+  const suffix = match[1] === '';
+  const start = suffix ? Math.max(0, size - Number(match[2])) : Number(match[1]);
+  const end = suffix || !match[2] ? size - 1 : Math.min(Number(match[2]), size - 1);
+  return start <= end ? {start, end} : null;
+}
+
 function createHandler() {
   const coop = require('./coop-server.cjs').createCoopHandler();
   return async function servePlasticFront(req, res) {
@@ -45,9 +54,23 @@ function createHandler() {
       'ETag': etag,
     };
     if (req.headers['if-none-match'] === etag) { res.writeHead(304, headers); return res.end(); }
-    res.writeHead(200, {...headers, 'Content-Length': stat.size});
+    let range;
+    if (type === 'audio/mpeg' || type === 'audio/wav') {
+      headers['Accept-Ranges'] = 'bytes';
+      if (req.method === 'GET' && !req.headers['if-range']) {
+        range = audioRange(req.headers.range, stat.size);
+      }
+      if (range === null) {
+        res.writeHead(416, {...headers, 'Content-Range': 'bytes */' + stat.size});
+        return res.end();
+      }
+      if (range) headers['Content-Range'] = `bytes ${range.start}-${range.end}/${stat.size}`;
+    }
+    res.writeHead(range ? 206 : 200, {
+      ...headers, 'Content-Length': range ? range.end - range.start + 1 : stat.size
+    });
     if (req.method === 'HEAD') return res.end();
-    pipeline(fs.createReadStream(file), res, () => {});
+    pipeline(fs.createReadStream(file, range), res, () => {});
   };
 }
 module.exports = {createHandler};
