@@ -56,7 +56,7 @@ test('pirate cannons use one existing wave slot from minute six with a shared 55
   g.roomEntry=g.desktopEntry=g.northernSpawn=()=>({x:1100,y:1900,entrySide:0});
   g.roomCanSpawnMageGroup=()=>false;
   const cannons=()=>g.units.filter(u=>u.type==='pirateCannon'&&u.hp>0);
-  const wave=at=>{g.time=at;g.swarm.nextAt=at;if(g.roomCampaign){g.roomCampaign.nextSpawnAt=at;g.roomCampaign.antWaveCursor=2;}g.updateSwarm();};
+  const wave=at=>{g.time=at;g.swarm.nextAt=at;if(g.roomCampaign){g.roomCampaign.nextSpawnAt=at;g.roomCampaign.antWaveCursor=at>=300&&at<600?3:2;}g.updateSwarm();};
   wave(359.99);a.equal(cannons().length,0,map);g.units=g.units.filter(u=>u.team===0);
   wave(360);a.equal(cannons().length,1,map);a.equal(g.nextPirateCannonAt,415,map);
   const first=cannons()[0];first.hp=0;g.units=g.units.filter(u=>u.team===0);

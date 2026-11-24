@@ -10,14 +10,14 @@ function scene(map='livingroom-star'){
 const enemy={team:2,type:'ant'};
 function elite(g,type,star=2){const u=g.addUnit(0,type,1500,7500);u.star=star;u.hp=u.maxHp=g.stats(u).hp;return u;}
 
-test('the real opening spawner eases in for two minutes, with no first-minute crisis spike',()=>{
+test('the opening borrows two spawn slots for one bomb packet and keeps the two-minute ramp',()=>{
  const g=scene();g.northernSpawn=()=>({x:1500,y:6800});const totals=[0,0],maxBatch=[0,0];
  for(let tick=0;tick<2400;tick++){
   g.time=tick/20;g.units=[];const before=g.roomCampaign.spawned;g.updateRoomWaves();
   const minute=Math.floor(g.time/60),added=g.roomCampaign.spawned-before;totals[minute]+=added;maxBatch[minute]=Math.max(maxBatch[minute],added);
-  a.equal(g.roomBeat().density,1);a.ok(g.roomEnemyCount()<=g.roomWaveCap());
+  a.equal(g.roomBeat().density,1);a.ok(g.roomEnemyCount()<=g.roomWaveCap());if(minute===0&&added>1)a.equal(g.units.filter(u=>u.openingBombBug).length,1);
  }
- a.deepEqual(maxBatch,[1,2]);a.ok(totals[0]===6);a.ok(totals[1]>=20&&totals[1]<=22);
+ a.deepEqual(maxBatch,[3,2]);a.ok(totals[0]===6);a.ok(totals[1]>=20&&totals[1]<=22);
  g.time=119.95;a.equal(g.roomWaveCap(),16);g.time=120;a.equal(g.roomWaveCap(),24);a.equal(g.roomWavePlan().count,3);a.equal(g.roomWavePlan().interval,5);
 });
 

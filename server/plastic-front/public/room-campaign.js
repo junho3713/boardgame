@@ -18,7 +18,10 @@ const config={version:116,duration:1200,enemyLuckyInterval:5,recoverySeconds:16,
  opening:[{type:'ant',x:760,y:2240},{type:'ant',x:860,y:2240}],
  roadCaptains:[['road-soldier','bayonet','길목 장난감 병정',5600,1],['road-blade','bladeGuard','블랙 실드 검병 대장',3600,2],['road-bike','bikeRaider','바이크 돌격대장',2160,2]],
  mageEscort:{from:360,mortars:4,spacing:60,depth:80,interval:60},
- insects:{from:180,intervals:{acidBeetle:14}},
+ insects:{from:180,intervals:{acidBeetle:14},
+  opening:{at:12,until:30,ants:2,hpScale:.26,allyDamageScale:.2},
+  midgame:{from:300,until:600,ants:6,rotation:['mixed','ants','mixed','troops']}
+ },
  introductions:{bayonet:180,honeybee:240,machinegun:360},
  openingCaps:[{until:360,bayonet:3,honeybee:2},{until:480,honeybee:4}],
  caps:{acidBeetle:2,blizzardMage:2,mortar:4,butterfly:2,sniper:2,machinegun:4,hornet:3,honeybee:8,bikeRaider:3,rhinoBeetle:4,stagBeetle:5,crimsonAce:3,lucky:4},
@@ -182,7 +185,7 @@ const methods={
   for(const u of this.units){if(u.team===0)continue;const ratio=u.hp>0?clamp(u.hp/Math.max(1,u.maxHp),0,1):0;u.maxHp=this.stats(u).hp;u.hp=u.maxHp*ratio;}
   this.roomHealthVersion=config.combat.healthVersion;return true;
  },
- roomEnemyCount(type=null){return this.units.filter(u=>u.hp>0&&u.team!==0&&!u.boss&&!u.fixedGuard&&!u.roomGarrison&&u.type!=='artillery'&&(!type||u.type===type)).length;},
+ roomEnemyCount(type=null,opening=false){return this.units.filter(u=>u.hp>0&&u.team!==0&&!u.boss&&!u.fixedGuard&&!u.roomGarrison&&u.type!=='artillery'&&(!opening||!u.roadCaptain)&&(!type||u.type===type)).length;},
  roomWaveCap(){const boss=this.units.some(u=>u.boss&&!u.miniBoss&&!u.roadCaptain&&u.hp>0),base=this.time>=config.bossRush.from?config.bossRush.troops[boss?'boss':'between'].cap:this.roomPhase().cap;return base+(boss?0:this.evolutionPace().capExtra);},
  roomEnemyTypeCap(type){const row=config.openingCaps.find(r=>this.time<r.until);return Math.min(config.caps[type]??Infinity,row?.[type]??Infinity);},
  roomCanSpawn(type){if(type==='pirateCannon'&&!this.pirateReinforcementReady())return false;if(this.time<(config.introductions[type]||0))return false;if(type==='bombBug'&&this.time<config.insects.from)return false;if(type==='sniper'&&this.enemySniperCount()>=2)return false;if(config.insects.intervals[type]&&(this.time<config.insects.from||this.time<(this.roomCampaign?.insectNext?.[type]||0)))return false;return this.roomEnemyCount()<this.roomWaveCap()&&this.roomEnemyCount(type)<this.roomEnemyTypeCap(type);},
@@ -190,15 +193,34 @@ const methods={
   const p=this.roomPhase(),beat=this.roomBeat(),r=config.surges,surge=r.enabled&&this.time>=r.from&&beat.density>1;
   const portal=this.roomPortalAlive(),late=portal&&this.time>=900;const plan={surge,count:beat.density<.6?1:surge?Math.min(this.time>=r.growthFrom&&this.time<r.growthUntil?r.growthMaxBatch:r.maxBatch,p.batch+r.extra):Math.min(6,p.batch+(beat.density>1&&this.time>=240?1:0)),interval:p.interval/beat.density*(surge?r.intervalScale:1),forced:surge?(r.rosters.filter(row=>row.at<=this.time).at(-1)?.types||[]):[],window:p.at+':'+Math.floor((this.time-p.at)/config.rhythm.cycle)};if(!portal){const late=this.time>=config.lateWaves.from;plan.count=Math.max(1,Math.ceil(plan.count*(late?config.lateWaves.closedCount:.65)));plan.interval*=late?config.lateWaves.closedInterval:1.4;}else if(late&&beat.density>=.6){plan.count=Math.min(10,plan.count+config.lateWaves.openExtra);plan.interval*=config.lateWaves.openInterval;plan.surge=true;plan.forced=['machinegun','sniper','butterfly','bikeRaider'];}if(this.time>=config.bossRush.from&&this.time>=(this.roomCampaign?.recoveryUntil||0)){const row=config.bossRush.troops[this.units.some(u=>u.boss&&!u.miniBoss&&!u.roadCaptain&&u.hp>0)?'boss':'between'];plan.count=portal?row.openCount:row.closedCount;plan.interval=portal?row.openInterval:row.closedInterval;plan.surge=false;plan.forced=[];}if(!this.units.some(u=>u.boss&&!u.miniBoss&&!u.roadCaptain&&u.hp>0)){if(this.time>=config.encirclement.from){const r=config.encirclement,q=clamp((this.time-r.pressureFrom)/Math.max(1,r.pressureUntil-r.pressureFrom),0,1);plan.interval*=r.intervalScale+(r.lateIntervalScale-r.intervalScale)*q;}if(beat.density>=1)plan.interval/=this.evolutionPace().spawnScale;}if(this.time>=180&&beat.density>=.6&&this.time>=(this.roomCampaign?.recoveryUntil||0)){const extra=this.time<300?6:7;plan.count+=portal?extra:Math.ceil(extra*.65);}return plan;
  },
- spawnRoomEnemy(type,lane=null,entry=null){if(!this.roomCanSpawn(type))return null;const cursor=this.roomCampaign.entryCursor||0,p=entry||this.roomEntry(this.serial+1+(lane||0)*3,55,cursor%4);if(!p)return null;this.roomCampaign.entryCursor=Number.isInteger(p.entrySide)?p.entrySide+1:cursor+1;const team=['rifle','machinegun','sniper','crimsonAce','lucky','pirateCannon'].includes(type)?1:2,u=this.addUnit(team,type,p.x,p.y,true);if(type==='pirateCannon')this.markPirateReinforcement();if(config.insects.intervals[type]){const next=this.roomCampaign.insectNext??={};next[type]=this.time+config.insects.intervals[type];}u.roomEntrySide=p.entrySide;u.assault=true;u.roomWave=true;this.stampEvolutionWave(u);if(type==='blizzardMage')Object.assign(u,{mobileMage:true,activeStage:1,cooldown:1.2});return u;},
- spawnRoomAntGroup(lane=null,budget=5){
-  const count=Math.min(this.time>=300?4:3,budget-1,this.roomWaveCap()-this.roomEnemyCount()-1);
-  if(count<3||!this.roomCanSpawn('bombBug'))return[];
-  // Reserve a clear offscreen area for the entire packet, not four unrelated entries.
-  const point=this.roomEntry(this.serial+1+(lane||0)*3,120,(this.roomCampaign.entryCursor||0)%4);if(!point)return[];
+ spawnRoomEnemy(type,lane=null,entry=null){
+  const r=config.insects.opening,opening=entry?.openingAntPack&&this.time>=r.at&&this.time<r.until&&!this.roomCampaign.openingAntWave&&this.roomEnemyCount(null,true)<this.roomWaveCap();
+  if(!opening&&!this.roomCanSpawn(type))return null;const cursor=this.roomCampaign.entryCursor||0,p=entry||this.roomEntry(this.serial+1+(lane||0)*3,55,cursor%4);if(!p)return null;this.roomCampaign.entryCursor=Number.isInteger(p.entrySide)?p.entrySide+1:cursor+1;const team=['rifle','machinegun','sniper','crimsonAce','lucky','pirateCannon'].includes(type)?1:2,u=this.addUnit(team,type,p.x,p.y,true);if(type==='pirateCannon')this.markPirateReinforcement();if(config.insects.intervals[type]){const next=this.roomCampaign.insectNext??={};next[type]=this.time+config.insects.intervals[type];}u.roomEntrySide=p.entrySide;u.assault=true;u.roomWave=true;this.stampEvolutionWave(u);if(opening&&type==='bombBug'){u.openingBombBug=true;u.hp=u.maxHp=this.stats(u).hp;}if(type==='blizzardMage')Object.assign(u,{mobileMage:true,activeStage:1,cooldown:1.2});return u;},
+ roomBombEscortPoint(bomb,slot,count){
+  const c=this.commander(0),offset=(bomb.openingBombBug||bomb.openingAntPack)?Math.PI+(slot===0?-.66:.66):slot*Math.PI*2/count,angle=Math.atan2(c.y-bomb.y,c.x-bomb.x)+offset;
+  return{x:bomb.x+Math.cos(angle)*70,y:bomb.y+Math.sin(angle)*70,entrySide:bomb.roomEntrySide??bomb.entrySide};
+ },
+ roomOpeningAntEntry(){
+  const c=this.commander(0),v=this.spawnView(true),b=this.bounds(),r=config.insects.opening;
+  if(c.hp<=0)return null;
+  const angles=[-Math.PI/2,-Math.PI/4,-Math.PI*3/4,0,Math.PI,Math.PI/2],sides=[0,0,0,1,3,2];
+  const safe=p=>p.x>=35&&p.x<=b.width-35&&p.y>=55&&p.y<=b.height-55&&p.x>=v.left+24&&p.x<=v.right-24&&p.y>=v.top+24&&p.y<=v.bottom-24&&this.freePosition(p.x,p.y,20)&&!this.units.some(u=>u.hp>0&&d(u,p)<32);
+  for(const reach of [300,245])for(const [i,angle] of angles.entries()){
+   const p={x:c.x+Math.cos(angle)*reach,y:c.y+Math.sin(angle)*reach,entrySide:sides[i],openingAntPack:true};
+   if(!safe(p)||!this.lineClear(c,p,0,{fireTeam:0}))continue;
+   if(Array.from({length:r.ants},(_,slot)=>this.roomBombEscortPoint(p,slot,r.ants)).every(safe))return p;
+  }return null;
+ },
+ spawnRoomAntGroup(lane=null,budget=5,openingPoint=null){
+  const opening=!!openingPoint,mid=config.insects.midgame,strong=this.time>=mid.from&&this.time<mid.until;
+  const maxAnts=opening?config.insects.opening.ants:strong?mid.ants:this.time>=300?4:3,minimum=opening?maxAnts:3;
+  const count=Math.min(maxAnts,budget-1,this.roomWaveCap()-this.roomEnemyCount(null,opening)-1);
+  if(count<minimum||!opening&&!this.roomCanSpawn('bombBug'))return[];
+  // Reserve space for a tight packet so a bomb can clear its own escorts.
+  const point=openingPoint||this.roomEntry(this.serial+1+(lane||0)*3,120,(this.roomCampaign.entryCursor||0)%4);if(!point)return[];
   const bomb=this.spawnRoomEnemy('bombBug',lane,point);if(!bomb)return[];const group=[bomb];
   for(let i=0;i<count;i++){
-   const angle=i*Math.PI*2/count,p={x:bomb.x+Math.cos(angle)*70,y:bomb.y+Math.sin(angle)*70,entrySide:point.entrySide},ant=this.spawnRoomEnemy('ant',lane,p);
+   const p=this.roomBombEscortPoint(bomb,i,count),ant=this.spawnRoomEnemy('ant',lane,{...p,openingAntPack:opening});
    if(!ant)break;Object.assign(ant,{roomBombLeaderId:bomb.id,roomBombSlot:i,roomBombCount:count});group.push(ant);
   }return group;
  },
@@ -215,7 +237,7 @@ const methods={
  followRoomEscort(u,dt,s){
   if(u.roomBombLeaderId){
    const bomb=this.units.find(t=>t.id===u.roomBombLeaderId&&t.hp>0&&!t.bombDetonated);if(!bomb){delete u.roomBombLeaderId;return false;}
-   const angle=Math.atan2(this.commander(0).y-bomb.y,this.commander(0).x-bomb.x)+(u.roomBombSlot||0)*Math.PI*2/(u.roomBombCount||3),goal={x:bomb.x+Math.cos(angle)*70,y:bomb.y+Math.sin(angle)*70};
+   const goal=this.roomBombEscortPoint(bomb,u.roomBombSlot||0,u.roomBombCount||3);
    if(d(u,goal)>16)this.navigate(u,goal.x,goal.y,dt,Math.min(s.speed,this.stats(bomb).speed*1.15));return true;
   }
   if(!u.roomEscortLeaderId)return false;const mage=this.units.find(v=>v.id===u.roomEscortLeaderId&&v.hp>0);if(!mage)return false;
@@ -236,10 +258,20 @@ const methods={
   if(plan.surge&&s.surgeWindow!==plan.window){s.surgeWindow=plan.window;this.notify('toast','집중 공세 · 혼합 병력 접근');}
   this.updateRoomScheduledTanks();
   if(this.time>=config.midgame.from)s.nextSpawnAt=Math.min(s.nextSpawnAt,this.time+plan.interval);
+  const opening=config.insects.opening,openingPending=!s.openingAntWave&&this.time<opening.until;
+  if(openingPending&&this.time<opening.at)s.nextSpawnAt=Math.min(s.nextSpawnAt,opening.at);
   if(this.time<s.nextSpawnAt)return;s.nextSpawnAt=this.time+plan.interval;
   const debt=s.waveSpawnDebt||0,count=Math.max(0,plan.count-debt);s.waveSpawnDebt=Math.max(0,debt-plan.count);
-  const varied=this.time>=180&&count>=4&&this.roomBeat().density>=.6&&this.time>=(s.recoveryUntil||0),pattern=varied?['mixed','ants','troops'][(s.antWaveCursor||0)%3]:'troops';
-  const mix=this.evolutionWaveMix(p.mix),eligible=type=>type==='bombBug'&&pattern!=='mixed'?false:type==='blizzardMage'?this.roomCanSpawnMageGroup():this.roomCanSpawn(type);
+  if(openingPending&&this.time>=opening.at&&count>0){
+   const point=this.roomOpeningAntEntry(),group=point?this.spawnRoomAntGroup(null,opening.ants+1,point):[];
+   if(!group.length){s.nextSpawnAt=Math.min(s.nextSpawnAt,this.time+2);return;}
+   s.openingAntWave=true;s.spawned+=group.length;s.waveSpawnDebt+=Math.max(0,group.length-count);
+   this.notify('toast','폭탄개미를 먼저 노려! · 주변 개미도 폭발에 휩쓸립니다.');
+   return;
+  }
+  const mid=config.insects.midgame,rotation=this.time>=mid.from&&this.time<mid.until?mid.rotation:['mixed','ants','troops'];
+  const varied=this.time>=config.insects.from&&count>=4&&this.roomBeat().density>=.6&&this.time>=(s.recoveryUntil||0),pattern=varied?rotation[(s.antWaveCursor||0)%rotation.length]:'troops';
+  const mix=this.evolutionWaveMix(p.mix),eligible=type=>type==='bombBug'&&(pattern!=='mixed'||antGroups>=2)?false:type==='blizzardMage'?this.roomCanSpawnMageGroup():this.roomCanSpawn(type);
   const melee=['bombBug','ant','bayonet','bladeGuard','stagBeetle','rhinoBeetle'],beforeSpawned=s.spawned;
   let antGroups=0;
   for(let i=0;i<count;i++){
@@ -252,7 +284,7 @@ const methods={
    if(!type){const pool=Object.entries(mix).filter(([t])=>eligible(t)&&(i<4||melee.includes(t))),total=pool.reduce((n,[,w])=>n+w,0);if(!total)break;let roll=this.random()*total;type=pool.at(-1)[0];for(const [t,w]of pool){roll-=w;if(roll<0){type=t;break;}}}
    const lane=plan.surge?config.surges.lanes[(i+s.spawned)%config.surges.lanes.length]:null;
    if(type==='bombBug'){
-    const group=this.spawnRoomAntGroup(lane,count-i);if(group.length){s.spawned+=group.length;i+=group.length-1;continue;}
+    const group=this.spawnRoomAntGroup(lane,count-i);if(group.length){antGroups++;s.spawned+=group.length;i+=group.length-1;continue;}
     type='ant';
    }
    if(type==='blizzardMage'){const group=this.spawnRoomMageGroup(lane);if(!group){s.nextSpawnAt=this.time+2;break;}s.spawned+=group.length;s.waveSpawnDebt+=Math.max(0,group.length-(count-i));i+=group.length-1;continue;}
