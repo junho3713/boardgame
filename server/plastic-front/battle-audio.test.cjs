@@ -101,3 +101,14 @@ test('the allied shotgun uses its own shot and fits the reload sample to the eng
   assert.equal(options.exactRate, true);
   assert.ok(Math.abs(options.delay + 1.66 / options.rate - event.duration) < 1e-12);
 });
+
+test('allied tank shell impacts use the selected blast while firing and enemy impacts keep their own cues', () => {
+  const audio = new FrontAudio();
+  audio.play = (...args) => args;
+  const impact = {kind: 'tank', team: 0, x: 100, y: 120};
+  const camera = {x: 90, y: 100};
+  assert.deepEqual(audio.explosion(impact, camera), ['tankBlast', impact, camera, {exactRate: true}]);
+  assert.equal(audio.fire({type: 'tank', team: 0}, camera)[0], 'tank');
+  assert.equal(audio.explosion({...impact, team: 1}, camera)[0], 'impact');
+  assert.equal(audio.explosion({...impact, kind: 'rocket'}, camera)[0], 'impact');
+});

@@ -18,6 +18,7 @@ const SOUNDS={
  sniperSuppressed:{file:'sniper-suppressed',gain:.59,gap:.09,priority:2},
  crimsonAce:{file:'tank',gain:.7,gap:.1,priority:3},
  tank:{file:'tank',gain:.65,gap:.1,priority:3},
+ tankBlast:{file:'tank-shell-blast',ext:'wav',gain:.50,gap:.11,priority:3},
  rocket:{file:'rocket',gain:.58,gap:.08,priority:2,revision:2},
  mortar:{file:'mortar-launch',gain:.56,gap:.09,priority:3},
  impact:{file:'impact',gain:.58,gap:.07,priority:3},
@@ -72,7 +73,11 @@ class FrontAudio{
   });
  }
  impact(event,listener){return this.play('impact',event,listener,{rate:event.armor?1.9:1.6,gain:.15,priorityBoost:-2,channel:'hitFeedback'});}
- explosion(event,listener){const key=['artillery','bossKiller','evolution','pirateCannon'].includes(event.kind)?'artillery':'impact';return this.play(key,event,listener,{rate:event.kind==='bossKiller'?.68:event.kind==='evolution'?1.3:event.kind==='tank'?.8:event.kind==='mortar'?.85:event.kind==='rocket'?1.12:1});}
+ explosion(event,listener){
+  if(event.kind==='tank'&&event.team===0)return this.play('tankBlast',event,listener,{exactRate:true});
+  const key=['artillery','bossKiller','evolution','pirateCannon'].includes(event.kind)?'artillery':'impact';
+  return this.play(key,event,listener,{rate:event.kind==='bossKiller'?.68:event.kind==='evolution'?1.3:event.kind==='tank'?.8:event.kind==='mortar'?.85:event.kind==='rocket'?1.12:1});
+ }
  upgradeOpen(){return this.play('upgradeOpen',undefined,undefined,{exactRate:true});}
  play(key,position={x:0,y:0},listener={x:0,y:0},options={}){
   const c=this.context,s=SOUNDS[key],preview=!!options.preview;
