@@ -98,3 +98,30 @@ test('the three-dimensional bait sprite loads once, falls back safely and render
  bait.hp=0;h.view.draw(h.ctx,bait,h.game);assert.equal(h.draws.length,3);
  const bytes=fs.readFileSync(__dirname+'/public/assets/support-toys/fishing-bait-v20261110.png');assert.equal(bytes.toString('ascii',1,4),'PNG');assert.equal(bytes.readUInt32BE(16),256);assert.equal(bytes.readUInt32BE(20),256);assert.equal(bytes[25],6);
 });
+
+test('Ramjwi prewarms its body only and never swaps a substitute squirrel for the real atlas while loading',async()=>{
+ const h=harness(),colors=[];h.unit.type='toyStunner';h.ctx.fill=()=>colors.push(h.ctx.fillStyle);
+ const loaded=h.view.prepareCharacter(h.unit.type);
+ assert.deepEqual(h.images.map(i=>i.src),['assets/support-toys/ramjwi-thunder-v20261109.webp']);
+ h.draw();assert.equal(h.images.length,3);assert.equal(h.draws.length,0);
+ assert.ok(colors.includes('#ffe290'));assert.ok(!colors.includes('#b77744'));
+ const atlas=h.images[0];atlas.naturalWidth=1536;atlas.naturalHeight=960;atlas.onload();
+ assert.equal(await loaded,true);h.draw();assert.equal(h.draws.length,1);
+ assert.equal(h.view.prepareCharacter(h.unit.type),loaded);
+ const failure=harness();failure.unit.type='toyStunner';const fallback=[];
+ failure.ctx.fill=()=>fallback.push(failure.ctx.fillStyle);
+ const failed=failure.view.prepareCharacter(failure.unit.type);failure.images[0].fail();
+ assert.equal(await failed,false);failure.draw();assert.ok(fallback.includes('#b77744'));assert.ok(!fallback.includes('#ffe290'));
+});
+
+test('the overhead dizzy cue follows actual stun expiry even without its transient lightning events',()=>{
+ const {FrontEffects}=require('./public/effects.js'),effects=Object.create(FrontEffects.prototype),drawn=[];
+ effects.drawDizzy=(_ctx,u,...args)=>drawn.push([u.id,...args]);
+ const ant={id:2,type:'ant',hp:10,toyStunUntil:11},boss={id:3,type:'rhinoBeetle',boss:true,hp:100,toyStunUntil:13};
+ const game={time:10,units:[ant,boss,{...boss,id:4,hp:0},{...ant,id:5}],effects:[]};
+ effects.drawStunStatuses(null,game,u=>u.id!==5);
+ assert.deepEqual(drawn,[[2,10,1,54,'기절'],[3,10,3,133,'기절']]);
+ game.time=11;drawn.length=0;effects.drawStunStatuses(null,game);
+ assert.deepEqual(drawn,[[3,11,2,133,'기절']]);
+ game.time=13;drawn.length=0;effects.drawStunStatuses(null,game);assert.equal(drawn.length,0);
+});

@@ -56,10 +56,18 @@ test('evolved chains travel in distinct timed steps and never jump to the other 
  assert.equal(restored.effects.filter(e=>e.kind==='blockMineBlast'&&e.chain).length,2);
  assert.ok(restored.blockMines.every(m=>m.owner===1&&m.chainAt===null));
 });
+test('new blocks last thirty seconds after landing and still arm near the end of their lifespan',()=>{
+ const g=field(),u=g.addUnit(0,'rocket',1200,6000),[first,last]=toss(g,u);
+ assert.equal(first.expiresAt,first.landAt+30);
+ g.time=first.expiresAt-.01;g.updateBlockMines();assert.ok(g.blockMines.includes(first));
+ const target=g.addUnit(2,'ant',first.toX,first.toY),hp=target.hp;
+ g.updateBlockMines();assert.ok(first.spent);assert.ok(target.hp<hp);
+ g.time=last.expiresAt;g.updateBlockMines();assert.ok(!g.blockMines.includes(last));
+});
 test('mine capacity belongs to each player, expiry clears the floor, and enemy launchers retain their original projectile',()=>{
  const g=field(true),one=g.addUnit(0,'rocket',1200,6000),two=g.withOwner(1,()=>g.addUnit(0,'rocket',1300,6000));
- for(let i=0;i<16;i++){toss(g,one);g.withOwner(1,()=>toss(g,two));}
- assert.equal(g.blockMines.filter(m=>m.owner===0).length,24);assert.equal(g.blockMines.filter(m=>m.owner===1).length,24);
+ for(let i=0;i<30;i++){toss(g,one);g.withOwner(1,()=>toss(g,two));}
+ assert.equal(g.blockMines.filter(m=>m.owner===0).length,54);assert.equal(g.blockMines.filter(m=>m.owner===1).length,54);
  const enemy=g.addUnit(1,'rocket',1400,6000),shots=toss(g,enemy,one);assert.equal(shots.length,1);assert.equal(shots[0].kind,'rocket');assert.ok(g.shots.includes(shots[0]));
  g.time=Math.max(...g.blockMines.map(m=>m.expiresAt));g.updateBlockMines();assert.equal(g.blockMines.length,0);
 });

@@ -28,7 +28,7 @@ let selectedMedicSkin='classic';try{selectedMedicSkin=localStorage.getItem('plas
 let selectedFlameSkin='classic';try{selectedFlameSkin=localStorage.getItem('plastic-front-flame-skin')==='hwarin'?'hwarin':'classic';}catch{}
 const unitModels=new window.FrontModels({commander:selectedCommander,flameSkin:selectedFlameSkin,medicSkin:selectedMedicSkin,sniperSkin:selectedSniperSkin}),battleFx=new window.FrontEffects({budget:window.matchMedia('(pointer:coarse)').matches?240:360,weaponPoint:e=>unitModels.weaponPoint(e)});
 const gameAssetsReady=unitModels.waitFor([unitModels.ready,swordView.ready,window.FrontPortal.ready,upgradeArt.ready,unitArt.ready]);
-gameAssetsReady.then(()=>{battleFx.prepareCombatMaterials();return battleFx.prepareCommanderMaterials();}).catch(()=>{});
+gameAssetsReady.then(()=>{window.FrontSupportToyView?.prepareCharacter?.('toyStunner');battleFx.prepareCombatMaterials();return battleFx.prepareCommanderMaterials();}).catch(()=>{});
 async function prepareGameAssets(){const b=$('startBtn'),label=b.textContent;b.disabled=true;b.textContent='선택한 분대 준비 중…';try{await gameAssetsReady;if(game.bedroomStar)await Promise.all([window.FrontBedroom.prepare(),window.FrontLivingRoom.ready]);await unitModels.prepare(game);}finally{b.disabled=false;b.textContent=label;}}
 let selectedMode='pve',autoPilot=null,waveTestBackup=null,waveTestReturn='ready',waveTestFocus=null;const directProfile=profile;
 const gameEvents={level:showUpgrade,change:updateUI,toast:toast,end:data=>{if(autoPilot)autoPilot.lastEnd=data;showResult(data);},fire:weaponSound,explosion:explosionSound,profile:persistProfile};
@@ -391,11 +391,20 @@ $('followOrderBtn').onclick=()=>{if(game.followCommander()){clearInput();updateU
   e.preventDefault();keys[control]=true;input();
  });
  function controlKey(e){
+  if(e.code==='Space'||e.key===' ')return 'Space';
   if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key))return e.key;
   const code=e.code||'Key'+String(e.key).toUpperCase();return ['KeyW','KeyA','KeyS','KeyD'].includes(code)?code:null;
  }
  window.addEventListener('keyup',e=>{const control=controlKey(e);if(control&&keys[control]){delete keys[control];input();}});window.addEventListener('blur',()=>{combatAudio.stop();clearInput();if(selectedMode!=='idle'&&!COOP?.active)openPause();else autoCheckpoint();});document.addEventListener('visibilitychange',()=>{if(document.hidden){combatAudio.stop();clearInput();if(selectedMode!=='idle'&&!COOP?.active)openPause();else autoCheckpoint();}else if(selectedMode==='idle')autoSession.tick(true);});
  function worldPosition(e){const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left-W/2)/scale+game.camera.x,y:(e.clientY-r.top-H/2)/scale+game.camera.y};}
+ let mouseCursor=null;
+ function trackMouse(e){
+  if(e.pointerType!=='mouse')return;
+  mouseCursor={clientX:e.clientX,clientY:e.clientY};
+  if(keys.Space&&!aimPointer)input();
+ }
+ window.addEventListener('pointermove',trackMouse,true);
+ window.addEventListener('pointerdown',trackMouse,true);
  function orderAt(e,announce=true){
   if(!acceptsCombatInput())return;
   const p=worldPosition(e);
@@ -447,8 +456,9 @@ $('followOrderBtn').onclick=()=>{if(game.followCommander()){clearInput();updateU
   }
   game.input=stickPointer!==null?{...stickInput}:{x:Number(!!keys.KeyD)-Number(!!keys.KeyA),y:Number(!!keys.KeyS)-Number(!!keys.KeyW)};
   let x=Number(!!keys.ArrowRight)-Number(!!keys.ArrowLeft),y=Number(!!keys.ArrowDown)-Number(!!keys.ArrowUp);
-  if(aimPointer){
-   const c=game.commander(0),p=worldPosition(aimPointer);x=p.x-c.x;y=p.y-c.y;
+  const cursor=aimPointer||(keys.Space&&mouseCursor);
+  if(cursor){
+   const c=game.commander(0),p=worldPosition(cursor);x=p.x-c.x;y=p.y-c.y;
   }
   const length=Math.hypot(x,y);applyManualAim(length>.001?{x:x/length,y:y/length}:null);
  }
@@ -692,7 +702,7 @@ function draw(dt){
 
  // Launched enemies stay visible above the shark rather than appearing after it submerges.
  for(const u of game.units.filter(u=>window.FrontHitFeedback.airborne(u,game.time)).sort((a,b)=>a.y-b.y||a.id-b.id))drawUnit(u,true);
- battleFx.drawHealingStatuses(ctx,game,fxVisible);battleFx.drawParticles(ctx,fxVisible);window.FrontRosterArt?.results(ctx,game,fxVisible);swordView.health(ctx,game);if(game.isRoomCampaign())window.FrontPortal.health(ctx,game.bases[1]);drawFog();ctx.setTransform(DPR,0,0,DPR,0,0);
+ battleFx.drawHealingStatuses(ctx,game,fxVisible);battleFx.drawParticles(ctx,fxVisible);window.FrontRosterArt?.results(ctx,game,fxVisible);battleFx.drawStunStatuses(ctx,game,u=>game.visible(u));swordView.health(ctx,game);if(game.isRoomCampaign())window.FrontPortal.health(ctx,game.bases[1]);drawFog();ctx.setTransform(DPR,0,0,DPR,0,0);
  swordView.hud(ctx,game,W);
  if(game.time<game.scoutUntil){ctx.strokeStyle='#f0db98';ctx.lineWidth=2;ctx.strokeRect(4,4,W-8,H-8);}
  if(game.bossIntro?.remaining>0){rr(ctx,W/2-156,24,312,64,10,'#211a2ee8','#b795d5');text(ctx,'최종 보스 등장',W/2,48,13,'#d8bde9');text(ctx,game.bossIntro.name,W/2,73,20,'#fff0d3');}

@@ -212,13 +212,10 @@ class FrontEffects{
    if(e.kind==='bossSlashWarn'){ctx.translate(e.x,e.y);ctx.rotate(e.angle);ctx.beginPath();ctx.moveTo(0,0);ctx.arc(0,0,e.range,-e.arc/2,e.arc/2);ctx.closePath();ctx.fill();ctx.stroke();}
    else{ctx.beginPath();ctx.ellipse(e.x,e.y,e.radius,e.radius*.8,0,0,TAU);ctx.fill();ctx.stroke();ctx.beginPath();ctx.ellipse(e.x,e.y,e.radius*p,e.radius*.8*p,0,0,TAU);ctx.stroke();ctx.fillStyle='#ffddd1';ctx.font='700 12px sans-serif';ctx.textAlign='center';ctx.fillText(e.kind==='bossDiveWarn'?'맹독 급강하':'후열 포격',e.x,e.y-e.radius-9);}
   }else if(e.kind==='bossGroggy'){
-   const u=e.target,until=e.stun?u?.toyStunUntil:u?.groggyUntil;
-   if(u?.hp>0&&this.time<(until??Infinity)){
-    const height=e.stun?(u.visualFlightHeight||0)+(u.boss?86:['tank','crimsonAce','guntruck','lucky'].includes(u.type)?54:['ant','soldierAnt','beetle','bruteBeetle'].includes(u.type)?38:68):86,cy=u.y-height;
-    ctx.globalAlpha=Math.min(1,e.t*7);ctx.strokeStyle='#b7812a';ctx.fillStyle='#ffe390';ctx.lineWidth=1.1;ctx.font='700 11px sans-serif';ctx.textAlign='center';ctx.strokeText(e.stun?'기절':'그로기 · 받는 피해 +'+(e.bonus??30)+'%',u.x,cy-18);ctx.fillText(e.stun?'기절':'그로기 · 받는 피해 +'+(e.bonus??30)+'%',u.x,cy-18);
-    ctx.beginPath();ctx.ellipse(u.x,cy,22,7,0,0,TAU);ctx.stroke();
-    for(let i=0;i<3;i++){const a=i*TAU/3+this.time*5,x=u.x+Math.cos(a)*22,y=cy+Math.sin(a)*7,r=4.5;ctx.beginPath();for(let j=0;j<10;j++){const b=-Math.PI/2+j*Math.PI/5,d=j%2?r*.43:r;if(j)ctx.lineTo(x+Math.cos(b)*d,y+Math.sin(b)*d);else ctx.moveTo(x+Math.cos(b)*d,y+Math.sin(b)*d);}ctx.closePath();ctx.fill();ctx.stroke();}
-   }
+   const u=e.target;
+   // Toy stun is drawn from the current target after lightning, particles and airborne units.
+   if(!e.stun&&u?.hp>0&&this.time<(u.groggyUntil??Infinity))
+    this.drawDizzy(ctx,u,this.time,e.t,86,'그로기 · 받는 피해 +'+(e.bonus??30)+'%');
   }else if(e.kind==='butterflyWarn'){
    ctx.translate(e.x,e.y);ctx.rotate(e.angle||0);ctx.scale(1,.85);ctx.globalAlpha=.12+.16*p;ctx.fillStyle='#d3a7ff';ctx.strokeStyle='#ead6ff';ctx.lineWidth=1.4;ctx.setLineDash([5,7]);ctx.beginPath();ctx.moveTo(12,0);ctx.arc(0,0,e.range,-e.arc/2,e.arc/2);ctx.closePath();ctx.fill();ctx.stroke();
   }else if(e.kind==='butterflyWind'){
@@ -271,6 +268,31 @@ class FrontEffects{
   if(root.FrontRosterArt?.shot(ctx,p))return;
   const a=Math.atan2(p.target.y-p.y,p.target.x-p.x),heavy=p.kind==='tank'||p.kind==='crimsonAce'||p.kind==='rocket',sniper=p.kind==='sniper',len=heavy?25:sniper?33:16,flight=p.target.visualFlightHeight??root.FrontTypes?.[p.target.type]?.flightHeight??0,fromFlight=root.FrontTypes?.[p.source?.type]?.flightHeight||0,total=p.source?Math.hypot(p.target.x-p.source.x,p.target.y-p.source.y):1,progress=clamp(1-Math.hypot(p.target.x-p.x,p.target.y-p.y)/Math.max(1,total),0,1),y=p.y-16-fromFlight*(1-progress)-flight*progress;
   ctx.save();if(p.kind==='crimsonAce'){const tip=this.weaponPoint?.(p.source);if(tip)ctx.translate((tip.x-p.source.x)*(1-progress),(tip.y-p.source.y+16)*(1-progress));}ctx.globalCompositeOperation='lighter';const g=ctx.createLinearGradient(p.x-Math.cos(a)*len,y-Math.sin(a)*len,p.x,y);g.addColorStop(0,heavy&&p.team===0?'#75ec8a00':'#ffc47500');g.addColorStop(.7,heavy&&p.team===0?'#8bef9b':evolved?'#ffd05a':'#ffc97b');g.addColorStop(1,heavy&&p.team===0?'#d4ffcc':'#fff8d7');ctx.strokeStyle=g;ctx.lineWidth=heavy?3:sniper?1.5:1.3;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(p.x-Math.cos(a)*len,y-Math.sin(a)*len);ctx.lineTo(p.x,y);ctx.stroke();if(heavy){this.blob(ctx,this.textures.glow,p.x,y,8,.45);ctx.globalCompositeOperation='source-over';ctx.translate(p.x,y);ctx.rotate(a);ctx.fillStyle=p.kind==='rocket'?'#658356':p.team===0?'#92bd7e':'#d6bc77';ctx.beginPath();ctx.moveTo(9,0);ctx.lineTo(3,-3);ctx.lineTo(-8,-3);ctx.lineTo(-8,3);ctx.lineTo(3,3);ctx.closePath();ctx.fill();if(p.kind==='rocket'){ctx.fillStyle='#ced4aa';ctx.fillRect(-7,-4,3,8);}}ctx.restore();
+ }
+ drawDizzy(ctx,u,time,remaining,rise,label){
+  const cy=u.y-rise;
+  ctx.save();ctx.lineCap='round';ctx.globalAlpha*=Math.min(1,remaining*7);
+  ctx.font='700 11px sans-serif';ctx.textAlign='center';ctx.lineWidth=2.7;ctx.strokeStyle='#64451d';ctx.fillStyle='#ffeb9c';
+  ctx.strokeText(label,u.x,cy-14);ctx.fillText(label,u.x,cy-14);
+  for(let i=0;i<3;i++){
+   const a=i*TAU/3+time*2,x=u.x+25*Math.cos(a),y=cy+8*Math.sin(a);
+   ctx.strokeStyle='#ffdc6599';ctx.lineWidth=2;
+   ctx.beginPath();ctx.ellipse(u.x,cy,25,8,0,a-.50,a-.12);ctx.stroke();
+   ctx.beginPath();ctx.arc(x,y,4,0,TAU);ctx.fillStyle='#ffda4d';ctx.fill();ctx.strokeStyle='#80581c';ctx.lineWidth=1.2;ctx.stroke();
+   ctx.beginPath();ctx.arc(x-.6,y-.8,1.6,0,TAU);ctx.fillStyle='#fff3af';ctx.fill();
+  }
+  ctx.restore();
+ }
+ drawStunStatuses(ctx,game,visible=()=>true){
+  for(const u of game.units){
+   const left=(u.toyStunUntil||0)-game.time;
+   if(left<=0||u.hp<=0||!visible(u))continue;
+   const flight=u.visualFlightHeight??root.FrontTypes?.[u.type]?.flightHeight??0;
+   const rise=u.type==='crimsonAce'?(u.boss?222:174):u.boss?133:
+    u.type==='pirateCannon'?110:['tank','guntruck','lucky','artillery'].includes(u.type)?96:
+    ['ant','soldierAnt','beetle','bombBug','acidBeetle'].includes(u.type)?54:83;
+   this.drawDizzy(ctx,u,game.time,left,flight+rise,'기절');
+  }
  }
  drawHealingStatuses(ctx,game,visible=()=>true){
   const a=this.healingReductionAsset();

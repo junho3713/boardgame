@@ -57,16 +57,25 @@ function prepareArt(art){
  if(artAssets.has(art.file))return artAssets.get(art.file);
  const ImageType=root.Image||(typeof Image!=='undefined'?Image:null);
  if(!ImageType)return null;
- const image=new ImageType(),asset={image,ready:false};artAssets.set(art.file,asset);let settled;asset.loading=new Promise(resolve=>{settled=resolve;});
- image.onload=()=>{asset.ready=image.naturalWidth===art.cell*(art.columns||6)&&image.naturalHeight===(art.frameHeight||art.cell)*(art.rows||5);settled(asset.ready);};
- image.onerror=()=>{asset.ready=false;settled(false);};image.src=art.file;return asset;
+ const image=new ImageType(),asset={image,ready:false,failed:false};artAssets.set(art.file,asset);let settled;asset.loading=new Promise(resolve=>{settled=resolve;});
+ image.onload=()=>{asset.ready=image.naturalWidth===art.cell*(art.columns||6)&&image.naturalHeight===(art.frameHeight||art.cell)*(art.rows||5);asset.failed=!asset.ready;settled(asset.ready);};
+ image.onerror=()=>{asset.failed=true;settled(false);};image.src=art.file;return asset;
 }
 function character(c,u,time,m,facing){
  const art=characterArt[u.type],asset=prepareArt(art);
  if(u.type==='toyDecoyMaker'){prepareArt(sharkArt);prepareArt(finArt);prepareArt(baitArt);prepareArt(sharkWaterArt);}
  if(u.type==='toyTurtle'){prepareArt(waveArt);prepareArt(jetArt);}
  if(u.type==='toyStunner'){prepareArt(cloudArt);prepareArt(currentArt);}
- if(!asset?.ready)return false;
+ if(!asset?.ready){
+  if(u.type!=='toyStunner'||!asset||asset.failed)return false;
+  // A restored or co-op toy can arrive while the cold-cache atlas is still in flight.
+  const pulse=.5+.5*Math.sin(time*5);
+  c.save();c.translate(0,-20);c.strokeStyle='#bdeae8';c.lineWidth=1.6;
+  c.beginPath();c.ellipse(0,16,11+3*pulse,3.5+1.5*pulse,0,0,TAU);c.stroke();
+  c.fillStyle='#ffe290';c.strokeStyle='#825729';c.lineWidth=1.4;
+  c.beginPath();c.moveTo(3,-8);c.lineTo(-6,2);c.lineTo(-1,2);c.lineTo(-3,10);c.lineTo(7,-2);c.lineTo(2,-2);c.closePath();c.fill();c.stroke();
+  c.restore();return true;
+ }
  const step=TAU/8,wanted=facing-Math.PI/2;
  if(!Number.isFinite(m.spriteAngle)||Math.abs(Math.atan2(Math.sin(wanted-m.spriteAngle),Math.cos(wanted-m.spriteAngle)))>step/2+.10)m.spriteAngle=Math.round(wanted/step)*step;
  const direction=(Math.round(m.spriteAngle/step)%8+8)%8,row=[0,1,2,3,4,3,2,1][direction],flip=direction>0&&direction<4;
@@ -583,5 +592,5 @@ function event(c,e,g){
   oval(c,e.x,e.y,18+(1-k)*25,8+(1-k)*12,'#8ae7ec18',e.tier===2?'#ffe4a3':'#a7f2f2');
  }
  c.restore();return true;}
-root.FrontSupportToyView={draw,event,motionPose:u=>motion.get(u),prepare(types){const extras={toyDecoyMaker:[sharkArt,finArt,baitArt,sharkWaterArt],toyTurtle:[waveArt,jetArt],toyStunner:[cloudArt,currentArt]};return Promise.all([...(Array.isArray(types)?types:[types])].filter(type=>characterArt[type]).flatMap(type=>[characterArt[type],...(extras[type]||[])]).map(art=>prepareArt(art)?.loading));}};
+root.FrontSupportToyView={draw,event,motionPose:u=>motion.get(u),prepareCharacter(type){const art=characterArt[type];return art&&prepareArt(art)?.loading;},prepare(types){const extras={toyDecoyMaker:[sharkArt,finArt,baitArt,sharkWaterArt],toyTurtle:[waveArt,jetArt],toyStunner:[cloudArt,currentArt]};return Promise.all([...(Array.isArray(types)?types:[types])].filter(type=>characterArt[type]).flatMap(type=>[characterArt[type],...(extras[type]||[])]).map(art=>prepareArt(art)?.loading));}};
 })(window);

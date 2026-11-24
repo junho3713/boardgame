@@ -166,6 +166,81 @@ function shot(c,p){
 function ring(c,x,y,r,k,color){
  c.strokeStyle=color;c.lineWidth=1.2+3*k;c.beginPath();c.ellipse(x,y,r,Math.max(1,r*.71),0,0,TAU);c.stroke();
 }
+const unit=(n)=>Math.max(0,Math.min(1,n)),ease=n=>1-Math.pow(1-unit(n),3),smooth=(a,b,n)=>{const t=unit((n-a)/(b-a));return t*t*(3-2*t);};
+const variation=(i,seed)=>{let n=Math.imul(i+19,374761393)^Math.imul(seed|0,668265263);n=Math.imul(n^(n>>>13),1274126177);return((n^(n>>>16))>>>0)/4294967295;};
+let diceMaterials;
+function materials(){
+ if(diceMaterials)return diceMaterials;if(!root.document?.createElement)return null;
+ const cloud=(seed,light,shade)=>{
+  const tile=root.document.createElement('canvas');tile.width=tile.height=112;const g=tile.getContext('2d');if(!g)return null;
+  // Bake irregular, lit smoke lobes once. No texture creation or random source
+  // advances during a paused frame, even when several double rolls overlap.
+  for(let i=0;i<17;i++){
+   const a=i*2.39996,d=(i?14+variation(i,seed)*18:0),x=56+Math.cos(a)*d,y=56+Math.sin(a)*d*.8,r=14+variation(i+20,seed)*15;
+   const ink=g.createRadialGradient(x-r*.29,y-r*.38,r*.1,x,y,r);ink.addColorStop(0,light);ink.addColorStop(.52,shade);ink.addColorStop(1,'#5e5a4b00');ellipse(g,x,y,r,r*.85,ink);
+  }return tile;
+ };
+ const flash=root.document.createElement('canvas');flash.width=flash.height=96;const g=flash.getContext('2d');if(!g)return null;
+ const glow=g.createRadialGradient(48,48,0,48,48,48);glow.addColorStop(0,'#fffefa');glow.addColorStop(.12,'#fff5d4ee');glow.addColorStop(.42,'#f0ce8a70');glow.addColorStop(1,'#b6843600');g.fillStyle=glow;g.fillRect(0,0,96,96);
+ diceMaterials={dust:cloud(73,'#e8d8b8b0','#af977c65'),smoke:cloud(139,'#b2b4a69e','#5f695d78'),warm:cloud(271,'#fff0bdc0','#c8b17a70'),flash};return diceMaterials;
+}
+function stamp(c,image,x,y,w,h,angle,alpha,blend='source-over'){
+ if(!image||alpha<=.001||w<=0||h<=0)return;c.save();c.globalAlpha*=unit(alpha);c.globalCompositeOperation=blend;c.translate(x,y);c.rotate(angle);c.drawImage(image,-w/2,-h/2,w,h);c.restore();
+}
+function chip(c,x,y,size,angle,teal=false,gold=false,pip=false){
+ c.save();c.translate(x,y);c.rotate(angle);
+ const light=gold?'#ffe8a1':teal?'#a9dbce':'#fff9df',base=gold?'#d5a14b':teal?'#679f94':'#c8cfb9',shade=gold?'#86602d':teal?'#3d625b':'#7f8c79';
+ polygon(c,[[-size,-size*.46],[size*.54,-size*.7],[size,size*.18],[-size*.36,size*.68]],base);
+ polygon(c,[[-size,-size*.46],[size*.54,-size*.7],[size*.45,-size*.30],[-size*.68,-size*.02]],light);
+ polygon(c,[[size*.45,-size*.30],[size,size*.18],[-size*.36,size*.68],[-size*.29,size*.31]],shade);
+ if(pip)ellipse(c,-size*.15,-size*.05,Math.max(.65,size*.19),Math.max(.45,size*.13),gold?'#574326':'#3d5144');
+ c.restore();
+}
+function diceImpact(c,e,p){
+ const m=materials(),split=e.style==='diceSplit',child=e.style==='diceChild',r=Math.max(12,e.radius||48),seed=Math.round(e.x*3+e.y*7+(e.face||1)*83),spread=ease(p),fade=1-smooth(.48,1,p);
+ // A short contact flash gives way to floor dust, then tumbling solid chips.
+ // The result-face labels are rendered later by results(), above this material.
+ if(m){
+  for(let i=0;i<(child?5:8);i++){
+   const a=i*2.39996+variation(i,seed)*.45,d=r*(.15+spread*.7),w=r*(.29+p*.35)*(1+variation(i+30,seed)*.3);
+   stamp(c,m.dust,e.x+Math.cos(a)*d,e.y+Math.sin(a)*d*.68,w,w*.48,a*.12,fade*(split?.48:.6));
+  }
+  for(let i=0;i<(child?3:5);i++){
+   const a=i*2.39996,d=r*(.06+spread*.22),w=r*(.44+p*.33),rise=p*r*(.22+variation(i+51,seed)*.2);
+   stamp(c,i%2?m.smoke:m.warm,e.x+Math.cos(a)*d,e.y-6+Math.sin(a)*d*.4-rise,w,w*.78,a+p*.15,Math.sin(p*Math.PI)*.36);
+  }
+  stamp(c,m.flash,e.x,e.y-5,r*(split?.95:1.38),r*.79,0,(1-smooth(.025,.23,p))*(child?.6:.82),'lighter');
+ }
+ const count=child?7:split?13:10+(e.face>=4?3:0);
+ for(let i=0;i<count;i++){
+  const a=i*2.39996+variation(i+4,seed)*.75,d=r*(.25+variation(i+6,seed)*.72)*ease(p*.92),groundY=e.y+Math.sin(a)*d*.66,h=Math.sin(p*Math.PI)*(r*.3+variation(i+8,seed)*r*.35),x=e.x+Math.cos(a)*d,size=(child?1.4:2.1)+variation(i+9,seed)*(split?3.4:2.1);
+  c.save();c.globalAlpha*=fade;ellipse(c,x+2,groundY+2,size*1.35,size*.45,'#4b493b24');
+  chip(c,x,groundY-h-4,size,a+p*(i%2?6:-5),split&&i%3===0,false,i%3===0);
+  if(p<.3&&i%2){c.globalAlpha*=1-p/.3;rod(c,[x,groundY-h-4],[x-Math.cos(a)*5,groundY-h-3-Math.sin(a)*3],.8,'#fff3c7');}c.restore();
+ }
+}
+function diceFragments(c,e,p){
+ const seed=Math.round(e.x*5+e.y*3),m=materials();
+ (e.angles||[]).forEach((a,i)=>{
+  const d=(e.range||75)*p,x=e.x+Math.cos(a)*d,y=e.y+Math.sin(a)*d-5,h=Math.sin(p*Math.PI)*(6+variation(i,seed)*7),size=3.1+variation(i+3,seed)*1.3;
+  c.save();c.globalAlpha*=1-smooth(.65,1,p);
+  const tail=10+7*(1-p);rod(c,[x-Math.cos(a)*tail,y-h-Math.sin(a)*tail],[x,y-h],2.2,'#d2b58072');rod(c,[x-Math.cos(a)*tail*.5,y-h-Math.sin(a)*tail*.5],[x,y-h],.85,'#fff3c7b0');
+  if(m)stamp(c,m.dust,x-Math.cos(a)*12,y-Math.sin(a)*12,14+p*12,7+p*5,a,.22);
+  chip(c,x,y-h,size,a+p*(i%2?4:-4),i%3===0,false,true);c.restore();
+ });
+}
+function diceWave(c,e,p){
+ const a=Math.atan2(e.ty-e.y,e.tx-e.x),distance=Math.hypot(e.tx-e.x,e.ty-e.y),x=e.x+(e.tx-e.x)*p,y=e.y+(e.ty-e.y)*p,width=(e.width||24),m=materials(),fade=1-smooth(.65,1,p);
+ c.save();c.translate(x,y);c.rotate(a);
+ // A low rolling pressure front connects the matching golden dice. Rounded
+ // plastic flakes tumble beside its crest instead of three flat bracket lines.
+ if(m)for(let i=-2;i<=2;i++){const side=i*width*.32;stamp(c,m.dust,-8-p*8,side,width*.75,width*.48,.2*i,fade*.45);stamp(c,m.warm,3,side,width*.55,width*.4,.14*i,fade*.35);}
+ const crest=c.createLinearGradient(-18,0,10,0);crest.addColorStop(0,'#bf8d3b00');crest.addColorStop(.55,'#d8b15a80');crest.addColorStop(.86,'#fff2bacc');crest.addColorStop(1,'#f5d78b00');
+ c.fillStyle=crest;c.beginPath();c.moveTo(-17,-width*.64);c.bezierCurveTo(13,-width*.47,18,width*.47,-17,width*.64);c.quadraticCurveTo(-1,0,-17,-width*.64);c.fill();
+ for(let i=0;i<6;i++){const side=(i-2.5)*width*.23,lift=Math.sin(p*Math.PI)*(6+i%3*3),drift=-12-variation(i,Math.round(distance))*22;chip(c,drift,side-lift,1.8+i%3*.6,p*(i%2?5:-5),false,true,i%2===0);}
+ if(m)stamp(c,m.flash,3,0,24,width*1.4,0,(1-smooth(.05,.22,p))*.45,'lighter');
+ c.restore();
+}
 function event(c,e){
  if(e.kind==='rosterDieResult')return true; // Draw result faces together above subsequent impact effects.
  if(!['rosterShotgun','rosterReload','rosterBlast','rosterFragments','rosterDiceWave'].includes(e.kind))return false;
@@ -196,15 +271,16 @@ function event(c,e){
   const u=e.source||e,angle=u.aimFace??u.face??0,load=p*4%1,hand=Math.sin(load*Math.PI),x=u.x+Math.cos(angle)*7,y=u.y-24;
   c.translate(x+Math.sin(angle)*(4+hand*5),y+5+hand*4);c.rotate(angle-.7+load*.65);
   rod(c,[-2.5,0],[2.5,0],3.3,'#a84d2e');rod(c,[-2,-.65],[1.4,-.65],1,'#e88a5c');rod(c,[1.7,0],[2.6,0],3.5,'#e9be63');
+ }else if(e.kind==='rosterBlast'&&e.style!=='shotgun'){
+  diceImpact(c,e,p);
  }else if(e.kind==='rosterBlast'){
   const hot=e.style==='shotgun',r=Math.max(2,(e.radius||48)*(.15+.85*p)),color=hot?'#ff9947':'#ffe09a';
   const g=c.createRadialGradient(e.x,e.y,0,e.x,e.y,r);g.addColorStop(0,hot?'#ffb24a66':'#f5cf7130');g.addColorStop(1,'#f3c57b00');ellipse(c,e.x,e.y,r,r,g);ring(c,e.x,e.y,r,k,color);
   for(let i=0;i<7;i++){const a=TAU*i/7+.12,d=r*(.63+i%3*.11);rod(c,[e.x+Math.cos(a)*d,e.y+Math.sin(a)*d*.72],[e.x+Math.cos(a)*(d+5),e.y+Math.sin(a)*(d+5)*.72-2],2,color);}
  }else if(e.kind==='rosterFragments'){
-  for(const a of e.angles||[]){const reach=(e.range||75)*p,dx=Math.cos(a),dy=Math.sin(a);rod(c,[e.x+dx*(reach-9),e.y+dy*(reach-9)-4],[e.x+dx*reach,e.y+dy*reach-4],2.5,'#e6bc6e');}
+  diceFragments(c,e,p);
  }else{
-  const a=Math.atan2(e.ty-e.y,e.tx-e.x),x=e.x+(e.tx-e.x)*p,y=e.y+(e.ty-e.y)*p,size=(e.width||24)*.5;
-  c.translate(x,y);c.rotate(a);for(let i=0;i<3;i++){c.strokeStyle=i?'#fff1aa':'#fbc65e';c.lineWidth=i?1.5:4;c.beginPath();c.moveTo(-8-i*4,-size);c.quadraticCurveTo(13-i*4,0,-8-i*4,size);c.stroke();}
+  diceWave(c,e,p);
  }
  c.restore();return true;
 }
