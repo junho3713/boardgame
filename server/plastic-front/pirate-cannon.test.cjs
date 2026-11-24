@@ -29,6 +29,10 @@ test('destroying the cannon or blinding the fuse cancels the warning and cannot 
   else if(interrupt==='flash')g.applyLuckyFlash(u,{evolved:false,source:c});
   else{u.toyStunUntil=g.time+2;g.update(.025);}
   assert.equal(u.pirateFuse,null,interrupt);
+  if(interrupt==='kill')g.damage(u,99999,c); // A repeated hit on a corpse cannot replay the reward.
+  const notices=g.effects.filter(e=>e.kind==='pirateIntercept');
+  assert.equal(notices.length,interrupt==='kill'?1:0);
+  if(notices.length)assert.deepEqual([notices[0].x,notices[0].y,notices[0].gunX,notices[0].gunY,notices[0].radius],[c.x,c.y,u.x,u.y,150]);
   tick(g,1.6);assert.equal(g.pirateShells.length,0);assert.equal(u.pirateFiredAt,undefined);
   assert.ok(!g.bossHazards().some(h=>h.radius===150),interrupt);
  }
@@ -38,7 +42,7 @@ test('once launched the shell survives its gunner and damages ground allies insi
  const shot=g.pirateShells[0],damage=shot.damage;assert.ok(damage>0);
  const center=g.addUnit(0,'machinegun',shot.x,shot.y),edge=g.addUnit(0,'machinegun',shot.x+149,shot.y),outside=g.addUnit(0,'rifle',shot.x+151,shot.y);
  const friendly=g.addUnit(1,'rifle',shot.x,shot.y),drone=g.addUnit(0,'drone',shot.x,shot.y);
- g.damage(u,99999,c);g.units=g.units.filter(t=>t!==u);g.time=shot.landAt;
+ g.damage(u,99999,c);assert.ok(!g.effects.some(e=>e.kind==='pirateIntercept'));g.units=g.units.filter(t=>t!==u);g.time=shot.landAt;
  const before=[center,edge,outside,friendly,drone].map(t=>t.hp);
  g.updatePirateShells();near(before[0]-center.hp,damage*g.defenseFactor(center,u));
  near(before[1]-edge.hp,damage*(1-.45*149/150)*g.defenseFactor(edge,u));
@@ -66,4 +70,14 @@ test('both a partially burned fuse and a launched projectile resume with their o
  const second=restore(first),shot=second.pirateShells[0],rebound=second.units.find(t=>t.id===u.id);
  assert.equal(shot.source,rebound);assert.equal(shot.landAt,first.pirateShells[0].landAt);second.phase='paused';second.update(.05);assert.equal(second.pirateShells.length,1);
  second.phase='playing';second.time=shot.landAt;second.updatePirateShells();assert.equal(second.pirateShells.length,0);
+});
+
+test('an enemy-caused kill, a nonlethal hit and a status already interrupting the fuse grant no interception cue',()=>{
+ for(const cause of ['enemy','nonlethal','stunned','blinded']){
+  const {g,c,u}=field();g.update(.025);assert.ok(u.pirateFuse);
+  if(cause==='stunned')u.toyStunUntil=g.time+1;
+  if(cause==='blinded')u.luckyFlash={until:g.time+1};
+  g.damage(u,cause==='nonlethal'?1:99999,cause==='enemy'?u:c);
+  assert.ok(!g.effects.some(e=>e.kind==='pirateIntercept'),cause);
+ }
 });

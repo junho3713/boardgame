@@ -253,7 +253,9 @@ function install({FrontGame:Game,TYPES}){
     this.effects.push({kind:'toyZap',x:previous.x,y:previous.y,from:previous,target:t,source:u,tier,hop,storm:tier===2,t:1,max:1,team:0});previous=t;
    }
    if(tier===2){
+    u.toyJackpotCount=targets.length;
     this.effects.push({kind:'toyThunder',source:u,x:center.x,y:center.y,areaRadius:rules.jackpot.radius,targets:[...targets],tier,t:1.2,max:1.2,team:0});
+    this.notify('fire',{type,x:u.x,y:u.y,team:u.team,luckySound:'jackpot'});
    }
   }else return false;
   const duration=type==='toyDecoyMaker' ? .7 : type==='toyStunner'&&u.toyProcTier===2 ? 1.2 : .5;

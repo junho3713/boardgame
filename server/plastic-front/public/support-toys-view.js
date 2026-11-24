@@ -173,7 +173,11 @@ function draw(c,u,g){if(u.type==='toyDecoy'&&(u.hp<=0||g.time<(u.toyArrivesAt||0
     c.globalAlpha=(1-beat)*(tier ? .65 : .4);oval(c,0,-8,30+beat*(tier?50:25),12+beat*(tier?20:10),'#e7cf710a',color);c.globalAlpha=1;
     for(let i=0;i<(tier?6:3);i++){const q=(g.time*(tier?1:.65)+i/(tier?6:3))%1;label(c,i%2?'♪':'♫',34+Math.sin(i*2.4+g.time)*8,-26-q*(tier?56:34),color);}
     if(tier)label(c,(tier===2?'대박':'강화')+' '+Math.ceil(u.toyBoostUntil-g.time)+'초',0,top-22,color);
-   }else if(g.time<(u.toyHighlightUntil||0))label(c,u.toyProcTier===2?'대박!':'강화!',0,top-22,u.toyProcTier===2?'#ffe075':'#9be9f4');
+   }else if(g.time<(u.toyHighlightUntil||0)){
+    const jackpot=u.toyProcTier===2;
+    const result=u.type==='toyStunner'&&jackpot&&u.toyJackpotCount>0?'대박 · '+u.toyJackpotCount+'기 기절':jackpot?'대박!':'강화!';
+    label(c,result,0,top-22,jackpot?'#ffe075':'#9be9f4');
+   }
   }
  }else label(c,'낚시 미끼',0,-65,'#ffe2a0');c.restore();}
 function sheet(c,art,frame,x,y,width,height){

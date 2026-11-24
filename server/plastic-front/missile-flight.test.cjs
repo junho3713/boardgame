@@ -115,3 +115,20 @@ test('hover follows the moving vehicle for one second, then detaches and hits at
 test('a boss killed during hover is replaced by another eligible boss before the pending missile is discarded',()=>{
  const {g,source,target}=scene(250);g.castLucky(source,'bossKiller');const b=g.shots[0],other=g.addUnit(2,'tank',source.x+200,source.y+100);other.boss=true;other.hp=other.maxHp=1e6;other.cooldown=1e6;target.hp=0;g.update(.05);a.equal(b.target,other);a.ok(g.shots.includes(b));for(let i=0;i<36;i++)g.update(.05);a.ok(other.hp<other.maxHp);a.equal(g.shots.includes(b),false);
 });
+
+test('boss-killer celebrates the draw, then sounds propulsion exactly once at the saved launch transition',()=>{
+ const {g,source}=scene(300),heard=[];g.notify=(kind,event)=>{if(kind==='fire'&&event.luckySound)heard.push([g.time,event.luckySound]);};
+ g.castLucky(source,'bossKiller');a.deepEqual(heard,[[0,'jackpot']]);const shot=g.shots[0];
+ g.time=.95;g.updateBossKillerFlight(shot,.05);a.equal(heard.length,1);
+ const restored=unpack(scene().g,JSON.parse(JSON.stringify(pack(g)))),pending=restored.shots[0],resumed=[];
+ restored.notify=(kind,event)=>{if(kind==='fire'&&event.luckySound)resumed.push([restored.time,event.luckySound]);};
+ restored.time=1;restored.updateBossKillerFlight(pending,.05);restored.updateBossKillerFlight(pending,0);a.deepEqual(resumed,[[1,'bossKiller']]);
+ const airborne=unpack(scene().g,JSON.parse(JSON.stringify(pack(restored)))),replayed=[];airborne.notify=(kind,event)=>{if(kind==='fire'&&event.luckySound)replayed.push(event.luckySound);};
+ airborne.time=1.1;airborne.updateBossKillerFlight(airborne.shots[0],.1);a.deepEqual(replayed,[]);
+});
+
+test('a boss-killer cancelled before launch produces no propulsion sound',()=>{
+ const {g,source,target}=scene(300),heard=[];g.notify=(kind,event)=>{if(kind==='fire'&&event.luckySound)heard.push(event.luckySound);};
+ g.castLucky(source,'bossKiller');const shot=g.shots[0];target.hp=0;g.update(.05);
+ a.equal(g.shots.includes(shot),false);g.time=1;g.updateBossKillerFlight(shot,.05);a.deepEqual(heard,['jackpot']);
+});

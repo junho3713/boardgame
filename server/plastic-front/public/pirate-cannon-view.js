@@ -110,9 +110,21 @@ function impact(c,e,p){
   const a=i*2.4+seed,dist=r*(.18+.07*(i%4))*p,x=Math.cos(a)*dist,y=Math.sin(a)*dist-13*Math.sin(p*Math.PI);c.save();c.globalAlpha*=k;c.translate(x,y);c.rotate(p*5+a);c.fillStyle=i%2?'#7b6850':'#a48960';c.fillRect(-1.9,-1.1,3.8,2.2);c.restore();
  }
 }
+function intercept(c,e,p){
+ const fold=Math.min(1,p/.48);
+ if(fold<1){
+  c.save();c.globalAlpha*=1-fold;const radius=e.radius*(1-fold)**2;
+  for(let i=0;i<4;i++){const a=i*Math.PI/2;ring(c,e.x,e.y,radius,'#a7f4be',2,a+.09,a+Math.PI/2-.09);}
+  c.restore();
+ }
+ c.globalAlpha*=Math.min(1,(1-p)*4);c.textAlign='center';c.font='bold 15px system-ui';c.lineWidth=3;c.lineJoin='round';
+ const y=e.gunY-62-9*Math.min(1,p*2);c.strokeStyle='#204536';c.fillStyle='#dcffc2';c.strokeText('포격 차단!',e.gunX,y);c.fillText('포격 차단!',e.gunX,y);
+}
 function event(c,e){
- if(e.kind!=='pirateMuzzle'&&e.kind!=='pirateImpact')return false;
- const p=1-clamp(e.t/e.max);c.save();if(e.kind==='pirateMuzzle')muzzle(c,e,p);else impact(c,e,p);c.restore();return true;
+ if(e.kind!=='pirateMuzzle'&&e.kind!=='pirateImpact'&&e.kind!=='pirateIntercept')return false;
+ const p=1-clamp(e.t/e.max);c.save();
+ if(e.kind==='pirateMuzzle')muzzle(c,e,p);else if(e.kind==='pirateImpact')impact(c,e,p);else intercept(c,e,p);
+ c.restore();return true;
 }
 root.FrontPirateCannonView={ground,air,event};
 })(typeof window==='undefined'?globalThis:window);

@@ -18,7 +18,7 @@ function createCoopHandler({now=Date.now,automatic=true}={}){
  function events(r){return Object.fromEntries(['toast','level','end','fire','explosion'].map(type=>[type,data=>{
    if(type==='level'||type==='end')r.cached=null;
    if(type==='level')r.round++;
-   const value=type==='toast'?String(data):type==='end'?{result:data.result,reason:data.reason}:type==='fire'?{type:data.type,team:data.team,x:data.x,y:data.y,appearance:data.appearance}:type==='explosion'?{x:data.x,y:data.y,kind:data.kind,team:data.team}:null;
+   const value=type==='toast'?String(data):type==='end'?{result:data.result,reason:data.reason}:type==='fire'?{type:data.type,team:data.team,x:data.x,y:data.y,appearance:data.appearance,luckySound:data.luckySound}:type==='explosion'?{x:data.x,y:data.y,kind:data.kind,team:data.team}:null;
    if(type!=='level'){r.events.push({id:++r.eventId,type,data:value,...(type==='toast'?{owner:r.game?.coopOwner}: {})});if(r.events.length>45)r.events.shift();}
  }]));}
  function clearInput(r,p){

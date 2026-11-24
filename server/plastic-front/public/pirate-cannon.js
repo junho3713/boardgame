@@ -22,8 +22,14 @@ function install({FrontGame}){
  p.reset=function(...args){const result=reset.apply(this,args);this.pirateShells=[];return result;};
  p.isStationary=function(u){return !!u?.pirateFuse||stationary.call(this,u);};
  p.damage=function(t,amount,source){
+  const alliedIntercept=t.pirateFuse&&t.hp>0&&source?.team===0&&t.team!==0&&this.time>=(t.toyStunUntil||0)&&!this.luckyFlashActive?.(t);
   const result=damage.call(this,t,amount,source);
-  if(t.hp<=0&&t.pirateFuse)cancel(t);
+  if(t.hp<=0&&t.pirateFuse){
+   const fuse=t.pirateFuse;cancel(t);
+   if(alliedIntercept){
+    this.effects.push({kind:'pirateIntercept',team:0,x:fuse.x,y:fuse.y,radius:fuse.radius,gunX:t.x,gunY:t.y,t:.85,max:.85});
+   }
+  }
   return result;
  };
  p.updatePirateCannon=function(u,dt,s=this.stats(u)){

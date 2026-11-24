@@ -136,7 +136,9 @@ test('a launched shark survives source retirement and cooperative snapshots with
 test('electric tiers stun three, five and all valid targets for one, two and three seconds respectively',()=>{
  for(const [tier,count]of [[0,3],[1,5],[2,11]]){
   const g=scene(),u=ready(g,'toyStunner',tier),targets=Array.from({length:10},(_,i)=>enemy(g,u.x+80+i*8,u.y)),boss=enemy(g,u.x+70,u.y,'rhinoBeetle');boss.boss=true;
-  assert.equal(g.useSupportToy(u),true);assert.equal(targets.filter(t=>t.toyStunUntil===tier+1).length,count-1);assert.equal(boss.toyStunUntil,tier+1);assert.equal(g.effects.filter(e=>e.kind==='toyZap').length,count);assert.equal(u.toyNextAt,10);
+  const sounds=[];g.events.fire=event=>sounds.push(event.luckySound);
+  assert.equal(g.useSupportToy(u),true);assert.equal(targets.filter(t=>t.toyStunUntil===tier+1).length,count-1);
+  assert.deepEqual(sounds,tier===2?['jackpot']:[]);assert.equal(u.toyJackpotCount,tier===2?count:undefined);assert.equal(boss.toyStunUntil,tier+1);assert.equal(g.effects.filter(e=>e.kind==='toyZap').length,count);assert.equal(u.toyNextAt,10);
   const links=g.effects.filter(e=>e.kind==='toyZap');for(let i=1;i<links.length;i++)assert.equal(links[i].from,links[i-1].target);
   assert.deepEqual(links.map(e=>e.hop),Array.from({length:count},(_,i)=>i));
   const storm=g.effects.find(e=>e.kind==='toyThunder');assert.equal(!!storm,tier===2);if(storm)assert.deepEqual(storm.targets,links.map(e=>e.target));
