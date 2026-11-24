@@ -24,6 +24,9 @@ class FrontModels{
  }
  prefetch(game){
   if(!this.manifest)return;
+  const engineer=game.tech?.[0]?.rocket||0;
+  if(engineer>0)this.ensure('blockEngineer',0);
+  if(engineer>=4)this.ensure('blockEngineerElite',0);
   for(const u of Array.isArray(game.units)?game.units:[])if(u.hp>0){this.ensure(this.visualFor(u,game.evolutionEnabled?.(u)??game.evolved?.[u.type]),u.type==='bayonetCaptain'?1:u.team);if(u.team===0&&u.type==='medic'&&u.appearance==='rina')this.ensureRina();}
   const c=game.commander?.(0);if(c&&game.level>=8&&['sarge','shino'].includes(c.appearance||'sarge'))this.ensure(c.appearance==='shino'?'commanderShinoUltimate':'commanderSargeUltimate',0);
  }
@@ -169,12 +172,13 @@ class FrontModels{
    if(u.type==='rifle')return evolved?'shotgunDragon':'shotgun';
    if(u.type==='guntruck')return evolved?'diceGold':'diceTrooper';
    if(u.type==='drone')return evolved?'droneLaser':'droneScout';
+   if(u.type==='rocket')return evolved?'blockEngineerElite':'blockEngineer';
   }
   const ultimate=u.type==='leader'&&u.team===0&&u.ultimatePose?.active,captain=u.type==='bayonetCaptain';let visual=u.type==='leader'&&u.team===0&&u.appearance==='shion'?'commanderShion':captain?'bayonet':u.type==='leader'&&u.team===0&&u.appearance==='blaze'?(u.flameSkin==='hwarin'?'commanderHwarin':'commanderBlaze'):ultimate?(u.appearance==='shino'?'commanderShinoUltimate':'commanderSargeUltimate'):u.type==='leader'&&u.team===0&&u.appearance==='shino'?'commanderShino':u.type==='sniper'&&u.team===0&&['kayla','hayeon'].includes(u.appearance)?'sniperKayla':u.defenseKind==='laserTower'?'laserTower':u.type;visual=({commando:'machinegun',spectre:'sniper',titan:'rocket'})[u.type]||visual;return visual;}
  draw(ctx,u,time,evolved=false){
   if(u.shotgunBurns?.length)window.FrontRosterArt?.burning(ctx,u,time);
   if(u.team===0&&u.type==='medic'&&u.appearance==='rina'){this.ensureRina();if(this.rina?.loaded)return this.rina.draw(ctx,u,time);if(u.hp<=0)return true;}
-  const ultimate=u.type==='leader'&&u.team===0&&u.ultimatePose?.active,captain=u.type==='bayonetCaptain';let visual=this.visualFor(u,evolved);let item=this.ensure(visual,visual==='bayonet'?1:u.team);if(!item?.ready&&visual!==u.type){const base=this.visualFor(u,false);if(base!==visual){item=this.ensure(base,u.team);visual=base;}if(!item?.ready&&u.team===0&&['rifle','guntruck','drone'].includes(u.type))return !!window.FrontRosterArt?.model(ctx,u,time,evolved);if(!item?.ready){item=this.ensure(u.type,u.team);visual=u.type;}}if(!item?.ready)return false;if(visual==='commanderShion')return this.drawSword(ctx,u,time,item);if(visual==='commanderHwarin')return this.drawHwarin(ctx,u,time,item);if(visual==='blizzardMage')return this.drawMage(ctx,u,time,item);
+  const ultimate=u.type==='leader'&&u.team===0&&u.ultimatePose?.active,captain=u.type==='bayonetCaptain';let visual=this.visualFor(u,evolved);let item=this.ensure(visual,visual==='bayonet'?1:u.team);if(!item?.ready&&visual!==u.type){const base=this.visualFor(u,false);if(base!==visual){item=this.ensure(base,u.team);visual=base;}if(!item?.ready&&u.team===0&&['rifle','guntruck','drone','rocket'].includes(u.type))return !!window.FrontRosterArt?.model(ctx,u,time,evolved);if(!item?.ready){item=this.ensure(u.type,u.team);visual=u.type;}}if(!item?.ready)return false;if(visual==='commanderShion')return this.drawSword(ctx,u,time,item);if(visual==='commanderHwarin')return this.drawHwarin(ctx,u,time,item);if(visual==='blizzardMage')return this.drawMage(ctx,u,time,item);
   const vehicle=!!item.layers.turret||!!item.layers.body.vehicle;
   const firingPirate=visual==='pirateCannon'&&Number.isFinite(u.pirateFiredAt)&&time>=u.pirateFiredAt&&time-u.pirateFiredAt<.37;
   const aimFace=visual==='pirateCannon'?(u.pirateFuse?.angle??(firingPirate?u.aimFace:u.moveFace)??u.face??0):vehicle&&Number.isFinite(u.turretFace)?u.turretFace:Number.isFinite(u.aimFace)?u.aimFace:u.face;
@@ -197,7 +201,12 @@ class FrontModels{
    const phase=(time-u.shotgunPumpStartedAt)/Math.max(.01,u.shotgunPumpUntil-u.shotgunPumpStartedAt);
    frame=phase<.2?pump[1]:phase<.56?pump[0]:phase<.78?pump[1]:frame;
   }
-  if(item.layers.body.throwFrame!==undefined&&Number.isFinite(u.rosterLastThrowAt)&&time-u.rosterLastThrowAt<.3)frame=item.layers.body.throwFrame;
+  const throwSpec=item.layers.body;
+  if(throwSpec.throwReleaseFrame!==undefined){
+   const elapsedSinceThrow=time-u.blockMineThrownAt;
+   if(elapsedSinceThrow>=0&&elapsedSinceThrow<.18)frame=throwSpec.throwReleaseFrame;
+   else if(Number.isFinite(u.aimFace)&&u.cooldown>=0&&u.cooldown<=.13)frame=throwSpec.throwFrame;
+  }else if(throwSpec.throwFrame!==undefined&&Number.isFinite(u.rosterLastThrowAt)&&time-u.rosterLastThrowAt<.3)frame=throwSpec.throwFrame;
   if(visual==='pirateCannon'){
    if(firingPirate)frame=item.layers.body.fireFrame;
    else if(u.pirateFuse){

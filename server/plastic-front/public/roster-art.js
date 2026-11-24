@@ -54,6 +54,7 @@ function die(c,x,y,r,face=5,gold=false,spin=0){
 function bodyProject(angle){const co=Math.cos(angle),si=Math.sin(angle);return (f,s,z)=>[f*co-s*si,(f*si+s*co)*.66-z];}
 function infantry(c,u,time,evolved,dice){
  const angle=Number.isFinite(u.aimFace)?u.aimFace:u.face||0,project=bodyProject(angle),step=Math.sin(u.walk||0);
+ const engineer=u.type==='rocket';
  const shell=evolved?'#e4a044':'#b45430',suit=dice?'#537776':'#688457',trim=dice?'#9fccc2':'#b9c78a';
  ellipse(c,2,2,17,6,'#28362942');
  for(const side of [-1,1]){
@@ -81,7 +82,13 @@ function infantry(c,u,time,evolved,dice){
  const mark=project(6,3,47);ellipse(c,...mark,1.6,1.8,dice?'#f7e4b8':shell);
  const front=project(12,-3,28),rear=project(4,6,27);
  for(const [side,hand] of [[-1,front],[1,rear]]){const shoulder=project(-1,side*8,31);rod(c,shoulder,hand,5.4,suit);ball(c,...hand,3.2,3,'#d0c393','#a7a16d','#56694c');}
- if(dice){
+ if(engineer){
+  const [x,y]=front,top=evolved?'#e8cf74':'#a8c782';
+  polygon(c,[[x-8,y-4],[x,y],[x,y+5],[x-8,y+1]],'#3e6141');
+  polygon(c,[[x,y],[x+8,y-4],[x+8,y+1],[x,y+5]],evolved?'#9c783a':'#62834f');
+  polygon(c,[[x-8,y-4],[x,y-8],[x+8,y-4],[x,y]],top);
+  for(const [dx,dy] of [[-3.5,-4],[0,-5.7],[0,-2.3],[3.5,-4]])ellipse(c,x+dx,y+dy-.6,1.55,.85,top);
+ }else if(dice){
   const pocket=project(-4,8,22);ball(c,...pocket,4.5,4.2,'#c9b88c','#9d865b','#6e6549');
   die(c,front[0],front[1]-4,8.5,evolved?6:5,evolved,-.16);
   if(evolved){const other=project(2,11,24);die(c,...other,6.2,3,true,.19);}
@@ -111,7 +118,7 @@ function drone(c,u,time,evolved){
  for(const s of [-1,1]){const lamp=P(-7,s*9,2);ellipse(c,...lamp,1.5,1.1,s>0?'#f2a879':'#8bf5d2');}
 }
 function paintModel(c,u,time,evolved){
- if(u.team!==0||!['rifle','guntruck','drone'].includes(u.type))return false;
+ if(u.team!==0||!['rifle','guntruck','drone','rocket'].includes(u.type))return false;
  c.save();if(u.type==='drone')drone(c,u,time,evolved);else infantry(c,u,time,evolved,u.type==='guntruck');c.restore();return true;
 }
 function burning(c,u,time){
@@ -124,7 +131,7 @@ function burning(c,u,time){
 }
 const frames=new Map();
 function model(c,u,time,evolved=false){
- if(u.team!==0||!['rifle','guntruck','drone'].includes(u.type))return false;
+ if(u.team!==0||!['rifle','guntruck','drone','rocket'].includes(u.type))return false;
  if(!root.document?.createElement)return paintModel(c,u,time,evolved);
  const direction=(Math.round((u.aimFace??u.face??0)/TAU*12)%12+12)%12,flying=u.type==='drone';
  const phase=flying?Math.floor(time*18+(u.id||0))%4:Math.round(Math.sin(u.walk||0)),kick=u.type==='rifle'&&(u.recoil||0)>.035;
