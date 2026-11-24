@@ -84,11 +84,11 @@ const TYPES={swordEmpress:{name:'사검의 군주',hp:140800,damage:0,rate:100,r
  honeybee:{name:'꿀벌',icon:'✥',hp:360,damage:16,rate:1.15,range:40,speed:112,r:14,cost:0,flying:true,flightHeight:36,role:'비행 근접 · 경장갑 · 거실 4분부터 단계적 합류'},
  hornet:{name:'말벌',icon:'⟡',hp:1500,damage:38,rate:1.5,range:48,speed:98,r:22,cost:0,flying:true,flightHeight:48,role:'6분부터 2마리씩 · 공격 자세 비행 · 중장갑'},
  leader:{name:'지휘관',icon:'★',hp:400,damage:16.8,rate:.65,range:235,speed:130,r:14,cost:0},
- lucky:{name:'럭키 레토나',icon:'🍀',hp:135,damage:8,rate:.95,range:285,speed:140,r:20,cost:160,role:'네잎클로버 군용 지프 · 4초마다 슬롯 추첨 / 꽝 40% · 끈끈이 폭탄/지뢰/퇴치 스프레이/777 미사일(방어력 35% 무시) · 레토나 Lv.5 + 이동속도 Lv.5 진화 시 꽝 감소·희귀 확률 증가'},
+ lucky:{name:'럭키 레토나',icon:'🍀',hp:135,damage:8,rate:.95,range:285,speed:140,r:20,cost:160,role:'네잎클로버 군용 지프 · 4초마다 슬롯 추첨 / 꽝 40% · 끈끈이 폭탄/섬광탄/퇴치 스프레이/777 미사일(방어력 35% 무시) · 레토나 Lv.5 + 이동속도 Lv.5 진화 시 꽝 감소·희귀 확률 증가'},
  rifle:{name:'소총병',icon:'▥',hp:140,damage:12,rate:.63,range:245,speed:144,r:11,cost:45,role:'범용 소총 · 경장갑 ×1 / 장갑 ×0.8'},
  machinegun:{name:'기관총병',icon:'≋',hp:160,damage:9,rate:.2,range:280,speed:126,r:12,cost:95,role:'빠른 연사 · 경장갑 ×1 / 장갑 ×0.8'},
  mortar:{name:'박격포병',icon:'◉',hp:90,damage:64,rate:3.6,range:700,minRange:135,speed:116,r:12,cost:140,splash:70,role:'레이저 포탑 우선 · 고정 낙탄 2초 · 건물 ×1.2 · 사거리 135~700'},
- rocket:{name:'바주카병',icon:'⌁',hp:120,damage:80,rate:1.85,range:295,speed:128,r:12,cost:120,splash:38,role:'장갑 ×1 · 경장갑 ×0.5 · 소형 폭발'},
+ rocket:{name:'바주카병',icon:'⌁',hp:120,damage:80,rate:1.85,range:295,speed:128,r:12,cost:120,splash:38,role:'조준 방향으로 블록 지뢰 2~3개 투척 · 지상 적이 밟으면 광역 폭발'},
  sniper:{name:'저격병',icon:'⌖',hp:100,damage:100,rate:2.35,range:560,speed:137,r:11,cost:110,role:'사거리 안에서 최대 체력이 가장 높은 적 자동 조준 · 경장갑 ×1 / 장갑 ×0.5'},
  guntruck:{name:'전투트럭',icon:'▱',hp:280,damage:12,rate:.22,range:265,speed:150,r:22,cost:150,role:'기동 연사 · 경장갑 ×1 / 장갑 ×0.8'},
  tank:{name:'전차',icon:'▰',hp:600,damage:100,rate:2.3,range:310,speed:95,r:26,cost:260,splash:60,role:'장갑 ×1 · 경장갑 ×0.5 · 범위 포격'},
@@ -143,10 +143,10 @@ const EVOLUTIONS={
  guntruck:{name:'황금 주사위 분대',ability:'haste',detail:'주사위 2개 · 눈금 3~6 · 더블 충격파'},
  rifle:{name:'드래곤 브레스 산탄병',ability:'health',detail:'화염 산탄 · 지속 화상 · 마지막 4번째 탄의 폭발 범위와 넉백 강화'},
  sniper:{name:'정예 저격병',ability:'critChance',detail:'치명타 확률 +25%p · 치명타 피해 +50%p · 사거리 +65'},
- rocket:{name:'파쇄 바주카병',ability:'critDamage',detail:'공격력 +25% · 폭발 범위 +30 · 치명타 확률 +20%p'},
+ rocket:{name:'파쇄 바주카병',ability:'critDamage',detail:'강화 블록 지뢰 · 더 큰 폭발 · 주변 지뢰 도미노 연쇄 폭파'},
  machinegun:{name:'보급 기관총병',ability:'gold',detail:'사격 속도 +33% · 공격력 +20% · 최대 체력 +20%'},
  mortar:{name:'중박격포 분대',ability:'capacity',detail:'공격력 +35% · 폭발 범위 +30 · 사거리 +70 · 낙탄 시간 2초 유지'},
- lucky:{name:'슈퍼 럭키 레토나',ability:'speed',detail:'꽝 40→30% · 스프레이 10→17% · 777 미사일 2→5% · 끈끈이 폭탄/지뢰 확률 유지'},
+ lucky:{name:'슈퍼 럭키 레토나',ability:'speed',detail:'꽝 40→30% · 스프레이 10→17% · 777 미사일 2→5% · 끈끈이 폭탄/혼란 섬광탄 확률 유지 · 섬광에 맞은 적은 서로 공격'},
  drone:{name:'레이저 쿼드콥터',ability:'xpGain',detail:'기체 확대 · 주기적으로 적을 향해 부채꼴 관통 레이저'},
  medic:{name:'야전 의무관',ability:'defense',detail:'1초마다 최대 3명 치료 · 각 대상 치료량 +40% · 치료 범위 +60 · 방어력 +12 · 최대 체력 +20% · 10초마다 최대 5명의 빙결·치유 감소·둔화·중독 정화'}
 };
@@ -1085,15 +1085,15 @@ class FrontGame{
  }
  detonateBombBug(u,killer=null){
   if(u.bombDetonated)return;u.bombDetonated=true;u.bombFuse=null;u.hp=0;u.diedAt=this.time;u.deadUntil=0;
-  // Credit a player's chain to its owner. The blast itself still hits both sides.
-  const source={type:'bombBug',team:killer?.team===0?0:u.team,x:u.x,y:u.y,...(killer?.team===0&&Number.isInteger(killer.coopOwner)?{coopOwner:killer.coopOwner}:{})};
+  const redirected=!!killer?.flashRedirect||!!this.luckyFlashConfused?.(u);
+  const source={type:'bombBug',flashRedirect:redirected,team:killer?.team===0?0:u.team,x:u.x,y:u.y,...(killer?.team===0&&Number.isInteger(killer.coopOwner)?{coopOwner:killer.coopOwner}:{})};
   (this.bombBlastQueue??=[]).push({x:u.x,y:u.y,damage:this.stats(u).damage,source,unit:u});
   if(this.processingBombBlasts)return;this.processingBombBlasts=true;
   try{for(let i=0;i<this.bombBlastQueue.length;i++){
    const blast=this.bombBlastQueue[i],radius=INSECTS.bomb.radius;
    this.effects.push({kind:'explosion',x:blast.x,y:blast.y,radius,t:.7,max:.7,team:2,visualKind:'bombBug'});
    this.notify('explosion',{x:blast.x,y:blast.y,kind:'rocket',team:2});
-   for(const target of [...this.units]){if(target===blast.unit||target.hp<=0||dist(target,blast)>radius)continue;const ant=target.team!==0&&target.type==='ant'&&!target.boss&&!target.roadCaptain&&!target.finalBoss;this.damage(target,blast.damage*(ant?2:1),target.team===0?{...blast.source,team:2,coopOwner:undefined}:blast.source);}
+   for(const target of [...this.units]){if(target===blast.unit||target.hp<=0||blast.source.flashRedirect&&target.team===0||dist(target,blast)>radius)continue;const ant=target.team!==0&&target.type==='ant'&&!target.boss&&!target.roadCaptain&&!target.finalBoss;this.damage(target,blast.damage*(ant?2:1),target.team===0?{...blast.source,team:2,coopOwner:undefined}:blast.source);}
   }}finally{this.bombBlastQueue=[];this.processingBombBlasts=false;}
  }
  updateAcidBeetle(u,dt){
@@ -1451,10 +1451,10 @@ class FrontGame{
   if(c.phase==='warning'&&this.time>=c.startAt)this.beginArtillery();
   if(c.phase!=='active')return;
   this.checkCrisisClear();if(c.phase!=='active')return;
-  const allies=this.alive(0).filter(u=>this.canTarget({team:1},u)),guns=this.artilleryUnits();
-  if(this.time>=c.nextSalvo&&allies.length){
+  const allies=this.alive(0).filter(u=>this.canTarget({team:1},u)),guns=this.artilleryUnits(),readyGuns=guns.filter(gun=>!this.luckyFlashActive?.(gun));
+  if(this.time>=c.nextSalvo&&allies.length&&readyGuns.length){
    c.salvos++;c.nextSalvo=this.time+8.5;
-   guns.forEach((gun,i)=>{const target=allies[(c.salvos-1+i*3)%allies.length];this.barrages.push({x:target.x,y:target.y,radius:100,landAt:this.time+4.5,delay:4.5,source:gun});});
+   readyGuns.forEach((gun,i)=>{const target=allies[(c.salvos-1+i*3)%allies.length];this.barrages.push({x:target.x,y:target.y,radius:100,landAt:this.time+4.5,delay:4.5,source:gun});});
    this.notify('toast','포격 위치 고정 · 4.5초 안에 붉은 범위 밖으로 이동하세요!');
   }
   if(this.time>=c.nextEscort){
@@ -1559,22 +1559,7 @@ class FrontGame{
    this.luckyGlues.push({x:target.x,y:target.y,fromX:u.x,fromY:u.y,source:u,team:0,radius:LUCKY.glueRadius,landAt:this.time+LUCKY.glueFlight,expires:this.time+LUCKY.glueFlight+LUCKY.glueLife,rulesVersion:78,hitIds:[]});
    this.effects.push({kind:'luckyGlueThrow',x:u.x,y:u.y,tx:target.x,ty:target.y,radius:LUCKY.glueRadius,t:LUCKY.glueFlight,max:LUCKY.glueFlight,team:0});return;
   }
-  if(kind==='mine'){
-   // Each winning reel places its own mine; keep their visible footprints apart.
-   const owned=this.luckyMines.filter(m=>m.ownerId===u.id);if(owned.length>=(Math.ceil(LUCKY.mineLife/LUCKY.interval)+1)*(u.star>=2?3:1)){const oldest=owned[0];this.luckyMines=this.luckyMines.filter(m=>m!==oldest);}
-   const ground=this.units.filter(t=>t.hp>0&&!this.isFlying(t)&&this.canTarget(u,t)&&dist(u,t)<=LUCKY.range&&this.visible(t)&&this.lineClear(u,t,0,{fireTeam:u.team})).sort((a,b)=>dist(u,a)-dist(u,b))[0];
-   const angle=ground?Math.atan2(ground.y-u.y,ground.x-u.x):u.moveFace??u.face??0;let point={x:u.x,y:u.y};for(const d of [38,24,0]){const near={x:u.x+Math.cos(angle)*d,y:u.y+Math.sin(angle)*d};if(this.freePosition(near.x,near.y,10)&&this.lineClear(u,near,10)){point=near;break;}}
-   if(this.starExperiment&&u.star>=2){
-    const channel=u.activeLuckyChannel??0,lane=channel===1?-32:channel===2?32:0,existing=this.luckyMines.filter(m=>m.ownerId===u.id&&m.expires>this.time);let best=-1,found=false;
-    for(const d of [38,62,86,24,0]){for(const side of [lane,lane-32,lane+32,lane-64,lane+64]){
-     const near={x:u.x+Math.cos(angle)*d-Math.sin(angle)*side,y:u.y+Math.sin(angle)*d+Math.cos(angle)*side};
-     if(!this.freePosition(near.x,near.y,10)||!this.lineClear(u,near,10))continue;
-     const gap=existing.length?Math.min(...existing.map(m=>dist(m,near))):Infinity;
-     if(gap>best){best=gap;point=near;}if(gap>=26){found=true;break;}
-    }if(found)break;}
-   }
-   this.luckyMines.push({x:point.x,y:point.y,ownerId:u.id,source:u,rouletteChannel:u.activeLuckyChannel??0,team:0,damage:LUCKY.mineDamage*scale,armAt:this.time+.35,placedAt:this.time,expires:this.time+LUCKY.mineLife,rulesVersion:85});return;
-  }
+  if(kind==='mine')return this.castLuckyFlash(u);
   if(kind==='spray'){
    const aim=this.luckySprayTarget(u);
    if(aim)u.face=Math.atan2(aim.target.y-u.y,aim.target.x-u.x)+aim.offset;
@@ -1861,7 +1846,7 @@ class FrontGame{
   this.effects.push({kind:'bayonetWarn',x:u.x,y:u.y,angle:u.face,range:s.range,slash:!!s.slash,team:u.team,t:s.windup,max:s.windup});
  }
  update(dt){
-  if(this.phase!=='playing')return;dt=Math.min(dt,.05);if(this.bossIntro?.remaining>0){this.bossIntro.remaining=Math.max(0,this.bossIntro.remaining-dt);return;}this.time+=dt;this.syncEnemyGrowth();this.updateGuardianRespawns();this.updateMageQuest();this.updateLaserQuest();
+  if(this.phase!=='playing')return;dt=Math.min(dt,.05);if(this.bossIntro?.remaining>0){this.bossIntro.remaining=Math.max(0,this.bossIntro.remaining-dt);return;}this.time+=dt;this.updateLuckyFlashes?.();this.syncEnemyGrowth();this.updateGuardianRespawns();this.updateMageQuest();this.updateLaserQuest();
   if(this.coop)this.coopIncome(dt);else for(let t=0;t<2;t++)this.cash[t]+=this.income(t)*dt;
   if(!this.coop&&this.mode!=='crisis')this.gainXP(dt*(this.mode==='pve'?1.3:3.1));if(this.mode==='duel')this.enemyAct();else if(this.mode==='pve')this.updateMission(dt);if(this.phase!=='playing')return;
   this.updateSwarm();this.updateBosses();if(this.bossIntro?.remaining>0)return;this.updateArtillery();if(this.mode==='pve')this.updateDefenses(dt);this.updateBuildings(dt);this.coopSelectOwner?.(0);if(this.phase!=='playing')return;
@@ -1877,6 +1862,7 @@ class FrontGame{
    if(this.isSupportEntity?.(u))continue;
    if(u.hp<=0){if(u.type==='leader'&&u.deadUntil&&this.time>=u.deadUntil)this.reviveCommander(u);continue;}
    if(this.updateSupportKnockback?.(u))continue;
+   if(u.team!==0&&this.updateLuckyFlashEnemy?.(u,dt))continue;
    if((u.roadCaptain||u.roomGarrison)&&!this.updateRoadCaptain(u,dt))continue;
    if(u.type==='lucky'){if(u.team===0)this.updateLuckyUnit(u);else if(this.isRoomCampaign())this.updateEnemyLucky(u);}
    u.flash=Math.max(0,u.flash-dt);u.recoil=Math.max(0,(u.recoil||0)-dt);const s=this.stats(u);u.cooldown-=dt;if(this.time<(u.toyStunUntil||0))continue;
@@ -1897,7 +1883,7 @@ class FrontGame{
     const manualAngle=u.team===0&&MANUAL_AIM_TYPES.has(u.type)?this.manualAimAngle():null;
     if(manualAngle!==null){
      if(!commandEngaged.has(player))commandEngaged.set(player,this.commandEnemyInView(player,combatCandidates));
-     if(commandEngaged.get(player))target=this.commandFirePoint(u,s.range,manualAngle);
+     if(u.type==='rocket'||commandEngaged.get(player))target=this.commandFirePoint(u,s.range,manualAngle);
     }else if(u.team===0&&u.type==='drone')target=this.droneTarget(u,s.range);
     else if(u.team===0)target=this.selectCombatTarget(u,combatCandidates,combatThreats,s);else for(const a of [...this.units,...this.buildings.filter(b=>b.hp>0)]){if(!this.canTarget(u,a))continue;const d=this.targetDistance(u,a),score=d/Math.max(.25,multiplier(u.type,combatKind(a)));if(d<s.range&&d>=(s.minRange||0)&&score<nearest){target=a;nearest=score;}}
     // Finish the turret's aim before reconsidering almost equidistant moving targets.
@@ -1912,7 +1898,7 @@ class FrontGame{
     if(u.team!==0&&u.type==='tank'){u.tankAimTargetId=target?.id??null;if(!target||u.cooldown>0)u.tankReadyAimAt=null;else u.tankReadyAimAt??=this.time;}
     if(u.type==='sniper'){const windup=Math.min(ROOM_RULES.sniperAim,s.rate*.7);if(!target)u.sniperAim=null;else if(u.sniperAim&&target.commandShot)u.sniperAim.target=target;else if(u.cooldown<=windup&&(!u.sniperAim||u.sniperAim.target!==target)){u.sniperAim={target,started:this.time,fireAt:this.time+windup};u.cooldown=Math.max(u.cooldown,windup);}}
     if(TYPES[u.type]?.stab){if(u.bossPattern!=='wideSlash')this.updateBayonet(u,target,s);}
-    else if(target&&!channeling){u.face=Math.atan2(target.y-u.y,target.x-u.x);u.aimFace=u.face;let aligned=true;if(u.type==='tank'||u.type==='crimsonAce'||u.type==='guntruck'&&u.team!==0){const delta=Math.atan2(Math.sin(u.aimFace-(u.turretFace??u.aimFace)),Math.cos(u.aimFace-(u.turretFace??u.aimFace)));u.turretFace=(u.turretFace??u.aimFace)+clamp(delta,-ROOM_RULES.turretSpeed*dt,ROOM_RULES.turretSpeed*dt);aligned=Math.abs(delta)<.13;if(u.team!==0&&u.type==='tank'&&u.cooldown<=0&&this.time-(u.tankReadyAimAt??this.time)>=.8){u.turretFace=u.aimFace;aligned=true;}}if(u.cooldown<=0&&aligned&&(u.type!=='sniper'||u.sniperAim&&this.time>=u.sniperAim.fireAt)){if(u.type==='sniper')u.sniperAim=null;const attack=this.attackRoll(u);u.cooldown=this.isFlameCommander(u)?Math.max(u.cooldown,-dt)+s.rate:s.rate;if(this.isSwordCommander(u)){this.beginSwordAttack(u,target,attack);}else if(this.isFlameCommander(u)){this.flamePulse(u,u.face);}else if(u.type==='mortar'){this.launchMortar(u,target,attack);u.recoil=.25;}else if(MELEE.has(u.type)){if(this.isFlying(u)){u.flightStrikeUntil=this.time+.22;u.recoil=.18;this.effects.push({kind:'sting',x:u.x,y:u.y,tx:target.x,ty:target.y,flightHeight:s.flightHeight,t:.2,max:.2,team:u.team});}this.damage(target,attack.damage,u);}else{this.fireUnitProjectiles(u,target,attack,s);u.recoil=(u.type==='tank'||u.type==='crimsonAce')?.24:u.type==='rocket'?.2:.16;this.notify('fire',u);this.effects.push({kind:'muzzle',x:u.x,y:u.y,origin:true,t:.12,max:.12,team:u.team,weapon:u.appearance==='shino'?'shino':u.type,boss:!!u.boss,...(u.type==='sniper'&&['kayla','hayeon'].includes(u.appearance)?{appearance:u.appearance}:{}),angle:u.face});if(u.type==='sniper')this.effects.push({kind:'tracer',x:u.x,y:u.y,tx:target.x,ty:target.y,t:.12,max:.12,team:u.team});}}}
+    else if(target&&!channeling){u.face=Math.atan2(target.y-u.y,target.x-u.x);u.aimFace=u.face;let aligned=true;if(u.type==='tank'||u.type==='crimsonAce'||u.type==='guntruck'&&u.team!==0){const delta=Math.atan2(Math.sin(u.aimFace-(u.turretFace??u.aimFace)),Math.cos(u.aimFace-(u.turretFace??u.aimFace)));u.turretFace=(u.turretFace??u.aimFace)+clamp(delta,-ROOM_RULES.turretSpeed*dt,ROOM_RULES.turretSpeed*dt);aligned=Math.abs(delta)<.13;if(u.team!==0&&u.type==='tank'&&u.cooldown<=0&&this.time-(u.tankReadyAimAt??this.time)>=.8){u.turretFace=u.aimFace;aligned=true;}}if(u.cooldown<=0&&aligned&&(u.type!=='sniper'||u.sniperAim&&this.time>=u.sniperAim.fireAt)){if(u.type==='sniper')u.sniperAim=null;const attack=this.attackRoll(u);u.cooldown=this.isFlameCommander(u)?Math.max(u.cooldown,-dt)+s.rate:s.rate;if(this.isSwordCommander(u)){this.beginSwordAttack(u,target,attack);}else if(this.isFlameCommander(u)){this.flamePulse(u,u.face);}else if(u.type==='mortar'){this.launchMortar(u,target,attack);u.recoil=.25;}else if(MELEE.has(u.type)){if(this.isFlying(u)){u.flightStrikeUntil=this.time+.22;u.recoil=.18;this.effects.push({kind:'sting',x:u.x,y:u.y,tx:target.x,ty:target.y,flightHeight:s.flightHeight,t:.2,max:.2,team:u.team});}this.damage(target,attack.damage,u);}else{this.fireUnitProjectiles(u,target,attack,s);u.recoil=(u.type==='tank'||u.type==='crimsonAce')?.24:u.type==='rocket'?.2:.16;if(u.team!==0||u.type!=='rocket'){this.notify('fire',u);this.effects.push({kind:'muzzle',x:u.x,y:u.y,origin:true,t:.12,max:.12,team:u.team,weapon:u.appearance==='shino'?'shino':u.type,boss:!!u.boss,...(u.type==='sniper'&&['kayla','hayeon'].includes(u.appearance)?{appearance:u.appearance}:{}),angle:u.face});}if(u.type==='sniper')this.effects.push({kind:'tracer',x:u.x,y:u.y,tx:target.x,ty:target.y,t:.12,max:.12,team:u.team});}}}
    }
    if(TYPES[u.type]?.stab&&(u.bayonetAttack||this.time<(u.bayonetRecoverUntil||0)))continue;
    if(u.team===0&&u.type==='drone'){const orbit=this.dronePatrolPoint(u,player);this.move(u,orbit.x-u.x,orbit.y-u.y,dt,s.speed);}
@@ -1951,6 +1937,6 @@ class FrontGame{
  finish(result,reason){if(this.phase==='ended')return;this.phase='ended';this.result=result;if(result==='win')this.awardGold(80);this.notify('end',{result,reason});}
 }
 Object.assign(FrontGame.prototype,ROOM_CAMPAIGN.methods);
-if(typeof module!=='undefined'&&module.exports){require('./evolution-combat.js')({FrontGame,TYPES,LUCKY,multiplier,EVOLUTIONS});require('./roster-combat.js')({FrontGame,TYPES,multiplier});require('./field-supplies.js')({FrontGame,TYPES});require('./reinforcement-plan.js')({FrontGame,TYPES,ROSTER});require('./support-toys.js')({FrontGame,TYPES});require('./evolution-links.js')({FrontGame});}
+if(typeof module!=='undefined'&&module.exports){require('./evolution-combat.js')({FrontGame,TYPES,LUCKY,multiplier,EVOLUTIONS});require('./block-mines.js')({FrontGame,TYPES,multiplier});require('./roster-combat.js')({FrontGame,TYPES,multiplier});require('./lucky-flash.js')({FrontGame,TYPES});require('./field-supplies.js')({FrontGame,TYPES});require('./reinforcement-plan.js')({FrontGame,TYPES,ROSTER});require('./support-toys.js')({FrontGame,TYPES});require('./evolution-links.js')({FrontGame});}
 root.FrontRoomCampaign=ROOM_CAMPAIGN;root.FrontButterfly=BUTTERFLY;root.FrontMedicCleanse=MEDIC_CLEANSE;root.FrontMedicHealing=MEDIC_HEALING;root.FrontGuardians=GUARDIANS;root.FrontBike=BIKE;root.FrontLucky=LUCKY;root.FrontDesktopItems={art:DESKTOP_ITEM_ART,sprite:desktopItemSprite,bodies:desktopItemBodies,floor:desktopItemFloor};root.FrontUnitTypeCap=UNIT_TYPE_CAP;root.FrontFlame=FLAME;root.FrontSword=SWORD;root.FrontWaveConfigs=WAVE_CONFIGS;root.FrontDesktopNotebook={art:DESKTOP_NOTEBOOK_ART,rect:desktopNotebookRect,bodies:desktopNotebookBodies};root.FrontDesktopProps={art:DESKTOP_PROP_ART,sprite:desktopPropSprite,bodies:desktopPropBodies};root.FrontDesktopCover={art:DESKTOP_COVER_ART,style:desktopCoverStyle,rect:desktopCoverRect};root.FrontRemoteShape=ROOM_REMOTE_SHAPE;root.FrontDesktopRules=DESKTOP_RULES;root.FrontFlyingWaves=FLYING_WAVES;root.FrontUltimate=ULTIMATE;root.FrontBuildings=BUILDINGS;root.FrontRoomRules=ROOM_RULES;root.FrontAbilities=ABILITIES;root.FrontEvolutions=EVOLUTIONS;root.FrontFieldCards=FIELD_CARDS;root.FrontProfile=FrontProfile;root.FrontPermanent=PERMANENT;root.FrontGame=FrontGame;root.FrontTypes=TYPES;root.FrontMultiplier=multiplier;root.FrontRoster=ROSTER;if(typeof module!=='undefined')module.exports={SWORD,BUTTERFLY,MEDIC_CLEANSE,MEDIC_HEALING,GUARDIANS,BIKE,LUCKY,DESKTOP_ITEM_ART,desktopItemSprite,desktopItemBodies,desktopItemFloor,UNIT_TYPE_CAP,FLAME,DESKTOP_NOTEBOOK_ART,desktopNotebookRect,desktopNotebookBodies,DESKTOP_PROP_ART,desktopPropSprite,desktopPropBodies,WAVE_CONFIGS,DESKTOP_COVER_ART,desktopCoverStyle,desktopCoverRect,ROOM_REMOTE_SHAPE,DESKTOP_RULES,FLYING_WAVES,ULTIMATE,BUILDINGS,ROOM_RULES,FrontGame,FrontProfile,PERMANENT,ABILITIES,EVOLUTIONS,FIELD_CARDS,TYPES,multiplier,ROSTER};
 })(typeof window==='undefined'?globalThis:window);

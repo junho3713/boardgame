@@ -53,7 +53,7 @@ function draw(){
  if(!laneLocked){const w=game.bounds().width,h=game.bounds().height;camera.x=Math.max(Math.min(w/2,halfW),Math.min(Math.max(w/2,w-halfW),target.x));camera.y=Math.max(Math.min(h/2,halfH),Math.min(Math.max(h/2,h-halfH),target.y));}
  game.trialViewport={left:camera.x-halfW,right:camera.x+halfW,top:camera.y-halfH,bottom:camera.y+halfH};
  ctx.translate(width/2,height/2);ctx.scale(scale,scale);ctx.translate(-camera.x,-camera.y);
- if(terrain)ctx.drawImage(terrain,0,0,game.bounds().width,game.bounds().height);view.scene(ctx,game);view.warnings(ctx,game);
+ if(terrain)ctx.drawImage(terrain,0,0,game.bounds().width,game.bounds().height);view.scene(ctx,game);view.warnings(ctx,game);window.FrontBlockFlashView?.grounded(ctx,game);
  if(game.moveOrder){ctx.strokeStyle='#d9ffd4';ctx.lineWidth=2;ctx.beginPath();ctx.arc(game.moveOrder.x,game.moveOrder.y,22,0,Math.PI*2);ctx.stroke();}
  const allies=game.units.filter(u=>u.team===0&&u.hp>0),parts=[{kind:'portal',depth:game.bases[1].y+29},...view.parts(game),...game.units.filter(u=>u.team===0&&(u.hp>0||u.type==='medic'&&u.appearance==='rina'&&Number.isFinite(u.diedAt)&&game.time-u.diedAt<1.2)).map(u=>({kind:'unit',u,depth:u.y})),...game.obstacles.map(o=>({kind:'prop',o,depth:FrontLivingRoom.depth(o)}))];
  for(const p of parts.sort((a,b)=>a.depth-b.depth)){

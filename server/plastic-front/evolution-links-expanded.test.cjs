@@ -7,6 +7,12 @@ function enemy(g,type='ant',x=1200){const t=g.addUnit(2,type,x,6000);t.hp=t.maxH
 const near=(x,y)=>a.ok(Math.abs(x-y)<1e-6,x+' != '+y);
 
 
+function mineImpact(g,u,t){
+ const m=g.fireUnitProjectiles(u,t,{damage:100},g.stats(u))[0];
+ const b={source:u,target:t,mine:{...m,x:t.x,y:t.y},team:0,kind:'blockMineImpact',damage:m.damage,splash:m.radius};
+ g.impact(b);return b;
+}
+
 test('seventeen distinct links give every regular class three or four partners',()=>{
  const g=scene();for(const t of ROSTER)actor(g,t);
  const links=g.evolutionLinks();
@@ -138,13 +144,13 @@ test('field repair increases actual medic tank healing while preserving heal cap
  const g=scene(true),tank=actor(g,'tank',0),medic=actor(g,'medic',0),other=actor(g,'medic',1);tank.hp=100;tank.maxHp=1000;near(g.heal(tank,100,other),100);near(g.heal(tank,100,medic),115*.6);tank.healingReductionUntil=10;near(g.heal(tank,100,medic),57.5*.6);tank.healingReductionUntil=0;tank.hp=990;near(g.heal(tank,100,medic),10);
 });
 test('Lucky and rocket add one delayed bounded explosion, share its cooldown and never recursively trigger it',()=>{
- const g=scene(),l=actor(g,'lucky'),r=actor(g,'rocket'),t=enemy(g);g.damage(t,1,l);const b=g.fireUnitProjectiles(r,t,{damage:100},g.stats(r))[0];g.impact(b);a.equal(b.linkApplied,'volatile');a.equal(g.evolutionLinkState.bursts.length,1);const next=g.fireUnitProjectiles(r,t,{damage:100},g.stats(r))[0];g.impact(next);a.equal(g.evolutionLinkState.bursts.length,1);g.time=.19;g.updateEvolutionCombat();const hp=t.hp;a.equal(g.effects.filter(e=>e.style==='linkVolatile').length,0);g.time=.2;g.updateEvolutionCombat();near(hp-t.hp,10*g.defenseFactor(t,r));a.equal(g.evolutionLinkState.bursts.length,0);a.equal(g.effects.filter(e=>e.style==='linkVolatile').length,1);g.time=.21;g.updateEvolutionCombat();a.equal(g.effects.filter(e=>e.style==='linkVolatile').length,1);
+ const g=scene(),l=actor(g,'lucky'),r=actor(g,'rocket'),t=enemy(g);g.damage(t,1,l);const b=mineImpact(g,r,t);a.equal(b.linkApplied,'volatile');a.equal(g.evolutionLinkState.bursts.length,1);mineImpact(g,r,t);a.equal(g.evolutionLinkState.bursts.length,1);g.time=.19;g.updateEvolutionCombat();const hp=t.hp;a.equal(g.effects.filter(e=>e.style==='linkVolatile').length,0);g.time=.2;g.updateEvolutionCombat();near(hp-t.hp,b.damage*.2*.5*g.defenseFactor(t,r));a.equal(g.evolutionLinkState.bursts.length,0);a.equal(g.effects.filter(e=>e.style==='linkVolatile').length,1);g.time=.21;g.updateEvolutionCombat();a.equal(g.effects.filter(e=>e.style==='linkVolatile').length,1);
 });
 test('one rocket cannot activate breach and volatile together and an immune impact does not queue an explosion',()=>{
- const g=scene(),l=actor(g,'lucky'),r=actor(g,'rocket'),tank=actor(g,'tank'),t=enemy(g);g.damage(t,1,l);g.damage(t,1,tank);const b=g.fireUnitProjectiles(r,t,{damage:100},g.stats(r))[0];g.impact(b);a.equal(b.linkApplied,'breach');a.equal(g.evolutionLinkState.bursts.length,0);
- const boss=enemy(g,'hornet');boss.boss=true;g.damage(boss,1,l);boss.bossPattern='venomDive';boss.bossAction={phase:'high'};g.impact(g.fireUnitProjectiles(r,boss,{damage:100},g.stats(r))[0]);a.equal(g.evolutionLinkState.bursts.length,0);
+ const g=scene(),l=actor(g,'lucky'),r=actor(g,'rocket'),tank=actor(g,'tank'),t=enemy(g);g.damage(t,1,l);g.damage(t,1,tank);const b=mineImpact(g,r,t);a.equal(b.linkApplied,'breach');a.equal(g.evolutionLinkState.bursts.length,0);
+ const boss=enemy(g,'hornet');boss.boss=true;g.damage(boss,1,l);boss.bossPattern='venomDive';boss.bossAction={phase:'high'};mineImpact(g,r,boss);a.equal(g.evolutionLinkState.bursts.length,0);
 });
 test('new links never borrow a cooperative partner and a saved delayed blast keeps its source and owner',()=>{
  const g=scene(true),r=actor(g,'rifle',0);actor(g,'guntruck',1);a.equal(g.hasEvolutionLink(r,'brawl'),false);
- const l=actor(g,'lucky',1),rocket=actor(g,'rocket',1),t=enemy(g);g.damage(t,1,l);g.withOwner(1,()=>g.impact(g.fireUnitProjectiles(rocket,t,{damage:100},g.stats(rocket))[0]));const restored=unpack(scene(true),JSON.parse(JSON.stringify(pack(g)))),burst=restored.evolutionLinkState.bursts[0];a.equal(burst.owner,1);a.equal(burst.source,restored.units.find(u=>u.id===rocket.id));restored.phase='paused';restored.update(.05);a.equal(restored.time,0);a.equal(restored.evolutionLinkState.bursts.length,1);restored.time=.2;restored.updateEvolutionCombat();a.equal(restored.evolutionLinkState.bursts.length,0);a.ok(restored.effects.some(e=>e.style==='linkVolatile'));
+ const l=actor(g,'lucky',1),rocket=actor(g,'rocket',1),t=enemy(g);g.damage(t,1,l);g.withOwner(1,()=>mineImpact(g,rocket,t));const restored=unpack(scene(true),JSON.parse(JSON.stringify(pack(g)))),burst=restored.evolutionLinkState.bursts[0];a.equal(burst.owner,1);a.equal(burst.source,restored.units.find(u=>u.id===rocket.id));restored.phase='paused';restored.update(.05);a.equal(restored.time,0);a.equal(restored.evolutionLinkState.bursts.length,1);restored.time=.2;restored.updateEvolutionCombat();a.equal(restored.evolutionLinkState.bursts.length,0);a.ok(restored.effects.some(e=>e.style==='linkVolatile'));
 });

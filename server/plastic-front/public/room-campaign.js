@@ -84,12 +84,12 @@ const methods={
  expandRoomLayout(){
   if(this.bounds().id!=='livingroom'||this.world.layoutVersion>=config.layout.version)return false;
   const l=config.layout,sx=l.width/(this.world.width||l.oldWidth),sy=l.height/(this.world.height||l.oldHeight),seen=new Set();
-  const scale=o=>{if(!o||seen.has(o))return;seen.add(o);for(const [x,y]of [['x','y'],['homeX','homeY'],['guardianSpawnX','guardianSpawnY'],['fromX','fromY'],['tx','ty'],['aimX','aimY']]){if(Number.isFinite(o[x]))o[x]*=sx;if(Number.isFinite(o[y]))o[y]*=sy;}if(Number.isFinite(o.angle))o.angle=Math.atan2(Math.sin(o.angle)*sy,Math.cos(o.angle)*sx);};
+  const scale=o=>{if(!o||seen.has(o))return;seen.add(o);for(const [x,y]of [['x','y'],['homeX','homeY'],['guardianSpawnX','guardianSpawnY'],['fromX','fromY'],['toX','toY'],['tx','ty'],['aimX','aimY']]){if(Number.isFinite(o[x]))o[x]*=sx;if(Number.isFinite(o[y]))o[y]*=sy;}if(Number.isFinite(o.angle))o.angle=Math.atan2(Math.sin(o.angle)*sy,Math.cos(o.angle)*sx);};
   const nodes=[...this.units,...this.bases,...this.structures,...this.defenses,...this.buildings,...this.pickups];
   for(const u of nodes){scale(u);for(const key of ['guardArrival','aiEvade','regroup','repairGoal','repairEvadeGoal','blizzardCast','bossAction','bossBarrage','sniperAim'])scale(u[key]);if(u.bikeAttack){const a=u.bikeAttack,k=Math.hypot(Math.cos(a.angle)*sx,Math.sin(a.angle)*sy);scale(a.origin);scale(a);for(const key of ['distance','remaining','traveled'])if(Number.isFinite(a[key]))a[key]*=k;}
    u.route=null;u.routeGoal=null;u.regroup=null;if(u.mobile){u.repairPath=null;u.repairReplanAt=0;}
   }
-  for(const list of [this.shots,this.mortarShells,this.barrages,this.effects,this.butterflyGusts,this.luckyMines,this.luckyGlues,this.luckyGlueHistory,this.luckySprays])for(const o of list||[])scale(o);
+  for(const list of [this.shots,this.mortarShells,this.barrages,this.effects,this.butterflyGusts,this.luckyMines,this.luckyGlues,this.luckyGlueHistory,this.luckySprays,this.blockMines,this.luckyFlashes])for(const o of list||[])scale(o);
   scale(this.camera);scale(this.moveOrder);scale(this.ultimate);scale(this.constructionLine?.anchor);
   this.obstacles=this.obstacles.map(o=>({...o,x:(o.x+o.w/2)*sx-o.w/2,y:(o.y+o.h/2)*sy-o.h/2}));
   this.world.width=l.width;this.world.height=l.height;this.world.layoutVersion=l.version;

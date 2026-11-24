@@ -1,0 +1,122 @@
+/* Thrown interlocking toy blocks. Arming, contact and chains use simulation time. */
+(function(root){'use strict';
+function install({FrontGame}){
+ const p=FrontGame.prototype,reset=p.reset,update=p.update,fire=p.fireUnitProjectiles,impact=p.impact,select=p.selectCombatTarget;
+ const limit=24,life=18,linkRange=98,linkDelay=.16;
+ const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+ const ground=(g,t)=>!!t.type&&!t.base&&!t.structure&&!t.built&&!g.isFlying(t);
+ const valid=(g,u,t)=>t.team!==u.team&&t.hp>0&&!t.hidden&&!(t.base&&g.baseShielded())&&g.canTarget(u,t);
+ function cue(g,kind,point,data,max){
+  g.effects.push({kind,x:point.x,y:point.y,team:0,...data,t:max,max});
+ }
+ function landing(g,u,angle,forward,side){
+  const dx=Math.cos(angle)*forward-Math.sin(angle)*side,dy=Math.sin(angle)*forward+Math.cos(angle)*side;
+  const b=g.bounds(),solids=g.solidObstacles();
+  // Keep each landing spot on reachable floor, including map edges and cover.
+  for(let step=1;step>0;step-=.06){
+   const x=Math.max(45,Math.min(b.width-45,u.x+dx*step)),y=Math.max(70,Math.min(b.height-70,u.y+dy*step));
+   if(g.freePosition(x,y,6,solids)&&g.lineClear(u,{x,y},0,{fireTeam:u.team}))return {x,y};
+  }
+  return {x:u.x,y:u.y};
+ }
+ p.reset=function(...args){const result=reset.apply(this,args);this.blockMines=[];this.blockMineSerial=0;return result;};
+ p.selectCombatTarget=function(u,candidates,threats,s){
+  if(u.team===0&&u.type==='rocket'&&!u.built)candidates=(candidates||this.combatCandidates()).filter(t=>ground(this,t));
+  return select.call(this,u,candidates,threats,s);
+ };
+ p.fireUnitProjectiles=function(u,target,attack,s=this.stats(u)){
+  if(u.team!==0||u.type!=='rocket'||u.built)return fire.call(this,u,target,attack,s);
+  const evolved=this.evolutionEnabled(u),owner=u.coopOwner||0;
+  const level=this.coop?this.withOwner(owner,()=>this.tech[0].rocket):this.tech[0].rocket;
+  const count=evolved||level>=5?3:2;
+  const angle=target.commandShot?target.angle:Math.atan2(target.y-u.y,target.x-u.x);
+  const reach=target.commandShot?s.range:Math.min(s.range,dist(u,target));
+  let mines=this.blockMines??=[];
+  // Retire the oldest blocks of this squad without touching its partner's mines.
+  const excess=mines.filter(m=>m.owner===owner).length+count-limit;
+  if(excess>0){
+   let removed=0;mines=this.blockMines=mines.filter(m=>m.owner!==owner||removed++>=excess);
+  }
+  const placed=[];
+  for(let i=0;i<count;i++){
+   // One block lands on the auto target; the other blocks cover its approach.
+   const forward=target.commandShot?reach*([.62,.93,.78][i]):Math.max(0,reach-i*39);
+   const point=landing(this,u,angle,forward,[0,-16,18][i]);
+   const landAt=this.time+.3+dist(u,point)/750+i*.065,radius=Math.max(54,s.splash||0)+(evolved?21:0);
+   const m={id:this.blockMineSerial=(this.blockMineSerial||0)+1,source:u,owner,index:i,
+    x:u.x,y:u.y,fromX:u.x,fromY:u.y,toX:point.x,toY:point.y,angle,startedAt:this.time,landAt,armAt:landAt,expiresAt:landAt+life,
+    evolved,damage:attack.damage*(evolved ? 1.05 : .92),critical:!!attack.critical,radius,triggerRadius:14,chainAt:null};
+   mines.push(m);placed.push(m);
+  }
+  u.blockMineThrownAt=this.time;
+  return placed;
+ };
+ // Evolution links modify the primary contact's damage/radius before this method
+ // evaluates the blast. Each victim is charged once, centered on the block.
+ p.impact=function(b){
+  if(b.kind!=='blockMineImpact')return impact.call(this,b);
+  const m=b.mine,u=m.source;
+  for(const t of new Set(this.combatCandidates())){
+   if(!valid(this,u,t))continue;
+   const d=dist(m,t),r=this.collisionRadius(t)-5;
+   if(t!==b.target&&(d>r+b.splash||!this.lineClear(m,t,0,{fireTeam:u.team})))continue;
+   const falloff=t===b.target?1:1-.45*Math.min(1,Math.max(0,d-r)/b.splash);
+   this.damage(t,b.damage*falloff,u);
+  }
+  if(b.critical&&b.target)cue(this,'critical',{x:b.target.x,y:b.target.y-25},{},.7);
+  cue(this,'blockMineBlast',m,{source:u,radius:b.splash,evolved:m.evolved,chain:m.chainAt!==null},.54);
+  this.notify('explosion',{x:m.x,y:m.y,team:0,kind:'rocket'});
+ };
+ function crossed(g,m,t,previous,since,now){
+  const r=m.triggerRadius+g.collisionRadius(t)-5;
+  if(dist(m,t)<=r)return true;
+  const old=previous?.get(t);if(!old||since>=now)return false;
+  const dx=t.x-old.x,dy=t.y-old.y,length2=dx*dx+dy*dy;if(!length2)return false;
+  const armed=Math.max(0,(m.armAt-since)/(now-since));
+  const at=Math.max(armed,Math.min(1,((m.x-old.x)*dx+(m.y-old.y)*dy)/length2));
+  return Math.hypot(old.x+dx*at-m.x,old.y+dy*at-m.y)<=r;
+ }
+ p.updateBlockMines=function(previous=null,since=this.time){
+  const mines=this.blockMines;if(!mines?.length)return;
+  const now=this.time,grounded=this.units.filter(t=>t.team!==0&&t.hp>0&&!t.hidden&&ground(this,t));
+  for(const m of mines){
+   const k=Math.min(1,Math.max(0,(now-m.startedAt)/(m.landAt-m.startedAt)));
+   m.x=m.fromX+(m.toX-m.fromX)*k;m.y=m.fromY+(m.toY-m.fromY)*k;
+   if(now<m.armAt||now>=m.expiresAt||m.spent)continue;
+   const chained=m.chainAt!==null;
+   if(chained&&now+1e-8<m.chainAt)continue;
+   let trigger=null;
+   for(const t of grounded){
+    if(valid(this,m.source,t)&&crossed(this,m,t,previous,since,now)&&this.lineClear(m,t,0,{fireTeam:0})&&(!trigger||dist(m,t)<dist(m,trigger)))trigger=t;
+   }
+   if(!chained&&!trigger)continue;
+   m.spent=true;
+   if(!trigger){
+    for(const t of this.combatCandidates())if(valid(this,m.source,t)&&dist(m,t)<=m.radius+this.collisionRadius(t)-5&&this.lineClear(m,t,0,{fireTeam:0})&&(!trigger||dist(m,t)<dist(m,trigger)))trigger=t;
+   }
+   const explode=()=>this.impact({kind:'blockMineImpact',mine:m,source:m.source,target:trigger,team:0,damage:m.damage,splash:m.radius,critical:m.critical});
+   if(this.coop)this.withOwner(m.owner,explode);else explode();
+   if(!m.evolved)continue;
+   const neighbors=mines.filter(next=>{
+    if(next.spent||!next.evolved||next.owner!==m.owner||next.chainAt!==null||now>=next.expiresAt)return false;
+    const end={x:next.toX,y:next.toY};
+    return next.armAt<=now+linkDelay&&dist(m,end)<=linkRange&&this.lineClear(m,end,0,{fireTeam:0});
+   }).sort((a,b)=>Math.hypot(a.toX-m.x,a.toY-m.y)-Math.hypot(b.toX-m.x,b.toY-m.y));
+   for(const [i,next] of neighbors.entries()){
+    next.chainAt=now+linkDelay+i*.08;
+    cue(this,'blockMineChain',m,{source:m.source,tx:next.toX,ty:next.toY},next.chainAt-now);
+   }
+  }
+  this.blockMines=mines.filter(m=>!m.spent&&m.expiresAt>now);
+ };
+ p.update=function(dt){
+  const since=this.time;
+  const previous=this.phase==='playing'&&this.blockMines?.length?new Map(this.units.filter(t=>t.team!==0&&t.hp>0&&ground(this,t)).map(t=>[t,{x:t.x,y:t.y}])):null;
+  const result=update.call(this,dt);
+  if(this.time>since)this.updateBlockMines(previous,since);
+  return result;
+ };
+}
+if(typeof module!=='undefined'&&module.exports)module.exports=install;
+else install({FrontGame:root.FrontGame});
+})(typeof window==='undefined'?globalThis:window);

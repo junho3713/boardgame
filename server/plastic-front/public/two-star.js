@@ -34,7 +34,8 @@ function mergeCopies(type,fromStar){
  const copies=this.fusionCandidates(type,fromStar).slice(0,RULES.copies);if(copies.length<RULES.copies)return null;
  const survivor=copies[0],ratio=copies.reduce((n,u)=>n+u.hp,0)/copies.reduce((n,u)=>n+u.maxHp,0);survivor.star=fromStar+1;survivor.maxHp=this.stats(survivor).hp;survivor.hp=survivor.maxHp*ratio;survivor.cooldown=Math.max(...copies.map(u=>u.cooldown||0));survivor.trialDodge=null;survivor.route=null;survivor.routeGoal=null;survivor.regroup=null;survivor.navCheck=null;survivor.tankCatchup=false;
  // Keep already-earned reserves and live effects when their vehicle is compressed.
- if(type==='lucky')for(const list of [this.luckySalvos,this.luckySprays,this.luckyMines,this.luckyGlues])for(const effect of list||[])if(copies.includes(effect.source)){const index=copies.indexOf(effect.source);effect.source=survivor;if(effect.ownerId!==undefined)effect.ownerId=survivor.id;effect.rouletteChannel=fromStar===1?index:(effect.rouletteChannel??0);}
+ if(type==='rocket')for(const mine of this.blockMines||[])if(copies.includes(mine.source))mine.source=survivor;
+ if(type==='lucky')for(const list of [this.luckySalvos,this.luckySprays,this.luckyMines,this.luckyGlues,this.luckyFlashes])for(const effect of list||[])if(copies.includes(effect.source)){const index=copies.indexOf(effect.source);effect.source=survivor;if(effect.ownerId!==undefined)effect.ownerId=survivor.id;effect.rouletteChannel=fromStar===1?index:(effect.rouletteChannel??0);}
  for(const u of copies.slice(1)){u.hp=0;u.merged=true;u.trialDodge=null;}
  const r=survivor.star===3?RULES.three:RULES;this.notify('toast',this.stats(survivor).name+' '+'★'.repeat(survivor.star)+` 합성 · 공격 ×${r.damage} / 체력 ×${r.hp}`+(type==='medic'?` / 치료 ×${r.heal}`:''));this.notify('change');return survivor;
 }

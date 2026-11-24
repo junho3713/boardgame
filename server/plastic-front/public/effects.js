@@ -129,6 +129,7 @@ class FrontEffects{
   return plumes;
  }
  luckyGround(ctx,game,visible=()=>true){
+  root.FrontBlockFlashView?.grounded(ctx,game,visible);
   for(const z of game.luckyGlues||[]){if(!visible(z)||game.time>=z.expires)continue;const landed=game.time>=z.landAt,r=z.radius||100;ctx.save();ctx.translate(z.x,z.y);ctx.strokeStyle=landed?'#b9ee72':'#d7f2a18c';ctx.fillStyle=landed?'#9cdb3d24':'#afd96510';ctx.lineWidth=1.6;ctx.setLineDash(landed?[]:[6,6]);ctx.beginPath();ctx.arc(0,0,r,0,TAU);ctx.fill();ctx.stroke();ctx.setLineDash([]);
    if(landed&&!this.drawStickyGel(ctx,0,0,r,Math.min(1,Math.max(0,z.expires-game.time)))){ctx.fillStyle='#8fce40aa';ctx.strokeStyle='#d1f89a';ctx.lineWidth=1;ctx.beginPath();for(let i=0;i<=64;i++){const a=i*TAU/64,w=r*(.78+.10*Math.sin(a*5+.4)+.05*Math.cos(a*3));if(i)ctx.lineTo(Math.cos(a)*w,Math.sin(a)*w);else ctx.moveTo(Math.cos(a)*w,Math.sin(a)*w);}ctx.closePath();ctx.fill();ctx.stroke();for(let i=0;i<9;i++){const a=i*2.4,d=r*(.17+(i%3)*.23);ctx.fillStyle='#dcfba664';ctx.beginPath();ctx.ellipse(Math.cos(a)*d,Math.sin(a)*d,4+i%3,2+i%2,a,0,TAU);ctx.fill();}}
    ctx.restore();}
@@ -149,6 +150,7 @@ class FrontEffects{
   ctx.save();ctx.translate(x-size/2,y-size/2);ctx.scale(size/32,size/32);this.paintLuckySymbol(ctx,kind);ctx.restore();
  }
  paintLuckySymbol(c,kind){
+  if(kind==='mine'&&root.FrontBlockFlashView){root.FrontBlockFlashView.reel(c);return;}
   c.save();c.lineJoin='round';c.lineCap='round';c.lineWidth=1.5;c.strokeStyle='#203128';
   const ellipse=(x,y,rx,ry,color)=>{c.fillStyle=color;c.beginPath();c.ellipse(x,y,rx,ry,0,0,TAU);c.fill();c.stroke();};
   if(kind==='glue'){
@@ -191,6 +193,7 @@ class FrontEffects{
   return true;
  }
  drawEvent(ctx,e){
+  if(root.FrontBlockFlashView?.event(ctx,e))return true;
   if(root.FrontRosterArt?.event(ctx,e))return true;
   if(e.kind==='explosion'&&['toyBall','acid'].includes(e.visualKind)){const k=clamp(e.t/e.max,0,1),spread=8+(1-k)*20;ctx.save();ctx.globalAlpha=k*.4;ctx.strokeStyle='#e8cd91';ctx.lineWidth=1.5;ctx.beginPath();ctx.ellipse(e.x,e.y,spread,spread*.6,0,0,TAU);ctx.stroke();ctx.restore();for(let i=0;i<3;i++){const a=i*TAU/3;this.toyStar(ctx,e.x+Math.cos(a)*spread,e.y-5+Math.sin(a)*spread*.6,3.5*k+1,a+(1-k)*3,k,'#ffe18a');}return true;}
   if(e.kind==='explosion'&&this.drawImpactMaterial?.(ctx,e,{boss:e.visualKind==='bossKiller',style:e.visualKind}))return true;

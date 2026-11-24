@@ -7,7 +7,7 @@
  const ENEMIES={ant:'개미',rifle:'소총병',tank:'일반 전차',rhinoBeetle:'장수풍뎅이 보스',hornet:'장수말벌 보스',bayonetCaptain:'인간형 보스',crimsonAce:'진홍전차 보스'};
  const BOSSES=new Set(['rhinoBeetle','hornet','bayonetCaptain','crimsonAce']);
  const MODES={lucky:'레토나',support:'서포토이',evolution:'진화 병과',ultimate:'대장 궁극기'};
- const OUTCOMES={missiles:'777 · 미사일 7발',bossKiller:'보스킬러',mine:'지뢰',glue:'끈끈이',spray:'살충 스프레이',blank:'꽝'};
+ const OUTCOMES={missiles:'777 · 미사일 7발',bossKiller:'보스킬러',mine:'섬광탄',glue:'끈끈이',spray:'살충 스프레이',blank:'꽝'};
  const COMMANDERS={sarge:'대장',shino:'시노',blaze:'화염방사 대장',hwarin:'화린',shion:'시온'};
  const num=(v,min,max,fallback)=>Number.isFinite(Number(v))?Math.max(min,Math.min(max,Math.floor(Number(v)))):fallback;
  function clean(v={}){
@@ -58,7 +58,7 @@
    for(const u of this.units)if(u!==this.actor||this.time>=Math.max(this.labFireUntil||0,this.labHealingUntil||0))u.cooldown=1e6;
    if(this.lab.moving)for(const t of this.labTargets){if(t.hp<=0||t.toyKnockback||this.time<(t.toyStunUntil||0))continue;const goal=this.supportBait()||this.actor,d=Math.hypot(goal.x-t.x,goal.y-t.y);if(d>45)this.move(t,goal.x-t.x,goal.y-t.y,dt,50);}
    super.update(dt);
-   for(const t of this.labTargets)if(t.toyKnockback||this.time<(t.toyStunUntil||0)||this.time<(t.luckySlowUntil||0))this.labStats.affected.add(t.id);
+   for(const t of this.labTargets)if(t.toyKnockback||this.time<(t.toyStunUntil||0)||this.time<(t.luckySlowUntil||0)||this.time<(t.luckyFlash?.until||0))this.labStats.affected.add(t.id);
   }
   result(){return{...this.labStats,affected:this.labStats.affected.size,alive:this.labTargets.filter(t=>t.hp>0).length,time:this.time};}
   duplicate(){if(!this.isSupportToy(this.actor))return false;return this.upgradeSupportToy(this.actor);}
@@ -102,7 +102,7 @@
    const continuous=this.lab.mode==='evolution'&&!['lucky','medic'].includes(this.actor.type);
    for(const u of this.units)if(u.team===0){if(u===this.actor&&continuous)u.cooldown=Math.min(u.cooldown,this.stats(u).rate);else if(u.type!=='medic')u.cooldown=1e6;}
    Game.prototype.update.call(this,dt);
-   for(const t of this.labTargets)if(t.toyKnockback||this.time<(t.toyStunUntil||0)||this.time<(t.luckySlowUntil||0))this.labStats.affected.add(t.id);
+   for(const t of this.labTargets)if(t.toyKnockback||this.time<(t.toyStunUntil||0)||this.time<(t.luckySlowUntil||0)||this.time<(t.luckyFlash?.until||0))this.labStats.affected.add(t.id);
    this.labTargets=this.labTargets.filter(t=>t.hp>0);
    // Stragglers cannot consume the cap after the player crosses the arena.
    const leader=this.commander(0);for(const t of this.units)if(t.team!==0&&Math.hypot(t.x-leader.x,t.y-leader.y)>1600)t.hp=0;

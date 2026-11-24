@@ -7,7 +7,7 @@ test('777 and boss killer use real production attacks immediately without roulet
  const killer=new Lab({outcome:'bossKiller',count:1,evolved:false});a.equal(killer.evolved.lucky,true);a.ok(killer.labTargets[0].boss);a.equal(killer.cast(),true);a.equal(killer.shots[0].guidedFlight.hoverDuration,1);advance(killer,.9);a.equal(killer.result().damage,0);a.equal(killer.shots[0].guidedFlight.hovering,true);advance(killer,1);a.equal(killer.result().hits,1);a.ok(killer.result().damage>0);
 });
 test('two-star and three-star forced jackpots populate all three real independent reels',()=>{
- for(const stars of [1,2,3])for(const outcome of ['missiles','mine','bossKiller']){const g=new Lab({stars,outcome,count:1});g.cast();a.equal(g.actor.luckyChannels.length,stars===1?1:3);const items=outcome==='missiles'?g.luckySalvos:outcome==='mine'?g.luckyMines:g.shots;a.equal(items.length,stars===1?1:3);a.equal(new Set(items.map(t=>t.rouletteChannel??0)).size,outcome==='bossKiller'?1:stars===1?1:3);}
+ for(const stars of [1,2,3])for(const outcome of ['missiles','mine','bossKiller']){const g=new Lab({stars,outcome,count:1});g.cast();a.equal(g.actor.luckyChannels.length,stars===1?1:3);const items=outcome==='missiles'?g.luckySalvos:outcome==='mine'?g.luckyFlashes:g.shots;a.equal(items.length,stars===1?1:3);a.equal(new Set(items.map(t=>t.rouletteChannel??0)).size,outcome==='bossKiller'?1:stars===1?1:3);}
 });
 test('forced support tiers retain production target counts and control resistance',()=>{
  for(const toy of TOYS.filter(t=>t!=='toyDrum'))for(const tier of [0,1,2]){const g=new Lab({mode:'support',toy,tier,count:24});a.equal(g.cast(),true);advance(g,2);a.equal(g.result().affected,[3,5,24][tier],toy+' '+tier);const casts=g.result().casts;advance(g,15);a.equal(g.result().casts,casts);}
@@ -21,8 +21,10 @@ test('every evolved troop runs its production special attack or healing without 
 test('all commanders including Hwarin can launch a real ultimate and remain safe',()=>{
  for(const commander of Object.keys(COMMANDERS)){const g=new Lab({mode:'ultimate',commander,level:1}),hp=g.actor.hp;a.ok(g.level>=10);a.equal(g.cast(),true);a.equal(g.ultimateStatus().active,true);advance(g,5);a.ok(g.result().damage>0,commander);a.equal(g.actor.hp,hp);a.equal(g.ultimateStatus().active,false);}
 });
-test('dummy approach triggers a placed mine and pause freezes projectiles and metrics',()=>{
- const g=new Lab({outcome:'mine',moving:true});g.cast();advance(g,3);a.ok(g.result().damage>0);g.phase='paused';const before=g.result(),positions=g.units.map(t=>[t.x,t.y,t.hp]);advance(g,5);a.deepEqual(g.result(),before);a.deepEqual(g.units.map(t=>[t.x,t.y,t.hp]),positions);
+test('flash flight pauses in place and landing registers control without direct damage',()=>{
+ const g=new Lab({outcome:'mine',moving:true,evolved:false});g.cast();advance(g,.15);a.equal(g.luckyFlashes.length,1);
+ g.phase='paused';const before=g.result(),positions=g.units.map(t=>[t.x,t.y,t.hp]);advance(g,5);a.deepEqual(g.result(),before);a.deepEqual(g.units.map(t=>[t.x,t.y,t.hp]),positions);a.equal(g.luckyFlashes.length,1);
+ g.phase='playing';advance(g,.4);a.equal(g.luckyFlashes.length,0);a.ok(g.result().affected>0);a.equal(g.result().damage,0);a.ok(g.labTargets.some(t=>t.luckyFlash?.until>g.time&&!t.luckyFlash.confused));
 });
 test('duplicate and keep use the actual rare supply handler and expose stars/cooldowns',()=>{
  const g=new Lab({mode:'support',toy:'toyStunner'});g.duplicate();a.equal(g.supportToyStars(g.actor),2);a.equal(g.supportToyCooldown(g.actor),9);g.duplicate();a.equal(g.supportToyStars(g.actor),3);g.offer();a.ok(g.supportToyOffer());a.equal(g.resolveSupportToyOffer('keep'),true);a.equal(g.supportToyStars(g.supportToys()[1]),2);a.equal(g.supportToyCooldown(g.actor),8);

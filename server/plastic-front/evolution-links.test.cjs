@@ -5,6 +5,13 @@ function scene(coop=false){const g=coop?new CoopGame():new FrontGame({},undefine
 function actor(g,type,owner=0){const spawn=()=>{g.evolved[type]=true;return g.addUnit(0,type,1000,6000);};return g.coop?g.withOwner(owner,spawn):spawn();}
 function enemy(g,type='ant',x=1200){const t=g.addUnit(2,type,x,6000);t.hp=t.maxHp=1e6;return t;}
 const near=(x,y)=>a.ok(Math.abs(x-y)<1e-6,x+' != '+y);
+function contactMine(g,u,target){
+ const mine=g.fireUnitProjectiles(u,target,{damage:100},g.stats(u))[0];g.time=mine.armAt;
+ const prior=g.impact;let payload;
+ g.impact=function(b){if(b.mine===mine)payload=b;return prior.call(this,b);};
+ try{for(let i=0;i<25&&!payload;i++){g.updateBlockMines();if(!payload)g.time+=.05;}}finally{g.impact=prior;}
+ a.ok(payload);return {mine,payload};
+}
 
 test('links require two living evolved types and do not combine different cooperative owners',()=>{
  const g=scene(true),s=actor(g,'sniper',0),m=actor(g,'mortar',1);a.equal(g.hasEvolutionLink(s,'precision'),false);a.equal(g.hasEvolutionLink(m,'precision'),false);
@@ -21,12 +28,13 @@ test('hunter guides existing roulette missiles to marks without adding launches 
 test('mortar/tank and tank/rocket each share one six-second proc across all copies',()=>{
  const g=scene(),m=actor(g,'mortar'),tank=actor(g,'tank'),rocket=actor(g,'rocket'),t=enemy(g);g.damage(t,1,m);
  const first=g.fireUnitProjectiles(tank,t,{damage:100},g.stats(tank))[0];g.impact(first);near(first.damage,115);a.equal(first.linkApplied,'barrage');const copy=actor(g,'tank'),second=g.fireUnitProjectiles(copy,t,{damage:100},g.stats(copy))[0];g.impact(second);near(second.damage,100);
- const b=g.fireUnitProjectiles(rocket,t,{damage:100},g.stats(rocket))[0];g.impact(b);near(b.damage,120);a.equal(b.linkApplied,'breach');const next=g.fireUnitProjectiles(rocket,t,{damage:100},g.stats(rocket))[0];g.impact(next);near(next.damage,100);
+ const firstMine=contactMine(g,rocket,t);near(firstMine.payload.damage,firstMine.mine.damage*1.2);a.equal(firstMine.payload.linkApplied,'breach');
+ const next=contactMine(g,rocket,t);near(next.payload.damage,next.mine.damage);
  g.time=6;g.damage(t,1,m);const retry=g.fireUnitProjectiles(tank,t,{damage:100},g.stats(tank))[0];g.impact(retry);near(retry.damage,115);
 });
 test('overheated suppressive fire slows only normal enemies and expands one rocket without multiplying damage',()=>{
  const g=scene(),mg=actor(g,'machinegun'),r=actor(g,'rocket'),t=enemy(g),boss=enemy(g,'rhinoBeetle',1250);boss.boss=true;mg.overheatUntil=4;const speed=g.stats(t).speed,bossSpeed=g.stats(boss).speed;g.damage(t,1,mg);g.damage(boss,1,mg);near(g.stats(t).speed,speed*.85);near(g.stats(boss).speed,bossSpeed);
- const b=g.fireUnitProjectiles(r,t,{damage:100},g.stats(r))[0],radius=b.splash;g.impact(b);near(b.splash,radius*1.2);near(b.damage,100);g.time=2;near(g.stats(t).speed,speed);
+ const {mine,payload}=contactMine(g,r,t);near(payload.splash,mine.radius*1.2);near(payload.damage,mine.damage);g.time=2;near(g.stats(t).speed,speed);
 });
 test('immune boss impacts do not make marks, consume link cooldowns or bypass vulnerability rules',()=>{
  const g=scene(),s=actor(g,'sniper'),m=actor(g,'mortar'),tank=actor(g,'tank'),t=enemy(g,'hornet');t.boss=true;t.bossPattern='venomDive';t.bossAction={phase:'high'};g.damage(t,100,s);a.equal(t.evolutionLinkMarks,undefined);g.linkMark(t,m,'bombard');const b=g.fireUnitProjectiles(tank,t,{damage:100},g.stats(tank))[0];g.impact(b);a.equal(g.linkState().ready.barrage,undefined);a.equal(t.hp,1e6);
