@@ -13,15 +13,16 @@ function mineImpact(g,u,t){
  g.impact(b);return b;
 }
 
-test('seventeen distinct links give every regular class three or four partners',()=>{
+test('seventeen distinct links include the three radio partnerships',()=>{
  const g=scene();for(const t of ROSTER)actor(g,t);
  const links=g.evolutionLinks();
+ a.deepEqual(links.filter(l=>l.types.includes('guntruck')).map(l=>l.types.find(t=>t!=='guntruck')).sort(),['lucky','mortar','sniper']);
  a.equal(links.length,17);
  a.equal(links.filter(l=>l.active).length,17);
  a.equal(new Set(links.map(l=>[...l.types].sort().join('/'))).size,17);
  for(const t of ROSTER){
   const n=links.filter(l=>l.types.includes(t)).length;
-  a.ok(n>=3&&n<=4,t+': '+n);
+  a.ok(n>=3&&n<=5,t+': '+n);
  }
  a.ok(links.every(l=>l.detail.length>10));
 });
@@ -83,28 +84,26 @@ test('real 777 and Boss Killer rewards force sixes for five seconds, including a
  a.equal(g.shots.at(-1).kind,'bossKiller');
  a.equal(g.linkState().diceSixUntil,10);
 });
-test('dice explosions mark actual hits for mortar and buff only dice blast damage on shoved targets',()=>{
- const g=scene(),r=actor(g,'rifle'),d=actor(g,'guntruck'),m=actor(g,'mortar');
- const target=enemy(g),other=enemy(g,'ant',1245);
- g.markShotgunKnockback(r,target);
- near(g.rosterBlastDamage(d,target,100,'dice'),120);
- near(g.rosterBlastDamage(d,other,100,'dice'),100);
- near(g.rosterBlastDamage(d,target,100,'diceWave'),100);
- const shell={source:m,team:0,x:target.x,y:target.y,radius:150,damage:100,landAt:0};
- const landAndMeasure=()=>{
-  const hp=other.hp;
-  g.mortarShells.push({...shell});
-  g.updateMortars();
-  return hp-other.hp;
- };
- const collateral=landAndMeasure();
- a.ok(collateral>0);
- g.rosterBlast(d,{x:target.x,y:target.y},22,100,0,'dice');
- near(g.mortarLinkDamageScale(shell,[other]),1);
- near(landAndMeasure(),collateral*1.15);
- g.time=3;
- near(landAndMeasure(),collateral);
- near(g.rosterBlastDamage(d,target,100,'dice'),100);
+test('precision coordinates prioritize a marked boss over manual aim and boost every marked enemy caught in the blast',()=>{
+ const g=scene(),radio=actor(g,'guntruck'),sniper=actor(g,'sniper'),target=enemy(g),other=enemy(g,'ant',1230);
+ const collateral=enemy(g,'ant',1175),boss=enemy(g,'ant',1255);boss.boss=true;
+ g.damage(target,5,sniper);g.damage(collateral,5,sniper);g.damage(boss,5,sniper);
+ g.diceFace=()=>6;
+ g.fireUnitProjectiles(radio,g.commandFirePoint(radio,600,Math.PI),{damage:100});
+ const shell=g.radioStrikes[0];a.equal(shell.x,boss.x);a.ok(shell.precise);
+ const hp=target.hp,otherHp=other.hp,before=collateral.hp;g.time=shell.landAt;g.updateEvolutionCombat();
+ near(hp-target.hp,(otherHp-other.hp)*1.2);near(before-collateral.hp,hp-target.hp);
+});
+test('mortar landings gain both radius and damage only in their own active radio fire zone',()=>{
+ const g=scene(true),radio=actor(g,'guntruck',0),m=actor(g,'mortar',0),other=actor(g,'guntruck',1);
+ const target=enemy(g),edge=enemy(g,'ant',1311);
+ const shell={source:m,team:0,x:target.x,y:target.y,radius:100,damage:100,landAt:0};
+ function land(){g.mortarShells.push({...shell});const before=target.hp;g.updateMortars();return before-target.hp;}
+ const base=land();a.ok(base>0);a.equal(edge.hp,edge.maxHp);
+ const zone={source:other,x:shell.x,y:shell.y,radius:80,until:3.5};
+ g.radioFireZones=[zone];near(land(),base);a.equal(edge.hp,edge.maxHp);
+ zone.source=radio;near(land(),base*1.15);a.ok(edge.hp<edge.maxHp);
+ zone.x+=100;near(land(),base);zone.x=shell.x;g.time=3.5;near(land(),base);
 });
 test('drone laser prioritizes the observed target, increases damage and honors mark expiration',()=>{
  const g=scene(),drone=actor(g,'drone'),s=actor(g,'sniper'),marked=enemy(g),nearest=enemy(g,'ant',1090);
@@ -151,6 +150,6 @@ test('one rocket cannot activate breach and volatile together and an immune impa
  const boss=enemy(g,'hornet');boss.boss=true;g.damage(boss,1,l);boss.bossPattern='venomDive';boss.bossAction={phase:'high'};mineImpact(g,r,boss);a.equal(g.evolutionLinkState.bursts.length,0);
 });
 test('new links never borrow a cooperative partner and a saved delayed blast keeps its source and owner',()=>{
- const g=scene(true),r=actor(g,'rifle',0);actor(g,'guntruck',1);a.equal(g.hasEvolutionLink(r,'brawl'),false);
+ const g=scene(true),r=actor(g,'sniper',0);actor(g,'guntruck',1);a.equal(g.hasEvolutionLink(r,'radioPrecision'),false);
  const l=actor(g,'lucky',1),rocket=actor(g,'rocket',1),t=enemy(g);g.damage(t,1,l);g.withOwner(1,()=>mineImpact(g,rocket,t));const restored=unpack(scene(true),JSON.parse(JSON.stringify(pack(g)))),burst=restored.evolutionLinkState.bursts[0];a.equal(burst.owner,1);a.equal(burst.source,restored.units.find(u=>u.id===rocket.id));restored.phase='paused';restored.update(.05);a.equal(restored.time,0);a.equal(restored.evolutionLinkState.bursts.length,1);restored.time=.2;restored.updateEvolutionCombat();a.equal(restored.evolutionLinkState.bursts.length,0);a.ok(restored.effects.some(e=>e.style==='linkVolatile'));
 });

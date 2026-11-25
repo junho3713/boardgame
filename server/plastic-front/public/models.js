@@ -27,6 +27,9 @@ class FrontModels{
   const engineer=game.tech?.[0]?.rocket||0;
   if(engineer>0)this.ensure('blockEngineer',0);
   if(engineer>=4)this.ensure('blockEngineerElite',0);
+  const radio=game.tech?.[0]?.guntruck||0;
+  if(radio>0)this.ensure('radioOperator',0);
+  if(radio>=4)this.ensure('radioOfficer',0);
   for(const u of Array.isArray(game.units)?game.units:[])if(u.hp>0){this.ensure(this.visualFor(u,game.evolutionEnabled?.(u)??game.evolved?.[u.type]),u.type==='bayonetCaptain'?1:u.team);if(u.team===0&&u.type==='medic'&&u.appearance==='rina')this.ensureRina();}
   const c=game.commander?.(0);if(c&&game.level>=8&&['sarge','shino'].includes(c.appearance||'sarge'))this.ensure(c.appearance==='shino'?'commanderShinoUltimate':'commanderSargeUltimate',0);
  }
@@ -170,7 +173,7 @@ class FrontModels{
  visualFor(u,evolved=false){
   if(u.team===0){
    if(u.type==='rifle')return evolved?'shotgunDragon':'shotgun';
-   if(u.type==='guntruck')return evolved?'diceGold':'diceTrooper';
+   if(u.type==='guntruck')return evolved?'radioOfficer':'radioOperator';
    if(u.type==='drone')return evolved?'droneLaser':'droneScout';
    if(u.type==='rocket')return evolved?'blockEngineerElite':'blockEngineer';
   }
@@ -207,6 +210,11 @@ class FrontModels{
    if(elapsedSinceThrow>=0&&elapsedSinceThrow<.18)frame=throwSpec.throwReleaseFrame;
    else if(Number.isFinite(u.aimFace)&&u.cooldown>=0&&u.cooldown<=.13)frame=throwSpec.throwFrame;
   }else if(throwSpec.throwFrame!==undefined&&Number.isFinite(u.rosterLastThrowAt)&&time-u.rosterLastThrowAt<.3)frame=throwSpec.throwFrame;
+  if(item.layers.body.listenFrame!==undefined){
+   const rollAge=time-u.radioRollAt;
+   if(rollAge>=0&&rollAge<.5)frame=item.layers.body.listenFrame;
+   else if(time-u.radioDoubleAt>=.5&&time-u.radioDoubleAt<1.05)frame=item.layers.body.callFrame;
+  }
   if(visual==='pirateCannon'){
    if(firingPirate)frame=item.layers.body.fireFrame;
    else if(u.pirateFuse){

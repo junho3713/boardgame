@@ -109,19 +109,19 @@ test('a distant cooperative squad reacts to its own play area with the other cam
  assert.equal(from(g,first),undefined);assert.ok(from(g,second)?.target.commandShot);
 });
 
-test('shotgun and dice alternate between independent nearest targets and a held manual angle on ordinary and star maps',()=>{
+test('shotgun and radio alternate between automatic targeting and a held manual angle on ordinary and star maps',()=>{
  for(const map of ['livingroom','livingroom-star']){
   const g=field(map),shotgun=add(g,'rifle',1100,1320),dice=add(g,'guntruck',1130,1340),enemy=add(g,'rifle',980,1300,1);
-  g.setManualAim({x:1,y:0});g.evolved.rifle=true;g.setFocus(enemy);
+  g.diceFace=()=>6;g.setManualAim({x:1,y:0});g.evolved.rifle=true;g.setFocus(enemy);
   g.update(.01);const pellets=g.shots.filter(s=>s.source===shotgun);
   assert.equal(pellets.length,5);assert.equal(pellets[2].commandAngle,0);assert.ok(pellets.every(s=>s.hot));
-  assert.equal(g.rosterDice.find(d=>d.source===dice).angle,0);assert.equal(enemy.hp,enemy.maxHp);
+  assert.equal(g.radioStrikes.find(d=>d.source===dice).angle,0);assert.equal(enemy.hp,enemy.maxHp);
   g.shots=[];enemy.hp=0;shotgun.cooldown=dice.cooldown=0;g.update(.01);
-  assert.equal(g.shots.filter(s=>s.source===shotgun).length,0);assert.equal(g.rosterDice.length,1);
-  g.setManualAim(null);enemy.hp=enemy.maxHp;g.rosterDice=[];g.move=()=>{};
+  assert.equal(g.shots.filter(s=>s.source===shotgun).length,0);assert.equal(g.radioStrikes.length,1);
+  g.setManualAim(null);enemy.hp=enemy.maxHp;g.radioStrikes=[];g.move=()=>{};
   g.time=shotgun.shotgunPumpUntil;shotgun.cooldown=dice.cooldown=0;g.update(.01);
   assert.ok(Math.cos(g.shots.find(s=>s.source===shotgun).muzzleAngle)<0);
-  assert.ok(Math.cos(g.rosterDice[0].angle)<0);assert.ok(g.rosterDice[0].range<g.stats(dice).range);
+  assert.ok(Math.cos(g.radioStrikes[0].angle)<0);assert.ok(Math.abs(g.radioStrikes[0].x-enemy.x)<2);
  }
 });
 
@@ -144,4 +144,26 @@ test('five-pellet volleys pump for one base second and reload the fourth shell f
  const basic=g.stats(u);assert.equal(basic.rate,1);assert.equal(g.shotgunReloadTime(u),1.8);
  g.abilities.haste=3;const faster=g.stats(u);assert.ok(faster.rate<basic.rate);
  assert.ok(Math.abs(g.shotgunReloadTime(u)-1.8*faster.rate)<1e-8);
+});
+
+test('a visible distant contact starts an incendiary call, and its random position ignores manual aim',()=>{
+ const g=field(),radio=add(g,'guntruck',1100,1320),far=add(g,'rifle',2000,1580,1);
+ g.visible=()=>true;g.move=g.navigate=g.separateCrowd=()=>{};
+ g.diceFace=()=>2;g.random=()=>0;g.setManualAim({x:-1,y:0});
+ g.update(.01);
+ const shell=g.radioStrikes.find(v=>v.source===radio);
+ assert.equal(shell.strike,'incendiary');assert.deepEqual([shell.x,shell.y],[far.x,far.y]);
+ const near=add(g,'rifle',1160,1310,1);
+ const contacts=g.radioContacts(radio);g.random=()=>(contacts.indexOf(near)+.5)/contacts.length;g.fireUnitProjectiles(radio,g.commandFirePoint(radio,620,Math.PI),{damage:10});
+ const second=g.radioStrikes.at(-1);assert.deepEqual([second.x,second.y],[near.x,near.y]);
+});
+test('an automatic missile salvo selects the packed group and attack speed shortens the next roll',()=>{
+ const g=field(),radio=add(g,'guntruck',1100,1320);
+ add(g,'rifle',1170,1320,1);
+ g.scoutUntil=g.time+10;
+ const cluster=add(g,'rifle',1360,2020,1);add(g,'rifle',1390,2020,1);add(g,'rifle',1415,2020,1);
+ g.move=g.navigate=g.separateCrowd=()=>{};g.diceFace=()=>3;
+ const base=g.stats(radio).rate;g.abilities.haste=5;
+ g.update(.01);assert.ok(radio.cooldown<base);
+ const first=g.radioStrikes[0];assert.equal(first.strike,'missile');assert.equal(first.x,cluster.x);
 });

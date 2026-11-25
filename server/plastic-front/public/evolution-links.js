@@ -12,9 +12,9 @@ const links=[
  {id:'medicalFire',types:['machinegun','medic'],name:'전선 유지',detail:'진화 의무병에게 치료받은 기관총병은 2초간 받는 피해 12% 감소'},
  {id:'volatile',types:['rocket','lucky'],name:'연쇄 폭약',detail:'레토나가 맞힌 적이 블록 지뢰에 걸리면 0.2초 뒤 20% 추가 폭발 · 반경 65 / 분대 재사용 6초'},
  {id:'fieldRepair',types:['tank','medic'],name:'야전 수리',detail:'진화 의무병의 전차 치료량 +15% · 치료 간격 유지'},
- {id:'gamblers',types:['guntruck','lucky'],name:'행운의 도박단',detail:'777 또는 보스킬러 당첨 후 5초간 같은 분대 주사위병은 6 고정'},
- {id:'chainBombard',types:['guntruck','mortar'],name:'연쇄 폭격',detail:'주사위 폭발에 맞은 적을 3초 안에 박격포로 포격하면 해당 포탄의 폭발 피해 +15%'},
- {id:'brawl',types:['guntruck','rifle'],name:'근접 난타',detail:'산탄총 네 번째 탄에 밀려난 적은 3초간 주사위 폭발 피해 +20%'},
+ {id:'gamblers',types:['guntruck','lucky'],name:'행운의 핫라인',detail:'777 또는 보스킬러 당첨 후 5초간 같은 분대 통신병은 6-6 확정'},
+ {id:'chainBombard',types:['guntruck','mortar'],name:'초토화 포격',detail:'같은 분대의 통신병 화염 지대에 착탄한 박격포는 폭발 반경·피해 +15%'},
+ {id:'radioPrecision',types:['guntruck','sniper'],name:'정밀 좌표 수신',detail:'미사일·핵은 저격 표식 적을 우선 조준하고 해당 적에게 피해 +20%'},
  {id:'airObserver',types:['drone','sniper'],name:'공중 관측',detail:'드론 레이저는 저격 표식 대상을 우선 조준하며 해당 대상 피해 +20%'},
  {id:'tacticalSupply',types:['drone','machinegun'],name:'전술 보급',detail:'기관총병 과열 중 드론 레이저 발사 주기 −20%'},
  {id:'airSupport',types:['drone','lucky'],name:'공중 지원',detail:'진화 드론이 살아 있으면 럭키 레토나 룰렛 주기 4초 → 3.5초'}
@@ -24,8 +24,7 @@ function install({FrontGame:Game}){
  const p=Game.prototype;if(p.evolutionLinksVersion)return;p.evolutionLinksVersion=1;
  const reset=p.reset,damage=p.damage,impact=p.impact,select=p.selectCombatTarget,mortar=p.launchMortar,twin=p.evolutionMortar,missile=p.luckyMissileTarget,boss=p.bossKillerTarget,stats=p.stats,update=p.updateEvolutionCombat,heal=p.heal;
  const owner=u=>u?.coopOwner||0,dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
- const {shotgunReloadTime,diceFace,droneLaserPeriod,droneLaserTarget,rosterBlast,rosterBlastDamage,droneLaserDamage,markShotgunKnockback,castLucky}=p;
- const diceBlasts=new Set(['dice','diceChild']);
+ const {shotgunReloadTime,diceFace,droneLaserPeriod,droneLaserTarget,droneLaserDamage,castLucky}=p;
  const overheated=(game,u,id)=>game.hasEvolutionLink(u,id)&&game.units.some(gunner=>
   gunner.type==='machinegun'&&gunner.team===0&&gunner.hp>0&&owner(gunner)===owner(u)&&gunner.overheatUntil>game.time
  );
@@ -53,7 +52,7 @@ function install({FrontGame:Game}){
   const hp=target.hp,result=damage.call(this,target,amount,source);
   if(target.hp>=hp||source?.team!==0||!this.evolutionEnabled(source))return result;
   if(pursuit)this.linkCue(source,target,'pursuit');
-  if(source.type==='sniper'&&['precision','hunter','pursuit','airObserver'].some(id=>this.hasEvolutionLink(source,id))){this.linkMark(target,source,'snipe');if(this.time>=(source.nextLinkCue||0)){this.linkCue(source,target,'mark');source.nextLinkCue=this.time+.5;}}
+  if(source.type==='sniper'&&['precision','hunter','pursuit','airObserver','radioPrecision'].some(id=>this.hasEvolutionLink(source,id))){this.linkMark(target,source,'snipe');if(this.time>=(source.nextLinkCue||0)){this.linkCue(source,target,'mark');source.nextLinkCue=this.time+.5;}}
   if(source.type==='mortar'&&this.hasEvolutionLink(source,'barrage'))this.linkMark(target,source,'bombard',3);
   if(source.type==='tank'&&this.hasEvolutionLink(source,'breach'))this.linkMark(target,source,'armor');
   if(source.type==='machinegun'&&this.time<(source.overheatUntil||0)&&!target.boss&&this.hasEvolutionLink(source,'suppress'))this.linkMark(target,source,'suppress',2);
@@ -102,32 +101,16 @@ function install({FrontGame:Game}){
   }
   return linked&&u.shotgunBoostMagazine?1.15:1;
  };
- p.markShotgunKnockback=function(u,target){
-  markShotgunKnockback.call(this,u,target);
-  if(this.hasEvolutionLink(u,'brawl'))this.linkMark(target,u,'shotgunPush',3);
- };
  p.diceFace=function(u,evolved){
   if(this.hasEvolutionLink(u,'gamblers')&&this.time<(this.linkState(owner(u)).diceSixUntil||0))return 6;
   return diceFace.call(this,u,evolved);
  };
- p.rosterBlast=function(u,point,radius,damage,push,style){
-  const hits=rosterBlast.call(this,u,point,radius,damage,push,style);
-  if(diceBlasts.has(style)&&this.hasEvolutionLink(u,'chainBombard')){
-   for(const target of hits)this.linkMark(target,u,'diceExplosion',3);
-  }
-  return hits;
- };
- p.rosterBlastDamage=function(u,target,amount,style){
-  const damage=rosterBlastDamage.call(this,u,target,amount,style);
-  if(diceBlasts.has(style)&&this.hasEvolutionLink(u,'brawl')&&this.linkMarked(target,u,'shotgunPush'))return damage*1.2;
-  return damage;
- };
- p.mortarLinkDamageScale=function(shell,targets){
+ p.mortarFireZoneScale=function(shell){
   const source=shell.source;
-  if(!source||!this.hasEvolutionLink(source,'chainBombard'))return 1;
-  const tagged=targets.find(target=>this.linkMarked(target,source,'diceExplosion'));
-  if(!tagged)return 1;
-  this.linkCue(source,tagged,'chainBombard');return 1.15;
+  if(source?.type!=='mortar'||!this.hasEvolutionLink(source,'chainBombard'))return 1;
+  const overlaps=this.radioFireZones.some(zone=>owner(zone.source)===owner(source)&&this.time<zone.until&&dist(shell,zone)<=zone.radius);
+  if(!overlaps)return 1;
+  this.linkCue(source,shell,'chainBombard');return 1.15;
  };
  p.droneLaserTarget=function(u,range,target){
   if(this.hasEvolutionLink(u,'airObserver')){

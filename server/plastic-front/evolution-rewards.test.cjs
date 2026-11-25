@@ -9,6 +9,14 @@ function scene(coop=false,map='livingroom-star3'){
 function actor(g,type,x=1000,y=6000,owner=0){const u=g.coop?g.withOwner(owner,()=>g.addUnit(0,type,x,y)):g.addUnit(0,type,x,y);if(g.coop)g.withOwner(owner,()=>g.evolved[type]=true);else g.evolved[type]=true;return u;}
 function enemy(g,x=1200,y=6000,type='rifle'){const t=g.addUnit(2,type,x,y);t.hp=t.maxHp=1e6;t.cooldown=1e6;return t;}
 function near(x,y){a.ok(Math.abs(x-y)<1e-7,`${x} != ${y}`);}
+test('a marching radio operator releases the last airstrike facing during cooldown',()=>{
+ const g=scene(),leader=g.addUnit(0,'leader',1000,6000),radio=actor(g,'guntruck',leader.x-160);
+ radio.cooldown=2;radio.aimFace=Math.PI;
+ g.setMoveOrder(leader.x+200,leader.y);
+ g.updateBattleUnits(.05,g.commander(1));
+ a.equal(radio.aimFace,null);
+ a.ok(radio.walk>0);
+});
 test('evolved shotgun uses a four-shell magazine, burning pellets and a single explosive fourth shot',()=>{
  const g=scene(),u=actor(g,'rifle'),t=enemy(g,1090),s=g.stats(u);
  for(let i=0;i<4;i++){
@@ -37,22 +45,41 @@ test('machinegun heats for three seconds, pierces for four, then restarts; pause
  g.phase='paused';const before=JSON.stringify(u);g.update(.05);a.equal(JSON.stringify(u),before);g.time=7;g.updateEvolutionCombat();a.equal(u.overheatUntil,0);a.equal(u.evolutionHeat,0);
  const h=scene(),v=actor(h,'machinegun'),q=enemy(h);h.fireUnitProjectiles(v,q,{damage:100},h.stats(v));h.time=.5;h.fireUnitProjectiles(v,q,{damage:100},h.stats(v));h.time=1.3;h.updateEvolutionCombat();a.equal(v.evolutionHeat,0);
 });
-test('all six die faces resolve their own explosions, fragments and child dice',()=>{
- for(let face=1;face<=6;face++){
-  const g=scene(),u=g.addUnit(0,'guntruck',1000,6000),s=g.stats(u),t=enemy(g,1000+s.range),hp=t.hp;
-  g.random=()=>0;g.diceFace=()=>face;g.fireUnitProjectiles(u,t,{damage:100},s);a.equal(g.rosterDice.length,1);
-  g.time=1;g.updateEvolutionCombat();a.equal(g.shots.length,face===4?6:face===5?8:0);
-  if(face===6){a.equal(g.rosterDice.length,2);a.ok(g.rosterDice.every(d=>d.child));g.time=2;g.updateEvolutionCombat();a.equal(g.effects.filter(e=>e.style==='diceChild').length,2);}
-  else{a.equal(g.rosterDice.length,0);near(hp-t.hp,100*(.6+.2*face)*g.defenseFactor(t,u));}
+test('radio doubles schedule three distinct barrages and burn moving targets for 3.5 seconds',()=>{
+ for(const face of [1,2,3,4,5,6]){
+  const g=scene(),u=g.addUnit(0,'guntruck',1000,6000),target=enemy(g,1200);
+  g.diceFace=()=>face;g.random=()=>0;
+  g.fireUnitProjectiles(u,target,{damage:100});
+  const shell=g.radioStrikes[0],strike=face<=2?'incendiary':face<=4?'missile':'nuke';
+  a.equal(shell.strike,strike);a.equal(g.radioStrikes.length,strike==='missile'?3:1);
+  const roll=g.effects.find(e=>e.kind==='radioRoll');a.deepEqual([roll.a,roll.b],[face,face]);
+  const hp=target.hp,x=target.x;g.time=shell.landAt-.001;g.updateEvolutionCombat();a.equal(target.hp,hp);
+  g.time=shell.landAt;g.updateEvolutionCombat();a.ok(target.hp<hp);
+  if(strike==='missile'){a.notEqual(target.x,x);a.equal(g.radioStrikes.length,2);}
+  if(strike==='incendiary'){
+   const zone=g.radioFireZones[0],late=enemy(g,zone.x+zone.radius/2);near(zone.until-zone.startedAt,3.5);
+   g.time+=.5;g.updateEvolutionCombat();a.ok(late.hp<late.maxHp);
+   const burnt=late.hp;late.x+=400;g.time=zone.until;g.updateEvolutionCombat();a.equal(late.hp,burnt);a.equal(g.radioFireZones.length,0);
+  }else a.equal(g.radioFireZones.length,0);
  }
 });
-test('two golden dice roll only 3–6, producing a single connecting shockwave for doubles',()=>{
- for(const same of [true,false]){
-  const g=scene(),u=actor(g,'guntruck'),t=enemy(g,1340),s=g.stats(u);
-  for(const [roll,face] of [[0,3],[.26,4],[.51,5],[.999,6]]){g.random=()=>roll;a.equal(g.diceFace(u),face);}
-  const sample=[0,same?0:.3];g.random=()=>sample.shift()??0;g.fireUnitProjectiles(u,t,{damage:100},s);
-  a.equal(g.rosterDice.length,2);g.time=1;g.updateEvolutionCombat();a.equal(g.effects.filter(e=>e.kind==='rosterDiceWave').length,same?1:0);
- }
+test('five separate misses force the sixth roll for that operator, even through a save',()=>{
+ const g=scene(),u=g.addUnit(0,'guntruck',1000,6000),other=g.addUnit(0,'guntruck',1000,6000),t=enemy(g);
+ let idx=0;g.diceFace=()=>[3,1][idx++%2];
+ for(let i=0;i<5;i++)g.fireUnitProjectiles(u,t,{damage:10});
+ a.equal(g.radioStrikes.length,0);a.equal(u.radioMisses,5);
+ g.fireUnitProjectiles(other,t,{damage:10});a.equal(other.radioMisses,1);
+ const restored=unpack(scene(),pack(g)),saved=restored.units.find(v=>v.id===u.id);
+ restored.diceFace=()=>5;restored.fireUnitProjectiles(saved,restored.units.find(v=>v.id===t.id),{damage:10});
+ a.equal(saved.radioMisses,0);a.equal(restored.radioStrikes[0].strike,'nuke');
+});
+test('the evolved operator rolls only 3–6, can miss, and leaves a larger burn zone after a nuclear call',()=>{
+ const g=scene(),u=actor(g,'guntruck'),t=enemy(g);
+ for(const [sample,face] of [[0,3],[.26,4],[.51,5],[.999,6]]){g.random=()=>sample;a.equal(g.diceFace(u),face);}
+ const picks=[3,4,5,5];g.diceFace=()=>picks.shift();
+ g.fireUnitProjectiles(u,t,{damage:10});a.equal(g.radioStrikes.length,0);
+ g.fireUnitProjectiles(u,t,{damage:10});a.equal(g.radioStrikes.length,1);
+ g.time=1.2;g.updateEvolutionCombat();a.equal(g.radioFireZones[0].radius,158);
 });
 test('an evolved drone circles its commander, shoots the nearest visible enemy and sweeps a piercing laser on a cooldown',()=>{
  const g=scene(),u=actor(g,'drone'),c=g.addUnit(0,'leader',1000,6100),behind=enemy(g,970,6000),a1=enemy(g,1120),a2=enemy(g,1220),off=enemy(g,1130,6150);
@@ -114,11 +141,11 @@ test('boss-killer preserves boss invulnerability, groggy multipliers and ordinar
  boss.hp=1;const kills=g.kills,rewards=g.bossState.rewards;g.impact(b);a.equal(boss.hp,0);a.equal(g.kills,kills+1);a.equal(g.bossState.rewards,rewards+1);a.ok(g.effects.some(e=>e.kind==='burst'));
 });
 test('saved delayed attacks and siege groups restore exact source references, hit history and coop ownership',()=>{
- const g=scene(true),u=actor(g,'guntruck',1000,6000,1),t=enemy(g);g.fireUnitProjectiles(u,t,{damage:100},g.stats(u));const tank=actor(g,'tank',1000,6200,1),q=enemy(g,1200,6200);g.impact(g.fireUnitProjectiles(tank,q,{damage:100},g.stats(tank))[0]);
- const restored=unpack(scene(true),pack(g));const pending=restored.rosterDice[0];a.equal(pending.source,restored.units.find(v=>v.id===u.id));a.equal(pending.source.coopOwner,1);a.ok(restored.evolutionBlasts[0].hitIds.includes(q.id));restored.time=.3;restored.updateEvolutionCombat();a.equal(restored.evolutionAttacks.length,0);
+ const g=scene(true),u=actor(g,'guntruck',1000,6000,1),t=enemy(g);g.diceFace=()=>5;g.fireUnitProjectiles(u,t,{damage:100},g.stats(u));const tank=actor(g,'tank',1000,6200,1),q=enemy(g,1200,6200);g.impact(g.fireUnitProjectiles(tank,q,{damage:100},g.stats(tank))[0]);
+ const restored=unpack(scene(true),pack(g));const pending=restored.radioStrikes[0];a.equal(pending.source,restored.units.find(v=>v.id===u.id));a.equal(pending.source.coopOwner,1);a.ok(restored.evolutionBlasts[0].hitIds.includes(q.id));restored.time=.3;restored.updateEvolutionCombat();a.equal(restored.evolutionAttacks.length,0);
  const old=pack(scene());
- for(const key of ['evolutionAttacks','evolutionBlasts','rosterDice','rosterLasers','rosterThrowSerial'])delete old.fields[key];
+ for(const key of ['evolutionAttacks','evolutionBlasts','radioStrikes','radioFireZones','rosterLasers'])delete old.fields[key];
  restored.rosterLasers=[{source:u}];unpack(restored,old);
- for(const key of ['evolutionAttacks','evolutionBlasts','rosterDice','rosterLasers'])a.deepEqual(restored[key],[]);
- a.equal(restored.rosterThrowSerial,0);
+ for(const key of ['evolutionAttacks','evolutionBlasts','radioStrikes','radioFireZones','rosterLasers'])a.deepEqual(restored[key],[]);
+ a.equal(restored.rosterDice,undefined);
 });

@@ -15,10 +15,11 @@ function createCoopHandler({now=Date.now,automatic=true}={}){
   return data;
  }
  function player(r,name,medicSkin,reinforcementPlan){const p={reinforcementPlan:globalThis.FrontReinforcementPlan.valid(reinforcementPlan)?globalThis.FrontReinforcementPlan.clean(reinforcementPlan):globalThis.FrontReinforcementPlan.clean(globalThis.FrontReinforcementPlan.defaults),owner:r.players.length,name,medicSkinId:medicSkin==='rina'?'rina':'classic',token:crypto.randomBytes(32).toString('hex'),seen:now(),rateAt:now(),requests:0};r.players.push(p);sessions.set(p.token,{r,p});return p;}
- function events(r){return Object.fromEntries(['toast','level','end','fire','explosion'].map(type=>[type,data=>{
+ function events(r){return Object.fromEntries(['toast','level','end','fire','explosion','radioWarning','radioImpact'].map(type=>[type,data=>{
    if(type==='level'||type==='end')r.cached=null;
    if(type==='level')r.round++;
-   const value=type==='toast'?String(data):type==='end'?{result:data.result,reason:data.reason}:type==='fire'?{type:data.type,team:data.team,x:data.x,y:data.y,appearance:data.appearance,luckySound:data.luckySound}:type==='explosion'?{x:data.x,y:data.y,kind:data.kind,team:data.team}:null;
+   const value=type==='toast'?String(data):type==='end'?{result:data.result,reason:data.reason}:type==='fire'?{type:data.type,team:data.team,x:data.x,y:data.y,appearance:data.appearance,luckySound:data.luckySound}:type==='explosion'?{x:data.x,y:data.y,kind:data.kind,team:data.team}:
+    type==='radioWarning'||type==='radioImpact'?{x:data.x,y:data.y,team:data.team,id:data.id,strike:data.strike}:null;
    if(type!=='level'){r.events.push({id:++r.eventId,type,data:value,...(type==='toast'?{owner:r.game?.coopOwner}: {})});if(r.events.length>45)r.events.shift();}
  }]));}
  function clearInput(r,p){

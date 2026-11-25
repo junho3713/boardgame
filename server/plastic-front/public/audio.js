@@ -14,6 +14,8 @@ const SOUNDS={
  machinegun:{file:'machinegun',gain:.29,gap:.035,priority:1,revision:2},
  machinegunBurst:{file:'machinegun-user-burst',ext:'wav',gain:.29,gap:.035,priority:1},
  guntruck:{file:'truck',gain:.36,gap:.045,priority:1},
+ radioRoll:{file:'radio-roll',ext:'wav',gain:.37,gap:.12,priority:1},
+ radioWarning:{file:'radio-warning',ext:'wav',gain:.55,gap:.4,priority:4},
  sniper:{file:'sniper',gain:.59,gap:.09,priority:2,revision:3},
  sniperSuppressed:{file:'sniper-suppressed',gain:.59,gap:.09,priority:2},
  crimsonAce:{file:'tank',gain:.7,gap:.1,priority:3},
@@ -57,6 +59,7 @@ class FrontAudio{
  stop(){for(const v of [...this.voices]){try{v.source.stop();}catch{}this.release(v);}this.lastKind.clear();}
  release(v){if(!this.voices.delete(v))return;v.source.disconnect();v.gain.disconnect();if(v.pan)v.pan.disconnect();}
  fire(unit,listener){
+  if(unit.team===0&&unit.type==='guntruck')return this.play('radioRoll',unit,listener);
   if(unit.luckySound==='bossKiller')return this.play('rocket',unit,listener,{rate:.68,priorityBoost:2,channel:'bossKiller'});
   if(unit.luckySound)return this.play(unit.luckySound,unit,listener);
   if(unit.team===0&&unit.type==='rifle'&&!unit.ultimate)return this.play('shotgun',unit,listener,{exactRate:true});
@@ -73,6 +76,12 @@ class FrontAudio{
   });
  }
  impact(event,listener){return this.play('impact',event,listener,{rate:event.armor?1.9:1.6,gain:.15,priorityBoost:-2,channel:'hitFeedback'});}
+ radioWarning(event,listener){return this.play('radioWarning',event,listener,{exactRate:true});}
+ radioImpact(event,listener){
+  if(event.strike==='nuke')return this.play('artillery',event,listener,{channel:'radioNuke',rate:.72,priorityBoost:2,gain:.93});
+  if(event.strike==='incendiary')return this.play('impact',event,listener,{channel:'radioFire',rate:.79,gain:.76});
+  return this.play('tankBlast',event,listener,{channel:'radioMissile',rate:.93,gain:.85});
+ }
  explosion(event,listener){
   if(event.kind==='tank'&&event.team===0)return this.play('tankBlast',event,listener,{exactRate:true});
   const key=['artillery','bossKiller','evolution','pirateCannon'].includes(event.kind)?'artillery':'impact';

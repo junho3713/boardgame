@@ -129,6 +129,7 @@ class FrontEffects{
   return plumes;
  }
  luckyGround(ctx,game,visible=()=>true){
+  root.FrontRadioArt?.ground(ctx,game,visible,this);
   root.FrontBlockFlashView?.grounded(ctx,game,visible);
   root.FrontPirateCannonView?.ground(ctx,game,visible);
   for(const z of game.luckyGlues||[]){if(!visible(z)||game.time>=z.expires)continue;const landed=game.time>=z.landAt,r=z.radius||100;ctx.save();ctx.translate(z.x,z.y);ctx.strokeStyle=landed?'#b9ee72':'#d7f2a18c';ctx.fillStyle=landed?'#9cdb3d24':'#afd96510';ctx.lineWidth=1.6;ctx.setLineDash(landed?[]:[6,6]);ctx.beginPath();ctx.arc(0,0,r,0,TAU);ctx.fill();ctx.stroke();ctx.setLineDash([]);
@@ -195,7 +196,7 @@ class FrontEffects{
  }
  drawEvent(ctx,e){
   if(root.FrontBlockFlashView?.event(ctx,e)||root.FrontPirateCannonView?.event(ctx,e))return true;
-  if(root.FrontRosterArt?.event(ctx,e))return true;
+  if(root.FrontRosterArt?.event(ctx,e,this))return true;
   if(e.kind==='explosion'&&['toyBall','acid'].includes(e.visualKind)){const k=clamp(e.t/e.max,0,1),spread=8+(1-k)*20;ctx.save();ctx.globalAlpha=k*.4;ctx.strokeStyle='#e8cd91';ctx.lineWidth=1.5;ctx.beginPath();ctx.ellipse(e.x,e.y,spread,spread*.6,0,0,TAU);ctx.stroke();ctx.restore();for(let i=0;i<3;i++){const a=i*TAU/3;this.toyStar(ctx,e.x+Math.cos(a)*spread,e.y-5+Math.sin(a)*spread*.6,3.5*k+1,a+(1-k)*3,k,'#ffe18a');}return true;}
   if(e.kind==='explosion'&&this.drawImpactMaterial?.(ctx,e,{boss:e.visualKind==='bossKiller',style:e.visualKind}))return true;
   if(e.kind==='muzzle'&&this.drawMuzzleMaterial?.(ctx,e))return true;

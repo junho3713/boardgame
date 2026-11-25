@@ -1,4 +1,4 @@
-/* Allied shotgun, rolling dice and patrol drone. All timers use simulation seconds. */
+/* Allied shotgun, radio support and patrol drone. All timers use simulation seconds. */
 (function(root){'use strict';
 function install({FrontGame,TYPES,multiplier}){
  const p=FrontGame.prototype,fire=p.fireUnitProjectiles,impact=p.impact,advance=p.advanceCommandShot,update=p.updateEvolutionCombat,reset=p.reset;
@@ -9,12 +9,10 @@ function install({FrontGame,TYPES,multiplier}){
  const foes=(g,u)=>g.combatCandidates().filter(t=>t.team!==u.team&&t.hp>0&&!t.hidden&&!(t.base&&g.baseShielded())&&g.canTarget(u,t));
 
  p.reset=function(...args){
-  const result=reset.apply(this,args);this.rosterDice=[];this.rosterLasers=[];this.rosterThrowSerial=0;return result;
+  const result=reset.apply(this,args);this.radioStrikes=[];this.radioFireZones=[];this.rosterLasers=[];return result;
  };
  p.shotgunReloadTime=function(u,s=this.stats(u)){return 1.8*s.rate/TYPES.rifle.rate;};
  p.shotgunShotMultiplier=function(){return 1;};
- p.markShotgunKnockback=function(){};
- p.rosterBlastDamage=function(u,t,amount){return amount;};
  p.droneLaserDamage=function(u,t,amount){return amount;};
  p.droneLaserPeriod=function(){return 6;};
  p.droneLaserTarget=function(u,range,target){return target;};
@@ -62,11 +60,11 @@ function install({FrontGame,TYPES,multiplier}){
   const hit=[];
   for(const t of foes(this,u)){
    if(distance(point,t)>radius+this.collisionRadius(t)-5||!this.lineClear(point,t,0,{fireTeam:u.team}))continue;
-   const hp=t.hp,amount=this.rosterBlastDamage(u,t,damage,style);
-   this.damage(t,amount*multiplier(u.type,targetKind(t)),u);
+   const hp=t.hp;
+   this.damage(t,damage*multiplier(u.type,targetKind(t)),u);
    if(t.hp>=hp)continue;
    hit.push(t);
-   if(push(this,t,heading(point,t),strength)&&style==='shotgun')this.markShotgunKnockback(u,t);
+   push(this,t,heading(point,t),strength);
    if(style==='shotgun')this.applyShotgunBurn(t,u,damage*.18);
   }
   effect(this,'rosterBlast',point,{source:u,radius,style,face:point.face},.47);
@@ -99,7 +97,7 @@ function install({FrontGame,TYPES,multiplier}){
    if(b.hot)this.applyShotgunBurn(t,u,b.shellDamage*.18);
    if(t.lastShotgunPush?.source!==u.id||t.lastShotgunPush.seq!==b.sequence){
     t.lastShotgunPush={source:u.id,seq:b.sequence};
-    if(push(this,t,b.commandAngle,b.finisher?20:9)&&b.finisher)this.markShotgunKnockback(u,t);
+    push(this,t,b.commandAngle,b.finisher?20:9);
    }
   }
   if(b.exploding){b.exploding=false;this.rosterBlast(u,b,82,b.shellDamage*.8,48,'shotgun');}
@@ -110,63 +108,94 @@ function install({FrontGame,TYPES,multiplier}){
   if(b.exploding&&b.life<=0){b.exploding=false;this.rosterBlast(b.source,b,82,b.shellDamage*.8,48,'shotgun');}
  };
 
- function roll(g,u,from,angle,range,damage,face,golden,child,throwId){
-  const duration=range/(child?285:420);
-  const die={source:u,x:from.x,y:from.y,fromX:from.x,fromY:from.y,toX:from.x+Math.cos(angle)*range,toY:from.y+Math.sin(angle)*range,
-   angle,range,damage,face,golden,child,throwId,startedAt:g.time,landAt:g.time+duration};
-  (g.rosterDice??=[]).push(die);return die;
+ const RADIO = {
+  incendiary: {radius:96, multiplier:2.2, count:1, delay:.65, knockback:0},
+  missile: {radius:88, multiplier:1.7, count:3, delay:.58, knockback:44},
+  nuke: {radius:225, multiplier:7, count:1, delay:1.2, knockback:0}
+ };
+ p.radioContacts=function(u,candidates=this.combatCandidates()){
+  return candidates.filter(t=>t.team!==u.team&&t.hp>0&&!t.hidden&&
+   !(t.base&&this.baseShielded())&&!(t.structure&&this.mission.stage<(t.activeStage||2))&&this.canTarget(u,t)&&this.visible(t));
+ };
+ function clusterTarget(contacts,u,radius){
+  let best=null,bestCount=0;
+  for(const target of contacts){
+   const count=contacts.reduce((n,t)=>n+Number(distance(t,target)<=radius),0);
+   if(count>bestCount||count===bestCount&&distance(u,target)<distance(u,best)){
+    best=target;bestCount=count;
+   }
+  }
+  return best;
  }
- function throwDice(g,u,target,attack,s){
-  const golden=g.evolutionEnabled(u),angle=target.commandShot?target.angle:heading(u,target);
-  const range=target.commandShot?s.range:Math.max(1,Math.min(s.range,distance(u,target)));
-  u.rosterLastThrowAt=g.time;
-  const id=g.rosterThrowSerial=(g.rosterThrowSerial||0)+1;
-  for(const offset of golden?[-.15,.15]:[0])roll(g,u,u,angle+offset,range,attack.damage,g.diceFace(u,golden),golden,false,id);
+ function radioTarget(g,u,contacts,aim,strike){
+  if(strike==='incendiary')return contacts[Math.min(contacts.length-1,Math.floor(g.random()*contacts.length))];
+  if(g.hasEvolutionLink(u,'radioPrecision')){
+   const marked=contacts.filter(t=>g.linkMarked(t,u,'snipe'));
+   const rank=t=>t.boss?2:Number(!!(t.roadCaptain||t.miniBoss||t.type==='pirateCannon'||t.type==='bombBug'));
+   marked.sort((a,b)=>rank(b)-rank(a)||distance(u,a)-distance(u,b));
+   if(marked.length){g.linkCue(u,marked[0],'radioPrecision');return marked[0];}
+  }
+  if(!aim.commandShot)return clusterTarget(contacts,u,RADIO[strike].radius);
+  const commander=g.commander(0),origin=commander?.type==='leader'?commander:u;
+  let best=null,smallest=Infinity;
+  for(const t of contacts){
+   const angle=heading(origin,t)-aim.angle,offset=Math.abs(Math.atan2(Math.sin(angle),Math.cos(angle)));
+   if(offset<=Math.PI/7&&offset<smallest){best=t;smallest=offset;}
+  }
+  return best||g.commandFirePoint(origin,aim.range,aim.angle);
+ }
+ function callRadio(g,u,aim,attack){
+  const contacts=g.radioContacts(u);
+  if(!contacts.length)return [];
+  const golden=g.evolutionEnabled(u),a=g.diceFace(u,golden),b=u.radioMisses>=5?a:g.diceFace(u,golden);
+  u.radioRollAt=g.time;
+  g.notify('fire',u);
+  effect(g,'radioRoll',u,{source:u,a,b,golden},.85);
+  if(a!==b){u.radioMisses=(u.radioMisses||0)+1;return [];}
+  u.radioMisses=0;u.radioDoubleAt=g.time;
+  const strike=a<=2?'incendiary':a<=4?'missile':'nuke',spec=RADIO[strike];
+  const point=radioTarget(g,u,contacts,aim,strike),angle=aim.commandShot?aim.angle:heading(u,point);
+  const precise=strike!=='incendiary'&&g.hasEvolutionLink(u,'radioPrecision');
+  const bounds=g.bounds();
+  for(let seq=0;seq<spec.count;seq++){
+   const spread=[0,-21,21][seq],delay=spec.delay+seq*.26;
+   const x=Math.max(0,Math.min(bounds.width,point.x-Math.sin(angle)*spread));
+   const y=Math.max(0,Math.min(bounds.height,point.y+Math.cos(angle)*spread));
+   const shell={source:u,x,y,angle,seq,strike,radius:spec.radius,golden,precise,damage:attack.damage,landAt:g.time+delay};
+   g.radioStrikes.push(shell);
+   effect(g,'radioIncoming',shell,{source:u,strike,angle,seq,radius:spec.radius},delay);
+   if(strike==='nuke')g.notify('radioWarning',{team:0,id:u.id,x,y});
+  }
   return [];
  }
- function settle(g,d){
-  d.settled=true;
-  effect(g,'rosterDieResult',d,{source:d.source,face:d.face,golden:d.golden,child:d.child,throwId:d.throwId,angle:d.angle},1.1);
-  if(d.face===6&&!d.child){
-   for(const side of [-1,1])roll(g,d.source,d,d.angle+side*.72,78,d.damage*.72,1+Math.min(2,Math.floor(g.random()*3)),d.golden,true,d.throwId);
-   effect(g,'rosterBlast',d,{source:d.source,style:'diceSplit',radius:38,face:6},.35);
-   return;
+ function inRadius(g,area,t){return distance(t,area)<=area.radius+Math.max(0,g.collisionRadius(t)-5);}
+ function impactRadio(g,shell){
+  const {source,x,y,angle,strike,seq,radius,golden,damage,landAt,precise}=shell;
+  const spec=RADIO[strike];
+  for(const t of foes(g,source)){
+   if(!inRadius(g,shell,t))continue;
+   const bonus=precise&&g.linkMarked(t,source,'snipe')?1.2:1,hp=t.hp;
+   g.damage(t,damage*spec.multiplier*bonus,source);
+   if(spec.knockback&&t.hp<hp)push(g,t,distance(t,shell)>.01?heading(shell,t):angle,spec.knockback);
   }
-  const radius=(45+d.face*8)*(d.child ? .8 : 1);
-  g.rosterBlast(d.source,d,radius,d.damage*(.6+d.face*.2),0,d.child?'diceChild':'dice');
-  if(d.face===4||d.face===5){
-   const count=d.face===4?6:8,angles=Array.from({length:count},(_,i)=>d.angle+i*Math.PI*2/count);
-   for(const angle of angles)forwardShot(g,d.source,d,angle,95,d.damage*.22,false,'diceFragment',580);
-   effect(g,'rosterFragments',d,{source:d.source,angles,range:95},.23);
+  effect(g,'radioImpact',shell,{source,strike,angle,seq,radius},strike==='nuke'?1.6:.65);
+  g.notify('radioImpact',{team:0,id:source.id,x,y,strike});
+  if(strike==='incendiary'||golden&&strike==='nuke'){
+   g.radioFireZones.push({source,x,y,radius:strike==='nuke'?158:80,damage:damage*.32,startedAt:landAt,nextAt:landAt+.5,until:landAt+3.5});
   }
  }
- p.diceShockwave=function(a,b){
-  const width=54,len=distance(a,b),dx=b.x-a.x,dy=b.y-a.y;
-  for(const t of foes(this,a.source)){
-   const q=len?Math.max(0,Math.min(1,((t.x-a.x)*dx+(t.y-a.y)*dy)/(len*len))):0;
-   const closest={x:a.x+q*dx,y:a.y+q*dy};
-   if(distance(t,closest)>width+this.collisionRadius(t)-5||!this.lineClear(closest,t,0,{fireTeam:0}))continue;
-   const damage=this.rosterBlastDamage(a.source,t,a.damage*1.8,'diceWave');this.damage(t,damage*multiplier(a.source.type,targetKind(t)),a.source);
-  }
-  effect(this,'rosterDiceWave',a,{source:a.source,tx:b.x,ty:b.y,width,face:a.face},.55);
- };
- function updateDice(g){
-  const dice=g.rosterDice||[];
-  for(const d of dice){
-   if(d.settled)continue;
-   const k=Math.min(1,(g.time-d.startedAt)/(d.landAt-d.startedAt)),progress=1-(1-k)*(1-k);
-   const next={x:d.fromX+(d.toX-d.fromX)*progress,y:d.fromY+(d.toY-d.fromY)*progress};
-   const blocked=!g.lineClear(d,next,0,{fireTeam:d.source.team});
-   if(!blocked){d.x=next.x;d.y=next.y;}
-   const touched=!d.child&&foes(g,d.source).some(t=>distance(t,d)<=12+g.collisionRadius(t)-5);
-   if(k>=1||blocked||touched)settle(g,d);
-  }
-  for(const d of dice){
-   if(!d.settled||!d.golden||d.child||d.pairDone)continue;
-   const mate=dice.find(m=>m!==d&&!m.child&&m.throwId===d.throwId);
-   if(mate?.settled){d.pairDone=mate.pairDone=true;if(mate.face===d.face)g.diceShockwave(d,mate);}
-  }
-  g.rosterDice=dice.filter(d=>!d.settled||d.golden&&!d.child&&!d.pairDone);
+ function updateRadio(g){
+  g.radioStrikes=g.radioStrikes.filter(shell=>{
+   if(shell.landAt>g.time)return true;
+   impactRadio(g,shell);return false;
+  });
+  g.radioFireZones=g.radioFireZones.filter(zone=>{
+   while(zone.nextAt<=g.time+1e-8&&zone.nextAt<=zone.until+1e-8){
+    for(const t of foes(g,zone.source))if(inRadius(g,zone,t))g.damage(t,zone.damage,zone.source);
+    zone.nextAt+=.5;
+   }
+   return zone.until>g.time;
+  });
  }
 
  function droneFire(g,u,t,attack,s){
@@ -199,14 +228,14 @@ function install({FrontGame,TYPES,multiplier}){
  p.fireUnitProjectiles=function(u,t,attack,s=this.stats(u)){
   if(u.team===0){
    if(u.type==='rifle')return shotgun(this,u,t,attack,s);
-   if(u.type==='guntruck')return throwDice(this,u,t,attack,s);
+   if(u.type==='guntruck')return callRadio(this,u,t,attack);
    if(u.type==='drone')return droneFire(this,u,t,attack,s);
   }
   return fire.call(this,u,t,attack,s);
  };
  p.updateEvolutionCombat=function(){
   update.call(this);
-  updateDice(this);updateLasers(this);
+  updateRadio(this);updateLasers(this);
   for(const t of this.combatCandidates())if(t.shotgunBurns?.length){
    t.shotgunBurns=t.shotgunBurns.filter(b=>{
     while(t.hp>0&&b.next<=this.time+1e-8&&b.next<=b.until+1e-8){

@@ -55,7 +55,7 @@ function bodyProject(angle){const co=Math.cos(angle),si=Math.sin(angle);return (
 function infantry(c,u,time,evolved,dice){
  const angle=Number.isFinite(u.aimFace)?u.aimFace:u.face||0,project=bodyProject(angle),step=Math.sin(u.walk||0);
  const engineer=u.type==='rocket';
- const shell=evolved?'#e4a044':'#b45430',suit=dice?'#537776':'#688457',trim=dice?'#9fccc2':'#b9c78a';
+ const shell=evolved?'#e4a044':'#b45430',suit=dice?'#5b7447':'#688457',trim=dice?'#aac085':'#b9c78a';
  ellipse(c,2,2,17,6,'#28362942');
  for(const side of [-1,1]){
   const foot=project(side*step*3.5,side*6,3),hip=project(0,side*4,17);
@@ -64,7 +64,13 @@ function infantry(c,u,time,evolved,dice){
  }
  const bob=Math.abs(step)*.9;c.translate(0,-bob);
  const torso=project(-1,0,25),neck=project(0,0,35),head=project(.7,0,41),hat=project(-.5,0,47);
- const pack=project(-8,0,26);ball(c,...pack,8.6,9.3,dice?'#b6b598':'#adab81',dice?'#787c68':'#788061','#495841');
+ const pack=project(-8,0,26);
+ if(dice){
+  const x=pack[0],y=pack[1],mast=project(-9,-4,61);
+  rod(c,[x-4,y],mast,1.6,'#344937');ellipse(c,...mast,1.4,1.3,'#dfc77e');
+  c.fillStyle='#485b39';c.beginPath();c.roundRect(x-7,y-10,14,21,2.3);c.fill();
+  for(let i=0;i<3;i++)rod(c,[x-4,y-5+i*3],[x+4,y-5+i*3],1.1,'#829268');
+ }else ball(c,...pack,8.6,9.3,'#adab81','#788061','#495841');
  ball(c,...torso,12.5,13.5,trim,suit,'#324737');
  const beltL=project(-1,-8,20),beltR=project(-1,8,20);rod(c,beltL,beltR,3.5,'#594b36');
  const strap1=project(0,-7,34),strap2=project(3,5,18);rod(c,strap1,strap2,3.1,dice?'#c4a56e':'#4b4938');
@@ -77,7 +83,7 @@ function infantry(c,u,time,evolved,dice){
  }
  const nose=project(7,0,40);ball(c,...nose,3,2.8,'#d6b68b','#aa9568','#837953');
  ball(c,...hat,10.8,6.1,dice?'#9bcab5':'#c5d59a',suit,'#374e39');
- const brim=project(1.4,0,44);ellipse(c,...brim,11.1,2.1,dice?'#476866':'#4a6644');
+ const brim=project(1.4,0,44);ellipse(c,...brim,11.1,2.1,dice?'#4b6444':'#4a6644');
  const ridge=project(-2,-1,49);ellipse(c,ridge[0]-2.5,ridge[1]-1.6,4.5,.8,dice?'#acd6c7':'#bed1a0',-.16);
  const mark=project(6,3,47);ellipse(c,...mark,1.6,1.8,dice?'#f7e4b8':shell);
  const front=project(12,-3,28),rear=project(4,6,27);
@@ -89,9 +95,12 @@ function infantry(c,u,time,evolved,dice){
   polygon(c,[[x-8,y-4],[x,y-8],[x+8,y-4],[x,y]],top);
   for(const [dx,dy] of [[-3.5,-4],[0,-5.7],[0,-2.3],[3.5,-4]])ellipse(c,x+dx,y+dy-.6,1.55,.85,top);
  }else if(dice){
-  const pocket=project(-4,8,22);ball(c,...pocket,4.5,4.2,'#c9b88c','#9d865b','#6e6549');
-  die(c,front[0],front[1]-4,8.5,evolved?6:5,evolved,-.16);
-  if(evolved){const other=project(2,11,24);die(c,...other,6.2,3,true,.19);}
+  const [x,y]=front;
+  c.strokeStyle='#364736';c.lineWidth=1.4;c.beginPath();c.moveTo(pack[0],pack[1]+6);
+  c.bezierCurveTo(pack[0]+1,pack[1]+22,x+3,y+17,x,y);c.stroke();
+  rod(c,[x,y+1],[x-3,y-7],3.8,'#384a36');
+  for(const [hx,hy] of [[x,y+2],[x-3,y-8]])ball(c,hx,hy,3.3,2.4,'#b3ba86','#536848','#354331');
+  ellipse(c,x-3,y-9,1.1,.7,evolved?'#ffe796':'#b7d678');
  }else{
   const recoil=Math.min(1,(u.recoil||0)*3),P=(f,s=3,z=29)=>project(f-recoil*3.2,s,z);
   rod(c,P(-8),P(4),5.7,'#70513a');rod(c,P(0),P(19),4.8,'#344544');rod(c,P(13),P(29),3.9,evolved?'#806339':'#394d50');
@@ -273,7 +282,8 @@ function diceWave(c,e,p){
  if(m)stamp(c,m.flash,3,0,24,width*1.4,0,(1-smooth(.05,.22,p))*.45,'lighter');
  c.restore();
 }
-function event(c,e){
+function event(c,e,fx){
+ if(root.FrontRadioArt?.event(c,e,fx))return true;
  if(e.kind==='rosterDieResult')return true; // Draw result faces together above subsequent impact effects.
  if(!['rosterShotgun','rosterReload','rosterBlast','rosterFragments','rosterDiceWave'].includes(e.kind))return false;
  const k=Math.max(0,Math.min(1,e.t/e.max)),p=1-k;c.save();c.globalAlpha*=k;
@@ -319,6 +329,7 @@ function event(c,e){
 const resultLanes=new WeakMap();
 function results(c,game,visible=()=>true){
  root.FrontBlockFlashView?.enemyStatuses(c,game,visible);
+ root.FrontRadioArt?.rolls(c,game,visible);
  const results=game.effects.filter(e=>e.kind==='rosterDieResult'&&visible(e));
  if(!results.length)return;
  const tr=c.getTransform(),scale=Math.max(.38,Math.hypot(tr.a,tr.b)/(root.devicePixelRatio||1)),occupied=[];

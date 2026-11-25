@@ -19,12 +19,28 @@ test('startup loads four core models and no unselected skin atlases',async()=>{
 });
 test('specialist models load the correct friendly rank while enemy troops keep their own sprites',async()=>{
  const h=models(),m=h.create();await m.ready;
- for(const [type,base,elite] of [['rifle','shotgun','shotgunDragon'],['guntruck','diceTrooper','diceGold'],['drone','droneScout','droneLaser'],['rocket','blockEngineer','blockEngineerElite']]){
+ for(const [type,base,elite] of [['rifle','shotgun','shotgunDragon'],['guntruck','radioOperator','radioOfficer'],['drone','droneScout','droneLaser'],['rocket','blockEngineer','blockEngineerElite']]){
   const ally={team:0,type,hp:10};
   assert.equal(m.visualFor(ally),base);assert.equal(m.visualFor(ally,true),elite);
   assert.equal(m.visualFor({...ally,team:1},true),type);
   await m.prepare({units:[ally],evolved:{[type]:true}});assert.equal(m.ensure( elite,0).ready,true);
  }
+});
+test('radio operators listen on a roll and signal only after a confirmed double',async()=>{
+ const m=models().create();
+ const unit={team:0,type:'guntruck',hp:100,x:0,y:0,face:0};
+ await m.prepare({units:[unit]});
+ const rows=[];
+ const canvas={save(){},restore(){},drawImage(_image,_sx,sy){rows.push(sy/128);}};
+ const draw=time=>{assert.equal(m.draw(canvas,unit,time),true);return rows.at(-1);};
+ assert.equal(draw(0),0);
+ unit.radioRollAt=1;
+ assert.equal(draw(1.25),3);
+ assert.equal(draw(1.75),0);
+ unit.radioRollAt=unit.radioDoubleAt=2;
+ assert.equal(draw(2.25),3);
+ assert.equal(draw(2.75),4);
+ assert.equal(draw(3.1),0);
 });
 test('selected skins and restored commander are prepared once, without other heroes',async()=>{
  const h=models(),m=h.create();await m.ready;
