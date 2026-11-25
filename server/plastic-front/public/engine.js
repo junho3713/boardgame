@@ -5,7 +5,7 @@ const BATTLE_SYSTEMS=typeof module!=='undefined'&&module.exports?require('./batt
 const SWORD={damage:90,rate:.75,range:135,arc:110*Math.PI/180,windup:.14,recovery:.42,targets:3,finisherRange:180,finisherArc:150*Math.PI/180,finisherTargets:6,finisherDamage:2,ultimateRange:170,ultimateInterval:.5,ultimateDamage:2};
 const FLAME={damage:14.4,rate:.12,range:250,arc:50*Math.PI/180,armor:.65,ultimateRange:420,ultimateArc:70*Math.PI/180,ultimateDamage:2};
 const BALANCE_VERSION=71;
-const PIRATE_REINFORCEMENT={from:360,interval:55};
+const PIRATE_REINFORCEMENT={from:360,interval:55,roomFrom:150,roomUntil:720,roomInterval:30,cap:2};
 const UNIT_TYPE_CAP=8;
 const COMMANDER_REVIVAL={delay:5,protection:3};
 const GUARDIANS={range:460,mageHp:560,mageRate:6,mageDamage:18,windup:.45,radius:145,root:2,laserHp:1500,laserDamage:40,laserTick:.2,respawnDelay:60,shieldNotice:.8,shieldRaise:.18,shieldHold:.35,lessonRange:650,lessonBannerTime:5,laserWindup:0,laserRate:0};
@@ -183,7 +183,7 @@ class FrontGame{
   this.summonSlots=this.usesSummoning?.()?[]:['rifle'];
   if(this.usesSummoning?.())this.tech[0].rifle=0;
   this.cardShownCounts={};this.choiceKind='level';this.abilities=Object.fromEntries(Object.keys(ABILITIES).map(k=>[k,0]));this.evolved=Object.fromEntries(ROSTER.map(k=>[k,false]));this.bossState={nextAt:this.waveRules().boss.firstAt,warned:false,spawned:0,killed:0,rewards:0,claimed:0};
-  this.aiHQTarget=null;this.nextPirateCannonAt=PIRATE_REINFORCEMENT.from;this.ultimate={readyAt:0,activeUntil:0,startedAt:0,nextShotAt:0,shots:0,angle:-Math.PI/2};this.moveOrder=null;this.focusTarget=null;this.focusAutomatic=false;this.formationFacing=-Math.PI/2;this.formationEnemy=null;this.lastPressure=0;this.barrages=[];this.crisis={phase:this.mode==='duel'?'disabled':'idle',warnAt:this.mode==='crisis'?0:450,startAt:this.mode==='crisis'?15:480,nextSalvo:0,nextEscort:0,salvos:0,hits:0,dodges:0,canceled:0,battery:[]};
+  this.aiHQTarget=null;this.nextPirateCannonAt=PIRATE_REINFORCEMENT.from;this.lastPirateCannonAt=null;this.ultimate={readyAt:0,activeUntil:0,startedAt:0,nextShotAt:0,shots:0,angle:-Math.PI/2};this.moveOrder=null;this.focusTarget=null;this.focusAutomatic=false;this.formationFacing=-Math.PI/2;this.formationEnemy=null;this.lastPressure=0;this.barrages=[];this.crisis={phase:this.mode==='duel'?'disabled':'idle',warnAt:this.mode==='crisis'?0:450,startAt:this.mode==='crisis'?15:480,nextSalvo:0,nextEscort:0,salvos:0,hits:0,dodges:0,canceled:0,battery:[]};
   this.units=[];this.shots=[];this.evolutionAttacks=[];this.evolutionBlasts=[];this.butterflyGusts=[];this.mortarShells=[];this.luckyMines=[];this.luckyGlues=[];this.luckyGlueHistory=[];this.luckySprays=[];this.luckySalvos=[];this.effects=[];this.serial=0;this.scoutUntil=0;this.report=null;this.enemyNext=15;this.enemyTechNext=40;this.enemyAdvanceAt=65;this.enemyPlan=['tank','sniper','guntruck','rocket','machinegun','mortar'][Math.floor(this.random()*6)];this.rallyUntil=0;this.rallyReady=0;this.camera={x:800,y:2170};this.input={x:0,y:0};
   this.bases=[{x:800,y:2600,hp:900,maxHp:900,team:0,base:true,r:85},{x:800,y:200,hp:900,maxHp:900,team:1,base:true,r:85}];
   this.swarm={nextAt:this.waveRules().swarm.firstAt,spawned:0};this.flyingSwarm=this.flyingStart();
@@ -1708,9 +1708,17 @@ class FrontGame{
   }
  }
  pirateReinforcementReady(){
-  return this.mode==='pve'&&this.time>=Math.max(PIRATE_REINFORCEMENT.from,this.nextPirateCannonAt||0)&&!this.units.some(u=>u.team!==0&&u.type==='pirateCannon'&&u.hp>0);
+  const rules=PIRATE_REINFORCEMENT,room=this.isRoomCampaign(),from=room?rules.roomFrom:rules.from;
+  const scheduled=this.nextPirateCannonAt||0;
+  const next=room&&scheduled===rules.from&&this.lastPirateCannonAt==null?from:scheduled;
+  return this.mode==='pve'&&this.time>=Math.max(from,next)&&
+   this.units.filter(u=>u.team!==0&&u.type==='pirateCannon'&&u.hp>0).length<rules.cap;
  }
- markPirateReinforcement(){this.nextPirateCannonAt=this.time+PIRATE_REINFORCEMENT.interval;}
+ markPirateReinforcement(){
+  const rules=PIRATE_REINFORCEMENT;
+  this.lastPirateCannonAt=this.time;
+  this.nextPirateCannonAt=this.time+(this.isRoomCampaign()&&this.time<rules.roomUntil?rules.roomInterval:rules.interval);
+ }
  updateSwarm(){
   if(this.isRoomCampaign()){this.updateRoomWaves();return;}
   this.updateFlyingSwarm();

@@ -331,7 +331,7 @@ function renderFusion(){
   '통신병은 성급마다 주사위 한 쌍 · 2성 화력 ×3.4, 폭발 반경 ×1.15',
   '2성이 전사하면 같은 병과 1성 1기가 최대 체력으로 복귀합니다.'
  ];
- if(destiny)rules.push('14분 정식 보스를 처치한 뒤 운명의 별을 주우세요. 같은 병과 2성 3기가 모인 병과마다 3성 1기로 합성됩니다.','일반 3성 공격력과 치료량 ×7.2 · 체력 ×7.8 · 병과별 최대 1기','3성 통신병 화력 ×10.5 · 폭발 반경 ×1.30');
+ if(destiny)rules.push('12분 이후 첫 정식 보스를 처치한 뒤 운명의 별을 주우세요. 같은 병과 2성 3기가 모인 병과마다 3성 1기로 합성됩니다.','일반 3성 공격력과 치료량 ×7.2 · 체력 ×7.8 · 병과별 최대 1기','3성 통신병 화력 ×10.5 · 폭발 반경 ×1.30');
  $('fusionRules').innerHTML=rules.join('<br>');
  $('fusionGrid').innerHTML=roster.map(type=>{
   const status=game.threeStarCount(type)?'3성 완성':game.twoStarCount(type)>=3?(destiny?'운명의 별로 3성 합성 가능':'2성 최대 편성'):'같은 병과 1성 3기 → 2성';
@@ -371,8 +371,8 @@ function updateUI(){syncBattleMusic();if(game.phase!=='ready')unitModels.prefetc
  $('crisisTitle').textContent=incoming?`포병 출현까지 ${Math.max(0,Math.ceil(c.startAt-game.time))}초`:`포병 ${game.artilleryUnits().length}기 가동 · 포격 위치 고정`;
  const next=game.barrages.length?Math.max(0,Math.min(...game.barrages.map(b=>b.landAt))-game.time):0;
  $('crisisText').textContent=incoming?'부대를 모으고 북쪽 돌파를 준비하세요.':next?`착탄까지 ${next.toFixed(1)}초 · 부대 전체를 붉은 원 밖으로 이동!`:'포격 사이에 접근 → 포병 집중 공격 → 파괴하면 포격 중단';
- $('orderStatus').textContent=manualAimCursor?'마우스 조준 중':manualAim?'방향키 조준 중':game.moveOrder?'지정 위치로 이동 중':'자동 조준';
- for(const id of ['followOrderBtn'])$(id).disabled=game.phase!=='playing';
+ $('followOrderBtn').disabled=game.phase!=='playing'&&($('battleMenuOverlay').hidden||returnPhase!=='playing');
+ $('fieldSummonKeys').hidden=!game.usesSummoning();
  $('matchStatus').textContent=desk||duel?'남은 시간':'경과 시간';
  const lives=$('hudLives');lives.hidden=duel||practice;lives.textContent=`기회 ${Math.max(0,3-game.retreated)}회`;
  const lessons=[['mage',game.mageQuestView()],['laser',game.laserQuestView()]];
@@ -396,7 +396,6 @@ function updateUI(){syncBattleMusic();if(game.phase!=='ready')unitModels.prefetc
  if(selectedMode==='idle'){
   $('modeName').textContent='AI 방치 돌파';$('modeTime').textContent='동일 작전 자동 지휘';$('headerMode').textContent='같은 돌파 작전 · AI 이동/성장/지원/건설';
   canvas.dataset.auto=JSON.stringify({phase:game.phase,time:game.time,stage:game.mission.stage,wave:game.mission.wave,units:game.units.length,kills:game.kills,x:game.commander(0).x,y:game.commander(0).y,action:autoPilot.action,owner:autoSession.owner,cash:game.cash[0],level:game.level,supplies:game.pickups.filter(p=>!p.active).length,supply:autoPilot.supply?.index??null,hq:game.bases[0].hp,defending:!!autoPilot.baseDefense});
-  $('orderStatus').textContent=autoSession.busy?'부재중 전투 계산 중':autoSession.owner||!autoPilot?.active?(autoPilot?.action||'AI 출격 대기'):'다른 창의 방치 작전 관전 중';$('autoState').textContent=autoSession.error?'저장 실패 · 이 창에서만 진행':autoPilot?.baseDefense?`본진 방어 중 · 본진 ${Math.ceil(game.bases[0].hp)} / ${game.bases[0].maxHp}`:autoPilot?.active?'자동 저장 · 창을 닫아도 복귀 시 진행 정산 (최대24시간)':'빌드만 설정하면 AI가 기존 명령과 선택을 대신합니다.';
   for(const id of ['followOrderBtn','ultimateBtn'])$(id).disabled=true;$('emergencySupportBtn').hidden=true;
  }
 

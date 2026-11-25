@@ -16,7 +16,6 @@
  const footer=doc.querySelector('.battle-footer');if(footer)menu.append(footer);
  const map=doc.querySelector('.map-label');if(map)menu.prepend(map);
  const hud=doc.querySelector('.battle-hud');if(hud)frame.prepend(hud);
- const toolbar=doc.querySelector('.tactical-toolbar');if(toolbar)frame.append(toolbar);
  const tools=doc.createElement('nav');tools.className='hud-quick-actions';tools.setAttribute('aria-label','전장 정보와 메뉴');
  tools.innerHTML='<button id="battleSquadBtn" type="button" aria-haspopup="dialog" aria-controls="battleSquadOverlay">분대<span class="hud-squad-detail"> · 강화 <span id="hudUnitCount"></span></span></button><button id="battleMenuBtn" type="button" aria-haspopup="dialog" aria-controls="battleMenuOverlay">메뉴</button>';
  for(const id of ['displayBtn','pauseBtn'])if($(id))tools.append($(id));frame.append(tools);

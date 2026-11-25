@@ -19,32 +19,43 @@ function addTwos(g,type,count){
 const destiny=g=>g.pickups.find(p=>p.destinyStar);
 function defeat(g,boss){g.damage(boss,1e9,g.commander(0));assert.equal(boss.hp,0);}
 
-for(const map of ['livingroom-star','livingroom-pixel'])test(map+' drops a reachable star from the 14-minute hornet, never the earlier mini',()=>{
- const g=game(map);g.time=780;g.roomCampaign.bossCursor=5;
+for(const map of ['livingroom-star','livingroom-pixel'])test(map+' drops a reachable star from the 12-minute rider, never the earlier mini',()=>{
+ const g=game(map);g.time=660;g.roomCampaign.bossCursor=4;
  g.roomEntry=g.northernSpawn=()=>({x:1500,y:6000});
  g.updateRoomBosses();
- const mini=g.units.find(u=>u.type==='hornet'&&u.miniBoss);defeat(g,mini);
+ const mini=g.units.find(u=>u.type==='bikeRaider'&&u.miniBoss);defeat(g,mini);
  assert.equal(destiny(g),undefined);
- g.time=900;g.updateRoomBosses();
- const boss=g.units.find(u=>u.type==='hornet'&&u.boss&&!u.miniBoss);
- assert.equal(boss.bossScheduleIndex,5);
+ g.time=750;g.updateRoomBosses();
+ const boss=g.units.find(u=>u.type==='bikeRaider'&&u.boss&&!u.miniBoss);
+ assert.equal(boss.bossScheduleIndex,4);
  defeat(g,boss);const p=destiny(g);
  assert.ok(p.active);assert.ok(g.freePosition(p.x,p.y,24));assert.equal(g.bossState.rewards,1);
- g.dropDestinyStar(boss);assert.equal(g.pickups.filter(p=>p.destinyStar).length,1);
+ g.time=900;g.updateRoomBosses();defeat(g,g.units.find(u=>u.type==='hornet'&&u.boss&&!u.miniBoss));
+ assert.equal(g.pickups.filter(p=>p.destinyStar).length,1);
 });
 
-test('the bedroom defense grants the sixth scheduled boss drop even after delay',()=>{
+test('the bedroom defense grants its first star at the 12-minute boss slot even after delay',()=>{
  const g=game('bedroom-star');
-  for(let ordinal=1;ordinal<=6;ordinal++){
+  for(let ordinal=1;ordinal<=5;ordinal++){
    g.time=g.bossState.nextAt+10;g.updateBosses();
    const boss=g.units.find(u=>u.boss&&u.hp>0);
    assert.equal(boss.bossNumber,ordinal);defeat(g,boss);
-   assert.equal(!!destiny(g),ordinal===6);
+   assert.equal(!!destiny(g),ordinal===5);
   }
- assert.ok(g.time>840);
+ assert.ok(g.time>720);
  const regular=game('desktop');regular.time=840;
  regular.bossState.spawned=6;regular.updateBosses();
  defeat(regular,regular.units.find(u=>u.boss&&u.hp>0));assert.equal(destiny(regular),undefined);
+});
+
+test('a resumed room past the rider can earn its first star from the hornet',()=>{
+ const g=game();
+ g.time=840;g.roomCampaign.bossCursor=5;
+ const restored=unpack(game(),pack(g));
+ restored.roomEntry=restored.northernSpawn=()=>({x:1500,y:6000});
+ restored.updateRoomBosses();
+ const boss=restored.units.find(u=>u.type==='hornet'&&u.boss&&!u.miniBoss);
+ defeat(restored,boss);assert.equal(destiny(restored).active,true);
 });
 
 test('only collection promotes every eligible class, retains health and stats, and survives checkpoints',()=>{

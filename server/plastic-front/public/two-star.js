@@ -53,7 +53,7 @@ p.dropDestinyStar=function(boss){
   const rules=this.waveRules().boss;
   scheduledAt=rules.firstAt+(boss.bossNumber-1)*rules.interval;
  }
- if(scheduledAt!==14*60)return;
+ if(!Number.isFinite(scheduledAt)||scheduledAt<12*60)return;
  const pickup={destinyStar:true,active:true,x:boss.x,y:boss.y};
  this.resolvePosition(pickup,24);this.pickups.push(pickup);
  this.notify('toast','운명의 별이 떨어졌습니다 · 같은 병과 2성 3기를 모아 대장으로 획득');

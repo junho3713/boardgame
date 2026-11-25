@@ -16,7 +16,7 @@ const SOUNDS={
  guntruck:{file:'truck',gain:.36,gap:.045,priority:1},
  radioRoll:{file:'radio-roll',ext:'wav',gain:.37,gap:.12,priority:1},
  radioWarning:{file:'radio-warning',ext:'wav',gain:.55,gap:.4,priority:4},
- radioNuke:{file:'radio-nuke-impact',ext:'wav',gain:.98,gap:.09,priority:7},
+ radioNuke:{file:'radio-nuke-boom',ext:'wav',gain:.98,gap:.09,priority:7},
  sniper:{file:'sniper',gain:.59,gap:.09,priority:2,revision:3},
  sniperSuppressed:{file:'sniper-suppressed',gain:.59,gap:.09,priority:2},
  crimsonAce:{file:'tank',gain:.7,gap:.1,priority:3},

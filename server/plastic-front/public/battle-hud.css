@@ -57,15 +57,44 @@ html.game-hud .battle-frame>.minimap{top:120px;right:max(12px,env(safe-area-inse
 .hud-quick-actions button{min-height:44px;padding:8px 12px;border:1px solid #a5b49b99;border-radius:6px;background:#20382ef0;color:#f0f3df;font-size:12px;font-weight:700;touch-action:manipulation}
 .hud-quick-actions .icon-btn{width:44px;padding:0;border-radius:6px;font-size:18px}
 #hudUnitCount{color:#ffe2a1;font-variant-numeric:tabular-nums}
-html.game-hud .battle-frame>.tactical-toolbar{position:absolute;z-index:9;left:0;right:0;bottom:0;top:auto;transform:none;width:100%;max-width:none;min-height:58px;margin:0;padding:6px max(12px,env(safe-area-inset-right)) max(6px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));display:flex;flex-wrap:nowrap;gap:8px;background:#20382ef5;border-top:1px solid #8da28a55}
-html.game-hud .tactical-toolbar .order-buttons{display:flex;gap:6px}
-html.game-hud .tactical-toolbar button{min-height:44px;padding:8px 14px;font-size:12px;color:#edf2db;background:#354f40;border:1px solid #92a78a88;border-radius:6px;white-space:nowrap}
-html.game-hud .tactical-toolbar .order-buttons button.active{color:#fff3c7;background:#536e43;border-color:#c1d09a}
-html.game-hud .tactical-toolbar>#mobileIntel{display:block;margin-left:auto;flex-shrink:0}
-html.game-hud .tactical-toolbar>#orderStatus{display:block;margin-left:auto;color:#e0e8d3;font-size:11px}
-html.game-hud .battle-frame>.joystick{bottom:84px}
-html.game-hud .battle-frame>.rally-btn{bottom:84px}
-html.game-hud .battle-frame>.emergency-support{bottom:174px}
+
+.field-key-guide {
+ position:absolute;
+ z-index:8;
+ left:max(14px,env(safe-area-inset-left));
+ bottom:max(14px,env(safe-area-inset-bottom));
+ display:grid;
+ gap:5px;
+ color:#fff;
+ font-size:11px;
+ line-height:1.15;
+ text-shadow:0 1px 3px #102117,0 0 5px #102117;
+ pointer-events:none;
+}
+.field-key-guide>span { display:flex; align-items:center; gap:4px; }
+.field-key-guide b { margin-left:4px; font-weight:650; }
+.field-key-guide kbd {
+ display:inline-grid;
+ min-width:20px;
+ min-height:20px;
+ place-items:center;
+ padding:0 4px;
+ color:inherit;
+ font:700 10px/1 system-ui,sans-serif;
+ border:1px solid #fff;
+ border-radius:4px;
+ background:transparent;
+ filter:drop-shadow(0 1px 1px #102117aa);
+}
+.auto-mode .field-key-guide { display:none; }
+@media (pointer:coarse), (max-width:540px) {
+ .field-key-guide { display:none; }
+}
+
+html.game-hud .battle-frame{--combat-bottom:max(12px,env(safe-area-inset-bottom))}
+html.game-hud .battle-frame>.joystick,
+html.game-hud .battle-frame>.rally-btn{bottom:var(--combat-bottom)}
+html.game-hud .battle-frame>.emergency-support{bottom:calc(var(--combat-bottom) + 90px)}
 html.game-hud .battle-frame>.mission-label{bottom:78px}
 html.game-hud .battle-frame>.field-supply-bar{position:absolute;right:120px;bottom:84px;max-width:min(430px,55%)}
 html.game-hud .battle-frame>.wave-test-strip{position:absolute;top:116px;left:50%;transform:translateX(-50%);z-index:10;max-width:70%;margin:0}
@@ -111,11 +140,6 @@ html.game-hud .battle-frame>.toast{top:auto;right:auto;bottom:calc(74px + env(sa
  .hud-rank{padding:1px 3px;min-width:29px}
  .hud-rank-icon,.hud-rank .unit-art,.hud-rank .upgrade-art{width:15px;height:15px}
  html.game-hud .battle-frame>.minimap{top:112px;right:max(6px,env(safe-area-inset-right))}
- html.game-hud .tactical-toolbar>#orderStatus{display:none}
- html.game-hud .tactical-toolbar .order-buttons{gap:4px;flex:1}
- html.game-hud .tactical-toolbar button{min-height:44px;padding:8px 6px;font-size:11px}
- html.game-hud .tactical-toolbar .order-buttons button{flex:1}
- html.game-hud .battle-frame>.tactical-toolbar{gap:4px;padding-left:6px;padding-right:6px}
  html.game-hud .battle-frame>.joystick{left:16px;width:84px;height:84px}
  html.game-hud .battle-frame>.rally-btn{right:16px;width:72px;height:72px}
  html.game-hud .battle-frame>.field-supply-bar{right:100px;bottom:82px;max-width:calc(100% - 204px);padding:6px;gap:4px}
@@ -131,7 +155,7 @@ html.game-hud .battle-frame>.toast{top:auto;right:auto;bottom:calc(74px + env(sa
  html.game-hud .battle-frame>.minimap{top:112px}
  html.game-hud .battle-frame>.hud-left-rail{gap:5px;width:min(235px,42vw)}
  html.game-hud .objective-details>small{display:none}
- html.game-hud .battle-frame>.joystick{width:70px;height:70px;bottom:74px}
- html.game-hud .battle-frame>.rally-btn{width:64px;height:64px;bottom:74px}
+ html.game-hud .battle-frame>.joystick{width:70px;height:70px}
+ html.game-hud .battle-frame>.rally-btn{width:64px;height:64px}
  html.game-hud .battle-frame>.mission-label{display:none}
 }

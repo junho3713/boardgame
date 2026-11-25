@@ -18,9 +18,10 @@ const config={version:116,duration:1200,enemyLuckyInterval:5,recoverySeconds:16,
  opening:[{type:'ant',x:760,y:2240},{type:'ant',x:860,y:2240}],
  roadCaptains:[['road-soldier','bayonet','길목 장난감 병정',5600,1],['road-blade','bladeGuard','블랙 실드 검병 대장',3600,2],['road-bike','bikeRaider','바이크 돌격대장',2160,2]],
  mageEscort:{from:360,mortars:4,spacing:60,depth:80,interval:60},
- insects:{from:180,intervals:{acidBeetle:14},
+ insects:{from:180,bombFrom:120,intervals:{acidBeetle:14},
   opening:{at:12,until:30,ants:2,hpScale:.26,allyDamageScale:.2},
-  midgame:{from:300,until:600,ants:6,rotation:['mixed','ants','mixed','troops']}
+  earlyRotation:['mixed','troops','mixed'],
+  midgame:{from:300,until:660,ants:6,packets:3,rotation:['mixed','ants','mixed','troops','mixed']}
  },
  introductions:{bayonet:180,honeybee:240,machinegun:360},
  openingCaps:[{until:360,bayonet:3,honeybee:2},{until:480,honeybee:4}],
@@ -32,8 +33,8 @@ const config={version:116,duration:1200,enemyLuckyInterval:5,recoverySeconds:16,
  phases:[
  {at:0,name:'첫 지원 대기',interval:10,batch:1,cap:4,mix:{ant:1}},
  {at:60,name:'분대 성장',interval:5.5,batch:2,cap:16,mix:{ant:8,rifle:2,bladeGuard:1}},
- {at:120,name:'소총병과 검병 합류',interval:5,batch:3,cap:24,mix:{ant:7,rifle:3,bladeGuard:2}},
- {at:180,name:'폭탄개미·투석 딱정벌레 합류',interval:4,batch:4,cap:34,mix:{ant:8,bombBug:.45,acidBeetle:.55,bayonet:1,bladeGuard:2,rifle:3}},
+ {at:120,name:'폭탄개미와 소총병 합류',interval:5,batch:3,cap:24,mix:{ant:7,rifle:3,bladeGuard:2}},
+ {at:180,name:'투석 딱정벌레 합류',interval:4,batch:4,cap:34,mix:{ant:8,bombBug:.45,acidBeetle:.55,bayonet:1,bladeGuard:2,rifle:3}},
  {at:240,name:'장갑·저격 혼합',interval:3.84,batch:5,cap:38,mix:{ant:4,bombBug:.45,acidBeetle:.55,bayonet:1.5,stagBeetle:2,sniper:1.5,honeybee:1,bladeGuard:2,rifle:2,butterfly:.6}},
  {at:360,name:'기동·원거리 위기',interval:4,batch:5,cap:41,mix:{blizzardMage:.7,ant:4,bombBug:.45,acidBeetle:.55,bayonet:2,bladeGuard:3,hornet:1,bikeRaider:1,machinegun:2,sniper:1,honeybee:2}},
  {at:480,name:'돌진·치유 약화',interval:4.16,batch:5,cap:41,mix:{blizzardMage:.7,ant:8,bombBug:.45,acidBeetle:.55,bayonet:2,rhinoBeetle:1,butterfly:.8,bikeRaider:1,bladeGuard:1,honeybee:2}},
@@ -106,16 +107,21 @@ class AntOnlyEncounter extends TroopEncounter{
 }
 
 class BombAntEncounter extends TroopEncounter{
- preferPirate(){return false;}
+ packetLimit(game){return inBombMidgame(game.time)?config.insects.midgame.packets:2;}
  eligible(game,type,batch){
-  if(type==='bombBug')return batch.packets<2&&game.roomCanSpawn(type);
+  if(type==='bombBug')return batch.packets<this.packetLimit(game)&&game.roomCanSpawn(type);
   return super.eligible(game,type,batch);
  }
  spawnPacket(game,lane,budget,point=null){return game.spawnRoomAntGroup(lane,budget,point).length;}
  spawnSlot(batch){
-  const remaining=batch.budget-batch.slot;
-  if(remaining>=4&&this.eligible(batch.game,'bombBug',batch)){
-   const count=this.spawnPacket(batch.game,null,remaining);
+  const {game}=batch,remaining=batch.budget-batch.slot,minimum=bombPacketMinimum(game.time);
+  if(remaining>minimum&&this.preferPirate(batch,this.forcedType(batch)))return super.spawnSlot(batch);
+  if(remaining>=minimum&&this.eligible(game,'bombBug',batch)){
+   const packets=Math.min(this.packetLimit(game)-batch.packets,Math.floor(remaining/minimum),
+    Math.floor((game.roomWaveCap()-game.roomEnemyCount())/minimum));
+   // Share the current wave budget across several led packs instead of crowding the first entry.
+   const budget=inBombMidgame(game.time)&&packets>1?Math.floor(remaining/packets):remaining;
+   const count=this.spawnPacket(game,null,budget);
    if(count){batch.packets++;return count;}
   }
   return super.spawnSlot(batch);
@@ -141,6 +147,8 @@ const encounters=Object.freeze({
  troops:Object.freeze(new TroopEncounter()),ants:Object.freeze(new AntOnlyEncounter()),
  mixed:Object.freeze(new BombAntEncounter()),opening:Object.freeze(new OpeningBombAntEncounter())
 });
+function inBombMidgame(time){const {from,until}=config.insects.midgame;return time>=from&&time<until;}
+function bombPacketMinimum(time){return time<config.insects.from?3:4;}
 
 const methods={
  isRoomCampaign(){return this.mode==='pve'&&(this.world?.id==='livingroom'||this.mapId==='livingroom');},
@@ -281,7 +289,13 @@ const methods={
  roomEnemyCount(type=null,opening=false){return this.units.filter(u=>u.hp>0&&u.team!==0&&!u.boss&&!u.fixedGuard&&!u.roomGarrison&&u.type!=='artillery'&&(!opening||!u.roadCaptain)&&(!type||u.type===type)).length;},
  roomWaveCap(){const boss=this.units.some(u=>u.boss&&!u.miniBoss&&!u.roadCaptain&&u.hp>0),base=this.time>=config.bossRush.from?config.bossRush.troops[boss?'boss':'between'].cap:this.roomPhase().cap;return base+(boss?0:this.evolutionPace().capExtra);},
  roomEnemyTypeCap(type){const row=config.openingCaps.find(r=>this.time<r.until);return Math.min(config.caps[type]??Infinity,row?.[type]??Infinity);},
- roomCanSpawn(type){if(type==='pirateCannon'&&!this.pirateReinforcementReady())return false;if(this.time<(config.introductions[type]||0))return false;if(type==='bombBug'&&this.time<config.insects.from)return false;if(type==='sniper'&&this.enemySniperCount()>=2)return false;if(config.insects.intervals[type]&&(this.time<config.insects.from||this.time<(this.roomCampaign?.insectNext?.[type]||0)))return false;return this.roomEnemyCount()<this.roomWaveCap()&&this.roomEnemyCount(type)<this.roomEnemyTypeCap(type);},
+ roomEnemyReady(type){
+  if(type==='pirateCannon')return this.pirateReinforcementReady();
+  if(type==='bombBug')return this.time>=config.insects.bombFrom;
+  if(this.time<(config.introductions[type]||0)||type==='sniper'&&this.enemySniperCount()>=2)return false;
+  return !config.insects.intervals[type]||this.time>=Math.max(config.insects.from,this.roomCampaign?.insectNext?.[type]||0);
+ },
+ roomCanSpawn(type){return this.roomEnemyReady(type)&&this.roomEnemyCount()<this.roomWaveCap()&&this.roomEnemyCount(type)<this.roomEnemyTypeCap(type);},
  roomWavePlan(){
   const p=this.roomPhase(),beat=this.roomBeat(),r=config.surges,surge=r.enabled&&this.time>=r.from&&beat.density>1;
   const portal=this.roomPortalAlive(),late=portal&&this.time>=900;const plan={surge,count:beat.density<.6?1:surge?Math.min(this.time>=r.growthFrom&&this.time<r.growthUntil?r.growthMaxBatch:r.maxBatch,p.batch+r.extra):Math.min(6,p.batch+(beat.density>1&&this.time>=240?1:0)),interval:p.interval/beat.density*(surge?r.intervalScale:1),forced:surge?(r.rosters.filter(row=>row.at<=this.time).at(-1)?.types||[]):[],window:p.at+':'+Math.floor((this.time-p.at)/config.rhythm.cycle)};if(!portal){const late=this.time>=config.lateWaves.from;plan.count=Math.max(1,Math.ceil(plan.count*(late?config.lateWaves.closedCount:.65)));plan.interval*=late?config.lateWaves.closedInterval:1.4;}else if(late&&beat.density>=.6){plan.count=Math.min(10,plan.count+config.lateWaves.openExtra);plan.interval*=config.lateWaves.openInterval;plan.surge=true;plan.forced=['machinegun','sniper','butterfly','bikeRaider'];}if(this.time>=config.bossRush.from&&this.time>=(this.roomCampaign?.recoveryUntil||0)){const row=config.bossRush.troops[this.units.some(u=>u.boss&&!u.miniBoss&&!u.roadCaptain&&u.hp>0)?'boss':'between'];plan.count=portal?row.openCount:row.closedCount;plan.interval=portal?row.openInterval:row.closedInterval;plan.surge=false;plan.forced=[];}if(!this.units.some(u=>u.boss&&!u.miniBoss&&!u.roadCaptain&&u.hp>0)){if(this.time>=config.encirclement.from){const r=config.encirclement,q=clamp((this.time-r.pressureFrom)/Math.max(1,r.pressureUntil-r.pressureFrom),0,1);plan.interval*=r.intervalScale+(r.lateIntervalScale-r.intervalScale)*q;}if(beat.density>=1)plan.interval/=this.evolutionPace().spawnScale;}if(this.time>=180&&beat.density>=.6&&this.time>=(this.roomCampaign?.recoveryUntil||0)){const extra=this.time<300?6:7;plan.count+=portal?extra:Math.ceil(extra*.65);}return plan;
@@ -305,8 +319,8 @@ const methods={
   }return null;
  },
  spawnRoomAntGroup(lane=null,budget=5,openingPoint=null){
-  const opening=!!openingPoint,mid=config.insects.midgame,strong=this.time>=mid.from&&this.time<mid.until;
-  const maxAnts=opening?config.insects.opening.ants:strong?mid.ants:this.time>=300?4:3,minimum=opening?maxAnts:3;
+  const opening=!!openingPoint,mid=config.insects.midgame,strong=inBombMidgame(this.time);
+  const maxAnts=opening?config.insects.opening.ants:strong?mid.ants:this.time>=300?4:3,minimum=opening?maxAnts:bombPacketMinimum(this.time)-1;
   const count=Math.min(maxAnts,budget-1,this.roomWaveCap()-this.roomEnemyCount(null,opening)-1);
   if(count<minimum||!opening&&!this.roomCanSpawn('bombBug'))return[];
   // Reserve space for a tight packet so a bomb can clear its own escorts.
@@ -356,8 +370,8 @@ const methods={
   if(this.time<s.nextSpawnAt)return;s.nextSpawnAt=this.time+plan.interval;
   const debt=s.waveSpawnDebt||0,count=Math.max(0,plan.count-debt);s.waveSpawnDebt=Math.max(0,debt-plan.count);
   const isOpening=openingPending&&this.time>=opening.at&&count>0;
-  const mid=config.insects.midgame,rotation=this.time>=mid.from&&this.time<mid.until?mid.rotation:ordinaryRotation;
-  const varied=!isOpening&&this.time>=config.insects.from&&count>=4&&this.roomBeat().density>=.6&&this.time>=(s.recoveryUntil||0);
+  const insects=config.insects,rotation=this.time<insects.midgame.from?insects.earlyRotation:inBombMidgame(this.time)?insects.midgame.rotation:ordinaryRotation;
+  const varied=!isOpening&&this.time>=insects.bombFrom&&count>=bombPacketMinimum(this.time)&&this.roomBeat().density>=.6&&this.time>=(s.recoveryUntil||0);
   const encounter=isOpening?encounters.opening:varied?encounters[rotation[(s.antWaveCursor||0)%rotation.length]]:encounters.troops;
   const result=encounter.deploy(this,p,plan,count);
   if(result.retry)s.nextSpawnAt=isOpening?Math.min(s.nextSpawnAt,this.time+2):this.time+2;

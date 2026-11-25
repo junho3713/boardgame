@@ -2,7 +2,7 @@
 (function(root){'use strict';
 function install({FrontGame}){
  const p=FrontGame.prototype,reset=p.reset,stationary=p.isStationary,damage=p.damage,mortars=p.updateMortars,hazards=p.bossHazards;
- const windup=3,flight=.8,radius=150;
+ const windup=3,flight=.32,radius=150;
  const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
  function targets(g,u){
   const bodies=[...g.alive(0),...g.buildings,g.bases[0]];

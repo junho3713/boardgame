@@ -12,14 +12,14 @@ function field(){
 }
 function tick(g,seconds){for(let i=0;i<Math.round(seconds/.025);i++)g.update(.025);}
 const near=(a,b)=>assert.ok(Math.abs(a-b)<1e-7,`${a} versus ${b}`);
-test('live cannon locks its aim, stays still throughout a three-second warning, then launches a dodgeable .8-second arc',()=>{
+test('live cannon locks its aim for three seconds, then the shell reaches the fixed mark in .32 seconds',()=>{
  const {g,c,u}=field(),hp=c.hp;g.update(.025);const f=u.pirateFuse;
  assert.ok(f);near(f.fireAt-f.startedAt,3);near(f.x,c.x);near(f.y,c.y);assert.equal(f.radius,150);
- assert.ok(g.isStationary(u));assert.ok(g.bossHazards().some(h=>h.x===f.x&&h.landAt===f.fireAt+.8));
+ assert.ok(g.isStationary(u));assert.ok(g.bossHazards().some(h=>h.x===f.x&&h.landAt===f.fireAt+.32));
  const origX=u.x,origY=u.y;c.y+=225;
  tick(g,2.975);assert.equal(g.pirateShells.length,0);near(u.x,origX);near(u.y,origY);
- g.update(.025);assert.equal(u.pirateFuse,null);const shell=g.pirateShells[0];assert.ok(shell);near(shell.landAt-shell.startedAt,.8);near(shell.x,f.x);near(shell.y,f.y);
- tick(g,.775);assert.equal(g.pirateShells.length,1);assert.equal(c.hp,hp);
+ g.update(.025);assert.equal(u.pirateFuse,null);const shell=g.pirateShells[0];assert.ok(shell);near(shell.landAt-shell.startedAt,.32);near(shell.x,f.x);near(shell.y,f.y);
+ tick(g,.3);assert.equal(g.pirateShells.length,1);assert.equal(c.hp,hp);
  g.update(.025);assert.equal(g.pirateShells.length,0);assert.equal(c.hp,hp);assert.equal(g.effects.filter(e=>e.kind==='pirateImpact').length,1);
 });
 test('destroying the cannon or blinding the fuse cancels the warning and cannot leave a delayed launch',()=>{

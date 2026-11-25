@@ -64,8 +64,9 @@ test('both original toy atlases render finite frames in all sixteen directions f
 test('the actual fixed-step loop arms and explodes a nearby bomb',()=>{
  const g=scene(),u=bug(g),c=g.commander(0);c.x=u.x+50;g.levelCheck=()=>{};g.gainXP=()=>{};g.navigate=()=>{};for(let i=0;i<21;i++)g.update(.05);a.equal(u.bombDetonated,true);
 });
-test('room waves introduce both bugs after three minutes with bounded simultaneous counts',()=>{
- const g=scene();g.time=179.99;a.equal(g.roomCanSpawn('bombBug'),false);a.equal(g.roomCanSpawn('acidBeetle'),false);g.time=180;
+test('bomb ants precede acid beetles, which retain their three-minute threshold and cap',()=>{
+ const g=scene();g.time=119.99;a.equal(g.roomCanSpawn('bombBug'),false);g.time=179.99;
+ a.equal(g.roomCanSpawn('bombBug'),true);a.equal(g.roomCanSpawn('acidBeetle'),false);g.time=180;
  a.ok(g.roomPhase().mix.bombBug>0&&g.roomPhase().mix.acidBeetle>0);for(let i=0;i<5;i++)a.ok(g.spawnRoomEnemy('bombBug'));a.ok(g.spawnRoomEnemy('acidBeetle'));a.equal(g.spawnRoomEnemy('acidBeetle'),null);g.time+=14;a.ok(g.spawnRoomEnemy('acidBeetle'));g.time+=14;a.equal(g.spawnRoomEnemy('acidBeetle'),null);
 });
 test('wave testing can rewind the new spawn intervals without blocking early encounters',()=>{
