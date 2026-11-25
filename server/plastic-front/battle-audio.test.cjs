@@ -112,3 +112,40 @@ test('allied tank shell impacts use the selected blast while firing and enemy im
   assert.equal(audio.explosion({...impact, team: 1}, camera)[0], 'impact');
   assert.equal(audio.explosion({...impact, kind: 'rocket'}, camera)[0], 'impact');
 });
+
+test('tactical nuke impacts stay audible at long range and through the reward they trigger', () => {
+  const audio = new FrontAudio();
+  const sample = {duration: 1.58};
+  audio.buffers.set('radioNuke', sample);
+  audio.buffers.set('rifle', {duration: .2});
+  const port = {connect() {}, disconnect() {}};
+  audio.context = {
+    state: 'running',
+    currentTime: 4,
+    createBufferSource() {
+      return {...port, playbackRate: {}, start(at) { this.startedAt = at; }, stop() { this.stopped = true; }};
+    },
+    createGain: () => ({...port, gain: {}}),
+    createStereoPanner: () => ({...port, pan: {}}),
+  };
+  audio.sync('playing');
+  audio.fire({type: 'rifle', team: 1, x: 0, y: 0});
+  const [rifle] = audio.voices;
+  const farImpact = {strike: 'nuke', team: 0, x: 2500, y: 0};
+  assert.equal(audio.radioImpact(farImpact), true);
+  const nuke = [...audio.voices].find(voice => voice.channel === 'radioNuke');
+  assert.equal(nuke.source.buffer, sample);
+  assert.equal(nuke.source.playbackRate.value, 1);
+  assert.ok(nuke.gain.gain.value > .5);
+  assert.ok(nuke.pan.pan.value < .4);
+  audio.sync('choice');
+  assert.equal(rifle.source.stopped, true);
+  assert.ok(audio.voices.has(nuke));
+  assert.equal(nuke.source.stopped, undefined);
+  audio.context.currentTime += .2;
+  assert.equal(audio.radioImpact({...farImpact, screenFlash: false}), true);
+  assert.equal(audio.voices.size, 2);
+  audio.sync('paused');
+  assert.equal(nuke.source.stopped, true);
+  assert.equal(audio.voices.size, 0);
+});

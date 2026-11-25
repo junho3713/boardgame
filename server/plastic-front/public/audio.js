@@ -16,6 +16,7 @@ const SOUNDS={
  guntruck:{file:'truck',gain:.36,gap:.045,priority:1},
  radioRoll:{file:'radio-roll',ext:'wav',gain:.37,gap:.12,priority:1},
  radioWarning:{file:'radio-warning',ext:'wav',gain:.55,gap:.4,priority:4},
+ radioNuke:{file:'radio-nuke-impact',ext:'wav',gain:.98,gap:.09,priority:7},
  sniper:{file:'sniper',gain:.59,gap:.09,priority:2,revision:3},
  sniperSuppressed:{file:'sniper-suppressed',gain:.59,gap:.09,priority:2},
  crimsonAce:{file:'tank',gain:.7,gap:.1,priority:3},
@@ -26,6 +27,7 @@ const SOUNDS={
  impact:{file:'impact',gain:.58,gap:.07,priority:3},
  artillery:{file:'artillery',gain:.78,gap:.12,priority:4}
 };
+const outcomePhase=phase=>phase==='choice'||phase==='resupply'||phase==='ended';
 class FrontAudio{
  constructor({contextFactory,fetcher,onStatus=()=>{}}={}){
   this.contextFactory=contextFactory||(()=>{const AC=root.AudioContext||root.webkitAudioContext;return AC?new AC():null;});
@@ -55,8 +57,16 @@ class FrontAudio{
  setVolume(value){const n=Number(value);this.volume=Number.isFinite(n)?Math.max(0,Math.min(1,n)):.65;this.applyVolume();}
  setMuted(value){this.muted=!!value;this.applyVolume();if(this.muted)this.stop();}
  applyVolume(){if(this.master)this.master.gain.setTargetAtTime(this.muted?0:this.volume*.65,this.context.currentTime,.015);}
- sync(phase){if(this.phase!==phase){this.phase=phase;if(phase!=='playing')this.stop();}}
- stop(){for(const v of [...this.voices]){try{v.source.stop();}catch{}this.release(v);}this.lastKind.clear();}
+ sync(phase){if(this.phase!==phase){this.phase=phase;if(phase!=='playing')this.stop(outcomePhase(phase));}}
+ stop(keepNuke=false){
+  const nukeStamp=keepNuke?this.lastKind.get('radioNuke'):undefined;
+  for(const v of [...this.voices]){
+   if(keepNuke&&v.channel==='radioNuke')continue;
+   try{v.source.stop();}catch{}this.release(v);
+  }
+  this.lastKind.clear();
+  if(nukeStamp!==undefined)this.lastKind.set('radioNuke',nukeStamp);
+ }
  release(v){if(!this.voices.delete(v))return;v.source.disconnect();v.gain.disconnect();if(v.pan)v.pan.disconnect();}
  fire(unit,listener){
   if(unit.team===0&&unit.type==='guntruck')return this.play('radioRoll',unit,listener);
@@ -78,7 +88,11 @@ class FrontAudio{
  impact(event,listener){return this.play('impact',event,listener,{rate:event.armor?1.9:1.6,gain:.15,priorityBoost:-2,channel:'hitFeedback'});}
  radioWarning(event,listener){return this.play('radioWarning',event,listener,{exactRate:true});}
  radioImpact(event,listener){
-  if(event.strike==='nuke')return this.play('artillery',event,listener,{channel:'radioNuke',rate:.72,priorityBoost:2,gain:.93});
+  if(event.strike==='nuke'){
+   const ready=this.buffers.has('radioNuke');
+   return this.play(ready?'radioNuke':'artillery',event,listener,{channel:'radioNuke',exactRate:true,
+    rate:ready?1:.72,priorityBoost:ready?0:3,distantGain:.62});
+  }
   if(event.strike==='incendiary')return this.play('impact',event,listener,{channel:'radioFire',rate:.79,gain:.76});
   return this.play('tankBlast',event,listener,{channel:'radioMissile',rate:.93,gain:.85});
  }
@@ -89,10 +103,13 @@ class FrontAudio{
  }
  upgradeOpen(){return this.play('upgradeOpen',undefined,undefined,{exactRate:true});}
  play(key,position={x:0,y:0},listener={x:0,y:0},options={}){
-  const c=this.context,s=SOUNDS[key],preview=!!options.preview;
-  if(!s||!c||c.state!=='running'||this.muted||!this.volume||(!preview&&this.phase!==(s.phase||'playing'))||!this.buffers.has(key))return false;
-  const distance=preview?0:Math.hypot(position.x-listener.x,position.y-listener.y);if(distance>950)return false;
-  const now=c.currentTime,channel=options.channel||key,stamp=this.lastKind.get(channel);
+  const c=this.context,s=SOUNDS[key],preview=!!options.preview,channel=options.channel||key;
+  const allowOutcome=channel==='radioNuke'&&outcomePhase(this.phase);
+  if(!s||!c||c.state!=='running'||this.muted||!this.volume||
+   (!preview&&!allowOutcome&&this.phase!==(s.phase||'playing'))||!this.buffers.has(key))return false;
+  const floor=options.distantGain||0;
+  const distance=preview?0:Math.hypot(position.x-listener.x,position.y-listener.y);if(distance>950&&!floor)return false;
+  const now=c.currentTime,stamp=this.lastKind.get(channel);
   if(!preview&&stamp!==undefined&&now-stamp<s.gap){this.dropped++;return false;}
   // Keep room for impacts even in a large infantry firefight. Prefer nearby sounds.
   const priority=s.priority+(options.priorityBoost||0)+(distance<260?.5:0);
@@ -103,10 +120,10 @@ class FrontAudio{
   }
   const source=c.createBufferSource(),gain=c.createGain(),pan=c.createStereoPanner?c.createStereoPanner():null;
   source.buffer=this.buffers.get(key);source.playbackRate.value=(options.rate||1)*(options.exactRate?1:1+(Math.random()-.5)*.07);
-  const attenuation=Math.pow(Math.max(0,1-distance/1000),1.45),teamScale=position.team===1?.72:1;
+  const attenuation=floor+(1-floor)*Math.pow(Math.max(0,1-distance/1000),1.45),teamScale=position.team===1?.72:1;
   gain.gain.value=s.gain*attenuation*teamScale*(options.gain??1);source.connect(gain);
-  if(pan){pan.pan.value=preview?0:Math.max(-.85,Math.min(.85,(position.x-listener.x)/550));gain.connect(pan);pan.connect(this.compressor);}else gain.connect(this.compressor);
-  const voice={source,gain,pan,priority,started:now};this.voices.add(voice);source.onended=()=>this.release(voice);this.lastKind.set(channel,now);source.start(now+(options.delay||0));this.played++;return true;
+  if(pan){const limit=floor?.34:.85;pan.pan.value=preview?0:Math.max(-limit,Math.min(limit,(position.x-listener.x)/550));gain.connect(pan);pan.connect(this.compressor);}else gain.connect(this.compressor);
+  const voice={source,gain,pan,channel,priority,started:now};this.voices.add(voice);source.onended=()=>this.release(voice);this.lastKind.set(channel,now);source.start(now+(options.delay||0));this.played++;return true;
  }
  async audition(key){await this.unlock();this.stop();return this.play(key,undefined,undefined,{preview:true});}
  diagnostics(){return{state:this.context?.state||'locked',loaded:this.buffers.size,failures:this.failures,active:this.voices.size,played:this.played,dropped:this.dropped,muted:this.muted,volume:this.volume};}
