@@ -98,6 +98,17 @@ function flame(c,x,y,width,height,bend) {
  c.quadraticCurveTo(x-width*.5,y-height*.22,x+bend*.5,y-height*.56);
  c.quadraticCurveTo(x+width*.67,y-height*.16,x+width*.4,y); c.closePath(); c.fill();
 }
+// Burn outward from the actual impact to each fuel pool. The pools remain fixed on the board.
+function burningTrail(c,x,y,r,progress,fade) {
+ const side=(x<0?-1:1)*r*.16, cx=x*.57-side,cy=y*.56+side*.51;
+ const q=ease(progress), endX=2*(1-q)*q*cx+q*q*x,endY=2*(1-q)*q*cy+q*q*y;
+ const path=()=>{c.moveTo(0,0);c.quadraticCurveTo(q*cx,q*cy,endX,endY);};
+ c.save();c.lineCap='round';c.globalAlpha*=fade;
+ stroke(c,Math.max(3,r*.066),'#612a20b8',path);
+ stroke(c,Math.max(1.4,r*.032),'#e8662dc2',path);
+ if(progress<1)glow(c,endX,endY,6,3,'#fff5a0','#ff8c36aa');
+ c.restore();
+}
 function ground(c,game,visible=()=>true,fx) {
  for(const z of game.radioFireZones || []) {
   if (!visible(z)) continue;
@@ -107,7 +118,8 @@ function ground(c,game,visible=()=>true,fx) {
   const time=quiet(game) ? .48 : age;
   c.save(); c.translate(z.x,z.y); c.globalAlpha*=fade;
   ellipse(c,0,0,r,r,gradient(c,0,0,r,[0,'#73361ca8'],[.58,'#9c41298c'],[.87,'#bd552f67'],[1,'#6a362300']));
-  const textures=fx?.prepareImpactMaterials?.(), reduced=quiet(game);
+  const reduced=quiet(game),sheet=impactSheet();
+  const textures=fx?.prepareImpactMaterials?.();
   // Unequal pockets of spilled fuel. The scorched islands stay fixed while wisps rise from each pool.
   const pockets=r>105?8:5;
   for(let i=0;i<pockets;i++) {
@@ -115,7 +127,15 @@ function ground(c,game,visible=()=>true,fx) {
    const d=r*(i===0?.05:.32+.41*noise(seed,i+35));
    const x=Math.cos(a)*d, y=Math.sin(a)*d;
    const wide=r*(.14+.19*noise(seed,i+4)), depth=wide*(.38+.24*noise(seed,i+14));
+   const spread=reduced?1:clamp((age-i*.035)/.47);
+   burningTrail(c,x,y,r,spread,.90-.31*clamp(age/.95));
+   if(!spread)continue;
    glow(c,x,y,wide,depth,'#462219ee','#b745139c');
+   if(sheet){
+    const phase=reduced?.42:(time*(.88+.19*noise(seed,i))+noise(seed,i+8))%1;
+    const width=Math.max(22,wide*2.1)*(.6+.4*spread);
+    paintVolume(c,sheet,3,phase,x,y,width*(noise(seed,i+51)>.5?1:-1),width*(.76+.24*noise(seed,i+17)));
+   }
    if(!reduced&&textures?.smoke?.length){
     const rise=(time*.76+noise(seed,i+42))%1;
     heatCloud(c,textures.smoke[i%3],x+rise*wide*.35,y-rise*wide*.7,wide*(.8+rise*.5),wide,Math.sin(rise*Math.PI)*.38);
@@ -126,11 +146,11 @@ function ground(c,game,visible=()=>true,fx) {
     const px=x+(noise(seed,k+6)-.5)*wide*1.4,py=y+(noise(seed,k+38)-.5)*depth;
     const s=(3+r*.046)*(j===0?1.3:.39+.62*noise(seed,k+17));
     glow(c,px,py,s*1.8,s*.64,'#ffd075c9','#ef792278');
-    if(textures) {
+    if(!sheet&&textures) {
      const h=s*(2.55+.55*Math.sin(phase));
      c.save();c.globalAlpha*=.88;c.drawImage(textures.fire[k%3],px-s*1.32,py-h*.85,s*2.65,h);c.restore();
     }
-    flame(c,px,py,s*(.27+.19*noise(seed,k+23)),s*(1.1+.46*Math.sin(phase)),s*.83*Math.sin(phase*.71));
+    if(!sheet)flame(c,px,py,s*(.27+.19*noise(seed,k+23)),s*(1.1+.46*Math.sin(phase)),s*.83*Math.sin(phase*.71));
     const ember=(time*(.38+.58*noise(seed,k+5))+noise(seed,k+13))%1;
     c.save();c.globalAlpha*=1-ember;
     ellipse(c,px+Math.sin(ember*4+k)*3+ember*5,py-s*(1.4+ember*2.4),1.15,.73,'#ffdb8c');c.restore();
@@ -143,6 +163,23 @@ function ground(c,game,visible=()=>true,fx) {
 const CELL_WIDTH=144,CELL_HEIGHT=216;
 const atlas=typeof root.Image==='function'?new root.Image():null;
 if(atlas)atlas.src='assets/effects/radio-strike-models-v214.webp';
+// Decode on the first radio roll, outside the game's initial asset load.
+const TILE=192,FRAMES=24,COLUMNS=6,ROWS=FRAMES/COLUMNS;
+let volumeAtlas;
+function impactSheet(){
+ if(!volumeAtlas&&typeof root.Image==='function'){
+  volumeAtlas=new root.Image();
+  volumeAtlas.src='assets/effects/radio-impact-volume-v1.webp';
+ }
+ return volumeAtlas?.complete&&volumeAtlas.naturalWidth===TILE*COLUMNS&&volumeAtlas.naturalHeight===TILE*ROWS*4?volumeAtlas:null;
+}
+function paintVolume(c,sheet,band,p,x,y,width,height){
+ const f=Math.min(FRAMES-1,Math.floor(clamp(p)*FRAMES));
+ c.save();c.translate(x,y);if(width<0)c.scale(-1,1);
+ const w=Math.abs(width);
+ c.drawImage(sheet,(f%COLUMNS)*TILE,(band*ROWS+Math.floor(f/COLUMNS))*TILE,TILE,TILE,-w/2,-height*151/TILE,w,height);
+ c.restore();
+}
 const prop={
  incendiary:{column:0,size:59,tail:.60,drop:179,shift:-91,flight:.55,ink:'#ffd483',glare:'#fff0a9',wake:'#ff984f'},
  missile:{column:1,size:65,tail:.79,drop:194,shift:107,flight:.47,ink:'#c1eeef',glare:'#e3ffff',wake:'#8bc6cf'},
@@ -184,6 +221,22 @@ function flightPoint(style,seq,p){
  const lane=seq===1?-.67:seq===2?.62:1,remain=1-p;
  return {x:style.shift*lane*remain,y:-style.drop*(1-p**1.75)};
 }
+function missileWake(c,style,seq,t){
+ // Sample the shell's path in world space. Each trail bends into its own landing lane.
+ if(t<=.025)return;
+ const steps=9, length=Math.min(.54,t),left=[],right=[];
+ for(let i=0;i<=steps;i++){
+  const u=i/steps, at=t-u*length, pos=flightPoint(style,seq,at);
+  const tangent=flightPoint(style,seq,at+.005),dx=tangent.x-pos.x,dy=tangent.y-pos.y;
+  const norm=Math.hypot(dx,dy)||1,width=1.4+4.8*u;
+  const x=pos.x-dx/norm*style.size*style.tail,y=pos.y-dy/norm*style.size*style.tail;
+  left.push([x-dy/norm*width,y+dx/norm*width]);right.push([x+dy/norm*width,y-dx/norm*width]);
+ }
+ const [x,y]=left[0],[tailX,tailY]=left[steps];
+ const g=c.createLinearGradient(x,y,tailX,tailY);
+ g.addColorStop(0,'#e5ffffcc');g.addColorStop(.46,'#c1eeee80');g.addColorStop(1,'#bbd9db00');
+ polygon(c,left.concat(right.reverse()),g);
+}
 function drawFallback(c,width,length,style){
  const metal=c.createLinearGradient(-width/2,0,width/2,0);
  metal.addColorStop(0,'#273333');metal.addColorStop(.39,style.wake);metal.addColorStop(1,'#283531');
@@ -201,6 +254,7 @@ function incoming(c,e,p,fx){
  const point=flightPoint(style,seq,travel);
  const next=flightPoint(style,seq,Math.min(1.001,travel+.015));
  const angle=Math.atan2(point.x-next.x,next.y-point.y);
+ if(!reduced&&e.strike==='missile')missileWake(c,style,seq,travel);
  glow(c,point.x*.33,0,13+(nuke?10:0)+travel*9,6+travel*5,'#181b1bce','#332b294c');
  c.save();c.translate(point.x,point.y);c.rotate(angle);
  const length=style.size*style.tail, w=style.size*CELL_WIDTH/CELL_HEIGHT;
@@ -245,6 +299,23 @@ function pressure(c,r,p,style,power,reduced){
 function heatCloud(c,image,x,y,w,h,alpha){
  if(!image||alpha<=0)return;
  c.save();c.globalAlpha*=alpha;c.drawImage(image,x-w*.5,y-h*.55,w,h);c.restore();
+}
+function groundSurge(c,e,p,textures){
+ const nuke=e.strike==='nuke',seed=seedFor(e),life=nuke?.73:.60;
+ if(p>=life)return;
+ const t=p/life,d=e.radius*(.13+.87*ease(t));
+ c.save();c.globalAlpha*=Math.sin(Math.PI*Math.sqrt(t))*(nuke?.86:.66);
+ const count=nuke?18:8;
+ for(let i=0;i<count;i++){
+  const a=tau*(i+noise(seed,i)*.48)/count;
+  const x=Math.cos(a)*d,y=Math.sin(a)*d;
+  const w=e.radius*(.13+.12*noise(seed,i+3))*(.5+.8*t);
+  heatCloud(c,textures?.dust?.[i%2],x,y,w,w*.5,.83);
+  if(nuke&&i%3!==1){
+   stroke(c,1.5+1.6*(1-t),'#fff1c48c',()=>c.arc(0,0,d,a-.088,a+.072));
+  }
+ }
+ c.restore();
 }
 function secondaryBurst(c,e,p,style,textures,reduced){
  const r=e.radius,fire=e.strike==='incendiary',seed=seedFor(e),bloom=ease(p/.46),heat=clamp(1-p/.76);
@@ -337,16 +408,23 @@ function impact(c,e,p,fx){
  const style=prop[e.strike],nuke=e.strike==='nuke',reduced=quiet(),r=e.radius;
  const textures=fx?.prepareImpactMaterials?.(),heat=clamp(1-p/(nuke?.28:.25));
  pressure(c,r,p,style,nuke?3:e.strike==='missile'?2:1,reduced);
+ if(!reduced&&e.strike!=='incendiary')groundSurge(c,e,p,textures);
  flash(c,r*(.40+.17*p),heat*(reduced?.46:.85),style.wake+'b8');
  c.save();c.globalAlpha*=clamp((1-p)/(nuke?.32:.23));
- if(nuke)cloudDepth(c,r,p,seedFor(e),textures,reduced);
+ const sheet=impactSheet();
+ if(sheet){
+  const size=r*(nuke?1.58:e.strike==='missile'?1.92:2.05);
+  const mirrored=e.strike==='missile'&&e.seq===1;
+  const frame=reduced?.32:p;
+  paintVolume(c,sheet,style.column,frame,0,0,mirrored?-size:size,size);
+ }else if(nuke)cloudDepth(c,r,p,seedFor(e),textures,reduced);
  else secondaryBurst(c,e,p,style,textures,reduced);
  if(!reduced)embers(c,e,p,nuke);
  c.restore();
 }
 
 function event(c,e,fx) {
- if(e.kind==='radioRoll')return true; // Heads-up result renders after units and blasts.
+ if(e.kind==='radioRoll'){impactSheet();return true;} // Heads-up result renders after units and blasts.
  if((e.kind!=='radioIncoming'&&e.kind!=='radioImpact')||!Object.hasOwn(prop,e.strike))return false;
  const p=clamp(1-e.t/e.max);
  c.save();c.translate(e.x,e.y);
