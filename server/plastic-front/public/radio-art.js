@@ -211,15 +211,24 @@ function groundPasses(c,game,visible,view){
 const CELL_WIDTH=144,CELL_HEIGHT=216;
 const atlas=typeof root.Image==='function'?new root.Image():null;
 if(atlas)atlas.src='assets/effects/radio-strike-models-v214.webp';
-// Decode on the first radio roll, outside the game's initial asset load.
+// Prepare the flipbook after the initial page load. A first roll can also request it
+// immediately. The procedural flames keep animating while a cold download finishes.
 const TILE=192,FRAMES=24,COLUMNS=6,ROWS=FRAMES/COLUMNS;
 let volumeAtlas;
 function impactSheet(){
  if(!volumeAtlas&&typeof root.Image==='function'){
   volumeAtlas=new root.Image();
+  volumeAtlas.decoding='async';
   volumeAtlas.src='assets/effects/radio-impact-volume-v1.webp';
+  volumeAtlas.decode?.().catch(()=>{});
  }
  return volumeAtlas?.complete&&volumeAtlas.naturalWidth===TILE*COLUMNS&&volumeAtlas.naturalHeight===TILE*ROWS*4?volumeAtlas:null;
+}
+if(root.document&&typeof root.addEventListener==='function'){
+ const warm=()=>impactSheet();
+ const afterLoad=()=>root.requestIdleCallback?root.requestIdleCallback(warm,{timeout:900}):root.setTimeout(warm,0);
+ if(root.document.readyState==='complete')afterLoad();
+ else root.addEventListener('load',afterLoad,{once:true});
 }
 function paintVolume(c,sheet,band,p,x,y,width,height){
  const f=Math.min(FRAMES-1,Math.floor(clamp(p)*FRAMES));
