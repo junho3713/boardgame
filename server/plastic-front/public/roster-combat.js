@@ -121,6 +121,7 @@ function install({FrontGame,TYPES,multiplier}){
  const radioRadius={1:1,2:1.15,3:1.30};
  const radioRank=(g,u)=>g.starExperiment?(u.star||1):1;
  const missileSpread=[0,-21,21,0,-38,38];
+ const missileGuidance={lockBeforeImpact:.20,maxTravel:220,retargetRange:145};
  const turretRules={flight:.48,lifetime:6.5,range:285,splash:18,damage:.24,interval:1/6.5,limit:4,overclock:3,speedBoost:1.6};
  p.stats=function(u){
   const result=stats.call(this,u);
@@ -193,9 +194,11 @@ function install({FrontGame,TYPES,multiplier}){
   const bounds=g.bounds();
   for(let seq=0;seq<count;seq++){
    const spread=missileSpread[seq],delay=spec.delay+seq*.26;
-   const x=Math.max(0,Math.min(bounds.width,point.x-Math.sin(angle)*spread));
-   const y=Math.max(0,Math.min(bounds.height,point.y+Math.cos(angle)*spread));
+   const offsetX=-Math.sin(angle)*spread,offsetY=Math.cos(angle)*spread;
+   const x=Math.max(0,Math.min(bounds.width,point.x+offsetX));
+   const y=Math.max(0,Math.min(bounds.height,point.y+offsetY));
    const shell={source:u,x,y,angle,seq,strike,radius,radiusScale,golden,precise,damage,landAt:g.time+delay};
+   if(strike==='missile'&&point.hp>0)shell.guidance={target:point,originX:point.x,originY:point.y,offsetX,offsetY};
    g.radioStrikes.push(shell);
    effect(g,'radioIncoming',shell,{source:u,strike,angle,seq,radius,landAt:shell.landAt,visualUntil:shell.landAt},delay);
    if(strike==='nuke')g.notify('radioWarning',{team:0,id:u.id,x,y});
@@ -280,9 +283,31 @@ function install({FrontGame,TYPES,multiplier}){
    g.radioFireZones.push({source,x,y,radius:burnRadius,damage:damage*.32,startedAt:landAt,nextAt:landAt+.5,until:landAt+duration});
   }
  }
+ function guideRadioMissile(g,shell){
+  const guide=shell.guidance,rules=missileGuidance;
+  if(!guide||g.time>=shell.landAt-rules.lockBeforeImpact)return;
+  const origin={x:guide.originX,y:guide.originY};
+  if(!guide.target||guide.target.hidden||!g.canTarget(shell.source,guide.target)){
+   let nearest=null,best=rules.retargetRange;
+   for(const enemy of g.radioContacts(shell.source)){
+    const d=distance(enemy,shell);
+    if(d<best&&distance(enemy,origin)<=rules.maxTravel){nearest=enemy;best=d;}
+   }
+   if(!nearest){shell.guidance=null;return;}
+   guide.target=nearest;
+  }
+  const dx=guide.target.x-origin.x,dy=guide.target.y-origin.y;
+  const ratio=Math.min(1,rules.maxTravel/Math.max(1,Math.hypot(dx,dy))),bounds=g.bounds();
+  const x=Math.max(0,Math.min(bounds.width,origin.x+dx*ratio+guide.offsetX));
+  const y=Math.max(0,Math.min(bounds.height,origin.y+dy*ratio+guide.offsetY));
+  if(shell.x===x&&shell.y===y)return;
+  shell.x=x;shell.y=y;
+  const marker=g.effects.find(e=>e.kind==='radioIncoming'&&e.strike==='missile'&&e.source===shell.source&&e.seq===shell.seq&&e.landAt===shell.landAt);
+  if(marker){marker.x=x;marker.y=y;}
+ }
  function updateRadio(g){
   g.radioStrikes=g.radioStrikes.filter(shell=>{
-   if(shell.landAt>g.time)return true;
+   if(shell.landAt>g.time){guideRadioMissile(g,shell);return true;}
    impactRadio(g,shell);return false;
   });
   g.radioFireZones=g.radioFireZones.filter(zone=>{

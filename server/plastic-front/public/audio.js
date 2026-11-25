@@ -5,7 +5,7 @@ const SOUNDS={
  bikeRaider:{file:'bike-rev',ext:'wav',gain:.32,gap:.6,priority:2},
  bladeGuard:{file:'blade-swish',ext:'wav',gain:.28,gap:.12,priority:1},
  slotBlank:{file:'lucky-blank',ext:'wav',gain:.22,gap:.18,priority:1},
- slotSpin:{file:'lucky-spin',ext:'wav',gain:.24,gap:.18,priority:2},
+ slotSpin:{file:'lucky-spin',ext:'wav',gain:.82,gap:.18,priority:4},
  jackpot:{file:'lucky-jackpot',ext:'wav',gain:.46,gap:.35,priority:3},
  flame:{file:'flame',ext:'wav',gain:.40,gap:.18,priority:2},
  rifle:{file:'rifle',gain:.38,gap:.04,priority:1,revision:2},
@@ -71,6 +71,10 @@ class FrontAudio{
  fire(unit,listener){
   if(unit.team===0&&unit.type==='guntruck')return this.play('radioRoll',unit,listener);
   if(unit.luckySound==='bossKiller')return this.play('rocket',unit,listener,{rate:.68,priorityBoost:2,channel:'bossKiller'});
+  if(unit.luckySound==='slotSpin'){
+   if(listener&&Math.hypot(unit.x-listener.x,unit.y-listener.y)>950)return false;
+   return this.play('slotSpin',unit,listener,{exactRate:true,distantGain:.32});
+  }
   if(unit.luckySound)return this.play(unit.luckySound,unit,listener);
   if(unit.team===0&&unit.type==='rifle'&&!unit.ultimate)return this.play('shotgun',unit,listener,{exactRate:true});
   if(unit.team===0&&unit.type==='sniper')return this.play('sniperSuppressed',unit,listener);

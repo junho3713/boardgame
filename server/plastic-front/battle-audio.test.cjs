@@ -3,7 +3,7 @@ const {test} = require('node:test');
 const assert = require('node:assert/strict');
 const {readFileSync} = require('node:fs');
 const {runInNewContext} = require('node:vm');
-const {FrontAudio} = require('./public/audio.js');
+const {FrontAudio,SOUNDS} = require('./public/audio.js');
 const {musicForBattle} = require('./public/music.js');
 
 test('main bosses and living boss pairs change the music without switching for mid-bosses', () => {
@@ -101,6 +101,17 @@ test('the music player alternates field songs, resumes them after bosses, and re
   player.unlock(context, true);
   assert.equal(player.media.src, 'assets/bgm/battle-opening.mp3');
   assert.equal(player.media.currentTime, 0);
+});
+
+test('the Retona spin uses the original cue at a higher mix level and skips off-screen sources', () => {
+  const audio = new FrontAudio(), listener = {x:0,y:0};
+  audio.play = (...args) => args;
+  const cue = {type:'lucky',team:0,x:400,y:0,luckySound:'slotSpin'};
+  assert.deepEqual(audio.fire(cue,listener),['slotSpin',cue,listener,{exactRate:true,distantGain:.32}]);
+  assert.equal(SOUNDS.slotSpin.file,'lucky-spin');
+  assert.ok(SOUNDS.slotSpin.gain>.75&&SOUNDS.slotSpin.priority>SOUNDS.machinegunBurst.priority);
+  assert.equal(audio.fire({...cue,x:951},listener),false);
+  assert.equal(audio.fire({...cue,luckySound:'jackpot'},listener)[0],'jackpot');
 });
 
 test('the allied shotgun uses its own shot and fits the reload sample to the engine timer', () => {

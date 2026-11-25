@@ -60,6 +60,41 @@ test('all ranks have one pair and a forced double on the sixth attempt',()=>{
  }
 });
 
+test('missile bursts follow a running target and lock the displayed landing point before impact',()=>{
+ const {g,radio,enemy}=field(),start=enemy.y;
+ fire(g,radio,enemy,[5,5]);
+ const [shell]=g.radioStrikes,marker=g.effects.find(e=>e.kind==='radioIncoming'&&e.seq===0);
+ for(let tick=1;tick<=20;tick++){
+  g.time=tick*.05;enemy.y=start+g.time*230;g.updateEvolutionCombat();
+ }
+ assert.ok(enemy.y-start>shell.radius+g.collisionRadius(enemy));
+ assert.ok(shell.y>start+200);assert.equal(marker.y,shell.y);
+ const locked=shell.y;
+ enemy.y=start+260;g.time=shell.landAt-.05;g.updateEvolutionCombat();
+ assert.equal(shell.y,locked);assert.equal(marker.y,locked);
+ g.time=shell.landAt;g.updateEvolutionCombat();
+ assert.ok(enemy.hp<enemy.maxHp);
+ assert.equal(g.effects.findLast(e=>e.kind==='radioImpact').y,locked);
+});
+
+test('saved missiles can retarget a nearby survivor while attacks into empty aim directions stay fixed',()=>{
+ const {g,radio,enemy}=field(),near=g.addUnit(2,'rifle',enemy.x+65,enemy.y+45);
+ fire(g,radio,enemy,[5,5]);
+ const enemyId=enemy.id;
+ const save=unpack(new FrontGame(),pack(g));
+ save.visible=save.lineClear=()=>true;
+ const [shell]=save.radioStrikes,savedTarget=save.units.find(u=>u.id===enemyId);
+ assert.equal(shell.guidance.target,savedTarget);
+ savedTarget.hp=0;save.time=.5;save.updateEvolutionCombat();
+ assert.equal(shell.guidance.target.id,near.id);
+ close(shell.x,near.x);close(shell.y,near.y);
+ const move=field(),angle=Math.PI,aim=move.g.commandFirePoint(move.radio,620,angle);
+ fire(move.g,move.radio,aim,[5,5]);
+ assert.ok(move.g.radioStrikes.every(shot=>!shot.guidance));
+ move.enemy.x-=210;move.g.time=.6;move.g.updateEvolutionCombat();
+ close(move.g.radioStrikes[0].x,aim.x);close(move.g.radioStrikes[0].y,aim.y);
+});
+
 test('real fusion and the Destiny Star scale damage once and scale every blast radius',()=>{
  const {g,radio,enemy}=field(),leader=g.commander(0);
  g.addUnit(0,'guntruck',920,5900);g.addUnit(0,'guntruck',940,5900);
