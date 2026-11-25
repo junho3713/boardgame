@@ -388,6 +388,10 @@ function updateUI(){syncBattleMusic();if(game.phase!=='ready')unitModels.prefetc
  renderWaveTest();
 }
 function showUpgrade(options){
+ if(!COOP?.active&&!options.length&&game.skipEmptyLevelUpgrade()){
+  $('upgradeOverlay').hidden=true;
+  return;
+ }
  const initial=game.choiceKind==='initial',lockedLevel=game.choiceKind==='level'&&game.summonSlotsLocked();
  $('upgradeOverlay').classList.toggle('initial-support',initial);
  if(selectedMode==='idle'&&autoPilot?.active)return;
@@ -399,7 +403,7 @@ function showUpgrade(options){
  $('promotionLevel').textContent=initial?'00:00':recovery?'EMERGENCY SUPPORT · 유료 충원':boss?'BOSS REWARD · 추가 강화':`LEVEL ${pad(game.level)}`;
  $('promotionTitle').textContent=initial?'초기 지원 병과 선택':recovery?'분대를 다시 편성하세요.':boss?'보스 격파 보상을 선택하세요.':'레벨업 선택';
  $('promotionDescription').textContent=initial?'병과 하나를 고르면 무료 지원군이 착지하고 작전이 시작돼요.':recovery?'보유 자원으로 해금한 병과를 충원합니다. XP·레벨·강화 기회 소비 없음 · 확정 후 90초 대기.':boss?'레벨업과 별개의 무료 강화입니다. 작전 능력은 같은 5종 선택 한도를 따릅니다.':'병과를 키우거나 능력 5종을 구성하세요. Lv.5 + 지정 능력 Lv.5면 자동 진화합니다.';
- if(lockedLevel)$('promotionDescription').textContent=options.length?'소환 슬롯 5개가 찼어요. 등록 병과와 작전 능력을 강화할 수 있어요.':'가능한 강화를 모두 완료했어요. 건너뛰면 30G를 받고 진격해요.';
+ if(lockedLevel)$('promotionDescription').textContent='소환 슬롯 5개가 찼어요. 등록 병과와 작전 능력을 강화할 수 있어요.';
  if(!initial&&!recovery&&!lockedLevel&&game.completedEvolutions()>=5)$('promotionDescription').textContent='진화 5종 완성 · 남은 강화 최대 1개 + 골드 상자 + 긴급 치료. 더 올릴 강화가 없으면 보급 보상을 선택하세요.';
  document.querySelector('.support-panel').hidden=boss||game.mode==='pve'&&!recovery;document.querySelector('.upgrade-layout').classList.toggle('boss-reward',boss);
  $('continueBattle').hidden=initial;$('continueBattle').disabled=true;syncUpgradeActions();
@@ -455,21 +459,25 @@ function syncUpgradeActions(){
  skip.disabled=choiceRequestPending;
  skip.querySelector('small').textContent='+'+window.FrontSummoning.rules.skipGold+'G';
 }
+function resumeAfterLevelSkip(){
+ $('upgradeOverlay').hidden=true;
+ clearInput();
+ game.levelCheck();
+ updateUI();
+}
 $('rerollUpgrade').onclick=async()=>{
  if(game.phase!=='choice'||choiceRequestPending)return;
- if(!COOP?.active){game.rerollUpgrade();return;}
+ if(!COOP?.active){
+  if(game.rerollUpgrade()&&game.phase==='playing')resumeAfterLevelSkip();
+  return;
+ }
  choiceRequestPending=true;syncUpgradeActions();
  try{await COOP.reroll();}finally{choiceRequestPending=false;syncUpgradeActions();}
 };
 $('skipLevelUpgrade').onclick=async()=>{
  if(choiceRequestPending||!game.canSkipLevelUpgrade())return;
  if(!COOP?.active){
-  if(game.skipLevelUpgrade()){
-   $('upgradeOverlay').hidden=true;
-   clearInput();
-   game.levelCheck();
-   updateUI();
-  }
+  if(game.skipLevelUpgrade())resumeAfterLevelSkip();
   return;
  }
  choiceRequestPending=true;syncUpgradeActions();

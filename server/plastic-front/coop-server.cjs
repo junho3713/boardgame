@@ -95,7 +95,7 @@ function createCoopHandler({now=Date.now,automatic=true}={}){
        if(action==='chooseInitial'){
         ok=g.chooseInitialSupport(body.type);if(ok)g.coopChoosing[p.owner]=false;
        }else if(action==='reroll'){
-        ok=g.rerollUpgrade();if(ok)g.coopRounds[p.owner]++;
+        ok=g.rerollUpgrade();if(ok){if(g.phase==='choice')g.coopRounds[p.owner]++;else g.coopChoosing[p.owner]=false;}
        }else{
         ok=g.skipLevelUpgrade();if(ok)g.coopChoosing[p.owner]=false;
        }

@@ -110,6 +110,20 @@ test('a saved empty level-up grants combat gold once and clears the old choice',
  assert.equal(restored.cash[0],cash+rules.skipGold);
  assert.equal(restored.level,g.level);
 });
+test('rerolling stale cards in a maxed draft resumes combat without spending a reroll',()=>{
+ const g=battle(),drafts=[];
+ maxRegisteredUpgrades(g);
+ g.phase='choice';g.choiceKind='level';g.currentOptions=['rifle'];
+ g.events.level=options=>drafts.push(options);
+ const cash=g.cash[0],rerolls=g.rerollCount;
+ assert.equal(g.rerollUpgrade(),true);
+ assert.equal(g.phase,'playing');
+ assert.equal(g.cash[0],cash+rules.skipGold);
+ assert.equal(g.rerollCount,rerolls);
+ assert.deepEqual(drafts,[]);
+ assert.equal(g.rerollUpgrade(),false);
+ assert.equal(g.cash[0],cash+rules.skipGold);
+});
 test('a maxed co-op squad does not enter the choice round while its partner can still draft',()=>{
  const g=new FrontCoopGame({}, {realtimeSummons:true});
  g.phase='playing';g.coopChoosing=[false,false];

@@ -60,6 +60,7 @@
    if(!this.canRerollUpgrade())return false;
    const previous=this.currentOptions;
    this.currentOptions=this.choiceKind==='initial'?this.initialOptions(previous):this.options(previous);
+   if(this.skipEmptyLevelUpgrade())return true;
    this.rerollCount--;this.pendingChoice=null;
    this.notify('level',this.currentOptions);return true;
   };
@@ -74,6 +75,9 @@
    this.notify('toast',label+' · 전투 골드 +'+rules.skipGold+'G');
    this.notify('change');return true;
   };
+  p.skipEmptyLevelUpgrade=function(){
+   return !this.currentOptions.length&&this.skipLevelUpgrade();
+  };
   p.summonSlotsLocked=function(){
    return this.usesSummoning()&&this.summonSlots.length>=rules.slots;
   };
@@ -83,7 +87,7 @@
     (this.choiceKind!=='boss'||this.bossRewardEligible(type)));
    if(!allowed.length||allowed.length!==this.currentOptions.length)this.currentOptions=[...new Set([...allowed,...this.options()])].slice(0,3);
    if(this.pendingChoice&&!this.currentOptions.includes(this.pendingChoice.type))this.pendingChoice=null;
-   if(!this.currentOptions.length)this.skipLevelUpgrade();
+   this.skipEmptyLevelUpgrade();
   };
   p.nextSummonSlot=function(type){
    return this.usesSummoning()&&ROSTER.includes(type)&&!this.summonSlots.includes(type)&&!this.summonSlotsLocked()?this.summonSlots.length+1:null;

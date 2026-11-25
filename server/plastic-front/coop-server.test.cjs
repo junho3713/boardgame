@@ -114,5 +114,20 @@ test('two clients authenticate, grow independently without pausing, reconnect an
   assert.equal((await call('/command',{action:'resume'},b.token)).status,200);handler.step();assert.ok(g.time>t);
   assert.equal((await call('/command',{action:'input',x:9,y:0},a.token)).status,400);
   const raw=await fetch(origin+'/state',{headers:{Authorization:'Bearer '+b.token,'Accept-Encoding':'gzip'}});assert.equal(raw.headers.get('content-encoding'),'gzip');assert.equal((await raw.json()).owner,1);
+  g.withOwner(0,()=>{g.xp=g.neededXP();});g.levelCheck();
+  assert.equal(g.coopChoosing[0],true);
+  g.withOwner(0,()=>{
+   for(const type of g.summonSlots)g.tech[0][type]=5;
+   const {ABILITIES}=require('./public/engine.js');
+   const keys=[...new Set([...g.selectedAbilities(),...Object.keys(ABILITIES)])].slice(0,5);
+   for(const key of keys)g.abilities[key]=5;
+  });
+  const round=g.coopRounds[0],cash=g.withOwner(0,()=>g.cash[0]),rerolls=g.withOwner(0,()=>g.rerollCount);
+  const rerolled=await call('/command',{action:'reroll',round},a.token);
+  assert.equal(rerolled.status,200);
+  assert.equal(rerolled.data.choosing,false);
+  assert.equal(rerolled.data.game.fields.cash[0],cash+30);
+  assert.equal(rerolled.data.game.fields.rerollCount,rerolls);
+  assert.equal((await call('/command',{action:'reroll',round},a.token)).status,409);
  }finally{handler.close();await new Promise(r=>app.close(r));}
 });
