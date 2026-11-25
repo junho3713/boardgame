@@ -27,9 +27,7 @@ html.game-hud .battle-frame>.hud-left-rail{
  position:absolute;top:64px;left:max(12px,env(safe-area-inset-left));z-index:6;
  width:min(278px,calc(100% - 108px));display:flex;flex-direction:column;align-items:flex-start;gap:8px;pointer-events:none;
 }
-html.game-hud .hud-left-rail>.field-economy{
- position:relative;inset:auto;transform:none;width:min(220px,100%);pointer-events:auto
-}
+
 html.game-hud .hud-left-rail>.operation-objective{
  position:relative;inset:auto;transform:none;max-width:100%;min-width:min(174px,100%)
 }
@@ -96,8 +94,7 @@ html.game-hud .battle-frame>.toast{top:auto;right:auto;bottom:calc(74px + env(sa
 .hud-quick-actions button:focus-visible,.hud-panel-head button:focus-visible{outline:3px solid #ffd785;outline-offset:3px}
 @media(max-width:760px){
  html.game-hud .battle-frame>.hud-left-rail{top:60px;left:max(6px,env(safe-area-inset-left));width:min(256px,calc(100% - 100px));gap:6px}
- html.game-hud .hud-left-rail>.field-economy{width:min(180px,calc(100vw - 176px));height:auto;grid-template-rows:auto;padding:5px 6px;gap:2px 4px}
- html.game-hud .hud-left-rail .field-economy #constructionBtn{grid-row:1 / 3;padding:4px;min-height:44px}
+
  .hud-progress{grid-template-columns:minmax(0,1.6fr) 66px minmax(69px,.8fr)}
  .hud-level{padding-right:8px}
  .hud-level-line{gap:4px}
@@ -125,10 +122,12 @@ html.game-hud .battle-frame>.toast{top:auto;right:auto;bottom:calc(74px + env(sa
  html.game-hud .battle-frame>.mission-label{bottom:78px;font-size:10px}
  .hud-panel-body{padding:12px 16px}.hud-panel-head{padding:12px 16px}
 }
+@media(max-width:440px){
+ html.game-hud .battle-frame>.hud-left-rail{top:112px}
+}
 @media(orientation:landscape) and (max-height:560px){
  .hud-quick-actions{top:60px;right:8px}
- html.game-hud .hud-left-rail>.field-economy{height:auto;grid-template-rows:auto;padding:4px 6px}
- html.game-hud .hud-left-rail .field-economy #constructionBtn{grid-row:1;min-height:40px}
+
  html.game-hud .battle-frame>.minimap{top:112px}
  html.game-hud .battle-frame>.hud-left-rail{gap:5px;width:min(235px,42vw)}
  html.game-hud .objective-details>small{display:none}
