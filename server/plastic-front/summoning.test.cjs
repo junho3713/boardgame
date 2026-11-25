@@ -79,4 +79,30 @@ test('co-op owns each slot list, purchase, and deployed reinforcement separately
  assert.equal(g.owned(1).filter(u=>u.type==='medic').length,1);
  assert.equal(g.owned(0).filter(u=>u.type==='medic').length,0);
 });
-
+test('reinforcement art draws the correct canopy and exchanges the deployed mesh for a collapsed pose',async()=>{
+ const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
+ const view={FrontSummoning:require('./public/summoning')};
+ const read=url=>fs.readFileSync(path.join(__dirname,'public',url));
+ class Image {
+  set src(url){assert.equal(read(url).toString('ascii',8,12),'WEBP');queueMicrotask(()=>this.onload());}
+ }
+ const fetch=async url=>({ok:true,json:async()=>JSON.parse(read(url))});
+ vm.runInNewContext(read('summon-hud.js'),{window:view,Image,fetch});
+ const hud=view.FrontSummonHud;await hud.ready;
+ const cells=[],cell=JSON.parse(read('assets/models/summon-canopies-v2.json')).cell;
+ const ctx={save(){},restore(){},translate(){},rotate(){},scale(){},beginPath(){},moveTo(){},
+  lineTo(){},quadraticCurveTo(){},stroke(){},fillRect(){},globalAlpha:1,
+  drawImage(_image,x,y){cells.push([x/cell,y/cell]);}};
+ for(const [type,mystery,row] of [['rifle',false,0],['tank',false,1],['medic',true,2],['lucky',true,3]]){
+  const pod={type,mystery,x:12,y:23,startedAt:0,landAt:rules.fall};
+  const game={dropPods:[pod],time:0,evolved:{}};
+  for(const [time,frame] of [[0,0],[.3,3]]){
+   cells.length=0;game.time=time;hud.airborne(ctx,game,()=>true);
+   const expected=Array.from({length:view.FrontSummoning.isVehicle(type)?2:1},()=>[frame,row]);
+   assert.deepEqual(cells,expected);
+  }
+  cells.length=0;
+  hud.impact(ctx,{kind:'summonChute',x:12,y:23,t:.01,max:rules.chuteFade,heavy:view.FrontSummoning.isVehicle(type),mystery});
+  assert.deepEqual(cells,Array.from({length:view.FrontSummoning.isVehicle(type)?2:1},()=>[6,row]));
+ }
+});
