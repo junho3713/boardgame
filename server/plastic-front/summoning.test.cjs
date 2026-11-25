@@ -1,7 +1,7 @@
 'use strict';
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
-const {FrontGame,TYPES,ROSTER}=require('./public/engine');
+const {FrontGame,TYPES,ROSTER,ABILITIES}=require('./public/engine');
 const {rules,rollBox}=require('./public/summoning');
 const {pack,unpack}=require('./public/autoplay');
 const {CoopGame:FrontCoopGame}=require('./public/coop-engine');
@@ -21,7 +21,7 @@ function upgrade(g,type){
 }
 test('slot order is committed once and round trips through saves with pending orders',()=>{
  const g=battle();
- for(const type of ['tank','medic','tank','rocket','lucky','drone'])upgrade(g,type);
+ for(const type of ['tank','medic','tank','rocket','lucky'])upgrade(g,type);
  assert.deepEqual(g.summonSlots,['rifle','tank','medic','rocket','lucky']);
  assert.equal(g.nextSummonSlot('sniper'),null);
  const old=g.cash[0];assert(g.summon(1));assert.equal(g.cash[0],old-TYPES.rifle.cost);
@@ -33,6 +33,45 @@ test('slot order is committed once and round trips through saves with pending or
  const size=restored.units.length;restored.time=pod.landAt-.01;restored.updateDropPods();assert.equal(restored.units.length,size);
  restored.time=pod.landAt;restored.updateDropPods();restored.updateDropPods();
  assert.equal(restored.units.length,size+1);assert.equal(restored.dropPods.length,0);
+});
+test('full slots restrict level-ups, rerolls and restored choices to registered troops and stats',()=>{
+ const g=battle();
+ for(const type of ['rocket','tank','medic','lucky'])upgrade(g,type);
+ assert(g.summonSlotsLocked());g.tech[0].drone=2;
+ g.time=90;g.mission.stage=2;g.level=6;g.phase='choice';g.turnChoice=null;
+ const allowed=t=>g.summonSlots.includes(t)||t.startsWith('ability_');
+ const rolled=g.options();assert.equal(rolled.length,3);assert(rolled.every(allowed));
+ g.currentOptions=['drone','mortar','ability_health'];
+ assert(!g.stageChoice('drone'));assert(!g.choose('mortar'));assert(g.stageChoice('ability_health'));
+ const restored=unpack(battle(),pack(g));restored.reconcileSummonChoices();
+ assert(restored.currentOptions.every(allowed));
+ assert.equal(restored.pendingChoice.type,'ability_health');
+ assert(restored.rerollUpgrade());assert(restored.currentOptions.every(allowed));
+ restored.addUnit(0,'drone',900,300);
+ restored.choiceKind='boss';assert(!restored.bossRewardEligible('drone'));
+ for(const type of restored.summonSlots){restored.evolved[type]=true;restored.tech[0][type]=5;}
+ restored.choiceKind='level';assert(restored.options().every(t=>t.startsWith('ability_')));
+ for(const key of Object.keys(ABILITIES).slice(0,5))restored.abilities[key]=5;
+ restored.currentOptions=restored.options();assert.deepEqual(restored.currentOptions,[]);
+ const rerolls=restored.rerollCount;assert(!restored.rerollUpgrade());assert.equal(restored.rerollCount,rerolls);
+ assert(restored.canSkipLevelUpgrade());
+});
+test('skipping a drafted upgrade grants 30 spendable combat gold once and clears the staged choice',()=>{
+ const g=battle();
+ g.xp=g.neededXP();g.levelCheck();
+ const [first]=g.currentOptions;assert(g.stageChoice(first));
+ const before={gold:g.cash[0],runGold:g.runGold,slots:[...g.summonSlots],rerolls:g.rerollCount,level:g.level,tech:{...g.tech[0]},abilities:{...g.abilities}};
+ assert(g.skipLevelUpgrade());assert(!g.skipLevelUpgrade());
+ assert.equal(g.cash[0],before.gold+30);assert.equal(g.runGold,before.runGold);
+ assert.equal(g.rerollCount,before.rerolls);assert.equal(g.level,before.level);
+ assert.deepEqual(g.tech[0],before.tech);assert.deepEqual(g.abilities,before.abilities);
+ assert.deepEqual(g.summonSlots,before.slots);assert.equal(g.pendingChoice,null);
+ assert.deepEqual(g.currentOptions,[]);assert.equal(g.phase,'playing');
+ for(const kind of ['initial','boss','recovery']){
+  g.phase='choice';g.choiceKind=kind;assert(!g.skipLevelUpgrade());
+ }
+ const legacy=new FrontGame();legacy.start();legacy.xp=legacy.neededXP();legacy.levelCheck();
+ assert(!legacy.skipLevelUpgrade());
 });
 test('normal action gates reject unaffordable or capped orders without charging; vehicle landing pushes enemies',()=>{
  const g=battle();

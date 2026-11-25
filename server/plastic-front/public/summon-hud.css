@@ -67,8 +67,9 @@
 
 /* Keep the reroll action available beside confirmation on short screens. */
 #upgradeOverlay .ui-actions{grid-template-columns:auto minmax(0,1fr);align-items:stretch}
+#upgradeOverlay .ui-actions:has(.upgrade-skip:not([hidden])){grid-template-columns:auto auto minmax(0,1fr)}
 #upgradeOverlay :is(.upgrade-reroll,#continueBattle,#runChoiceSummary)[hidden]{display:none}
-#upgradeOverlay .ui-actions:has(.upgrade-reroll[hidden]){grid-template-columns:minmax(0,1fr)}
+#upgradeOverlay .ui-actions:has(#rerollUpgrade[hidden]):has(.upgrade-skip[hidden]){grid-template-columns:minmax(0,1fr)}
 #upgradeOverlay .upgrade-reroll{
  display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:3px 7px;
  min-height:48px;padding:6px 13px;border:1px solid #77926a;border-radius:5px;
@@ -78,6 +79,7 @@
 #upgradeOverlay .upgrade-reroll:hover:not(:disabled){background:#d8e5c5}
 #upgradeOverlay .upgrade-reroll:disabled{background:#d1d4c8;color:#60695f;border-color:#a5aa9b;opacity:.84;cursor:default}
 #upgradeOverlay .upgrade-reroll:disabled small{color:inherit}
+#upgradeOverlay .upgrade-skip:not(:disabled) small{color:#675118;font-weight:800;font-variant-numeric:tabular-nums}
 #upgradeOverlay .upgrade-reroll:focus-visible{outline:3px solid #526e44;outline-offset:2px}
 #upgradeOverlay.initial-support>.upgrade-modal.ui-split{height:auto;max-height:calc(var(--ui-height,100dvh) - 20px)}
 #upgradeOverlay.initial-support .ui-actions{display:flex;justify-content:center}
@@ -86,6 +88,7 @@
 #upgradeOverlay.initial-support .summon-preview-badge{align-self:center}
 #upgradeOverlay.initial-support[aria-busy=true] .upgrade-cards{pointer-events:none}
 #upgradeOverlay.pixel-promotion .upgrade-reroll{border-radius:0}
+#upgradeOverlay.pixel-promotion #continueBattle:disabled{background:#d4d8c4;color:#52604d;border-color:#a1ab91;cursor:default}
 #initialAllyWait{
  position:absolute;z-index:12;top:44%;left:50%;transform:translateX(-50%);
  width:max-content;max-width:calc(100% - 32px);margin:0;padding:12px 16px;
@@ -103,3 +106,8 @@
 }
 
 #joystick[hidden]{display:none}
+
+@media(max-width:370px){
+ #upgradeOverlay .ui-actions:has(.upgrade-skip:not([hidden])){grid-template-columns:repeat(2,minmax(0,1fr))}
+ #upgradeOverlay .ui-actions:has(.upgrade-skip:not([hidden])) #continueBattle{grid-column:1/-1}
+}

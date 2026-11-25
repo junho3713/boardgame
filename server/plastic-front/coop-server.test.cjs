@@ -37,6 +37,7 @@ test('two clients authenticate, grow independently without pausing, reconnect an
   assert.equal((await call('/command',{action:'start'},a.token)).status,200);
   const r=handler.rooms.get(a.state.code),g=r.game;
   const seed=(await call('/state',null,b.token)).data;
+  assert.equal((await call('/command',{action:'skipLevelUpgrade',round:seed.round},b.token)).status,409);
   const rolled=await call('/command',{action:'reroll',round:seed.round},b.token);assert.equal(rolled.status,200);assert.equal(rolled.data.game.fields.rerollCount,2);
   assert.equal((await call('/command',{action:'reroll',round:seed.round},b.token)).status,409);
   await selectOpening(call,a.token);handler.step();assert.equal(g.time,0);
@@ -54,6 +55,23 @@ test('two clients authenticate, grow independently without pausing, reconnect an
   assert.equal((await call('/command',{action:'confirm',round:green.round},b.token)).status,409);
   assert.equal((await call('/command',{action:'confirm',round:green.round},a.token)).status,200);
   assert.equal(g.coopChoosing[0],false);assert.equal(g.phase,'playing');
+  g.withOwner(0,()=>{
+   g.summonSlots=['rifle','tank','rocket','lucky','medic'];
+   for(const type of g.summonSlots)g.tech[0][type]=1;
+  });
+  for(const owner of [0,1])g.withOwner(owner,()=>{g.xp=g.neededXP();});g.levelCheck();
+  assert(g.currentOptions.every(type=>g.summonSlots.includes(type)||g.abilityKey(type)));
+  const [greenCash,blueCash]=[0,1].map(owner=>g.withOwner(owner,()=>g.cash[0]));
+  const greenRound=g.coopRounds[0],blueRound=g.coopRounds[1],blueCards=g.withOwner(1,()=>[...g.currentOptions]);
+  let skipped=await call('/command',{action:'skipLevelUpgrade',round:greenRound-1},a.token);
+  assert.equal(skipped.status,409);
+  skipped=await call('/command',{action:'skipLevelUpgrade',round:greenRound},a.token);
+  assert.equal(skipped.status,200);assert.equal(skipped.data.choosing,false);
+  assert.equal(skipped.data.game.fields.cash[0],greenCash+30);assert.equal(g.phase,'playing');
+  assert.equal(g.withOwner(1,()=>g.cash[0]),blueCash);assert(g.coopChoosing[1]);
+  assert.deepEqual(g.withOwner(1,()=>g.currentOptions),blueCards);
+  assert.equal((await call('/command',{action:'skipLevelUpgrade',round:greenRound},a.token)).status,409);
+  assert.equal((await call('/command',{action:'skipLevelUpgrade',round:blueRound},b.token)).status,200);
   const input=(token,aim,x=0,y=0)=>call('/command',{action:'input',x,y,aim},token);
   const angle=owner=>g.withOwner(owner,()=>g.manualAimAngle());
   assert.equal((await input(a.token,{x:1,y:0},0,-1)).status,200);

@@ -59,7 +59,7 @@ function manualCheckpoint(report=false){if(selectedMode==='idle'||!['playing','p
 $('saveRunBtn').onclick=()=>manualCheckpoint(true);
 $('saveMenuBtn').onclick=()=>{if(manualCheckpoint(true))newGame(false);};
 $('manualContinue').onclick=async()=>{enableAudio(true);await gameAssetsReady;let latest;try{latest=window.FrontProfile.read(localStorage,profileKey);}catch{toast('개인 강화 저장을 읽지 못했습니다. 기존 저장은 유지합니다.');return;}directProfile.gold=latest.gold;Object.assign(directProfile.upgrades,latest.upgrades);const restored=runSave.load(gameEvents,directProfile);if(!restored){refreshManualSave();toast(runSave.error||'저장된 작전이 없습니다.');return;}
- if(selectedMode==='idle')autoSession.detach();selectedMode=restored.mode;autoPilot=null;game=restored.game;if(game.mode==='pve'&&!game.realtimeSummons)game.restoreSummoning(true);await unitModels.prepare(game);profile=directProfile;battlefield=game.battlefieldId();selectedCommander=game.commanderId||'sarge';selectedSniperSkin=game.sniperSkinId||'classic';selectedMedicSkin=game.medicSkinId||'classic';selectedFlameSkin=game.flameSkinId||'classic';document.body.classList.remove('auto-mode');for(const id of ['startOverlay','idleConfig','autoState','displayOverlay','constructionOverlay','resultOverlay','upgradeOverlay','pauseOverlay','helpOverlay','intelOverlay','supportOverlay','permanentOverlay','evolutionOverlay','fusionOverlay','battleSquadOverlay','battleMenuOverlay'])$(id).hidden=true;
+ if(selectedMode==='idle')autoSession.detach();selectedMode=restored.mode;autoPilot=null;game=restored.game;if(game.mode==='pve'&&!game.realtimeSummons)game.restoreSummoning(true);game.reconcileSummonChoices();await unitModels.prepare(game);profile=directProfile;battlefield=game.battlefieldId();selectedCommander=game.commanderId||'sarge';selectedSniperSkin=game.sniperSkinId||'classic';selectedMedicSkin=game.medicSkinId||'classic';selectedFlameSkin=game.flameSkinId||'classic';document.body.classList.remove('auto-mode');for(const id of ['startOverlay','idleConfig','autoState','displayOverlay','constructionOverlay','resultOverlay','upgradeOverlay','pauseOverlay','helpOverlay','intelOverlay','supportOverlay','permanentOverlay','evolutionOverlay','fusionOverlay','battleSquadOverlay','battleMenuOverlay'])$(id).hidden=true;
  cursorAimEnabled=false;clearInput();rosterKey='';queue=emptyQueue();renderCommanderChoice();renderSniperChoice();renderMedicChoice();renderBattlefieldChoice();buildTerrain();resize();updateIntel();if(game.phase==='choice'){showUpgrade(game.currentOptions||[]);if(game.pendingChoice){queue={...emptyQueue(),...game.pendingChoice.queue};choiceDone(game.pendingChoice.type);}}else $('pauseOverlay').hidden=false;refreshManualSave();updateUI();toast('저장된 작전 복구 · 준비되면 계속 진격하세요.');};
 setInterval(()=>{if(waveTestBackup)normalRunSave.claim();if(!COOP?.active&&selectedMode!=='idle'&&['playing','paused','choice','resupply'].includes(game.phase)&&!runSave.claim()){refreshManualSave();}},3000);
 
@@ -392,7 +392,7 @@ function updateUI(){syncBattleMusic();if(game.phase!=='ready')unitModels.prefetc
  renderWaveTest();
 }
 function showUpgrade(options){
- const initial=game.choiceKind==='initial';
+ const initial=game.choiceKind==='initial',lockedLevel=game.choiceKind==='level'&&game.summonSlotsLocked();
  $('upgradeOverlay').classList.toggle('initial-support',initial);
  if(selectedMode==='idle'&&autoPilot?.active)return;
  const pixel=game.pixelRoom&&game.isRoomCampaign();
@@ -403,12 +403,13 @@ function showUpgrade(options){
  $('promotionLevel').textContent=initial?'00:00':recovery?'EMERGENCY SUPPORT · 유료 충원':boss?'BOSS REWARD · 추가 강화':`LEVEL ${pad(game.level)}`;
  $('promotionTitle').textContent=initial?'초기 지원 병과 선택':recovery?'분대를 다시 편성하세요.':boss?'보스 격파 보상을 선택하세요.':'레벨업 선택';
  $('promotionDescription').textContent=initial?'병과 하나를 고르면 무료 지원군이 착지하고 작전이 시작돼요.':recovery?'보유 자원으로 해금한 병과를 충원합니다. XP·레벨·강화 기회 소비 없음 · 확정 후 90초 대기.':boss?'레벨업과 별개의 무료 강화입니다. 작전 능력은 같은 5종 선택 한도를 따릅니다.':'병과를 키우거나 능력 5종을 구성하세요. Lv.5 + 지정 능력 Lv.5면 자동 진화합니다.';
- if(!initial&&!recovery&&game.completedEvolutions()>=5)$('promotionDescription').textContent='진화 5종 완성 · 남은 강화 최대 1개 + 골드 상자 + 긴급 치료. 더 올릴 강화가 없으면 보급 보상을 선택하세요.';
+ if(lockedLevel)$('promotionDescription').textContent=options.length?'소환 슬롯 5개가 찼어요. 등록 병과와 작전 능력을 강화할 수 있어요.':'가능한 강화를 모두 완료했어요. 건너뛰면 30G를 받고 진격해요.';
+ if(!initial&&!recovery&&!lockedLevel&&game.completedEvolutions()>=5)$('promotionDescription').textContent='진화 5종 완성 · 남은 강화 최대 1개 + 골드 상자 + 긴급 치료. 더 올릴 강화가 없으면 보급 보상을 선택하세요.';
  document.querySelector('.support-panel').hidden=boss||game.mode==='pve'&&!recovery;document.querySelector('.upgrade-layout').classList.toggle('boss-reward',boss);
- $('continueBattle').hidden=initial;$('continueBattle').disabled=true;syncReroll();
+ $('continueBattle').hidden=initial;$('continueBattle').disabled=true;syncUpgradeActions();
  document.querySelector('.choice-foot>b').textContent=initial||!COOP?.active?'선택 중 전투 일시정지':'전투 계속 · 내 분대만 5초 무적';
  $('continueBattle').innerHTML='선택 후 확정하고 진격 <span>→</span>';
- $('choiceStatus').textContent=initial?'첫 병과는 하단 1번 슬롯에 등록돼요.':recovery?'지원 편성을 선택하거나 취소하고 계속 진격하세요.':boss?'강화 보상 1개를 선택하세요. 확정 전에는 변경할 수 있습니다.':game.mode==='pve'?(game.usesSummoning()?'강화를 선택하세요. 등록한 병과는 전투 중 하단에서 소환할 수 있어요.':'강화 1개를 선택하세요. 병력 지원은 1분부터 매분 제공됩니다.'):'강화 · 지원 중 하나를 선택하세요. 확정 전에는 변경할 수 있습니다.';
+ $('choiceStatus').textContent=lockedLevel?(options.length?'병과 Lv.5 + 지정 작전 능력 Lv.5에서 진화해요.':''):initial?'첫 병과는 하단 1번 슬롯에 등록돼요.':recovery?'지원 편성을 선택하거나 취소하고 계속 진격하세요.':boss?'강화 보상 1개를 선택하세요. 확정 전에는 변경할 수 있습니다.':game.mode==='pve'?(game.usesSummoning()?'강화를 선택하세요. 등록한 병과는 전투 중 하단에서 소환할 수 있어요.':'강화 1개를 선택하세요. 병력 지원은 1분부터 매분 제공됩니다.'):'강화 · 지원 중 하나를 선택하세요. 확정 전에는 변경할 수 있습니다.';
  document.querySelector('.support-note').textContent=recovery?'보유 자원으로 충원 · 강화·XP 소비 없음':'매 레벨업마다 제공 · 강화와 하나만 선택';
  document.querySelector('.support-menu>small').textContent=recovery?'생산 자원만 사용 · 확정 후 90초 대기 ↗':'자원 + 이번 강화 기회 사용 ↗';
  $('supportMenuBtn').disabled=boss;$('supportMenuBtn').classList.remove('selected');
@@ -445,20 +446,38 @@ async function submitOpening(type){
   else toast('초기 지원 병과를 선택할 수 없어요.');
   return;
  }
- choiceRequestPending=true;syncReroll();
+ choiceRequestPending=true;syncUpgradeActions();
  const overlay=$('upgradeOverlay');overlay.setAttribute('aria-busy','true');
- try{await COOP.chooseInitial(type);}finally{choiceRequestPending=false;overlay.removeAttribute('aria-busy');syncReroll();}
+ try{await COOP.chooseInitial(type);}finally{choiceRequestPending=false;overlay.removeAttribute('aria-busy');syncUpgradeActions();}
 }
-function syncReroll(){
+function syncUpgradeActions(){
  const button=$('rerollUpgrade'),available=['initial','level'].includes(game.choiceKind);
- button.hidden=!available;button.disabled=choiceRequestPending||game.rerollCount<=0;
+ button.hidden=!available;button.disabled=choiceRequestPending||!game.canRerollUpgrade();
  button.querySelector('small').textContent='남은 횟수: '+game.rerollCount;
+ const skip=$('skipLevelUpgrade');
+ skip.hidden=!game.canSkipLevelUpgrade();
+ skip.disabled=choiceRequestPending;
+ skip.querySelector('small').textContent='+'+window.FrontSummoning.rules.skipGold+'G';
 }
 $('rerollUpgrade').onclick=async()=>{
  if(game.phase!=='choice'||choiceRequestPending)return;
  if(!COOP?.active){game.rerollUpgrade();return;}
- choiceRequestPending=true;syncReroll();
- try{await COOP.reroll();}finally{choiceRequestPending=false;syncReroll();}
+ choiceRequestPending=true;syncUpgradeActions();
+ try{await COOP.reroll();}finally{choiceRequestPending=false;syncUpgradeActions();}
+};
+$('skipLevelUpgrade').onclick=async()=>{
+ if(choiceRequestPending||!game.canSkipLevelUpgrade())return;
+ if(!COOP?.active){
+  if(game.skipLevelUpgrade()){
+   $('upgradeOverlay').hidden=true;
+   clearInput();
+   game.levelCheck();
+   updateUI();
+  }
+  return;
+ }
+ choiceRequestPending=true;syncUpgradeActions();
+ try{await COOP.skipLevelUpgrade();}finally{choiceRequestPending=false;syncUpgradeActions();}
 };
 $('upgradeCards').addEventListener('click',e=>{
  const button=e.target.closest('[data-upgrade]');

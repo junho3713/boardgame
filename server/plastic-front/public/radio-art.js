@@ -61,74 +61,101 @@ function noise(seed, i) {
  let h = Math.imul(seed + Math.imul(i, 1597334677), 2246822519);
  return ((h ^ (h >>> 13)) >>> 0) / 4294967296;
 }
-function face(c,x,y,n,rim,angle) {
+const pairPositions=[[0,-42],[-36,0],[36,0]];
+function face(c,x,y,n,rim,angle,gold) {
  c.save(); c.translate(x,y); c.rotate(angle);
- c.fillStyle='#434543';c.beginPath();c.roundRect(-8,-8,18,20,3.5);c.fill();
- c.fillStyle='#fff';c.beginPath();c.roundRect(-9,-9,18,18,3.5);c.fill();
- stroke(c,1.6,'#191918',()=>c.roundRect(-9,-9,18,18,3.5));
+ c.fillStyle=gold?'#9e611e':'#434543';c.beginPath();c.roundRect(-8,-8,18,20,3.5);c.fill();
+ c.fillStyle=gold?'#f7d072':'#fff';c.beginPath();c.roundRect(-9,-9,18,18,3.5);c.fill();
+ stroke(c,1.6,gold?'#5a390e':'#191918',()=>c.roundRect(-9,-9,18,18,3.5));
  if(rim)stroke(c,2.3,rim,()=>c.roundRect(-10,-10,20,20,4.2));
  for (const [a,b] of pipLayout[n] || []) {
   const r=n===1?2.45:1.7;
-  ellipse(c,a*4.6,b*4.6,r,r,'#0e0e0e');
+  ellipse(c,a*4.6,b*4.6,r,r,gold?'#3f230d':'#0e0e0e');
  }
  c.restore();
 }
+function drawRollPair(c,roll,x,y,{rank,age,spinning,reduced,duration,grouped,index}) {
+ const popup=(age-duration)/.25, accented=roll.success&&popup>=0&&popup<1;
+ const zoom=accented?1+(reduced?.09:.5)*Math.min(1,popup/.22,(1-popup)/.30):1;
+ const golden=rank===3, revealed=roll.success&&!spinning;
+ const twist=spinning&&!reduced ? .34*Math.sin(age*38+index*1.2):0;
+ const jump=spinning&&!reduced ? 2.6*Math.sin(age/duration*Math.PI):0;
+ c.save();c.translate(x,y);c.scale(zoom,zoom);
+ if(grouped){
+  const plate=()=>c.roundRect(-22,-12,44,24,5);
+  c.fillStyle='rgba(18,30,23,.92)';c.beginPath();plate();c.fill();
+  stroke(c,accented?2.1:1.1,accented?'#ffcf58':revealed?'#d4a345':'#8e9380',plate);
+ }
+ if(spinning&&!reduced)c.scale(.55+.33*Math.abs(Math.sin(age*35+index)),1);
+ const rim=!grouped&&accented?(roll.strike==='nuke'?'#ff472f':'#ffbf33'):null;
+ face(c,-10.6,-jump,spinning?0:roll.dice[0],rim,twist-.035,golden);
+ face(c,10.6,-jump*.55,spinning?0:roll.dice[1],rim,-twist+.035,golden);
+ c.restore();
+}
+function rollLabel(c,label,top,bonus,incendiary,e,u,tr) {
+ c.font=bonus?'800 13px sans-serif':'bold 12px sans-serif';
+ c.textAlign='center';c.textBaseline='bottom';c.lineJoin='round';
+ const width=c.measureText(label).width;
+ if(bonus){
+  const tag=()=>c.roundRect(-width/2-7,top-16,width+14,19,5);
+  c.fillStyle=bonus===3?'#431b15':'#293520';c.beginPath();tag();c.fill();
+  stroke(c,1.3,bonus===3?'#e96a3c':'#d6a246',tag);
+ }
+ c.strokeStyle='#382115';c.lineWidth=bonus?2:3;c.strokeText(label,0,top);
+ c.fillStyle=bonus===3?'#fff0bb':'#ffdb89';c.fillText(label,0,top);
+ if(bonus||!incendiary)return;
+ const tx=incendiary.tx??e.tx, ty=incendiary.ty??e.ty;
+ if(Number.isFinite(tx)&&Number.isFinite(ty)){
+  const sx=tr.a*tx+tr.c*ty+tr.e,sy=tr.b*tx+tr.d*ty+tr.f;
+  if(sx<0||sx>c.canvas.width||sy<0||sy>c.canvas.height){
+   c.translate(width/2+7,top-7);c.rotate(Math.atan2(ty-u.y,tx-u.x));
+   polygon(c,[[5,0],[-4,-4],[-2,0],[-4,4]],'#ffc568');
+  }
+ }
+}
 function rolls(c,game,visible) {
- const rolling = game.effects.filter(e=>e.kind==='radioRoll' && visible(e.source || e));
- if (!rolling.length) return;
+ const rolling = new Map();
+ for(const e of game.effects){
+  if(e.kind==='radioRoll'&&visible(e.source||e))rolling.set(e.source?.id??e,e);
+ }
+ if(!rolling.size)return;
  const tr = c.getTransform();
  const pixelRatio=c.canvas?.clientWidth?c.canvas.width/c.canvas.clientWidth:root.devicePixelRatio||1;
  const scale = Math.max(.15, Math.hypot(tr.a,tr.b) / pixelRatio);
- const lanes = [];
- for (const e of rolling) {
-  const view=displayFrames.get(c);
-  const u=e.source || e, age=e.max-e.t+(view?.offset||0), hit=e.a===e.b, reduced=quiet(game);
-  const spinning=age<.23;
-  const popup=(age-.23)/.25, accented=hit&&popup>=0&&popup<1;
-  const zoom=accented?1+(reduced?.09:.5)*Math.min(1,popup/.22,(1-popup)/.30):1;
-  // Older saves carry the already-scheduled impact but omit its type on the roll.
-  const nuclear=e.strike===undefined?e.a>=5:e.strike==='nuke';
-  const rim=accented?(nuclear?'#ff342e':'#ffbb26'):null;
-  const incendiary=!spinning&&hit&&e.strike==='incendiary';
-  const labelHeight=incendiary?13:0;
+ const lanes = [], offset=displayFrames.get(c)?.offset||0, reduced=quiet(game);
+ for (const e of rolling.values()) {
+  const u=e.source || e, age=e.max-e.t+offset, rank=e.rank||1;
+  // Older saves resolve the single displayed pair from the original roll fields.
+  const pairs=e.rolls||[{dice:[e.a,e.b],success:e.a===e.b,strike:e.strike}];
+  const grouped=pairs.length>1, duration=rank===3?.16:.23, spinning=age<duration;
+  const successful=pairs.some(roll=>roll.success), bonus=e.bonus||0;
+  const incendiary=pairs.find(roll=>roll.success&&roll.strike==='incendiary');
+  const label=bonus===3?'TRIPLE JACKPOT!':bonus===2?'SYNC x2!':incendiary?(e.golden?'강화 소이탄':'소이탄'):'';
   const x=u.x*scale;
-  let y=(u.y-57)*scale-10;
-  while(lanes.some(lane=>Math.abs(lane.x-x)<lane.w+22*zoom && Math.abs(lane.y-y)<lane.h+13*zoom+labelHeight)) y-=14+13*zoom+labelHeight;
-  lanes.push({x,y,w:Math.max(22*zoom,incendiary?43:0),h:13*zoom+labelHeight});
+  let y=(u.y-(grouped?68:57))*scale-10;
+  const width=grouped?71:35, top=(grouped?61:19)+(label?22:0), bottom=19;
+  let overlap;
+  while((overlap=lanes.find(lane=>Math.abs(lane.x-x)<lane.width+width
+   && y+bottom>lane.y-lane.top && y-top<lane.y+lane.bottom))){
+   y=overlap.y-overlap.top-bottom-3;
+  }
+  lanes.push({x,y,width,top,bottom});
   c.save();
-  if (hit && !spinning) {
+  if (successful && !spinning) {
    const lampX=u.x+7, lampY=u.y-38;
    glow(c,lampX,lampY,15,15,'#fff9b6','#ffc44772');
    ellipse(c,lampX,lampY,2.3,2.3,'#fffdee');
-   const wave=clamp((age-.23)/.52), r=5+wave*(reduced?5:17);
+   const wave=clamp((age-duration)/.52), r=5+wave*(reduced?5:17);
    c.save(); c.globalAlpha*=1-wave;
    stroke(c,1.6,'#ffdb85',()=>c.arc(lampX,lampY,r,-1.5,-.22));
    stroke(c,1.2,'#ffeab0',()=>c.arc(lampX,lampY,r+4,-1.5,-.22)); c.restore();
   }
-  c.translate(x/scale,y/scale); c.scale(zoom/scale,zoom/scale);
-  const jump=spinning&&!reduced ? 3*Math.sin(age/.23*Math.PI):0;
-  const twist=spinning&&!reduced ? .37*Math.sin(age*38):0;
-  // Tumble unreadable edges first. Every readable pair is the resolved roll.
-  c.save();
-  if(spinning)c.scale(.40+.35*Math.abs(Math.sin(age*32)),1);
-  face(c,-11,-jump,spinning?0:e.a,rim,twist-.035);
-  face(c,11,-jump*.55,spinning?0:e.b,rim,-twist+.035);
-  c.restore();
-  if(incendiary){
-   c.scale(1/zoom,1/zoom);
-   const top=-11*zoom-3, label=e.golden?'강화 소이탄':'소이탄';
-   c.font='bold 12px sans-serif';c.textAlign='center';c.textBaseline='bottom';c.lineJoin='round';
-   c.strokeStyle='#382115';c.lineWidth=3;c.strokeText(label,0,top);
-   c.fillStyle='#ffdb89';c.fillText(label,0,top);
-   if(Number.isFinite(e.tx)&&Number.isFinite(e.ty)){
-    const sx=tr.a*e.tx+tr.c*e.ty+tr.e,sy=tr.b*e.tx+tr.d*e.ty+tr.f;
-    if(sx<0||sx>c.canvas.width||sy<0||sy>c.canvas.height){
-     c.translate(c.measureText(label).width/2+7,top-7);
-     c.rotate(Math.atan2(e.ty-u.y,e.tx-u.x));
-     polygon(c,[[5,0],[-4,-4],[-2,0],[-4,4]],'#ffc568');
-    }
-   }
-  }
+  c.translate(x/scale,y/scale); c.scale(1/scale,1/scale);
+  pairs.forEach((roll,index)=>{
+   const [px,py]=grouped?pairPositions[index]:[0,0];
+   drawRollPair(c,roll,px,py,{rank,age,spinning,reduced,duration,grouped,index});
+  });
+  if(label&&!spinning)rollLabel(c,label,grouped?-64:-21,bonus,incendiary,e,u,tr);
   c.restore();
  }
 }

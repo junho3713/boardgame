@@ -76,7 +76,7 @@ function apply(data){
   const opening=data.phase==='choice'&&game.time===0;
   $('initialAllyWait').hidden=!(opening&&!data.choosing&&!data.paused);
   if(opening&&data.choosing)$('promotionDescription').textContent='각자 초기 병과를 고르면 두 분대가 함께 출격해요.';
-  if(!opening&&data.choosing)$('promotionDescription').textContent='내 강화·지원만 선택합니다. 전투는 계속 진행됩니다. '+(data.invulnerable>0?'내 분대 무적 '+data.invulnerable.toFixed(1)+'초 남음.':'5초 무적이 끝났습니다. 빠르게 선택하세요.');
+  if(!opening&&data.choosing&&!(game.choiceKind==='level'&&game.summonSlotsLocked()))$('promotionDescription').textContent='내 강화·지원만 선택합니다. 전투는 계속 진행됩니다. '+(data.invulnerable>0?'내 분대 무적 '+data.invulnerable.toFixed(1)+'초 남음.':'5초 무적이 끝났습니다. 빠르게 선택하세요.');
   if(previousRound!==data.round)move=null;
  }
  for(const event of data.events||[]){if(event.id<=lastEvent)continue;lastEvent=event.id;if(['fire','explosion','radioWarning','radioImpact','toast'].includes(event.type))bridge.events[event.type]?.(event.data);}
@@ -112,6 +112,7 @@ api.configureReinforcement=plan=>{if(!globalThis.FrontReinforcementPlan.valid(pl
 api.install=value=>{bridge=value;mount();};
 api.chooseInitial=type=>state?.choosing&&!state.paused?command('chooseInitial',{type}):false;
 api.reroll=()=>state?.choosing&&!state.paused?command('reroll'):false;
+api.skipLevelUpgrade=()=>state?.choosing&&!state.paused?command('skipLevelUpgrade'):false;
 api.summon=slot=>inputAllowed()?command('summon',{slot}):false;
 api.pause=()=>{bridge.clearInput();command('pause');};
 api.frame=game=>{

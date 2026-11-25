@@ -109,7 +109,7 @@ const TYPES={swordEmpress:{name:'사검의 군주',hp:140800,damage:0,rate:100,r
 };
 const ENEMY_REPLACED_TYPES={rifle:TYPES.rifle,guntruck:TYPES.guntruck,rocket:TYPES.rocket};
 TYPES.rifle={...TYPES.rifle,name:'산탄총병',enemyName:TYPES.rifle.name,icon:'✦',hp:160,damage:22,rate:1,range:210,cost:60,role:'근거리 산탄 피해 최대 +65% · 5갈래 · 4발 후 재장전'};
-TYPES.guntruck={...TYPES.guntruck,name:'통신병',enemyName:TYPES.guntruck.name,icon:'⚄',hp:200,damage:38,rate:2.4,range:620,speed:133,r:13,role:'주사위 2개 · 더블로 폭격 호출 · 5회 불발 후 다음 더블 확정'};
+TYPES.guntruck={...TYPES.guntruck,name:'통신병',enemyName:TYPES.guntruck.name,icon:'⚄',hp:200,damage:38,rate:2.4,range:620,speed:133,r:13,role:'주사위 더블로 폭격 · 2성부터 3세트 동시 굴림'};
 TYPES.rocket={...TYPES.rocket,name:'지뢰 설치병',enemyName:TYPES.rocket.name,role:'조준 방향으로 블록 지뢰 2~3개 투척 · 지상 적이 밟으면 광역 폭발'};
 TYPES.drone={name:'미니 RC 드론',icon:'✜',hp:130,damage:9,rate:.20,range:330,speed:175,r:12,cost:125,flying:true,flightHeight:54,role:'부대 상공을 선회하며 가장 가까운 적에게 자동 연사'};
 const ROSTER=['rifle','machinegun','sniper','guntruck','rocket','mortar','tank','medic','lucky','drone'];
@@ -507,8 +507,9 @@ class FrontGame{
  abilityKey(type){return typeof type==='string'&&type.startsWith('ability_')?type.slice(8):null;}
  eligibleCard(type){
   const key=this.abilityKey(type);if(key)return !!ABILITIES[key]&&this.abilities[key]<5&&(this.abilities[key]>0||this.selectedAbilities().length<5);
-  if(ROSTER.includes(type))return this.tech[0][type]<5;
-  return !!FIELD_CARDS[type];
+  const locked=this.summonSlotsLocked?.();
+  if(ROSTER.includes(type))return this.tech[0][type]<5&&(!locked||this.summonSlots.includes(type));
+  return !!FIELD_CARDS[type]&&(!locked||this.choiceKind!=='level');
  }
  checkEvolutions(){
   for(const [type,e]of Object.entries(EVOLUTIONS)){
@@ -721,16 +722,16 @@ class FrontGame{
  }
  completedEvolutions(){return ROSTER.filter(type=>this.evolved[type]).length;}
  options(avoid=[]){
-  const unseen=t=>!avoid.includes(t);
-  if(this.completedEvolutions()>=5){
-   const boss=this.choiceKind==='boss',owned=new Set(this.units.filter(u=>u.team===0&&u.hp>0&&(!this.coop||u.coopOwner===this.coopOwner)).map(u=>u.type));
+  const unseen=t=>!avoid.includes(t),boss=this.choiceKind==='boss';
+  const owned=boss?new Set(this.alive(0).filter(u=>!this.coop||u.coopOwner===this.coopOwner).map(u=>u.type)):null;
+  if(this.completedEvolutions()>=5&&(boss||!this.summonSlotsLocked?.())){
    const pool=[...ROSTER.filter(t=>this.eligibleCard(t)&&(!boss||owned.has(t))),...Object.keys(ABILITIES).filter(k=>!boss||this.abilities[k]>0).map(k=>'ability_'+k).filter(t=>this.eligibleCard(t))];
    const fresh=avoid.length?pool.filter(unseen):pool,choices=fresh.length?fresh:pool;
    const result=[...(choices.length?[choices[Math.floor(this.random()*choices.length)]]:!boss&&this.usesSummoning?.()?['fieldSupply']:[]),'fieldGold','fieldRepair'];
    if(!boss)for(const t of result)this.cardShownCounts[t]=(this.cardShownCounts[t]||0)+1;
    return result;
   }
-  if(this.choiceKind==='boss'){const owned=new Set(this.alive(0).map(u=>u.type)),pool=[...ROSTER.filter(t=>owned.has(t)&&this.eligibleCard(t)),...Object.keys(ABILITIES).filter(k=>this.abilities[k]>0).map(k=>'ability_'+k).filter(t=>this.eligibleCard(t))];for(let i=pool.length-1;i>0;i--){const j=Math.floor(this.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}return pool.length?pool.slice(0,3):['fieldGold','fieldRepair'];}
+  if(boss){const pool=[...ROSTER.filter(t=>owned.has(t)&&this.eligibleCard(t)),...Object.keys(ABILITIES).filter(k=>this.abilities[k]>0).map(k=>'ability_'+k).filter(t=>this.eligibleCard(t))];for(let i=pool.length-1;i>0;i--){const j=Math.floor(this.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}return pool.length?pool.slice(0,3):['fieldGold','fieldRepair'];}
   const shuffle=list=>{for(let i=list.length-1;i>0;i--){const j=Math.floor(this.random()*(i+1));[list[i],list[j]]=[list[j],list[i]];}return list;};
   // Owning or fielding a card does not increase its chance: locked units and
   // unselected abilities share the same eligible pools as existing upgrades.
@@ -740,18 +741,19 @@ class FrontGame{
    const first=group.find(unseen);if(first)picks.push(first);
   }
   const mixed=shuffle(eligible);
-  const order=avoid.length?[...mixed.filter(unseen),...Object.keys(FIELD_CARDS).filter(unseen),...mixed.filter(t=>!unseen(t))]:mixed;
+  const fields=Object.keys(FIELD_CARDS).filter(t=>this.eligibleCard(t));
+  const order=avoid.length?[...mixed.filter(unseen),...fields.filter(unseen),...mixed.filter(t=>!unseen(t))]:mixed;
   for(const t of order)if(picks.length<3&&!picks.includes(t))picks.push(t);
   const early=this.level<8&&this.time<150;
   const unlock=this.mode==='pve'&&this.choiceKind!=='boss'?(early&&this.time>=45&&!this.tech[0].rocket&&!this.cardShownCounts.rocket?'rocket':early&&this.level>=3&&!this.tech[0].medic&&!this.cardShownCounts.medic?'medic':early&&this.level>=4&&!this.tech[0].lucky&&!this.cardShownCounts.lucky?'lucky':early&&this.time>=90&&!this.tech[0].tank&&!this.cardShownCounts.tank?'tank':this.mission.stage>=2&&!this.tech[0].mortar&&!this.cardShownCounts.mortar?'mortar':null):null;
   // An introductory unlock may appear once; declining it never pins a slot.
   if(unlock&&unseen(unlock)&&this.eligibleCard(unlock)&&!picks.includes(unlock)){if(picks.length>=3)picks[2]=unlock;else picks.push(unlock);}
-  for(const t of Object.keys(FIELD_CARDS))if(picks.length<3&&!picks.includes(t))picks.push(t);
+  for(const t of fields)if(picks.length<3&&!picks.includes(t))picks.push(t);
   const result=picks.slice(0,3);for(const t of result)this.cardShownCounts[t]=(this.cardShownCounts[t]||0)+1;
   return result;
  }
 
- bossRewardEligible(type){if(type==='fieldGold'||type==='fieldRepair')return true;const key=this.abilityKey(type);return this.eligibleCard(type)&&(key?this.abilities[key]>0:this.alive(0).some(u=>u.type===type));}
+ bossRewardEligible(type){if(type==='fieldGold'||type==='fieldRepair')return true;const key=this.abilityKey(type);return this.eligibleCard(type)&&(key?this.abilities[key]>0:this.alive(0).some(u=>u.type===type&&(!this.coop||u.coopOwner===this.coopOwner)));}
  choose(type){
   if(this.phase!=='choice'||this.turnChoice||type==='scout')return false;
   if(['recovery','supply','periodic'].includes(this.choiceKind))return false;

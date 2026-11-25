@@ -89,13 +89,15 @@ function createCoopHandler({now=Date.now,automatic=true}={}){
      if(r.paused||r.players.some(q=>!connected(q)))fail(409,'연결 후 작전을 재개해 주세요.');
      g.withOwner(p.owner,()=>{
       let ok=false;const worldPhase=g.phase;const opening=worldPhase==='choice'&&g.time===0;try{
-      if(action==='chooseInitial'||action==='reroll'){
+      if(action==='chooseInitial'||action==='reroll'||action==='skipLevelUpgrade'){
        if(body.round!==g.coopRounds[p.owner]||!g.coopChoosing[p.owner])fail(409,'선택지가 갱신되었습니다.');
        g.phase='choice';
        if(action==='chooseInitial'){
         ok=g.chooseInitialSupport(body.type);if(ok)g.coopChoosing[p.owner]=false;
-       }else{
+       }else if(action==='reroll'){
         ok=g.rerollUpgrade();if(ok)g.coopRounds[p.owner]++;
+       }else{
+        ok=g.skipLevelUpgrade();if(ok)g.coopChoosing[p.owner]=false;
        }
       }else if(opening)fail(409,'두 대장이 초기 병과를 선택하면 작전이 시작됩니다.');
       else if(action==='move')ok=g.setMoveOrder(body.x,body.y,false);

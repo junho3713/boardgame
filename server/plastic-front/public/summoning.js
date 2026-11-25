@@ -1,6 +1,6 @@
 /* Shared realtime orders for the player and the authoritative co-op battle. */
 (function(root){'use strict';
- const rules={slots:5,boxCost:150,boxReserve:6,income:2.5,fall:.58,height:200,chuteFade:.3};
+ const rules={slots:5,skipGold:30,boxCost:150,boxReserve:6,income:2.5,fall:.58,height:200,chuteFade:.3};
  const vehicles=['tank','lucky'];
  const isVehicle=type=>vehicles.includes(type);
  const choose=(pool,random)=>pool[Math.min(pool.length-1,Math.floor(random()*pool.length))];
@@ -52,15 +52,39 @@
    this.currentOptions=[];this.pendingChoice=null;this.choiceKind='level';this.turnChoice=null;this.phase='playing';
    this.notify('change');return true;
   };
+  p.canRerollUpgrade=function(){
+   return this.phase==='choice'&&!this.turnChoice&&this.rerollCount>0&&
+    (this.choiceKind==='initial'||this.choiceKind==='level'&&this.currentOptions.length>0);
+  };
   p.rerollUpgrade=function(){
-   if(this.phase!=='choice'||!['initial','level'].includes(this.choiceKind)||this.turnChoice||this.rerollCount<1)return false;
+   if(!this.canRerollUpgrade())return false;
    const previous=this.currentOptions;
    this.currentOptions=this.choiceKind==='initial'?this.initialOptions(previous):this.options(previous);
    this.rerollCount--;this.pendingChoice=null;
    this.notify('level',this.currentOptions);return true;
   };
+  p.canSkipLevelUpgrade=function(){
+   return this.usesSummoning()&&this.phase==='choice'&&this.choiceKind==='level'&&!this.turnChoice;
+  };
+  p.skipLevelUpgrade=function(){
+   if(!this.canSkipLevelUpgrade())return false;
+   this.cash[0]+=rules.skipGold;
+   this.pendingChoice=null;this.currentOptions=[];this.phase='playing';
+   this.notify('toast','강화 건너뛰기 · 전투 골드 +'+rules.skipGold+'G');
+   this.notify('change');return true;
+  };
+  p.summonSlotsLocked=function(){
+   return this.usesSummoning()&&this.summonSlots.length>=rules.slots;
+  };
+  p.reconcileSummonChoices=function(){
+   if(this.phase!=='choice'||!['level','boss'].includes(this.choiceKind)||!this.summonSlotsLocked())return;
+   const allowed=this.currentOptions.filter(type=>this.eligibleCard(type)&&
+    (this.choiceKind!=='boss'||this.bossRewardEligible(type)));
+   if(allowed.length!==this.currentOptions.length)this.currentOptions=[...new Set([...allowed,...this.options()])].slice(0,3);
+   if(this.pendingChoice&&!this.currentOptions.includes(this.pendingChoice.type))this.pendingChoice=null;
+  };
   p.nextSummonSlot=function(type){
-   return this.usesSummoning()&&ROSTER.includes(type)&&!this.summonSlots.includes(type)&&this.summonSlots.length<rules.slots?this.summonSlots.length+1:null;
+   return this.usesSummoning()&&ROSTER.includes(type)&&!this.summonSlots.includes(type)&&!this.summonSlotsLocked()?this.summonSlots.length+1:null;
   };
   p.registerSummon=function(type){
    if(this.nextSummonSlot(type))this.summonSlots.push(type);
