@@ -42,7 +42,10 @@ def sources():
         specs[path] = (cell, scale)
 
     models = json.loads((ASSETS / "models/manifest.json").read_text())["models"]
-    for layers in models.values():
+    for model, layers in models.items():
+        # The line infantry and its captain share the original guardsman art in both rooms.
+        if model == "bayonet-1":
+            continue
         for layer in layers.values():
             add("models", layer["file"], layer["cell"], .375)
     add("models", "blizzardMage-walk-v20261106.webp", models["blizzardMage-1"]["body"]["cell"], .375)
@@ -59,13 +62,9 @@ def sources():
     return specs
 
 
-
 def convert(item, binary, temp):
     path, (cell, scale) = item
     name = path.relative_to(ASSETS).as_posix()
-    if name == "models/bayonet-1-body.webp":
-        from pixel_bayonet import build_sheet
-        return name, build_sheet()
     stem = name.replace("/", "_")
     with Image.open(path) as source:
         rgba = source.convert("RGBA")

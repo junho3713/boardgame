@@ -58,3 +58,14 @@ test('the pixel infantry override is reserved for player troops; hostile melee r
  }
  assert.equal(calls,4);
 });
+
+test('the pixel room loads the original bayonet atlas for all sixteen facings and six poses',()=>{
+ const assets=path.join(__dirname,'public','assets');
+ const models=JSON.parse(fs.readFileSync(path.join(assets,'models','manifest.json'),'utf8')).models;
+ const sprites=JSON.parse(fs.readFileSync(path.join(assets,'pixel-room','manifest.json'),'utf8')).sprites;
+ const original=models['bayonet-1'].body;
+ assert.equal(original.directions*original.frames,96);
+ assert.ok(fs.existsSync(path.join(assets,'models',original.file)));
+ assert.equal(sprites['models/'+original.file],undefined);
+ assert.ok(sprites['models/'+models['bladeGuard-2'].body.file]);
+});

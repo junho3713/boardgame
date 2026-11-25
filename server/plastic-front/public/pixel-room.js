@@ -6,7 +6,7 @@
  const sources=new WeakMap(),canvasDraw=new WeakMap();
  const base='assets/pixel-room/';
  function load(){
-  if(!loading)loading=fetch(base+'manifest.json?v=20261125-enemy-identity').then(r=>{
+  if(!loading)loading=fetch(base+'manifest.json?v=20261125-original-bayonet').then(r=>{
    if(!r.ok)throw Error('Pixel atlas manifest '+r.status);return r.json();
   }).then(async data=>{
    const [pages]=await Promise.all([Promise.all(data.pages.map(async file=>{
