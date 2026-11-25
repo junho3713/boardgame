@@ -9,9 +9,9 @@
   if(!loading)loading=fetch(base+'manifest.json?v=20261125-snap1').then(r=>{
    if(!r.ok)throw Error('Pixel atlas manifest '+r.status);return r.json();
   }).then(async data=>{
-   const pages=await Promise.all(data.pages.map(async file=>{
+   const [pages]=await Promise.all([Promise.all(data.pages.map(async file=>{
     const img=new Image();img.src=base+file;await img.decode();return img;
-   }));
+   })),window.FrontPixelInfantry.load()]);
    sheets=pages;manifest=data.sprites;
   }).catch(err=>{loading=null;console.warn('도트 전장 이미지 로딩',err);});
   return loading;

@@ -1,0 +1,90 @@
+/* The pixel room's promotion cards use the same field greens as its infantry. */
+.pixel-promotion {
+  --px-ink:#243a32; --px-deep:#304a3c; --px-paper:#f3efd7; --px-face:#fffbe8;
+  --px-line:#839477; --px-green:#456544; --px-gold:#edc766;
+  background:rgba(23,39,32,.79);
+  backdrop-filter:none;
+}
+.pixel-promotion .modal {
+  color:var(--px-ink); background:var(--px-paper); border:4px solid var(--px-ink);
+  border-radius:0; box-shadow:inset 0 0 0 2px #fffbe8;
+}
+.pixel-promotion :is(.upgrade-card,.permanent-card,.run-choice-summary,.card-num,.card-badge,
+    .card-select-label,.card-effect,.evolution-hint,.support-menu,.primary,button,.ui-actions,.permanent-effect) {
+  border-radius:0;
+}
+.pixel-promotion .ui-scroll {scrollbar-color:#70836a var(--px-paper)}
+.pixel-promotion .eyebrow {color:var(--px-green)}
+.pixel-promotion :is(.upgrade-card,.permanent-card) {
+  border:2px solid var(--px-line);background:var(--px-face);box-shadow:none;
+  color:var(--px-ink);transition:none;
+}
+.pixel-promotion .upgrade-card:hover {transform:none;border-color:var(--px-green)}
+.pixel-promotion .upgrade-card.selected {
+  border:2px solid var(--px-deep);background:#e1eccb;
+  box-shadow:inset 0 0 0 2px #a3be84;
+}
+.pixel-promotion button:focus-visible {outline:3px solid #985321;outline-offset:2px}
+.pixel-promotion .card-icon {
+  align-self:center;display:grid;place-items:center;width:100%;min-height:0;height:90px;
+  color:var(--px-ink);background:none;border:0;box-shadow:none;filter:none;
+}
+.pixel-promotion .pixel-emblem {
+  display:inline-block;width:80px;height:80px;flex:none;
+  background-image:url('assets/pixel-room/promotion-v1.png');background-size:3300% 100%;
+  image-rendering:pixelated;vertical-align:middle;
+}
+.pixel-promotion .card-num {color:#425b44;background:#dce4c8;border:0}
+.pixel-promotion .card-badge {color:#496344;background:none}
+.pixel-promotion :is(.card-effect,.card-effect em) {color:#345837}
+.pixel-promotion .card-select-label {color:#314c37;background:#dde6cb;border:1px solid #91a281}
+.pixel-promotion .selected .card-select-label {color:#fffbe8;background:var(--px-deep);border-color:var(--px-deep)}
+.pixel-promotion .selected .card-select-label::before {content:"";display:inline-block;width:8px;height:8px;margin-right:5px;background:var(--px-gold);clip-path:polygon(0 38%,25% 38%,25% 63%,50% 63%,50% 38%,75% 38%,75% 13%,100% 13%,100% 50%,75% 50%,75% 75%,50% 75%,50% 100%,25% 100%,25% 75%,0 75%)}
+.pixel-promotion .run-choice-summary {background:#e1e7d2;border:1px solid #99aa8a}
+.pixel-promotion .ui-actions {border-top:2px solid var(--px-line);background:#e2e6ce}
+.pixel-promotion :is(.primary,.permanent-card button:not(:disabled)) {background:var(--px-deep);border:2px solid var(--px-ink);color:#fffbe8}
+.pixel-promotion .primary:disabled {background:#d3d8c4;color:#536151;border:2px solid #8d9b85;opacity:1}
+.pixel-promotion .permanent-card-top .pixel-emblem {width:40px;height:40px}
+.pixel-promotion .support-menu>span {background:none}
+.pixel-promotion .support-menu>span .upgrade-art {display:none}
+.pixel-promotion .support-menu>span::before {content:"";width:40px;height:40px;display:inline-block;background:url('assets/pixel-room/promotion-v1.png') 18.75% 0 / 3300% 100%;image-rendering:pixelated}
+@media (max-width:600px), (max-height:500px) {
+  .pixel-promotion .upgrade-card .card-icon {width:100%;height:60px;min-height:0;margin:0}
+  .pixel-promotion .card-icon .pixel-emblem {width:60px;height:60px}
+}
+@media (max-width:600px) {
+  .pixel-promotion .upgrade-cards .upgrade-card {grid-template-columns:60px minmax(0,1fr)}
+  .pixel-promotion .upgrade-cards .card-icon {width:60px}
+}
+
+
+.pixel-promotion .upgrade-modal.ui-split .ui-scroll {flex:1 1 auto}
+.pixel-promotion .modal {
+  border:12px solid transparent;
+  border-image:url('assets/pixel-room/promotion-frame.png') 5 / 12px stretch;
+}
+.pixel-promotion .upgrade-modal .eyebrow {
+  display:flex;align-items:center;justify-content:space-between;background:#304a3c;color:#f7eab8;
+  padding:6px 12px;font-size:11px;line-height:1.3;letter-spacing:.12em;
+}
+.pixel-promotion .eyebrow #promotionLevel {color:#f6d77a}
+.pixel-promotion #promotionTitle {color:#243b30;font-weight:850;letter-spacing:-.045em}
+.pixel-promotion .upgrade-card .card-icon {
+  position:relative;isolation:isolate;min-width:0;
+}
+.pixel-promotion .upgrade-card .card-icon::before {
+  content:"";position:absolute;inset:auto 0 7px;margin:auto;
+  width:66px;height:10px;z-index:-1;opacity:1;
+  background:#c6ceb1;clip-path:polygon(0 40%,13% 40%,13% 15%,30% 15%,30% 0,70% 0,70% 15%,87% 15%,87% 40%,100% 40%,100% 70%,87% 70%,87% 90%,70% 90%,70% 100%,30% 100%,30% 90%,13% 90%,13% 70%,0 70%);
+}
+.pixel-promotion .ability-card .card-icon::before {background:#d9ceb0}
+@media (min-width:601px) and (min-height:501px) {
+  .pixel-promotion .upgrade-card .card-icon {height:116px}
+  .pixel-promotion .upgrade-card .pixel-emblem {width:120px;height:120px}
+  .pixel-promotion .upgrade-card .card-icon::before {bottom:9px;width:84px}
+}
+@media (max-width:600px) {
+  .pixel-promotion .modal {border-width:7px;border-image-width:7px}
+  .pixel-promotion .upgrade-modal .eyebrow {padding:4px 8px}
+  .pixel-promotion .upgrade-card .card-icon::before {width:44px;height:6px;bottom:5px}
+}
