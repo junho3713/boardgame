@@ -7,6 +7,28 @@ const clamp = n => Math.max(0, Math.min(1, n));
 const ease = n => 1 - (1 - clamp(n)) ** 3;
 const preference = root.matchMedia?.('(prefers-reduced-motion: reduce)');
 const quiet = game => game?.reducedMotion ?? preference?.matches ?? false;
+const displayFrames=new WeakMap();
+// Network games receive the battle clock in snapshots. Animate between confirmations
+// on the canvas only, and stop advancing if the server stops sending snapshots.
+function beginFrame(c,game){
+ let view=displayFrames.get(c);
+ if(!view||view.game!==game){
+  view={game,snapshot:-Infinity,time:game.time};displayFrames.set(c,view);
+ }
+ view.reduced=quiet(game);
+ if(!game.coop||!root.FrontCoopClient?.active||game.phase!=='playing'||game.bossIntro?.remaining>0){
+  view.time=game.time;view.snapshot=-Infinity;
+ }else{
+  const now=root.performance.now()/1000;
+  if(view.snapshot!==game.time){
+   if(game.time<view.snapshot||view.snapshot===-Infinity)view.time=game.time;
+   view.snapshot=game.time;view.received=now;
+  }
+  view.time=Math.max(view.time,game.time+Math.min(.125,Math.max(0,now-view.received)));
+ }
+ view.offset=view.time-game.time;
+ return view;
+}
 const pipLayout = [[], [[0,0]], [[-1,-1],[1,1]], [[-1,-1],[0,0],[1,1]],
  [[-1,-1],[-1,1],[1,-1],[1,1]], [[-1,-1],[-1,1],[0,0],[1,-1],[1,1]],
  [[-1,-1],[-1,0],[-1,1],[1,-1],[1,0],[1,1]]];
@@ -59,12 +81,13 @@ function rolls(c,game,visible) {
  const scale = Math.max(.15, Math.hypot(tr.a,tr.b) / pixelRatio);
  const lanes = [];
  for (const e of rolling) {
-  const u=e.source || e, age=e.max-e.t, hit=e.a===e.b, reduced=quiet(game);
-  const spinning=!reduced && age<.23;
+  const view=displayFrames.get(c);
+  const u=e.source || e, age=e.max-e.t+(view?.offset||0), hit=e.a===e.b, reduced=quiet(game);
+  const spinning=age<.23;
   const popup=(age-.23)/.25, accented=hit&&popup>=0&&popup<1;
-  const zoom=accented&&!reduced?1+.5*Math.min(1,popup/.22,(1-popup)/.30):1;
+  const zoom=accented?1+(reduced?.09:.5)*Math.min(1,popup/.22,(1-popup)/.30):1;
   const rim=accented?(e.a>=5?'#ff342e':'#ffbb26'):null;
-  const tick=Math.floor(age*23), first=e.golden?3:1, count=7-first;
+  const tick=Math.floor(age*(reduced?10:23)), first=e.golden?3:1, count=7-first;
   const faces=spinning ? [first+(e.a-first+tick)%count,first+(e.b-first+5*tick)%count] : [e.a,e.b];
   const x=u.x*scale;
   let y=(u.y-57)*scale-10;
@@ -75,14 +98,14 @@ function rolls(c,game,visible) {
    const lampX=u.x+7, lampY=u.y-38;
    glow(c,lampX,lampY,15,15,'#fff9b6','#ffc44772');
    ellipse(c,lampX,lampY,2.3,2.3,'#fffdee');
-   const wave=reduced?.46:clamp((age-.23)/.52), r=5+wave*17;
+   const wave=clamp((age-.23)/.52), r=5+wave*(reduced?5:17);
    c.save(); c.globalAlpha*=1-wave;
    stroke(c,1.6,'#ffdb85',()=>c.arc(lampX,lampY,r,-1.5,-.22));
    stroke(c,1.2,'#ffeab0',()=>c.arc(lampX,lampY,r+4,-1.5,-.22)); c.restore();
   }
   c.translate(x/scale,y/scale); c.scale(zoom/scale,zoom/scale);
-  const jump=spinning ? 3*Math.sin(age/.23*Math.PI):0;
-  const twist=spinning ? .37*Math.sin(age*38):0;
+  const jump=spinning&&!reduced ? 3*Math.sin(age/.23*Math.PI):0;
+  const twist=spinning&&!reduced ? .37*Math.sin(age*38):0;
   face(c,-11,-jump,faces[0],rim,twist-.035);
   face(c,11,-jump*.55,faces[1],rim,-twist+.035);
   c.restore();
@@ -111,8 +134,9 @@ function burningTrail(c,x,y,r,progress,fade) {
  c.restore();
 }
 function ground(c,game,visible=()=>true,fx) {
+ const view=beginFrame(c,game);
  sky.syncOrigins(c,game);
- const events=game.effects||[],reducedMotion=quiet(game);
+ const events=game.effects||[],reduced=view.reduced;
  for(const e of events){
   if(e.kind!=='radioCrater'||!visible(e))continue;
   const life=e.t/e.max;
@@ -121,13 +145,13 @@ function ground(c,game,visible=()=>true,fx) {
  }
  for(const z of game.radioFireZones || []) {
   if (!visible(z)) continue;
-  const age=game.time-z.startedAt, life=z.until-game.time;
+  const age=view.time-z.startedAt, life=z.until-view.time;
   if (age<0 || life<=0) continue;
   const fade=clamp(age/.14)*clamp(life/.4), r=z.radius, seed=seedFor(z);
-  const time=quiet(game) ? .48 : age;
+  const time=age*(reduced?.47:1);
   c.save(); c.translate(z.x,z.y); c.globalAlpha*=fade;
   sky.scorch(c,r,false);
-  const reduced=quiet(game),sheet=impactSheet();
+  const sheet=impactSheet();
   const textures=fx?.prepareImpactMaterials?.();
   // Unequal pockets of spilled fuel. The scorched islands stay fixed while wisps rise from each pool.
   const pockets=r>105?8:5;
@@ -136,19 +160,20 @@ function ground(c,game,visible=()=>true,fx) {
    const d=r*(i===0?.05:.32+.41*noise(seed,i+35));
    const x=Math.cos(a)*d, y=Math.sin(a)*d;
    const wide=r*(.14+.19*noise(seed,i+4)), depth=wide*(.38+.24*noise(seed,i+14));
-   const spread=reduced?1:clamp((age-i*.035)/.47);
+   const spread=clamp((age-i*.035)/.47);
    burningTrail(c,x,y,r,spread,.90-.31*clamp(age/.95));
    if(!spread)continue;
    glow(c,x,y,wide,depth,'#462219ee','#b745139c');
    if(textures?.smoke?.length){
-    const rise=reduced?.46:(time*.71+noise(seed,i+42))%1;
+    const rise=(time*.71+noise(seed,i+42))%1;
     const lift=wide*(.8+1.34*rise);
     heatCloud(c,textures.smoke[i%3],x+wide*(rise*.23-.08),y-lift,wide*(.60+rise*.72),wide*(.8+rise),Math.sin(rise*Math.PI)*.40);
    }
    if(sheet){
-    const phase=reduced?.42:(time*(.88+.19*noise(seed,i))+noise(seed,i+8))%1;
+    const phase=(time*(.88+.19*noise(seed,i))+noise(seed,i+8))%1;
     const width=Math.max(20,wide*1.82)*(.6+.4*spread);
-    paintVolume(c,sheet,3,phase,x,y,width*(noise(seed,i+51)>.5?1:-1),width*(1.46+.29*noise(seed,i+17)));
+    const height=width*(1.46+.29*noise(seed,i+17))*(1+(reduced?.035:.10)*Math.sin(tau*phase));
+    paintVolume(c,sheet,3,phase,x,y,width*(noise(seed,i+51)>.5?1:-1),height);
    }
    const pieces=2+(i%3);
    for(let j=0;j<pieces;j++) {
@@ -168,17 +193,17 @@ function ground(c,game,visible=()=>true,fx) {
   }
   c.restore();
  }
- groundPasses(c,game,visible,reducedMotion);
+ groundPasses(c,game,visible,view);
 }
 
-function groundPasses(c,game,visible,reduced){
+function groundPasses(c,game,visible,view){
  for(const e of game.effects||[]){
   const incoming=e.kind==='radioIncoming',follow=e.kind==='radioImpact'&&e.strike==='incendiary';
   if((!incoming&&!follow)||!visible(e))continue;
-  const left=Number.isFinite(e.landAt)?e.landAt-game.time:(incoming?e.t:e.t-e.max);
+  const left=Number.isFinite(e.landAt)?e.landAt-view.time:(incoming?e.t:e.t-e.max)-view.offset;
   c.save();c.translate(e.x,e.y);
-  sky.aircraft(c,e,left,reduced);
-  if(incoming){sky.shadow(c,e,left);sky.marker(c,e,left,reduced);}
+  sky.aircraft(c,e,left,view.reduced);
+  if(incoming){sky.shadow(c,e,left);sky.marker(c,e,left,view.reduced);}
   c.restore();
  }
 }
@@ -247,8 +272,9 @@ function drawFallback(c,width,length,style){
  c.fillStyle=style.glare;c.fillRect(-half,-length*.39,width*.64,2);
 }
 function incoming(c,e,fx){
- const style=prop[e.strike],reduced=quiet(),nuke=e.strike==='nuke';
- const left=Number.isFinite(e.landAt)&&Number.isFinite(fx?.time)?e.landAt-fx.time:e.t;
+ const view=displayFrames.get(c),style=prop[e.strike],reduced=view?.reduced??quiet(),nuke=e.strike==='nuke';
+ const time=view?.time??fx?.time;
+ const left=Number.isFinite(e.landAt)&&Number.isFinite(time)?e.landAt-time:e.t-(view?.offset||0);
  if(left>sky.flightSeconds[e.strike])return;
  const point=sky.pose(c,e,left),travel=point.t;
  c.save();c.translate(point.x,point.y);c.rotate(point.angle);
@@ -264,14 +290,14 @@ function incoming(c,e,fx){
  c.bezierCurveTo(nozzle*.32,-length-jet*.65,nozzle*1.6,-length-11,nozzle,-length+4);
  c.closePath();c.fillStyle=plume;c.fill();
  if(assetReady()){
-  const frame=reduced?0:Math.min(3,Math.floor(travel*4));
+  const frame=Math.min(3,Math.floor(travel*4));
   c.drawImage(atlas,style.column*CELL_WIDTH,frame*CELL_HEIGHT,CELL_WIDTH,CELL_HEIGHT,-w/2,-style.size,w,style.size);
  }else drawFallback(c,w,length,style);
  c.restore();
 }
 // A ring reaches the actual damage radius before it fades, while the plume rises above it.
 function missilePressure(c,r,p,style,reduced){
- const q=clamp(p/.72),radius=reduced?r*.83:r*(.18+.82*ease(q));
+ const q=clamp(p/.72),radius=r*((reduced?.55:.18)+(reduced?.45:.82)*ease(q));
  if(q===1)return;
  c.save();c.globalAlpha*=clamp(1-q)*(reduced?.46:.86);
  stroke(c,3.5,style.wake+'99',()=>c.arc(0,0,radius,0,tau));
@@ -387,8 +413,8 @@ function embers(c,e,p,nuke){
  }
  c.restore();
 }
-function impact(c,e,p,fx){
- const style=prop[e.strike],nuke=e.strike==='nuke',reduced=quiet(),r=e.radius;
+function impact(c,e,p,fx,reduced){
+ const style=prop[e.strike],nuke=e.strike==='nuke',r=e.radius;
  const textures=fx?.prepareImpactMaterials?.(),heat=clamp(1-p/(nuke?.28:.25));
  if(nuke){
   const age=p*e.max,q=clamp(age/.32),radius=r*(1-(1-q)**2);
@@ -404,8 +430,10 @@ function impact(c,e,p,fx){
  if(sheet){
   const size=r*(nuke?1.58:e.strike==='missile'?1.92:2.05);
   const mirrored=e.strike==='missile'&&e.seq===1;
-  const frame=reduced?.32:p;
-  paintVolume(c,sheet,style.column,frame,0,0,mirrored?-size:size,size);
+  // Expand along the floor, then lift the plume while keeping its base on the impact point.
+  const rise=ease(p/.73),lift=reduced?.075:(nuke?.25:.18);
+  const height=size*(1-lift+lift*rise),width=size*(1-.1*(1-ease(p/.31)));
+  paintVolume(c,sheet,style.column,p,0,0,mirrored?-width:width,height);
  }else if(nuke)cloudDepth(c,r,p,seedFor(e),textures,reduced);
  else secondaryBurst(c,e,p,style,textures,reduced);
  if(!reduced)embers(c,e,p,nuke);
@@ -416,9 +444,11 @@ function event(c,e,fx) {
  if(e.kind==='radioCrater')return true; // Painted under units until the soot dissipates.
  if(e.kind==='radioRoll'){impactSheet();return true;} // Heads-up result renders after units and blasts.
  if((e.kind!=='radioIncoming'&&e.kind!=='radioImpact')||!Object.hasOwn(prop,e.strike))return false;
- const p=clamp(1-e.t/e.max);
+ const view=displayFrames.get(c);
+ const age=view&&Number.isFinite(e.at)?view.time-e.at:e.max-e.t+(view?.offset||0);
+ const p=clamp(age/e.max);
  c.save();c.translate(e.x,e.y);
- if(e.kind==='radioIncoming')incoming(c,e,fx);else impact(c,e,p,fx);
+ if(e.kind==='radioIncoming')incoming(c,e,fx);else impact(c,e,p,fx,view?.reduced??quiet());
  c.restore();return true;
 }
 root.FrontRadioArt={event,rolls,ground};

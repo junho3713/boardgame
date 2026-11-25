@@ -94,10 +94,10 @@ function aircraft(c,e,left,reduced){
  const spec=pass[e.strike],p=passPhase(e.strike,left);
  if(p<0||p>1)return;
  const tr=c.getTransform(),worldH=c.canvas.height/tr.d;
- const span=worldH*1.36+spec.size*1.2,d=(p-.5)*span;
- c.save();c.translate(reduced?0:dx*d,reduced?0:dy*d);
+ const span=reduced?spec.size*.85:worldH*1.36+spec.size*1.2,d=(p-.5)*span;
+ c.save();c.translate(dx*d,dy*d);
  c.rotate(Math.atan2(dy,dx)+Math.PI/2);
- c.globalAlpha*=(reduced?.12:.32)*Math.min(1,p*9,(1-p)*9);
+ c.globalAlpha*=(reduced?.23:.32)*Math.min(1,p*9,(1-p)*9);
  const img=silhouette(e.strike),s=spec.size;
  if(e.strike==='missile'){
   // The wingman trails to the side of the lead aircraft.

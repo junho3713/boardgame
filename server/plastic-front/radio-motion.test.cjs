@@ -1,0 +1,42 @@
+'use strict';
+const {test}=require('node:test'),assert=require('node:assert/strict');
+const fs=require('node:fs'),vm=require('node:vm');
+
+function renderer(coop=false){
+ let now=0;
+ class Atlas{
+  set src(url){
+   this.complete=true;
+   [this.naturalWidth,this.naturalHeight]=url.includes('volume')?[1152,3072]:[432,864];
+  }
+ }
+ const window={Image:Atlas,matchMedia:()=>({matches:true}),performance:{now:()=>now},
+  FrontCoopClient:{active:coop},FrontRadioAirspace:{syncOrigins(){},scorch(){},aircraft(){},marker(){},shadow(){}}};
+ vm.runInNewContext(fs.readFileSync(require.resolve('./public/radio-art.js'),'utf8'),{window});
+ const cells=[],gradient={addColorStop(){}},c=new Proxy({
+  globalAlpha:1,createRadialGradient:()=>gradient,createLinearGradient:()=>gradient,
+  drawImage(img,sx,sy,sw,sh){if(sw===192)cells.push((sy/192%4)*6+sx/192);}
+ },{get:(o,k)=>o[k]??(()=>{})});
+ const game={time:0,phase:'playing',coop,effects:[],radioFireZones:[]};
+ return {game,paint(t,ms){now=ms;game.time=t;window.FrontRadioArt.ground(c,game);},cells,
+  impact(at=0){window.FrontRadioArt.event(c,{kind:'radioImpact',strike:'nuke',at,x:0,y:0,radius:225,t:1,max:1});}};
+}
+test('reduced motion advances the impact and the same burning pocket, and a paused battle holds the frame',()=>{
+ const r=renderer();
+ r.game.radioFireZones=[{x:50,y:32,radius:80,startedAt:0,until:5}];
+ const fire=new Set(),cloud=new Set();
+ for(const t of [.25,.45,.65,.85]){
+  r.cells.length=0;r.paint(t,t*1000);fire.add(r.cells[0]);r.impact();cloud.add(r.cells.at(-1));
+ }
+ assert.equal(fire.size,4);assert.equal(cloud.size,4);
+ r.game.phase='paused';r.cells.length=0;r.paint(.85,1500);r.impact();const frozen=[...r.cells];
+ r.cells.length=0;r.paint(.85,3000);r.impact();assert.deepEqual(r.cells,frozen);
+});
+test('cooperative display advances between snapshots, bounds prediction and leaves the simulation clock intact',()=>{
+ const r=renderer(true);r.paint(4,1000);r.impact(4);const initial=r.cells.at(-1);
+ r.paint(4,1100);r.impact(4);assert.ok(r.cells.at(-1)>initial);assert.equal(r.game.time,4);
+ r.paint(4,1500);r.impact(4);const limit=r.cells.at(-1);
+ r.paint(4,2300);r.impact(4);assert.equal(r.cells.at(-1),limit);
+ r.paint(4.15,2350);r.impact(4);assert.ok(r.cells.at(-1)>=limit);
+ r.paint(1,2400);r.impact(1);assert.equal(r.cells.at(-1),initial);
+});
