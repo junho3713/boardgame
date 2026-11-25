@@ -52,7 +52,7 @@ function draw(){
  const halfW=width/scale/2,halfH=height/scale/2,target={x:c.x,y:c.y-height/scale*.16};
  if(!laneLocked){const w=game.bounds().width,h=game.bounds().height;camera.x=Math.max(Math.min(w/2,halfW),Math.min(Math.max(w/2,w-halfW),target.x));camera.y=Math.max(Math.min(h/2,halfH),Math.min(Math.max(h/2,h-halfH),target.y));}
  game.trialViewport={left:camera.x-halfW,right:camera.x+halfW,top:camera.y-halfH,bottom:camera.y+halfH};
- ctx.translate(width/2,height/2);ctx.scale(scale,scale);ctx.translate(-camera.x,-camera.y);
+ ctx.translate(width/2,height/2);ctx.scale(scale,scale);ctx.translate(-camera.x,-camera.y);const shake=FrontHitFeedback.nuclearShake(game);ctx.translate(shake.x,shake.y);
  if(terrain)ctx.drawImage(terrain,0,0,game.bounds().width,game.bounds().height);view.scene(ctx,game);view.warnings(ctx,game);window.FrontBlockFlashView?.grounded(ctx,game);window.FrontPirateCannonView?.ground(ctx,game);window.FrontRadioArt?.ground(ctx,game,undefined,fx);
  if(game.moveOrder){ctx.strokeStyle='#d9ffd4';ctx.lineWidth=2;ctx.beginPath();ctx.arc(game.moveOrder.x,game.moveOrder.y,22,0,Math.PI*2);ctx.stroke();}
  const allies=game.units.filter(u=>u.team===0&&u.hp>0),parts=[{kind:'portal',depth:game.bases[1].y+29},...view.parts(game),...game.units.filter(u=>u.team===0&&(u.hp>0||u.type==='medic'&&u.appearance==='rina'&&Number.isFinite(u.diedAt)&&game.time-u.diedAt<1.2)).map(u=>({kind:'unit',u,depth:u.y})),...game.obstacles.map(o=>({kind:'prop',o,depth:FrontLivingRoom.depth(o)}))];
@@ -65,7 +65,7 @@ function draw(){
   const bar=u.type==='medic'&&u.appearance==='rina'?-78:-69;ctx.fillStyle='#213b2b';ctx.fillRect(-17,bar,34,4);ctx.fillStyle='#b9e7a5';ctx.fillRect(-17,bar,34*u.hp/u.maxHp,4);ctx.restore();
  }
  window.FrontRosterArt?.field(ctx,game);
- for(const shot of game.shots)fx.drawShot(ctx,shot,game.evolved[shot.source.type]);for(const shell of game.mortarShells)fx.drawMortar(ctx,shell,game.time);for(const e of game.effects)fx.drawEvent(ctx,e);fx.drawParticles(ctx);window.FrontRosterArt?.results(ctx,game);fx.drawStunStatuses(ctx,game);view.health(ctx,game);
+ for(const shot of game.shots)fx.drawShot(ctx,shot,game.evolved[shot.source.type]);for(const shell of game.mortarShells)fx.drawMortar(ctx,shell,game.time);for(const e of game.effects)fx.drawEvent(ctx,e);fx.drawParticles(ctx);window.FrontRosterArt?.results(ctx,game);fx.drawStunStatuses(ctx,game);view.health(ctx,game);FrontHitFeedback.screenFlash(ctx,game);
 }
 function frame(now){const elapsed=Math.min(.1,(now-last)/1000||0);last=now;if(game?.phase==='playing'){acc+=elapsed;let n=0;while(acc>=.025&&n++<4){const x=joy.x+(keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0),y=joy.y+(keys.s||keys.arrowdown?1:0)-(keys.w||keys.arrowup?1:0),len=Math.max(1,Math.hypot(x,y));game.input={x:x/len,y:y/len};game.update(.025);acc-=.025;}fx.update(game);}else if(game)fx.time=game.time;if(now-renderAt>100){updateHUD();renderAt=now;}if(now>bannerUntil)$('banner').classList.remove('show');draw();requestAnimationFrame(frame);}requestAnimationFrame(frame);
 })();

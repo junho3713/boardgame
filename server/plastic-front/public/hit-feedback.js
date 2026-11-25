@@ -12,13 +12,36 @@ function pose(u,time){
 }
 function transform(c,u,time){const p=pose(u,time);if(!p)return;c.translate(p.x,p.y);c.rotate(p.angle);c.scale(p.scaleX,p.scaleY);if(p.flash>0)c.filter='brightness('+(1+p.flash*.7)+') saturate('+(1-p.flash*.35)+')';}
 const motionPreference=root.matchMedia?.('(prefers-reduced-motion: reduce)');
+const networkImpacts=new WeakMap();
+function nuclearAge(game){
+ if(game.reducedMotion??motionPreference?.matches)return Infinity;
+ const hit=game.effects?.findLast(e=>e.kind==='radioImpact'&&e.strike==='nuke');
+ if(!hit)return Infinity;
+ const age=Number.isFinite(hit.at)?game.time-hit.at:hit.max-hit.t;
+ if(!root.FrontCoopClient?.active||!Number.isFinite(hit.at))return age;
+ // The networking interval is longer than the flash. Play a fresh, confirmed impact once
+ // on the display clock, including when the server has already advanced past 50 ms.
+ const now=root.performance.now(),seen=networkImpacts.get(game);
+ if(seen&&seen.at===hit.at&&seen.x===hit.x&&seen.y===hit.y)return (now-seen.first)/1000;
+ if(age<0||age>.25)return age;
+ networkImpacts.set(game,{at:hit.at,x:hit.x,y:hit.y,first:now});
+ return 0;
+}
+function nuclearShake(game,age=nuclearAge(game)){
+ if(age<0||age>=.30)return{x:0,y:0};
+ const strength=(1-age/.30)**1.5;
+ return{x:Math.sin(age*88+.8)*11*strength,y:Math.cos(age*109)*13*strength};
+}
+function screenFlash(c,game){
+ const age=nuclearAge(game);
+ if(age<0||age>=.05||game.phase!=='playing')return;
+ c.save();c.setTransform(1,0,0,1,0,0);c.globalAlpha=.55*(1-(age/.05)**2);
+ c.fillStyle='#fff';c.fillRect(0,0,c.canvas.width,c.canvas.height);c.restore();
+}
 function shake(game){
  if(game.reducedMotion??motionPreference?.matches)return{x:0,y:0};
- const nuke=game.effects?.findLast(e=>e.kind==='radioImpact'&&e.strike==='nuke'&&e.max-e.t<.48&&Math.hypot(e.x-game.camera.x,e.y-game.camera.y)<650);
- if(nuke){
-  const age=nuke.max-nuke.t, power=(1-age/.48)**2;
-  return{x:Math.sin(age*59+.5)*5*power,y:Math.cos(age*73)*6*power};
- }
+ const ageNuke=nuclearAge(game);
+ if(ageNuke>=0&&ageNuke<.30)return nuclearShake(game,ageNuke);
  const h=game.impactPulse;if(!h)return{x:0,y:0};const age=game.time-h.at;if(age<0||age>=.18||Math.hypot(h.x-game.camera.x,h.y-game.camera.y)>650)return{x:0,y:0};const k=(1-age/.18)*Math.min(3,h.power*1.6);return{x:Math.sin(age*103)*k,y:Math.cos(age*87)*k*.65};
 }
 function install(Effects){const p=Effects.prototype,draw=p.drawEvent,emit=p.emit;p.emit=function(e){emit.call(this,e);if(e.kind==='hit')this.impactSound?.(e);};
@@ -32,5 +55,5 @@ function install(Effects){const p=Effects.prototype,draw=p.drawEvent,emit=p.emit
   return draw.call(this,c,e);
  };
 }
-root.FrontHitFeedback={pose,transform,shake,airborne,install};if(root.FrontEffects)install(root.FrontEffects);if(typeof module!=='undefined'&&module.exports)module.exports={pose,transform,shake,airborne,install};
+root.FrontHitFeedback={pose,transform,shake,airborne,nuclearShake,screenFlash,install};if(root.FrontEffects)install(root.FrontEffects);if(typeof module!=='undefined'&&module.exports)module.exports=root.FrontHitFeedback;
 })(typeof window==='undefined'?globalThis:window);

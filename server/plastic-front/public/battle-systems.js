@@ -120,7 +120,7 @@ class BattleResolution extends BattleSystem{
  update(game,{dt}){
   game.units=game.units.filter(unit=>game.isSupportToy?.(unit)&&!unit.toyRetired||unit.type==='leader'||unit.guardianRespawn||unit.hp>0||unit.diedAt===undefined||game.time-unit.diedAt<(unit.type==='medic'&&unit.team===0&&unit.appearance==='rina'?1.2:.8));
   game.shots=game.shots.filter(shot=>shot.life>0);
-  for(const effect of game.effects)effect.t-=dt;
+  for(const effect of game.effects)effect.t=Number.isFinite(effect.visualUntil)?effect.visualUntil-game.time:effect.t-dt;
   game.effects=game.effects.filter(effect=>effect.t>0);
   if(game.mode==='duel'&&game.time>=180&&game.phase==='playing'){
    const difference=game.bases[0].hp-game.bases[1].hp;

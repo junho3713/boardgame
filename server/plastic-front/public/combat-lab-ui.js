@@ -53,13 +53,13 @@
   const r=canvas.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,1.5),w=Math.max(1,r.width),h=Math.max(1,r.height);if(canvas.width!==Math.round(w*dpr)||canvas.height!==Math.round(h*dpr)){canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);}c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,w,h);
   c.fillStyle='#8a7956';c.fillRect(0,0,w,h);if(!game)return;
   const scale=Math.max(.38,Math.min(1.15,w/1080)),leader=game.commander(0),halfW=w/scale/2,halfH=h/scale/2;game.viewport={width:w/scale,height:h/scale};const target={x:Math.max(halfW,Math.min(game.bounds().width-halfW,leader.x)),y:Math.max(halfH,Math.min(game.bounds().height-halfH,leader.y-h/scale*.08))},smooth=Math.min(1,dt*10);game.camera.x+=(target.x-game.camera.x)*smooth;game.camera.y+=(target.y-game.camera.y)*smooth;
-  projection={scale,w,h};c.save();c.translate(w/2,h/2);c.scale(scale,scale);c.translate(-game.camera.x,-game.camera.y);
+  projection={scale,w,h};c.save();c.translate(w/2,h/2);c.scale(scale,scale);c.translate(-game.camera.x,-game.camera.y);const shake=FrontHitFeedback.nuclearShake(game);c.translate(shake.x,shake.y);
   if(floor.complete&&floor.naturalWidth){const tw=1080,th=tw*floor.naturalHeight/floor.naturalWidth;for(let x=Math.floor((game.camera.x-halfW)/tw)*tw;x<game.camera.x+halfW;x+=tw)for(let y=Math.floor((game.camera.y-halfH)/th)*th;y<game.camera.y+halfH;y+=th)c.drawImage(floor,x,y,tw,th);}
   fx.ground(c);fx.luckyGround(c,game);c.strokeStyle='#d3f5a5';c.lineWidth=2;c.beginPath();c.ellipse(leader.x,leader.y,25,15,0,0,Math.PI*2);c.stroke();if(game.moveOrder){c.beginPath();c.arc(game.moveOrder.x,game.moveOrder.y,16,0,Math.PI*2);c.stroke();}
   if(game.actor.type==='leader'&&game.ultimateStatus().active)fx.drawUltimateArea?.(c,game.actor,game.ultimate,game.time);
   for(const u of [...game.units].sort((a,b)=>a.y-b.y||a.id-b.id)){if(FrontHitFeedback.airborne(u,game.time))continue;unit(u);if(u.type==='lucky')fx.luckyReels(c,u,game);}
   window.FrontRosterArt?.field(c,game);fx.drawLuckySprays(c,game);for(const p of game.mortarShells)fx.drawMortar(c,p,game.time);for(const p of game.shots)fx.drawShot(c,p,game.evolved[p.source.type]);
-  for(const e of game.effects)if(!FrontSupportToyView.event(c,e,game))fx.drawEvent(c,e);for(const u of game.units.filter(u=>FrontHitFeedback.airborne(u,game.time)).sort((a,b)=>a.y-b.y||a.id-b.id))unit(u);fx.drawParticles(c);window.FrontRosterArt?.results(c,game);fx.drawStunStatuses(c,game);c.restore();
+  for(const e of game.effects)if(!FrontSupportToyView.event(c,e,game))fx.drawEvent(c,e);for(const u of game.units.filter(u=>FrontHitFeedback.airborne(u,game.time)).sort((a,b)=>a.y-b.y||a.id-b.id))unit(u);fx.drawParticles(c);window.FrontRosterArt?.results(c,game);fx.drawStunStatuses(c,game);c.restore();FrontHitFeedback.screenFlash(c,game);
  }
  function clearControls(){keys.clear();stick={x:0,y:0};if(game)game.input={x:0,y:0};$('joy').querySelector('i').style.transform='';}
  document.addEventListener('visibilitychange',()=>{if(document.hidden&&game){game.phase='paused';clearControls();acc=0;hud();}});window.addEventListener('blur',clearControls);

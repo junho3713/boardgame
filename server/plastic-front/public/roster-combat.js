@@ -168,7 +168,7 @@ function install({FrontGame,TYPES,multiplier}){
    const y=Math.max(0,Math.min(bounds.height,point.y+Math.cos(angle)*spread));
    const shell={source:u,x,y,angle,seq,strike,radius:spec.radius,golden,precise,damage:attack.damage,landAt:g.time+delay};
    g.radioStrikes.push(shell);
-   effect(g,'radioIncoming',shell,{source:u,strike,angle,seq,radius:spec.radius},delay);
+   effect(g,'radioIncoming',shell,{source:u,strike,angle,seq,radius:spec.radius,landAt:shell.landAt,visualUntil:shell.landAt},delay);
    if(strike==='nuke')g.notify('radioWarning',{team:0,id:u.id,x,y});
   }
   return [];
@@ -183,7 +183,9 @@ function install({FrontGame,TYPES,multiplier}){
    g.damage(t,damage*spec.multiplier*bonus,source);
    if(spec.knockback&&t.hp<hp)push(g,t,distance(t,shell)>.01?heading(shell,t):angle,spec.knockback);
   }
-  effect(g,'radioImpact',shell,{source,strike,angle,seq,radius},strike==='nuke'?1.6:.65);
+  const impactLife=strike==='nuke'?1.6:.65;
+  effect(g,'radioImpact',shell,{source,strike,angle,seq,radius,landAt,at:g.time,visualUntil:g.time+impactLife},impactLife);
+  if(strike==='nuke')effect(g,'radioCrater',shell,{radius,visualUntil:g.time+6},6);
   g.notify('radioImpact',{team:0,id:source.id,x,y,strike});
   if(strike==='incendiary'||golden&&strike==='nuke'){
    const duration=strike==='incendiary'?5:3.5;

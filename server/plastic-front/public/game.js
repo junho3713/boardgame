@@ -751,6 +751,7 @@ function draw(dt){
  // Launched enemies stay visible above the shark rather than appearing after it submerges.
  for(const u of game.units.filter(u=>window.FrontHitFeedback.airborne(u,game.time)).sort((a,b)=>a.y-b.y||a.id-b.id))drawUnit(u,true);
  battleFx.drawHealingStatuses(ctx,game,fxVisible);battleFx.drawParticles(ctx,fxVisible);window.FrontRosterArt?.results(ctx,game,fxVisible);battleFx.drawStunStatuses(ctx,game,u=>game.visible(u));swordView.health(ctx,game);if(game.isRoomCampaign())window.FrontPortal.health(ctx,game.bases[1]);drawFog();ctx.setTransform(DPR,0,0,DPR,0,0);
+ window.FrontHitFeedback.screenFlash(ctx,game);
  swordView.hud(ctx,game,W);
  if(game.time<game.scoutUntil){ctx.strokeStyle='#f0db98';ctx.lineWidth=2;ctx.strokeRect(4,4,W-8,H-8);}
  if(game.bossIntro?.remaining>0){rr(ctx,W/2-156,24,312,64,10,'#211a2ee8','#b795d5');text(ctx,'최종 보스 등장',W/2,48,13,'#d8bde9');text(ctx,game.bossIntro.name,W/2,73,20,'#fff0d3');}

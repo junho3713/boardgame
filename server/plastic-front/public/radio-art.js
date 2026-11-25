@@ -1,6 +1,7 @@
 /* World-space paint for the signal corps. All animation follows the combat clock. */
 (function (root) {
 'use strict';
+const sky=root.FrontRadioAirspace;
 const tau = Math.PI * 2;
 const clamp = n => Math.max(0, Math.min(1, n));
 const ease = n => 1 - (1 - clamp(n)) ** 3;
@@ -38,19 +39,15 @@ function noise(seed, i) {
  let h = Math.imul(seed + Math.imul(i, 1597334677), 2246822519);
  return ((h ^ (h >>> 13)) >>> 0) / 4294967296;
 }
-function face(c,x,y,n,gold,angle) {
+function face(c,x,y,n,rim,angle) {
  c.save(); c.translate(x,y); c.rotate(angle);
- c.fillStyle = gold ? '#795128' : '#364c42';
- c.beginPath(); c.roundRect(-8,-8,17,19,3.4); c.fill();
- const ivory = c.createLinearGradient(-6,-9,6,9);
- ivory.addColorStop(0,gold ? '#fff5bc' : '#fffdf1');
- ivory.addColorStop(.68,gold ? '#edc064' : '#e1e7cc');
- ivory.addColorStop(1,gold ? '#bb8138' : '#a5b3a1');
- c.fillStyle = ivory; c.beginPath(); c.roundRect(-9,-9,17,17,3.5); c.fill();
- stroke(c,.8,gold ? '#ffe393' : '#fbffe9',()=>c.roundRect(-8.3,-8.3,15.7,15.7,3));
+ c.fillStyle='#434543';c.beginPath();c.roundRect(-8,-8,18,20,3.5);c.fill();
+ c.fillStyle='#fff';c.beginPath();c.roundRect(-9,-9,18,18,3.5);c.fill();
+ stroke(c,1.6,'#191918',()=>c.roundRect(-9,-9,18,18,3.5));
+ if(rim)stroke(c,2.3,rim,()=>c.roundRect(-10,-10,20,20,4.2));
  for (const [a,b] of pipLayout[n] || []) {
-  ellipse(c,a*4.5-.5,b*4.5-.1,n===1?2.25:1.55,n===1?2.25:1.55,'#ffffd6');
-  ellipse(c,a*4.5-.5,b*4.5-.7,n===1?2.25:1.55,n===1?2.25:1.55,gold?'#513516':'#263c34');
+  const r=n===1?2.45:1.7;
+  ellipse(c,a*4.6,b*4.6,r,r,'#0e0e0e');
  }
  c.restore();
 }
@@ -58,18 +55,22 @@ function rolls(c,game,visible) {
  const rolling = game.effects.filter(e=>e.kind==='radioRoll' && visible(e.source || e));
  if (!rolling.length) return;
  const tr = c.getTransform();
- const scale = Math.max(.4, Math.hypot(tr.a,tr.b) / (root.devicePixelRatio || 1));
+ const pixelRatio=c.canvas?.clientWidth?c.canvas.width/c.canvas.clientWidth:root.devicePixelRatio||1;
+ const scale = Math.max(.15, Math.hypot(tr.a,tr.b) / pixelRatio);
  const lanes = [];
  for (const e of rolling) {
   const u=e.source || e, age=e.max-e.t, hit=e.a===e.b, reduced=quiet(game);
   const spinning=!reduced && age<.23;
+  const popup=(age-.23)/.25, accented=hit&&popup>=0&&popup<1;
+  const zoom=accented&&!reduced?1+.5*Math.min(1,popup/.22,(1-popup)/.30):1;
+  const rim=accented?(e.a>=5?'#ff342e':'#ffbb26'):null;
   const tick=Math.floor(age*23), first=e.golden?3:1, count=7-first;
   const faces=spinning ? [first+(e.a-first+tick)%count,first+(e.b-first+5*tick)%count] : [e.a,e.b];
   const x=u.x*scale;
   let y=(u.y-57)*scale-10;
-  while(lanes.some(lane=>Math.abs(lane.x-x)<41 && Math.abs(lane.y-y)<22)) y-=23;
-  lanes.push({x,y});
-  c.save(); c.globalAlpha *= clamp(e.t/.16);
+  while(lanes.some(lane=>Math.abs(lane.x-x)<lane.w+22*zoom && Math.abs(lane.y-y)<lane.h+13*zoom)) y-=14+13*zoom;
+  lanes.push({x,y,w:22*zoom,h:13*zoom});
+  c.save();
   if (hit && !spinning) {
    const lampX=u.x+7, lampY=u.y-38;
    glow(c,lampX,lampY,15,15,'#fff9b6','#ffc44772');
@@ -79,11 +80,11 @@ function rolls(c,game,visible) {
    stroke(c,1.6,'#ffdb85',()=>c.arc(lampX,lampY,r,-1.5,-.22));
    stroke(c,1.2,'#ffeab0',()=>c.arc(lampX,lampY,r+4,-1.5,-.22)); c.restore();
   }
-  c.translate(x/scale,y/scale); c.scale(1/scale,1/scale);
+  c.translate(x/scale,y/scale); c.scale(zoom/scale,zoom/scale);
   const jump=spinning ? 3*Math.sin(age/.23*Math.PI):0;
   const twist=spinning ? .37*Math.sin(age*38):0;
-  face(c,-10,-jump,faces[0],hit||e.golden,twist-.035);
-  face(c,10,-jump*.55,faces[1],hit||e.golden,-twist+.035);
+  face(c,-11,-jump,faces[0],rim,twist-.035);
+  face(c,11,-jump*.55,faces[1],rim,-twist+.035);
   c.restore();
  }
 }
@@ -110,6 +111,14 @@ function burningTrail(c,x,y,r,progress,fade) {
  c.restore();
 }
 function ground(c,game,visible=()=>true,fx) {
+ sky.syncOrigins(c,game);
+ const events=game.effects||[],reducedMotion=quiet(game);
+ for(const e of events){
+  if(e.kind!=='radioCrater'||!visible(e))continue;
+  const life=e.t/e.max;
+  c.save();c.translate(e.x,e.y);c.globalAlpha*=Math.min(1,life*1.65);
+  sky.scorch(c,e.radius*.79,true);c.restore();
+ }
  for(const z of game.radioFireZones || []) {
   if (!visible(z)) continue;
   const age=game.time-z.startedAt, life=z.until-game.time;
@@ -117,7 +126,7 @@ function ground(c,game,visible=()=>true,fx) {
   const fade=clamp(age/.14)*clamp(life/.4), r=z.radius, seed=seedFor(z);
   const time=quiet(game) ? .48 : age;
   c.save(); c.translate(z.x,z.y); c.globalAlpha*=fade;
-  ellipse(c,0,0,r,r,gradient(c,0,0,r,[0,'#73361ca8'],[.58,'#9c41298c'],[.87,'#bd552f67'],[1,'#6a362300']));
+  sky.scorch(c,r,false);
   const reduced=quiet(game),sheet=impactSheet();
   const textures=fx?.prepareImpactMaterials?.();
   // Unequal pockets of spilled fuel. The scorched islands stay fixed while wisps rise from each pool.
@@ -131,14 +140,15 @@ function ground(c,game,visible=()=>true,fx) {
    burningTrail(c,x,y,r,spread,.90-.31*clamp(age/.95));
    if(!spread)continue;
    glow(c,x,y,wide,depth,'#462219ee','#b745139c');
+   if(textures?.smoke?.length){
+    const rise=reduced?.46:(time*.71+noise(seed,i+42))%1;
+    const lift=wide*(.8+1.34*rise);
+    heatCloud(c,textures.smoke[i%3],x+wide*(rise*.23-.08),y-lift,wide*(.60+rise*.72),wide*(.8+rise),Math.sin(rise*Math.PI)*.40);
+   }
    if(sheet){
     const phase=reduced?.42:(time*(.88+.19*noise(seed,i))+noise(seed,i+8))%1;
-    const width=Math.max(22,wide*2.1)*(.6+.4*spread);
-    paintVolume(c,sheet,3,phase,x,y,width*(noise(seed,i+51)>.5?1:-1),width*(.76+.24*noise(seed,i+17)));
-   }
-   if(!reduced&&textures?.smoke?.length){
-    const rise=(time*.76+noise(seed,i+42))%1;
-    heatCloud(c,textures.smoke[i%3],x+rise*wide*.35,y-rise*wide*.7,wide*(.8+rise*.5),wide,Math.sin(rise*Math.PI)*.38);
+    const width=Math.max(20,wide*1.82)*(.6+.4*spread);
+    paintVolume(c,sheet,3,phase,x,y,width*(noise(seed,i+51)>.5?1:-1),width*(1.46+.29*noise(seed,i+17)));
    }
    const pieces=2+(i%3);
    for(let j=0;j<pieces;j++) {
@@ -156,6 +166,19 @@ function ground(c,game,visible=()=>true,fx) {
     ellipse(c,px+Math.sin(ember*4+k)*3+ember*5,py-s*(1.4+ember*2.4),1.15,.73,'#ffdb8c');c.restore();
    }
   }
+  c.restore();
+ }
+ groundPasses(c,game,visible,reducedMotion);
+}
+
+function groundPasses(c,game,visible,reduced){
+ for(const e of game.effects||[]){
+  const incoming=e.kind==='radioIncoming',follow=e.kind==='radioImpact'&&e.strike==='incendiary';
+  if((!incoming&&!follow)||!visible(e))continue;
+  const left=Number.isFinite(e.landAt)?e.landAt-game.time:(incoming?e.t:e.t-e.max);
+  c.save();c.translate(e.x,e.y);
+  sky.aircraft(c,e,left,reduced);
+  if(incoming){sky.shadow(c,e,left);sky.marker(c,e,left,reduced);}
   c.restore();
  }
 }
@@ -181,9 +204,9 @@ function paintVolume(c,sheet,band,p,x,y,width,height){
  c.restore();
 }
 const prop={
- incendiary:{column:0,size:59,tail:.60,drop:179,shift:-91,flight:.55,ink:'#ffd483',glare:'#fff0a9',wake:'#ff984f'},
- missile:{column:1,size:65,tail:.79,drop:194,shift:107,flight:.47,ink:'#c1eeef',glare:'#e3ffff',wake:'#8bc6cf'},
- nuke:{column:2,size:95,tail:.97,drop:256,shift:0,flight:.81,ink:'#ffd390',glare:'#fff4cf',wake:'#efaa61'}
+ incendiary:{column:0,size:59,tail:.60,ink:'#ffd483',glare:'#fff0a9',wake:'#ff984f'},
+ missile:{column:1,size:65,tail:.79,ink:'#c1eeef',glare:'#e3ffff',wake:'#8bc6cf'},
+ nuke:{column:2,size:95,tail:.97,ink:'#ffd390',glare:'#fff4cf',wake:'#efaa61'}
 };
 function assetReady(){
  return atlas?.complete&&atlas.naturalWidth===CELL_WIDTH*3&&atlas.naturalHeight===CELL_HEIGHT*4;
@@ -194,48 +217,25 @@ function flash(c,r,alpha,color){
  glow(c,0,-2,r,r*.51,'#ffffeb',color);
  c.restore();
 }
-function guidance(c,e,p,style,reduced){
- const nuke=e.strike==='nuke',r=e.radius, clock=reduced?.18:p;
- c.save();c.lineCap='round';
- c.globalAlpha*=nuke?.56+.27*p:.35+.36*p;
- if(nuke||!e.seq){
-  c.setLineDash(nuke?[9,8]:[4,7]);c.lineDashOffset=reduced?0:-p*16;
-  stroke(c,nuke?2:1.35,style.ink,()=>c.arc(0,0,r,0,tau));c.setLineDash([]);
-  const inner=r*(1-.75*ease(clock));
-  c.save();c.globalAlpha*=.41;
-  stroke(c,1.15,style.ink,()=>c.arc(0,0,inner,0,tau));c.restore();
-  for(let i=0;i<4;i++){
-   const a=tau*(i+.5)/4,x=Math.cos(a),y=Math.sin(a);
-   stroke(c,nuke?2.8:1.5,style.glare,()=>{c.moveTo(x*(r-9),y*(r-9));c.lineTo(x*(r+3),y*(r+3));});
+// Smoke starts at the nozzle. It stays on the same axis as the accelerated body.
+function exhaust(c,length,t,nuke,fx,reduced){
+ const white=fx?.textures?.whiteSmoke;
+ const reach=(nuke?150:91)*(.45+.55*t),base=nuke?6:2.6,spread=nuke?17:6;
+ c.save();c.translate(0,-length+2);
+ const plume=c.createLinearGradient(0,0,0,-reach);
+ plume.addColorStop(0,'#fffdf6f0');plume.addColorStop(.23,'#fffdf5cf');
+ plume.addColorStop(.70,'#fffcf399');plume.addColorStop(1,'#f6f4ee00');
+ c.beginPath();c.moveTo(-base,0);
+ c.bezierCurveTo(-base,-reach*.22,-spread,-reach*.8,-spread,-reach);
+ c.lineTo(spread,-reach);c.bezierCurveTo(spread,-reach*.8,base,-reach*.25,base,0);
+ c.closePath();c.fillStyle=plume;c.fill();
+ if(nuke&&white&&!reduced){
+  for(let i=0;i<9;i++){
+   const u=i/9,w=11+u*32;
+   heatCloud(c,white,Math.sin(i*1.9+t*5)*4*u,-reach*u,w,w*1.3,(1-u)*.67);
   }
  }
- const lock=(nuke?26:16)*(1-.42*ease(clock));
- for(let i=0;i<4;i++){
-  const a=tau*i/4+Math.PI/4;
-  stroke(c,1.55,style.glare,()=>c.arc(0,0,lock,a-.25,a+.25));
- }
- stroke(c,1.05,style.ink,()=>{c.moveTo(-4,0);c.lineTo(4,0);c.moveTo(0,-4);c.lineTo(0,4);});
  c.restore();
-}
-function flightPoint(style,seq,p){
- const lane=seq===1?-.67:seq===2?.62:1,remain=1-p;
- return {x:style.shift*lane*remain,y:-style.drop*(1-p**1.75)};
-}
-function missileWake(c,style,seq,t){
- // Sample the shell's path in world space. Each trail bends into its own landing lane.
- if(t<=.025)return;
- const steps=9, length=Math.min(.54,t),left=[],right=[];
- for(let i=0;i<=steps;i++){
-  const u=i/steps, at=t-u*length, pos=flightPoint(style,seq,at);
-  const tangent=flightPoint(style,seq,at+.005),dx=tangent.x-pos.x,dy=tangent.y-pos.y;
-  const norm=Math.hypot(dx,dy)||1,width=1.4+4.8*u;
-  const x=pos.x-dx/norm*style.size*style.tail,y=pos.y-dy/norm*style.size*style.tail;
-  left.push([x-dy/norm*width,y+dx/norm*width]);right.push([x+dy/norm*width,y-dx/norm*width]);
- }
- const [x,y]=left[0],[tailX,tailY]=left[steps];
- const g=c.createLinearGradient(x,y,tailX,tailY);
- g.addColorStop(0,'#e5ffffcc');g.addColorStop(.46,'#c1eeee80');g.addColorStop(1,'#bbd9db00');
- polygon(c,left.concat(right.reverse()),g);
 }
 function drawFallback(c,width,length,style){
  const metal=c.createLinearGradient(-width/2,0,width/2,0);
@@ -246,32 +246,15 @@ function drawFallback(c,width,length,style){
  polygon(c,[[-half,-length],[half,-length],[half,-length*.19],[0,0],[-half,-length*.19]],metal);
  c.fillStyle=style.glare;c.fillRect(-half,-length*.39,width*.64,2);
 }
-function incoming(c,e,p,fx){
+function incoming(c,e,fx){
  const style=prop[e.strike],reduced=quiet(),nuke=e.strike==='nuke';
- guidance(c,e,p,style,reduced);
- if(e.t>style.flight)return;
- const travel=clamp(1-e.t/style.flight),seq=e.seq||0;
- const point=flightPoint(style,seq,travel);
- const next=flightPoint(style,seq,Math.min(1.001,travel+.015));
- const angle=Math.atan2(point.x-next.x,next.y-point.y);
- if(!reduced&&e.strike==='missile')missileWake(c,style,seq,travel);
- glow(c,point.x*.33,0,13+(nuke?10:0)+travel*9,6+travel*5,'#181b1bce','#332b294c');
- c.save();c.translate(point.x,point.y);c.rotate(angle);
- const length=style.size*style.tail, w=style.size*CELL_WIDTH/CELL_HEIGHT;
- const textures=fx?.prepareImpactMaterials?.();
- const seed=seedFor(e),jet=nuke?50:34;
- if(!reduced){
-  // Scaled puffs separate along the wake, so the exhaust reads as moving through the air.
-  for(let i=0;i<5;i++){
-   const q=i/5,side=(noise(seed,i)-.5)*q*w*(.68+.35*Math.sin(travel*10+i));
-   const y=-length-jet*(q+.13),size=8+q*(nuke?23:12);
-   c.save();c.globalAlpha*=(1-q)*.61;
-   const image=textures?.smoke?.[i%3];
-   if(image)c.drawImage(image,side-size/2,y-size/2,size,size);
-   else glow(c,side,y,size*.57,size*.4,'#e4d9c5b8','#a39c8c80');
-   c.restore();
-  }
- }
+ const left=Number.isFinite(e.landAt)&&Number.isFinite(fx?.time)?e.landAt-fx.time:e.t;
+ if(left>sky.flightSeconds[e.strike])return;
+ const point=sky.pose(c,e,left),travel=point.t;
+ c.save();c.translate(point.x,point.y);c.rotate(point.angle);
+ const length=style.size*style.tail,w=style.size*CELL_WIDTH/CELL_HEIGHT;
+ const jet=nuke?51:27;
+ if(e.strike!=='incendiary')exhaust(c,length,travel,nuke,fx,reduced);
  const plume=c.createLinearGradient(0,-length-jet,0,-length+3);
  plume.addColorStop(0,'#d8a87900');plume.addColorStop(.38,style.wake+'a0');
  plume.addColorStop(.76,style.glare);plume.addColorStop(1,'#ffffed');
@@ -287,13 +270,13 @@ function incoming(c,e,p,fx){
  c.restore();
 }
 // A ring reaches the actual damage radius before it fades, while the plume rises above it.
-function pressure(c,r,p,style,power,reduced){
- const q=clamp(p/(power===3?.49:.72)),radius=reduced?r*.83:r*(.18+.82*ease(q));
+function missilePressure(c,r,p,style,reduced){
+ const q=clamp(p/.72),radius=reduced?r*.83:r*(.18+.82*ease(q));
  if(q===1)return;
  c.save();c.globalAlpha*=clamp(1-q)*(reduced?.46:.86);
- stroke(c,power+1.5,style.wake+'99',()=>c.arc(0,0,radius,0,tau));
+ stroke(c,3.5,style.wake+'99',()=>c.arc(0,0,radius,0,tau));
  stroke(c,1.2,style.glare,()=>c.arc(0,0,radius,0,tau));
- if(power>1&&!reduced)stroke(c,1.05,style.ink+'a8',()=>c.arc(0,0,radius*(.82+.10*q),0,tau));
+ if(!reduced)stroke(c,1.05,style.ink+'a8',()=>c.arc(0,0,radius*(.82+.10*q),0,tau));
  c.restore();
 }
 function heatCloud(c,image,x,y,w,h,alpha){
@@ -407,7 +390,13 @@ function embers(c,e,p,nuke){
 function impact(c,e,p,fx){
  const style=prop[e.strike],nuke=e.strike==='nuke',reduced=quiet(),r=e.radius;
  const textures=fx?.prepareImpactMaterials?.(),heat=clamp(1-p/(nuke?.28:.25));
- pressure(c,r,p,style,nuke?3:e.strike==='missile'?2:1,reduced);
+ if(nuke){
+  const age=p*e.max,q=clamp(age/.32),radius=r*(1-(1-q)**2);
+  if(age<.44&&radius>0){
+   c.save();c.globalAlpha*=clamp((.44-age)/.16)*(reduced?.30:.92);
+   stroke(c,4+8*(1-q),'#fffdf2',()=>c.arc(0,0,radius,0,tau));c.restore();
+  }
+ }else if(e.strike==='missile')missilePressure(c,r,p,style,reduced);
  if(!reduced&&e.strike!=='incendiary')groundSurge(c,e,p,textures);
  flash(c,r*(.40+.17*p),heat*(reduced?.46:.85),style.wake+'b8');
  c.save();c.globalAlpha*=clamp((1-p)/(nuke?.32:.23));
@@ -424,11 +413,12 @@ function impact(c,e,p,fx){
 }
 
 function event(c,e,fx) {
+ if(e.kind==='radioCrater')return true; // Painted under units until the soot dissipates.
  if(e.kind==='radioRoll'){impactSheet();return true;} // Heads-up result renders after units and blasts.
  if((e.kind!=='radioIncoming'&&e.kind!=='radioImpact')||!Object.hasOwn(prop,e.strike))return false;
  const p=clamp(1-e.t/e.max);
  c.save();c.translate(e.x,e.y);
- if(e.kind==='radioIncoming')incoming(c,e,p,fx);else impact(c,e,p,fx);
+ if(e.kind==='radioIncoming')incoming(c,e,fx);else impact(c,e,p,fx);
  c.restore();return true;
 }
 root.FrontRadioArt={event,rolls,ground};
