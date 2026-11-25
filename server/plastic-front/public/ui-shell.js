@@ -1,7 +1,6 @@
 /* Presentation only: retains the game's existing controls, saves and combat. */
 (()=>{'use strict';
 const $=id=>document.getElementById(id);
-for(const id of ['greenLabel','redLabel']){const label=$(id);if(!label)continue;const compact=()=>{const text=label.textContent;label.setAttribute('aria-label',text);label.title=text;const lives=text.match(/(?:기회|후퇴) (\d+)회/);label.dataset.compact=id==='greenLabel'&&lives?((text.includes('방어 기지')?'기지':text.includes('내 분대')?'내 분대':'대장')+' · 기회 '+lives[1]+'회'):text.split('/')[0].trim();};new MutationObserver(compact).observe(label,{childList:true,characterData:true,subtree:true});compact();}
 function details(label,nodes){const d=document.createElement('details');d.className='ui-details';const s=document.createElement('summary');s.textContent=label;d.append(s);nodes[0]?.before(d);for(const n of nodes)d.append(n);return d;}
 const start=$('startOverlay')?.querySelector('.modal');
 if(start){

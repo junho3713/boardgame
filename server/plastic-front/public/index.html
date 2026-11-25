@@ -5,7 +5,7 @@
   <meta name="theme-color" content="#182d28">
   <meta name="description" content="작은 병정, 큰 판단. 분대를 키우고 전장을 돌파하는 모바일 전술 게임 시제품.">
   <title>PLASTIC FRONT — 작은 병정, 큰 판단</title>
-  <link rel="stylesheet" href="style.css?v=20261109-toys2"><link rel="stylesheet" href="coop.css?v=20261105">
+  <link rel="stylesheet" href="style.css?v=20261125-progress"><link rel="stylesheet" href="coop.css?v=20261105">
   <link rel="preload" as="image" href="assets/ui/unit-portraits-v140.webp">
   <link rel="preload" as="image" href="assets/ui/upgrades-v139/damage.webp">
   <link rel="preload" as="image" href="assets/ui/upgrades-v139/health.webp">
@@ -17,7 +17,7 @@
   <link rel="preload" as="image" href="assets/ui/upgrades-v139/capacity.webp">
   <link rel="preload" as="image" href="assets/ui/upgrades-v139/defense.webp">
 <link rel="stylesheet" href="ui-shell.css?v=20261109-pace1">
-<link rel="stylesheet" href="reinforcement-plan.css?v=20261109-starfirst"><link rel="stylesheet" href="battle-hud.css?v=20261111-toast2"><link rel="stylesheet" href="pixel-promotion.css?v=infantry1"></head>
+<link rel="stylesheet" href="reinforcement-plan.css?v=20261109-starfirst"><link rel="stylesheet" href="battle-hud.css?v=20261125-progress"><link rel="stylesheet" href="pixel-promotion.css?v=infantry1"></head>
 <body>
 <div class="app">
   <header class="topbar">
@@ -44,22 +44,33 @@
       <div class="sidebar-foot">PROTOTYPE v1.74<span>독자 제작 장난감 전장</span></div>
     </aside>
     <section class="battle-section" aria-label="전투 화면">
-      <div class="battle-hud">
-        <div class="base-status green"><span><span id="greenLabel">GREEN / 아군 지휘부</span></span><div class="health-track"><i id="greenHealth"></i></div><b id="greenHP">100%</b></div>
-        <div class="timer"><span id="matchStatus">작전 경과 시간</span><strong id="timer">00:00</strong></div>
-        <div class="base-status red"><span><span id="redLabel">최종 기지 / 방어막</span></span><div class="health-track"><i id="redHealth"></i></div><b id="redHP">100%</b></div>
+      <div class="battle-hud" aria-label="작전 진행도">
+        <div class="hud-progress">
+          <div class="hud-level">
+            <div class="hud-level-line"><strong id="levelLabel">LV. 01</strong><small id="xpText">다음까지 24 XP</small></div>
+            <div class="xp-track" id="hudXp" role="progressbar" aria-label="레벨 경험치" aria-valuemin="0" aria-valuemax="24" aria-valuenow="0"><i id="xpFill"></i></div>
+          </div>
+          <div class="hud-metric"><span id="matchStatus">경과 시간</span><strong id="timer">00:00</strong></div>
+          <div class="hud-metric hud-gold"><span>획득 골드</span><strong id="hudRunGold">0</strong></div>
+        </div>
       </div>
       <div class="tactical-toolbar" aria-label="부대 명령"><div class="order-buttons"><button id="followOrderBtn">↶ 지휘관 추종</button></div><button id="mobileIntel">⌖ 상대 정보</button><span id="orderStatus" role="status">자동 조준</span></div>
       <div class="run-build-bar"><b id="runAbilityCount">작전 능력 0/5</b><div id="abilitySlots" class="ability-slots"></div><button id="fusionBtn" hidden>★★ 병과 합성</button><button id="evolutionBtn">진화 조합 ↗</button></div><div id="waveTestStrip" class="wave-test-strip" hidden><b id="waveTestLabel">웨이브 테스트</b><button id="changeWaveTest">시점 변경</button><button id="exitWaveTest">원래 작전으로 ↗</button></div><div class="battle-frame" id="battleFrame">
         <canvas id="battle" aria-label="분대 전투 지도. WASD로 이동합니다. 스페이스바를 한 번 눌러 커서 조준을 켜고, 다시 눌러 자동 조준으로 돌아갑니다. 마우스 왼쪽 버튼이나 방향키를 누르는 동안에도 수동 조준합니다. 우클릭 또는 터치로 부대 이동 위치를 지정합니다."></canvas>
-        <div class="field-economy economy-bar" aria-label="전투 자원과 건설">
-          <div class="field-cash" title="병력 지원과 건설에 사용하는 전투 자원"><span class="resource-cube" aria-hidden="true">◆</span><b id="cash">135</b><small>자원</small></div>
-          <button id="constructionBtn" aria-label="건설 메뉴 열기" aria-haspopup="dialog">⌂ 건설 <b id="constructionCount">0</b></button>
-          <div class="truck-info"><span aria-hidden="true">▰</span><b id="truckCount">2</b><small>자동 채집</small><strong id="income">+3.6 / 초</strong></div>
+        <div class="hud-left-rail">
+          <div class="field-economy economy-bar" aria-label="전투 자원과 건설">
+            <div class="field-cash" title="병력 지원과 건설에 사용하는 전투 자원"><span class="resource-cube" aria-hidden="true">◆</span><b id="cash">135</b><small>자원</small></div>
+            <button id="constructionBtn" aria-label="건설 메뉴 열기" aria-haspopup="dialog">⌂ 건설 <b id="constructionCount">0</b></button>
+            <div class="truck-info"><span aria-hidden="true">▰</span><b id="truckCount">2</b><small>자동 채집</small><strong id="income">+3.6 / 초</strong></div>
+          </div>
+          <div class="map-label"><span class="map-label-dot"></span> <span id="mapName">LIVING ROOM 02</span> <small id="mapSubtitle">작전 구역 · 거실</small></div>
+          <button id="hudBuildBtn" class="hud-build" type="button" aria-controls="battleSquadOverlay" aria-haspopup="dialog" hidden>
+            <span id="hudUnitRanks" class="hud-build-row" hidden><b>병과</b><span></span></span>
+            <span id="hudAbilityRanks" class="hud-build-row" hidden><b>스탯</b><span></span></span>
+          </button>
+          <div class="operation-objective" id="objectivePanel"><button id="objectiveToggle" class="objective-toggle" aria-expanded="true" aria-controls="objectiveDetails"><span>작전 정보</span><small id="hudLives" hidden></small><i aria-hidden="true">−</i></button><div id="objectiveDetails" class="objective-details"><b id="objectiveTitle">01 / 사냥 구역 돌파</b><span id="objectiveProgress">벌레 무리를 모두 처치하세요.</span><small id="pressureText">위협 Lv.1 · 1분마다 상승</small><small id="enemyGrowthText"></small><small id="bossSchedule"></small><div id="bossHealthBar" class="boss-health" role="progressbar" aria-label="보스 체력" aria-valuemin="0" aria-valuemax="100" hidden><i id="bossHealthFill"></i></div></div><div id="mageQuest" class="mage-quest" role="status" hidden><b id="mageQuestTitle"></b><span id="mageQuestProgress"></span><small id="mageQuestReward"></small></div><div id="laserQuest" class="mage-quest" role="status" hidden><b id="laserQuestTitle"></b><span id="laserQuestProgress"></span><small id="laserQuestReward"></small></div></div>
         </div>
-        <div class="map-label"><span class="map-label-dot"></span> <span id="mapName">LIVING ROOM 02</span> <small id="mapSubtitle">작전 구역 · 거실</small></div>
-        <div class="level-panel"><span id="levelLabel">LV. 01</span><div class="xp-track"><i id="xpFill"></i></div><small id="xpText">다음 선택까지 24 XP</small></div>
-        <div class="operation-objective" id="objectivePanel"><button id="objectiveToggle" class="objective-toggle" aria-expanded="true" aria-controls="objectiveDetails"><span>작전 정보</span><i aria-hidden="true">−</i></button><div id="objectiveDetails" class="objective-details"><b id="objectiveTitle">01 / 사냥 구역 돌파</b><span id="objectiveProgress">벌레 무리를 모두 처치하세요.</span><small id="pressureText">위협 Lv.1 · 1분마다 상승</small><small id="enemyGrowthText"></small><small id="bossSchedule"></small><div id="bossHealthBar" class="boss-health" role="progressbar" aria-label="보스 체력" aria-valuemin="0" aria-valuemax="100" hidden><i id="bossHealthFill"></i></div></div><div id="mageQuest" class="mage-quest" role="status" hidden><b id="mageQuestTitle"></b><span id="mageQuestProgress"></span><small id="mageQuestReward"></small></div><div id="laserQuest" class="mage-quest" role="status" hidden><b id="laserQuestTitle"></b><span id="laserQuestProgress"></span><small id="laserQuestReward"></small></div></div><div id="lessonBanner" class="lesson-banner" role="status" hidden></div><div id="targetMarker" class="target-marker"><b>↑</b><small>목표</small></div><div id="toast" class="toast" role="status"></div>
+        <div id="lessonBanner" class="lesson-banner" role="status" hidden></div><div id="targetMarker" class="target-marker"><b>↑</b><small>목표</small></div><div id="toast" class="toast" role="status"></div>
         <button id="fullscreenBtn" class="field-fullscreen" type="button" aria-label="전체화면 켜기" aria-pressed="false" title="전체화면">⛶ 전체화면</button>
         <div class="minimap"><canvas id="mini" width="132" height="175" aria-label="전장 미니맵"></canvas><span>TACTICAL MAP</span></div>
         <div class="mission-label" id="missionLabel"><span>↑</span><div>상대 본진으로 진격<small>병력을 모으고, 측면을 공략하세요.</small></div></div>
@@ -139,6 +150,6 @@
 <script src="autoplay.js?v=20261125-pixelroom1"></script><script src="auto-session.js?v=20261125-pixelroom1"></script><script src="run-save.js?v=20261124-hybrid1"></script>
 <script src="room-fence-art.js?v=178"></script><script src="livingroom.js?v=20261115-bedroom1"></script><script src="display.js?v=178"></script>
 <script src="garden.js?v=178"></script><script src="desktop.js?v=20261125-pixelroom1"></script>
-<script src="art-loader.js?v=178"></script><script src="unit-art.js?v=20261125-radio1"></script><script src="upgrade-art.js?v=178"></script><script src="mobile-ui.js?v=178"></script><script src="wave-test.js?v=20261125-radio1"></script><script src="wave-test-ui.js?v=20261124-destiny1"></script><script src="coop-state.js?v=2"></script><script src="coop-client.js?v=20261125-radio1"></script><script src="unit-labels.js?v=20261124-roster1"></script><script src="field-supply-ui.js?v=20261115-toyarea1"></script><script src="reinforcement-plan-ui.js?v=20261124-roster1"></script><script src="battle-hud.js?v=20261111-hud1"></script><script src="pixel-infantry.js?v=20261125-enemy-identity"></script><script src="pixel-room.js?v=20261125-original-bayonet"></script><script src="game.js?v=20261125-infantry1"></script>
-<script src="ui-shell.js?v=20261109-ux1"></script>
+<script src="art-loader.js?v=178"></script><script src="unit-art.js?v=20261125-radio1"></script><script src="upgrade-art.js?v=178"></script><script src="mobile-ui.js?v=178"></script><script src="wave-test.js?v=20261125-radio1"></script><script src="wave-test-ui.js?v=20261124-destiny1"></script><script src="coop-state.js?v=2"></script><script src="coop-client.js?v=20261125-progress"></script><script src="unit-labels.js?v=20261124-roster1"></script><script src="field-supply-ui.js?v=20261115-toyarea1"></script><script src="reinforcement-plan-ui.js?v=20261124-roster1"></script><script src="battle-hud.js?v=20261125-progress"></script><script src="pixel-infantry.js?v=20261125-enemy-identity"></script><script src="pixel-room.js?v=20261125-original-bayonet"></script><script src="game.js?v=20261125-progress"></script>
+<script src="ui-shell.js?v=20261125-progress"></script>
 </body></html>

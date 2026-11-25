@@ -186,6 +186,12 @@ function abilityValue(key,level){const b=abilities[key],n=game.abilityBonus(key,
 function evolutionHint(type){const key=game.abilityKey(type),pairs=key?Object.entries(evolutions).filter(([,e])=>e.ability===key):evolutions[type]?[[type,evolutions[type]]]:[];return pairs.map(([u,e])=>`${types[u].name} Lv.5 + ${abilities[e.ability].name} Lv.5 → ${e.name}`).join('<br>');}
 function renderBuild(){
  const selected=game.selectedAbilities();$('runAbilityCount').textContent=`작전 능력 ${selected.length}/5`;
+ const upgraded=roster.filter(type=>game.tech[0][type]>1||game.evolved[type]).map(type=>({
+  name:unitName(type),level:game.tech[0][type],evolved:!!game.evolved[type],
+  icon:unitArt.icon(type,types[type].icon,game.evolved[type])
+ }));
+ const stats=selected.map(key=>({name:abilities[key].name,level:game.abilities[key],icon:upgradeArt.icon(key,'')||'<i class="hud-xp-icon"></i>'}));
+ window.FrontBattleHud.renderUpgrades(upgraded,stats);
  $('abilitySlots').innerHTML=[...selected.map(k=>`<span class="ability-slot ${game.abilities[k]===5?'maxed':''}" title="${abilities[k].name} Lv.${game.abilities[k]}/5"><i>${upgradeArt.icon(k,abilities[k].icon)}</i><b>${abilities[k].name}</b><small>${game.abilities[k]===5?'MAX':game.abilities[k]+'/5'}</small></span>`),...Array(5-selected.length).fill('<span class="ability-slot empty">＋</span>')].join('');
  $('runChoiceSummary').innerHTML=`<b>작전 능력 ${selected.length}/5종</b><span>${selected.length?selected.map(k=>`${abilities[k].name} ${game.abilities[k]}/5`).join(' · '):'능력 카드를 확정하면 슬롯이 채워집니다.'}</span><small>${selected.length===5?'5종 선택 완료 · 선택한 능력만 계속 강화할 수 있습니다.':'새 능력을 고르면 이번 판의 5개 슬롯 중 하나를 사용합니다.'}</small>`;
 }
@@ -308,18 +314,24 @@ function updateUI(){syncBattleMusic();if(game.phase!=='ready')unitModels.prefetc
  const room=game.bounds().id==='livingroom',desk=game.isDesktopDefense();$('mapName').textContent=game.bedroomStar&&desk?'BEDROOM FLOOR ★★':desk?'DESK DEFENSE 03':room?(game.pixelRoom?'PIXEL LIVING ROOM ★★':game.starExperiment?'LIVING ROOM ★★':'LIVING ROOM 02'):'BACKYARD 01';$('mapSubtitle').textContent=game.bedroomStar&&desk?'마루 · 러그 · 생활용품 / 2성 방바닥':desk?'책상 위 방어선 · 북쪽 공세 / 20분 생존':room?(game.pixelRoom?'도트 거실 · 2성 혼합 공세':'확장 거실 · 20분 혼합 공세'):'작전 구역 · 뒷마당';$('constructionCount').textContent=game.buildings.filter(b=>b.hp>0).length;$('constructionBtn').disabled=game.mode!=='pve'||!['playing','paused'].includes(game.phase);renderBattlefieldChoice();
  renderBuild();updateIntel();
  $('headerGold').textContent=Math.floor(profile.gold);$('startGold').textContent=Math.floor(profile.gold);$('cash').textContent=Math.floor(game.cash[0]);$('supportCash').textContent=Math.floor(game.cash[0]);$('truckCount').textContent=game.trucks[0];$('income').textContent=`+${game.income(0).toFixed(1)} / 초`;
- $('levelLabel').textContent=`LV. ${pad(game.level)}`;$('xpFill').style.width=`${Math.min(100,game.xp/game.neededXP()*100)}%`;$('xpText').textContent=`다음 선택까지 ${Math.max(0,Math.ceil(game.neededXP()-game.xp))} XP`;
+ const needed=game.neededXP(),earned=Math.max(0,Math.min(needed,game.xp)),left=Math.ceil(needed-earned),xp=$('hudXp');
+ $('levelLabel').textContent=`LV. ${pad(game.level)}`;
+ $('xpFill').style.width=`${earned/needed*100}%`;
+ $('xpText').textContent=`다음까지 ${left} XP`;
+ xp.setAttribute('aria-valuemax',String(needed));
+ xp.setAttribute('aria-valuenow',String(earned));
+ xp.setAttribute('aria-valuetext',`다음 레벨까지 ${left} 경험치`);
+ $('hudRunGold').textContent=Math.floor(game.runGold).toLocaleString('ko-KR');
  const duel=game.mode==='duel',practice=game.mode==='crisis',clock=desk?Math.max(0,Math.ceil(1200-game.time)):duel?Math.max(0,Math.ceil(180-game.time)):Math.floor(game.time);$('timer').textContent=`${pad(Math.floor(clock/60))}:${pad(clock%60)}`;
  $('startDescription').innerHTML=practice?'준비된 분대로 포격을 피하고 북쪽 포병을 돌파하세요.<br><strong>승리: 포병 2기 파괴</strong> · 부대를 이동해 포격을 피하고 적 포병을 격파하세요.':duel?'상대의 테크와 편성을 읽고 분대로 대결하세요.<br><strong>승리: 상대 본진 파괴</strong> · 3분 후 남은 본진 체력으로 판정':'벌레 사냥 → 전초기지 2곳 → 최종 기지 파괴.<br><strong>7:30 포병 예고 · 8:00 포격 개시</strong> · 시간 제한 없음';
  if(room&&game.mode==='pve')$('startDescription').innerHTML='16분부터 보스 2기씩 연전을 돌파하고, 20분 이후 최종 보스를 처치하면 승리합니다. 최전방 포탈을 파괴하면 보상과 함께 증원이 줄어듭니다.<br><strong>약 20분 혼합 공세 · 4:00 첫 사슴벌레 보스 · 7:30 포격 예고</strong><br>13:00 미드보스 · 14:00 장수말벌 · 16:00부터 매분 보스 2기씩 · 19:00 전차 보스 · 20분 이후 연전 완료 시 사검의 군주 · 포탈이 남으면 15분부터 증원 폭주<br>레이저 포탑 → 얼음 마녀 순서로 박격포병·저격병 해금 퀘스트를 경험하세요.';
  $('startSubtitle').textContent=practice?'고정 분대 9기 · 15초 준비 · 전사한 분대원은 복귀하지 않음':duel?'1대1 훈련 3분 · 채집 트럭 양측 2대 고정':room&&game.mode==='pve'?'3분부터 미드 보스 · 4분 첫 정식 보스 · 16분부터 2기씩 연전':'적 무리 지속 유입 · 2분마다 보스 / 처치 시 추가 강화';
- $('modeName').textContent=practice?'포병 위기 연습':duel?'1대1 훈련':'돌파 작전';$('modeTime').textContent=room?'20분 최종 보스':practice?'포병 격파':duel?'03:00':'기지 파괴';$('headerMode').textContent=COOP?.active?'2인 협동 · 2성 거실 · 개인 성장':practice?'부대 이동 · 포격 회피 훈련':duel?'선택 모드 · 컴퓨터와 1대1':'기본 모드 · 스테이지 돌파';$('greenLabel').textContent=COOP?.active?`${game.coopOwner?'BLUE':'GREEN'} / 내 분대 · 기회 ${Math.max(0,3-game.retreated)}회`:duel?'GREEN / 아군 본진':`GREEN / ${game.commanderId==='blaze'&&game.flameSkinId==='hwarin'?'화린':game.commanderId==='shion'?'시온':game.commanderId==='shino'?'시노':'대장'} · 기회 ${Math.max(0,3-game.retreated)}회`;$('redLabel').textContent=room?'최전방 포탈 / 폐쇄 시 증원 감소':practice?'적 포병 / 2기 파괴하면 승리':duel?'상대 본진 / CORAL':game.baseShielded()?'최종 기지 / 방어막':'최종 기지 / 파괴하면 승리';
+ $('modeName').textContent=practice?'포병 위기 연습':duel?'1대1 훈련':'돌파 작전';$('modeTime').textContent=room?'20분 최종 보스':practice?'포병 격파':duel?'03:00':'기지 파괴';$('headerMode').textContent=COOP?.active?'2인 협동 · 2성 거실 · 개인 성장':practice?'부대 이동 · 포격 회피 훈련':duel?'선택 모드 · 컴퓨터와 1대1':'기본 모드 · 스테이지 돌파';
  $('startRules').innerHTML=practice?'<div><b>01</b><span>전장을 눌러<strong>부대 이동</strong></span></div><div><b>02</b><span>포격 원 밖으로<strong>전체 회피</strong></span></div><div><b>03</b><span>방어선을 돌파해<strong>포병 2기 격파</strong></span></div>':'<div><b>01</b><span>부대 이동 명령<strong>공격은 자동</strong></span></div><div><b>02</b><span>레벨업마다<strong>강화 1개 선택</strong></span></div><div><b>03</b><span>매분 병력 지원<strong>첫 지원은 1분 뒤</strong></span></div>';
  if(desk){
   $('startDescription').innerHTML='책상 위 최후의 방어선을 지키세요.<br><strong>20분 동안 버티세요.</strong> · 아군 기지가 파괴되면 패배';
   $('startSubtitle').textContent='북쪽에서만 적 접근 · 건설 한도 2배 · 2분마다 보스 / 격파 시 추가 강화';
   $('modeName').textContent='책상 디펜스';$('modeTime').textContent='20:00 생존';$('headerMode').textContent='책상 위 방어전 · 20분 생존';
-  $('greenLabel').textContent=`GREEN / 방어 기지 · 후퇴 ${Math.max(0,3-game.retreated)}회`;$('redLabel').textContent='방어 진행 / 20분 달성 시 승리';
   $('startRules').innerHTML='<div><b>01</b><span>적은 북쪽에서<strong>방어선 구축</strong></span></div><div><b>02</b><span>건설 한도 2배<strong>기지 보호·수리</strong></span></div><div><b>03</b><span>기지를 지키며<strong>20분 버티기</strong></span></div>';
  }
  if(desk&&game.bedroomStar){
@@ -332,14 +344,15 @@ function updateUI(){syncBattleMusic();if(game.phase!=='ready')unitModels.prefetc
  const commandFire=game.starExperiment&&game.mode==='pve';
  if(commandFire)$('startDescription').innerHTML+='<br><strong>자동 사격 · PC에서 수동 조준 가능</strong> · 14분 정식 보스가 운명의 별을 떨어뜨립니다.';
  if(game.hasInvulnerableHQ())$('startSubtitle').textContent+=' · 대장 5초 뒤 제자리 부활 · 부활 후 3초 보호 · 3회 후퇴 시 패배 / HQ 보호';
- if(practice){$('levelLabel').textContent='고정 편성';$('xpFill').style.width='0%';$('xpText').textContent='고정 분대로 이동·조준 연습';}
+ xp.hidden=practice;$('xpText').hidden=practice;if(practice)$('levelLabel').textContent='고정 편성';
  const c=game.crisis;const incoming=c.phase==='warning',active=c.phase==='active';$('crisisBanner').hidden=!(incoming||active)||game.phase==='ready'||game.phase==='ended';$('crisisBanner').classList.toggle('active',active);
  $('crisisTitle').textContent=incoming?`포병 출현까지 ${Math.max(0,Math.ceil(c.startAt-game.time))}초`:`포병 ${game.artilleryUnits().length}기 가동 · 포격 위치 고정`;
  const next=game.barrages.length?Math.max(0,Math.min(...game.barrages.map(b=>b.landAt))-game.time):0;
  $('crisisText').textContent=incoming?'부대를 모으고 북쪽 돌파를 준비하세요.':next?`착탄까지 ${next.toFixed(1)}초 · 부대 전체를 붉은 원 밖으로 이동!`:'포격 사이에 접근 → 포병 집중 공격 → 파괴하면 포격 중단';
  $('orderStatus').textContent=manualAim?'수동 조준 중':game.moveOrder?'지정 위치로 이동 중':'자동 조준';
  for(const id of ['followOrderBtn'])$(id).disabled=game.phase!=='playing';
- $('matchStatus').textContent=game.phase==='ready'?'작전 대기':game.phase==='ended'?'작전 종료':game.phase==='playing'?(desk?'남은 방어 시간':duel?`남은 대결 시간`:'경과 시간 · 제한 없음'):'전술 검토 중';
+ $('matchStatus').textContent=desk||duel?'남은 시간':'경과 시간';
+ const lives=$('hudLives');lives.hidden=duel||practice;lives.textContent=`기회 ${Math.max(0,3-game.retreated)}회`;
  const lessons=[['mage',game.mageQuestView()],['laser',game.laserQuestView()]];
  for(const [key,quest]of lessons){$(key+'Quest').hidden=!quest||quest.announce;if(quest){$(key+'QuestTitle').textContent=quest.title;$(key+'QuestProgress').textContent=quest.progress;$(key+'QuestReward').textContent=quest.reward;}}
  const announced=lessons.filter(([,q])=>q?.announce);$('lessonBanner').hidden=!announced.length;
@@ -348,10 +361,6 @@ function updateUI(){syncBattleMusic();if(game.phase!=='ready')unitModels.prefetc
  $('enemyGrowthText').textContent=`시간 성장 · 체력 +${Math.round((pressure.hp-1)*100)}% / 공격 +${pressure.tier*10}% / 방어 +${pressure.defense}`;
  const boss=game.activeBoss(),bosses=game.isRoomCampaign()?game.units.filter(u=>u.boss&&!u.roadCaptain&&u.hp>0):boss?[boss]:[];$('bossHealthBar').hidden=!boss;if(boss){const percent=Math.max(0,bosses.reduce((n,u)=>n+u.hp,0)/bosses.reduce((n,u)=>n+u.maxHp,0)*100);$('bossHealthFill').style.width=`${percent}%`;$('bossHealthBar').setAttribute('aria-valuenow',String(Math.round(percent)));}$('bossSchedule').hidden=game.mode!=='pve';$('bossSchedule').textContent=boss?(boss.miniBoss?'미드 보스 · 체력·공격력 30% · 처치 시 자원·경험치':bosses.length>1?'보스 2기 · 각각 강화 보상 · 모두 격파 후 16초 회복':'보스 격파 → 추가 강화 1회 보장'):game.isRoomCampaign()&&!Number.isFinite(game.bossState.nextAt)?'보스 공세 종료 · 최종 기지를 파괴하세요':`다음 보스 ${Math.max(0,Math.ceil(game.bossState.nextAt-game.time))}초 · 격파 ${game.bossState.killed}회`;if(game.isRoomCampaign()&&!boss){const next=Array.from({length:15},(_,i)=>(i+1)*60).find(at=>at>=window.FrontRoomCampaign.config.miniBoss.from&&at>game.time&&!window.FrontRoomCampaign.config.bosses.some(b=>b.at===at));if(next)$('bossSchedule').textContent+=' · 미드 보스 '+Math.ceil(next-game.time)+'초';}if(game.isRoomCampaign()&&game.time>=780)$('bossSchedule').textContent+=` · 일반 전차 증원 ${game.roomCampaign.tankSpawned||0}/3`;
  document.querySelectorAll('[data-mode]').forEach(b=>b.classList.toggle('selected',b.dataset.mode===selectedMode));
- [0,1].forEach(t=>{const p=game.bases[t].hp/game.bases[t].maxHp*100;$(t?'redHealth':'greenHealth').style.width=`${p}%`;$(t?'redHP':'greenHP').textContent=!duel&&t===1&&game.baseShielded()?'잠김':`${Math.ceil(p)}%`;});
- if(game.hasInvulnerableHQ()){$('greenHealth').style.width='100%';$('greenHP').textContent='보호';$('greenLabel').textContent+= ' · HQ 보호';}
- if(desk){$('redHealth').style.width=`${Math.min(100,game.time/1200*100)}%`;$('redHP').textContent=`${Math.floor(Math.min(100,game.time/1200*100))}%`;}
- if(practice){const n=c.phase==='idle'||c.phase==='warning'?2:game.artilleryUnits().length;$('redHealth').style.width=`${n/2*100}%`;$('redHP').textContent=`${n}기`;}
  const rows=roster.filter(t=>game.tech[0][t]>0);const count=game.units.filter(u=>u.team===0&&u.hp>0&&!u.patrol&&u.type!=='leader'&&(!COOP?.active||u.coopOwner===game.coopOwner)).length;
  const signature=rows.map(t=>`${t}${game.tech[0][t]}${game.evolved[t]}:${game.unitCount(t)}:${game.starExperiment?game.starRosterLabel(t):0}`).join('');
  $('unitCount').textContent=`${pad(count+(game.commander(0).hp>0?1:0))} 생존 / 한도 ${game.capacity()+1}`;$('squadLosses').textContent=`전사 ${game.losses[0]}기 · 장비 회수 ${game.salvaged} 자원`;
@@ -367,7 +376,7 @@ function updateUI(){syncBattleMusic();if(game.phase!=='ready')unitModels.prefetc
   $('modeName').textContent='AI 방치 돌파';$('modeTime').textContent='동일 작전 자동 지휘';$('headerMode').textContent='같은 돌파 작전 · AI 이동/성장/지원/건설';$('startDescription').innerHTML=desk?(game.bedroomStar?'AI가 방바닥의 생활용품 사이로 이동하며 사방 공세를 막습니다.<br><strong>2성 합성 · 중앙 기지 20분 방어</strong>':'AI가 책상 기지의 방어와 건설을 지휘합니다.<br><strong>북쪽 공세를 막으며 20분 생존</strong>'):room?'AI가 최전방 포탈을 공략하고 20분 최종 보스 처치를 지휘합니다.<br><strong>포탈이 남으면 15분부터 증원 폭주 · 폐쇄하면 보상과 증원 감소</strong>':'기존 돌파 작전과 같은 전장·적·능력치·보상.<br><strong>AI가 벌레 사냥 → 전초기지 → 최종 기지 파괴까지 지휘합니다.</strong>';
   $('startSubtitle').textContent=`시작 자원 135 · 지휘관 + 산탄총병 2기 · ${desk?(game.bedroomStar?'방바닥 · 2성 사방 방어':'책상 20분 기지 방어'):room?'거실 20분 혼합 공세':'기존 뒷마당 작전'}`;$('startRules').innerHTML='<div><b>01</b><span>편성 비율과<strong>성장 순서 설정</strong></span></div><div><b>02</b><span>이동·회피·돌파<strong>AI 자동 지휘</strong></span></div><div><b>03</b><span>원래 기회·비용으로<strong>강화·지원</strong></span></div>';
   canvas.dataset.auto=JSON.stringify({phase:game.phase,time:game.time,stage:game.mission.stage,wave:game.mission.wave,units:game.units.length,kills:game.kills,x:game.commander(0).x,y:game.commander(0).y,action:autoPilot.action,owner:autoSession.owner,cash:game.cash[0],level:game.level,supplies:game.pickups.filter(p=>!p.active).length,supply:autoPilot.supply?.index??null,hq:game.bases[0].hp,defending:!!autoPilot.baseDefense});
-  $('orderStatus').textContent=autoSession.busy?'부재중 전투 계산 중':autoSession.owner||!autoPilot?.active?(autoPilot?.action||'AI 출격 대기'):'다른 창의 방치 작전 관전 중';$('matchStatus').textContent=game.phase==='playing'?(desk?'AI 방어 · 남은 시간':'AI 자동 지휘 · 경과 시간'):game.phase==='ended'?'자동 작전 종료':'자동 작전 대기';$('autoState').textContent=autoSession.error?'저장 실패 · 이 창에서만 진행':autoPilot?.baseDefense?`본진 방어 중 · 본진 ${Math.ceil(game.bases[0].hp)} / ${game.bases[0].maxHp}`:autoPilot?.active?'자동 저장 · 창을 닫아도 복귀 시 진행 정산 (최대24시간)':'빌드만 설정하면 AI가 기존 명령과 선택을 대신합니다.';
+  $('orderStatus').textContent=autoSession.busy?'부재중 전투 계산 중':autoSession.owner||!autoPilot?.active?(autoPilot?.action||'AI 출격 대기'):'다른 창의 방치 작전 관전 중';$('autoState').textContent=autoSession.error?'저장 실패 · 이 창에서만 진행':autoPilot?.baseDefense?`본진 방어 중 · 본진 ${Math.ceil(game.bases[0].hp)} / ${game.bases[0].maxHp}`:autoPilot?.active?'자동 저장 · 창을 닫아도 복귀 시 진행 정산 (최대24시간)':'빌드만 설정하면 AI가 기존 명령과 선택을 대신합니다.';
   for(const id of ['followOrderBtn','ultimateBtn'])$(id).disabled=true;$('emergencySupportBtn').hidden=true;
  }
 

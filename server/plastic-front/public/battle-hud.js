@@ -18,9 +18,27 @@
  const hud=doc.querySelector('.battle-hud');if(hud)frame.prepend(hud);
  const toolbar=doc.querySelector('.tactical-toolbar');if(toolbar)frame.append(toolbar);
  const tools=doc.createElement('nav');tools.className='hud-quick-actions';tools.setAttribute('aria-label','전장 정보와 메뉴');
- tools.innerHTML='<button id="battleSquadBtn" type="button" aria-haspopup="dialog" aria-controls="battleSquadOverlay">분대 · 강화 <span id="hudUnitCount"></span></button><button id="battleMenuBtn" type="button" aria-haspopup="dialog" aria-controls="battleMenuOverlay">메뉴</button>';
+ tools.innerHTML='<button id="battleSquadBtn" type="button" aria-haspopup="dialog" aria-controls="battleSquadOverlay">분대<span class="hud-squad-detail"> · 강화 <span id="hudUnitCount"></span></span></button><button id="battleMenuBtn" type="button" aria-haspopup="dialog" aria-controls="battleMenuOverlay">메뉴</button>';
  for(const id of ['displayBtn','pauseBtn'])if($(id))tools.append($(id));frame.append(tools);
  for(const [button,id]of [['battleSquadBtn','battleSquadOverlay'],['battleMenuBtn','battleMenuOverlay']])$(button).addEventListener('click',()=>root.dispatchEvent(new root.CustomEvent('front-hud-open',{detail:id})));
+ let lastBuild;
+ function renderUpgrades(troops,stats){
+  const button=$('hudBuildBtn'), groups=[[$('hudUnitRanks'),troops],[$('hudAbilityRanks'),stats]];
+  const buildKey=JSON.stringify(groups.map(([,items])=>items.map(({name,level,evolved})=>[name,level,evolved])));
+  if(buildKey===lastBuild)return;
+  lastBuild=buildKey;button.hidden=!troops.length&&!stats.length;
+  for(const [row,items] of groups){
+   row.hidden=!items.length;
+   row.lastElementChild.innerHTML=items.map(({name,level,evolved,icon})=>
+    '<span class="hud-rank'+(evolved?' evolved':'')+'" title="'+name+' · Lv.'+level+'">'+
+    '<span class="hud-rank-icon" aria-hidden="true">'+icon+'</span><span aria-hidden="true">'+level+'</span></span>'
+   ).join('');
+  }
+  const names=items=>items.map(({name,level})=>name+' '+level+'단계').join(', ');
+  button.setAttribute('aria-label',[troops.length?'병과 '+names(troops):'',stats.length?'스탯 '+names(stats):'','분대 강화 상세 열기'].filter(Boolean).join('. '));
+ }
+ root.FrontBattleHud={renderUpgrades};
+ $('hudBuildBtn').addEventListener('click',()=>root.dispatchEvent(new root.CustomEvent('front-hud-open',{detail:'battleSquadOverlay'})));
  const count=$('unitCount');if(count){const sync=()=>{$('hudUnitCount').textContent=count.textContent.replace(/\s*UNITS/i,'');};new root.MutationObserver(sync).observe(count,{childList:true,characterData:true,subtree:true});sync();}
  const fieldFullscreen=$('fullscreenBtn');if(fieldFullscreen){fieldFullscreen.classList.remove('field-fullscreen');fieldFullscreen.classList.add('hud-menu-fullscreen');menu.append(fieldFullscreen);}
  const test=$('waveTestStrip');if(test)frame.append(test);

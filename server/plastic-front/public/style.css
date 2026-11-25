@@ -136,22 +136,22 @@
 .audio-settings h3{font-size:15px;margin:0 0 12px;color:#30482c}.audio-settings .audio-volume{margin-top:0;font-size:13px;font-weight:700}.audio-volume output{font-variant-numeric:tabular-nums;color:#416137}.audio-settings input[type=range]{min-height:44px;cursor:pointer}.audio-settings #sfxMuteStatus{min-height:18px}.audio-settings .pause-sound{min-height:42px}.audio-settings .audio-preview select{width:auto}.display-modal .audio-settings{margin-top:4px}
 
 /* Resource wallet and construction remain inside the battlefield, above the canvas. */
-.battle-frame>.field-economy{position:absolute;z-index:6;top:12px;left:max(12px,env(safe-area-inset-left));display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 10px;width:220px;height:auto;min-height:0;margin:0;padding:8px 10px;color:#e8eddb;background:#20382ee8;border:1px solid #d8dfba66;border-radius:8px;box-shadow:0 3px 12px #17271e33;touch-action:manipulation}
+.hud-left-rail>.field-economy{position:absolute;z-index:6;top:12px;left:max(12px,env(safe-area-inset-left));display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 10px;width:220px;height:auto;min-height:0;margin:0;padding:8px 10px;color:#e8eddb;background:#20382ee8;border:1px solid #d8dfba66;border-radius:8px;box-shadow:0 3px 12px #17271e33;touch-action:manipulation}
 .field-economy .field-cash{gap:6px;min-width:0}.field-economy .resource-cube{color:#e7c879}.field-economy b{color:#fff2ce;font-size:24px;min-width:0;font-variant-numeric:tabular-nums}.field-economy small{color:#c1ceb5;font-size:9px}
 .field-economy #constructionBtn{grid-column:2;grid-row:1 / 3;min-height:44px;padding:7px 9px;border:1px solid #aebc8b;border-radius:5px;background:#dfe7c9;color:#304c37;font-size:11px;font-weight:700;white-space:nowrap;touch-action:manipulation}.field-economy #constructionBtn b{margin-left:3px;font:700 11px sans-serif;color:#456044}.field-economy #constructionBtn:disabled{opacity:.5}
 .field-economy .truck-info{grid-column:1;gap:4px;padding:0;border:0;white-space:nowrap}.field-economy .truck-info>span,.field-economy .truck-info>b,.field-economy .truck-info>small{font-size:9px;color:#b8caaa}.field-economy .truck-info strong{margin:0 0 0 2px;padding:0;color:#d4e0bc;background:none;font-size:11px}
 .battle-frame>.map-label{top:91px}.battle-frame>.operation-objective{top:139px}.tactical-toolbar>#mobileIntel{margin-left:0;flex-shrink:0;min-height:40px}.tactical-toolbar>span{margin-left:auto}
 @media(max-width:760px){
- .battle-frame>.field-economy{top:10px;left:max(10px,env(safe-area-inset-left));width:208px;padding:6px 8px;gap:2px 7px}.field-economy b{font-size:22px}.field-economy #constructionBtn{min-height:44px;padding:6px 8px}
+ .hud-left-rail>.field-economy{top:10px;left:max(10px,env(safe-area-inset-left));width:208px;padding:6px 8px;gap:2px 7px}.field-economy b{font-size:22px}.field-economy #constructionBtn{min-height:44px;padding:6px 8px}
  .battle-frame>.level-panel{left:auto;right:12px;top:12px;transform:none;width:105px}.battle-frame>.map-label{display:none}.battle-frame>.minimap{top:88px}.battle-frame>.operation-objective{top:88px;left:10px;max-width:calc(100% - 100px)}.tactical-toolbar{flex-wrap:wrap;gap:6px}.tactical-toolbar>span{display:none}.tactical-toolbar>#mobileIntel{min-height:42px}
 }
 @media(orientation:landscape) and (max-height:560px){
- .battle-frame>.field-economy{top:8px;left:max(8px,env(safe-area-inset-left));width:210px}.battle-frame>.operation-objective{top:82px;left:max(8px,env(safe-area-inset-left));max-width:40vw}.battle-frame>.level-panel{left:auto;right:12px;top:8px;transform:none;width:110px}.tactical-toolbar{flex-wrap:nowrap;gap:4px;max-width:calc(100% - 190px)}.tactical-toolbar>#mobileIntel{min-height:34px;padding:5px 7px;font-size:9px}.tactical-toolbar .order-buttons button{padding:6px 7px}
+ .hud-left-rail>.field-economy{top:8px;left:max(8px,env(safe-area-inset-left));width:210px}.battle-frame>.operation-objective{top:82px;left:max(8px,env(safe-area-inset-left));max-width:40vw}.battle-frame>.level-panel{left:auto;right:12px;top:8px;transform:none;width:110px}.tactical-toolbar{flex-wrap:nowrap;gap:4px;max-width:calc(100% - 190px)}.tactical-toolbar>#mobileIntel{min-height:34px;padding:5px 7px;font-size:9px}.tactical-toolbar .order-buttons button{padding:6px 7px}
 }
 
 .commander-picker:not(.unit-skin-picker) .commander-options{grid-template-columns:repeat(3,minmax(0,1fr))}.commander-option:has(input[value="blaze"]) img{object-fit:contain}@media(max-width:600px){.commander-picker:not(.unit-skin-picker) .commander-options{grid-template-columns:1fr}.commander-option:has(input[value="blaze"]) img{height:68px}}
 
-@media(max-width:360px){.battle-frame>.field-economy{width:190px;gap:2px 5px;padding:6px}.field-economy .truck-info>span,.field-economy .truck-info>small{display:none}.battle-frame>.level-panel{width:90px;right:8px}}
+@media(max-width:360px){.hud-left-rail>.field-economy{width:190px;gap:2px 5px;padding:6px}.field-economy .truck-info>span,.field-economy .truck-info>small{display:none}.battle-frame>.level-panel{width:90px;right:8px}}
 
 .save-personal-note{font-size:11px;line-height:1.7;color:#6b7b60;margin:8px 0 12px}.save-personal-note.save-error{color:#a04436}#manualContinue{border-color:#7c9461;background:#e1e8ce}#manualSaveSummary{display:block;margin-top:5px}#manualSaveStatus{min-height:19px}
 
@@ -191,7 +191,7 @@
  .tactical-toolbar .order-buttons{gap:3px;flex:1}.tactical-toolbar .order-buttons button,.tactical-toolbar>#mobileIntel{min-height:32px;padding:5px;font-size:9px}
  .run-build-bar{position:static;max-width:none;min-height:27px;padding:3px 6px;margin:0 0 5px;gap:4px;background:#e7ecde}
  .run-build-bar>b,.run-build-bar>button{font-size:8px;color:#526b43}.ability-slot{padding:2px 3px;min-width:16px}.ability-slot b{display:none}.ability-slot i{font-size:10px}.ability-slot small{font-size:7px}.ability-slot.empty{min-width:17px}
- .battle-frame>.field-economy{left:max(6px,env(safe-area-inset-left));top:6px;width:156px;padding:4px 5px;gap:1px 4px;background:#20382e80;border-color:#d8dfba55;box-shadow:none;border-radius:5px}
+ .hud-left-rail>.field-economy{left:max(6px,env(safe-area-inset-left));top:6px;width:156px;padding:4px 5px;gap:1px 4px;background:#20382e80;border-color:#d8dfba55;box-shadow:none;border-radius:5px}
  .field-economy .field-cash{gap:3px}.field-economy b{font-size:17px}.field-economy small{font-size:8px}.field-economy .resource-cube{font-size:11px}
  .field-economy #constructionBtn{min-height:34px;padding:4px 5px;font-size:10px;background:#dfe7c99c;border-color:#d8e2bf88}
  .field-economy #constructionBtn b{font-size:9px}.field-economy .truck-info{gap:3px}.field-economy .truck-info>span,.field-economy .truck-info>b,.field-economy .truck-info>small{font-size:7px}.field-economy .truck-info>small{display:none}.field-economy .truck-info strong{font-size:8px}
@@ -249,7 +249,7 @@ html.game-fullscreen .mission-label{bottom:44px}
 .field-fullscreen{width:auto;min-width:76px;font-size:11px;padding:0 7px;white-space:nowrap}
 @media(max-width:760px), (pointer:coarse), (orientation:landscape) and (max-height:560px){
  .top-actions .fullscreen-entry{font-size:9px;padding:4px 5px;min-height:30px}.brand{min-width:0;font-size:15px}.topbar{gap:3px}.top-actions{gap:3px}
- .battle-frame>.field-economy{width:132px;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:1fr;height:34px;padding:2px 4px;gap:4px;background:#20382e59;border-color:#d8dfba44}
+ .hud-left-rail>.field-economy{width:132px;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:1fr;height:34px;padding:2px 4px;gap:4px;background:#20382e59;border-color:#d8dfba44}
  .field-economy .field-cash{gap:3px}.field-economy b{font-size:14px}.field-economy .field-cash>small,.field-economy .truck-info{display:none}
  .field-economy #constructionBtn{grid-row:1;min-height:27px;padding:3px 4px;font-size:9px;background:#dfe7c966;border-color:#d8e2bf66}.field-economy #constructionBtn b{font-size:9px}
  .field-fullscreen{top:48px;min-width:74px;width:auto;height:29px;padding:0 6px;font-size:10px;background:#20382e99;z-index:9}
