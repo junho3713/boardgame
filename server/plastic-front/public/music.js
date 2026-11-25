@@ -1,10 +1,11 @@
 ((root) => {
  'use strict';
 
- const TRACKS = {
-  battle: { file: 'maple-toy.mp3', gain: 1 },
-  boss: { file: 'toy-survival-95bpm.mp3', gain: 1.30 }
- };
+ const BATTLE_TRACKS = [
+  { file: 'battle-opening.mp3', gain: .91 },
+  { file: 'maple-toy.mp3', gain: 1 },
+ ];
+ const BOSS_TRACK = { file: 'toy-survival-95bpm.mp3', gain: 1.30 };
  const DEFAULT_VOLUME = 0.11;
 
  function musicForBattle(game, hidden = false) {
@@ -20,6 +21,7 @@
    this.muted = false;
    this.scene = null;
    this.track = null;
+   this.battleIndex = 0;
    this.battleTime = 0;
    this.timer = null;
    this.blocked = false;
@@ -29,9 +31,14 @@
    if (!root.Audio) return;
    if (!this.media) {
     this.media = new root.Audio();
-    this.media.loop = true;
     this.media.preload = 'none';
     this.media.addEventListener('playing', () => this.applyLevel());
+    this.media.addEventListener('ended', () => {
+     if (!this.media.ended || this.track !== this.battleTrack) return;
+     this.battleIndex = (this.battleIndex + 1) % BATTLE_TRACKS.length;
+     this.battleTime = 0;
+     this.refresh();
+    });
    }
    if (!this.gain && context?.createMediaElementSource) {
     const source = context.createMediaElementSource(this.media);
@@ -43,7 +50,7 @@
    }
    this.blocked = false;
    if (prime && !this.scene && this.volume && !this.muted) {
-    if (!this.track) this.select('battle');
+    if (this.track !== this.battleTrack) this.select(this.battleTrack);
     // The first play call needs to happen inside the start gesture on Safari.
     this.applyLevel();
     this.play(true);
@@ -71,31 +78,42 @@
   reset() {
    this.scene = null;
    this.refresh();
+   this.battleIndex = 0;
    this.battleTime = 0;
    if (this.track) this.media.currentTime = 0;
   }
 
+  get battleTrack() { return BATTLE_TRACKS[this.battleIndex]; }
+
+  get sceneTrack() {
+   if (this.scene === 'battle') return this.battleTrack;
+   if (this.scene === 'boss') return BOSS_TRACK;
+   return null;
+  }
+
   refresh() {
    if (!this.media) return;
-   if (!this.scene || this.muted || !this.volume) {
+   const track = this.sceneTrack;
+   if (!track || this.muted || !this.volume) {
     this.cancelTransition();
     this.setLevel(0, 0);
     this.media.pause();
     return;
    }
-   if (this.track === this.scene) {
+   if (this.track === track) {
     this.cancelTransition();
     this.applyLevel();
     this.play();
-   } else if (!this.gain || this.media.paused) {
+   } else if (!this.gain || this.media.paused || this.media.ended) {
     this.cancelTransition();
-    this.select(this.scene);
+    this.select(track);
     this.play();
    } else if (this.timer === null) {
     this.setLevel(0, 0.05);
     this.timer = root.setTimeout(() => {
      this.timer = null;
-     if (this.scene && this.track !== this.scene) this.select(this.scene);
+     const next = this.sceneTrack;
+     if (next && this.track !== next) this.select(next);
      this.refresh();
     }, 220);
    }
@@ -108,11 +126,12 @@
   }
 
   select(track) {
-   if (this.track === 'battle') this.battleTime = this.media.currentTime;
+   if (this.track === this.battleTrack && !this.media.ended) this.battleTime = this.media.currentTime;
    this.setLevel(0, 0);
    this.track = track;
-   this.media.src = `assets/bgm/${TRACKS[track].file}`;
-   if (track === 'battle') this.media.currentTime = this.battleTime;
+   this.media.loop = track === BOSS_TRACK;
+   this.media.src = `assets/bgm/${track.file}`;
+   if (track === this.battleTrack) this.media.currentTime = this.battleTime;
   }
 
   play(prime = false) {
@@ -126,8 +145,8 @@
   }
 
   applyLevel() {
-   const active = !this.muted && this.scene && this.scene === this.track;
-   const level = active ? Math.min(1, this.volume * TRACKS[this.track].gain) : 0;
+   const active = !this.muted && this.track && this.sceneTrack === this.track;
+   const level = active ? Math.min(1, this.volume * this.track.gain) : 0;
    this.setLevel(level, 0.12);
   }
 

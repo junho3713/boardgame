@@ -56,7 +56,7 @@ test('static hosting rejects traversal, source files and unsupported methods', a
 }));
 
 test('battle tracks can stream and seek through single audio byte ranges', async () => withApp(async origin => {
-  for (const track of ['maple-toy.mp3', 'toy-survival-95bpm.mp3']) {
+  for (const track of ['battle-opening.mp3', 'maple-toy.mp3', 'toy-survival-95bpm.mp3']) {
     const url = origin + '/plastic-front/assets/bgm/' + track;
     const head = await fetch(url, {method: 'HEAD'});
     const size = Number(head.headers.get('content-length'));

@@ -26,14 +26,15 @@ test('main bosses and living boss pairs change the music without switching for m
   }
 });
 
-test('the music player switches tracks, resumes the field song, and saves silence for mute or pause', () => {
+test('the music player alternates field songs, resumes them after bosses, and resets to the opener', () => {
   let queued;
   let connected = 0;
   class Audio {
-    constructor() { this.paused = true; this.currentTime = 0; }
-    set src(value) { this.url = value; this.pause(); this.currentTime = 0; }
+    constructor() { this.paused = true; this.currentTime = 0; this.listeners = {}; }
+    set src(value) { this.url = value; this.pause(); this.currentTime = 0; this.ended = false; }
     get src() { return this.url; }
-    addEventListener() {}
+    addEventListener(name, callback) { this.listeners[name] = callback; }
+    finish() { this.ended = true; this.pause(); this.listeners.ended(); }
     play() { this.paused = false; return Promise.resolve(); }
     pause() { this.paused = true; }
   }
@@ -59,13 +60,20 @@ test('the music player switches tracks, resumes the field song, and saves silenc
   player.sync('battle');
   assert.equal(player.media, undefined);
   player.unlock(context);
+  assert.equal(player.media.src, 'assets/bgm/battle-opening.mp3');
+  assert.equal(player.media.loop, false);
+  assert.equal(player.media.paused, false);
+  player.media.currentTime = 137;
+  player.media.finish();
   assert.equal(player.media.src, 'assets/bgm/maple-toy.mp3');
+  assert.equal(player.media.currentTime, 0);
   assert.equal(player.media.paused, false);
   player.media.currentTime = 31.4;
   player.sync('boss');
   assert.equal(parameter.value, 0);
   queued();
   assert.equal(player.media.src, 'assets/bgm/toy-survival-95bpm.mp3');
+  assert.equal(player.media.loop, true);
   assert.equal(player.media.currentTime, 0);
   assert.ok(Math.abs(parameter.value - .143) < 1e-12);
   player.setMuted(true);
@@ -73,17 +81,25 @@ test('the music player switches tracks, resumes the field song, and saves silenc
   player.setMuted(false);
   player.sync('battle');
   queued();
+  assert.equal(player.media.src, 'assets/bgm/maple-toy.mp3');
   assert.equal(player.media.currentTime, 31.4);
   assert.equal(connected, 1);
   player.setVolume(0);
   assert.equal(player.media.paused, true);
   player.setVolume(.11);
   assert.equal(player.media.paused, false);
+  player.media.finish();
+  assert.equal(player.media.src, 'assets/bgm/battle-opening.mp3');
+  assert.equal(player.media.currentTime, 0);
+  player.media.finish();
+  assert.equal(player.media.src, 'assets/bgm/maple-toy.mp3');
   player.sync('boss');
   player.sync(null);
   assert.equal(queued, undefined);
   assert.equal(player.media.paused, true);
   player.reset();
+  player.unlock(context, true);
+  assert.equal(player.media.src, 'assets/bgm/battle-opening.mp3');
   assert.equal(player.media.currentTime, 0);
 });
 
