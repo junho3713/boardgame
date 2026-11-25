@@ -539,16 +539,41 @@ class FrontGame{
  defenseFactor(target,source=null){if(target.fencePost)return 1;const defense=target.built?(this.buildingStats(target.kind,target.team)?.defense??10):TYPES[target.type]?this.stats(target).defense:target.base?18:target.structure?10:0,cover=target.team===0&&!target.structure?Math.max(this.buildings.some(b=>b.hp>0&&b.kind==='barricade'&&b.buildUntil<=this.time&&dist(b,target)<100)?20:0,this.isDesktopDefense()&&this.obstacles.some(slot=>{if(!slot.cover)return false;const o=slot.kind==='deskCover'?desktopCoverRect(slot):slot;return Math.hypot(Math.max(0,Math.abs(target.x-o.x-o.w/2)-o.w/2),Math.max(0,Math.abs(target.y-o.y-o.h/2)-o.h/2))<85;})?12:0):0;return 100/(100+(defense+(!TYPES[target.type]?(this.roomDefenseRules(target)?.defense||0):0))*(1-this.bossArmorPenetration(source))+cover);}
  setManualAim(value){
   if(value!=null&&(!Number.isFinite(value.x)||!Number.isFinite(value.y)))return false;
+  const point=value?.point;
+  if(point!=null){
+   const {width,height}=this.bounds();
+   if(!Number.isFinite(point.x)||!Number.isFinite(point.y)||point.x<0||point.x>width||point.y<0||point.y>height)return false;
+  }
   const length=value?Math.hypot(value.x,value.y):0;
   if(!Number.isFinite(length))return false;
   this.manualAim=length>1e-6?{x:value.x/length,y:value.y/length}:null;
+  if(this.manualAim&&point)this.manualAim.point={x:point.x,y:point.y};
   const commander=this.commander(0);
   if(commander?.type==='leader')commander.manualAimAngle=this.manualAimAngle();
   return true;
  }
- manualAimAngle(){
+ manualAimAngle(origin,point){
   const aim=this.manualAim;
+  if(origin&&point&&(point.x!==origin.x||point.y!==origin.y))return Math.atan2(point.y-origin.y,point.x-origin.x);
   return aim&&(aim.x||aim.y)&&Number.isFinite(aim.x)&&Number.isFinite(aim.y)?Math.atan2(aim.y,aim.x):null;
+ }
+ commandCursorPoint(commander,point,candidates){
+  let nearest=null,score=1;
+  for(const target of candidates){
+   const type=TYPES[target.type];
+   if(!type||target.team===0||target.hidden||target.hp<=0)continue;
+   // Sprites rise above their ground hitboxes. Project the visible body back onto the shot plane.
+   const r=this.collisionRadius(target),halfWidth=r+7;
+   const dx=(point.x-target.x)/halfWidth;
+   if(Math.abs(dx)>=1)continue;
+   const height=target.type==='bombBug'?64:MELEE.has(target.type)?Math.max(32,r*1.8):Math.max(54,r*1.8);
+   const lift=(target.visualFlightHeight??type.flightHeight??0)*(target.boss?1.35:1);
+   const halfHeight=(height+12)/2,dy=(point.y-target.y+lift+halfHeight-12)/halfHeight;
+   const distance=dx*dx+dy*dy;
+   if(distance>=score||!this.canTarget(commander,target)||!this.visible(target))continue;
+   nearest=target;score=distance;
+  }
+  return nearest?{x:nearest.x,y:nearest.y}:point;
  }
  commandFirePoint(u,range,angle){
   return {commandShot:true,angle,range,x:u.x+Math.cos(angle)*range,y:u.y+Math.sin(angle)*range};
@@ -1932,7 +1957,7 @@ class FrontGame{
  }
  update(dt){return BATTLE_SYSTEMS.update(this,dt);}
  updateBattleUnits(dt,enemy){
-  const combatThreats=this.attackingEnemies(),combatCandidates=this.combatCandidates(),commandEngaged=new Map();
+  const combatThreats=this.attackingEnemies(),combatCandidates=this.combatCandidates(),commandEngaged=new Map(),commandPoints=new Map();
   for(const u of this.units){
    this.coopSelectOwner?.(u.team===0?u.coopOwner:0);
    const player=this.commander(0);
@@ -1960,7 +1985,9 @@ class FrontGame{
     target=patients[0]||null;if(target)nearest=dist(u,target);
     if(u.team!==0)this.updateMedicHealing(u,s);
    }else{
-    const manualAngle=u.team===0&&MANUAL_AIM_TYPES.has(u.type)?this.manualAimAngle():null;
+    const aim=u.team===0&&MANUAL_AIM_TYPES.has(u.type)?this.manualAim:null;
+    if(aim?.point&&!commandPoints.has(player))commandPoints.set(player,this.commandCursorPoint(player,aim.point,combatCandidates));
+    const manualAngle=aim?this.manualAimAngle(u.type==='guntruck'?player:u,commandPoints.get(player)):null;
     if(u.team===0&&u.type==='guntruck'){
      if(u.cooldown<=0){
       const contact=this.radioContacts(u,combatCandidates)[0];

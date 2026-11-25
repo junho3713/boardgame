@@ -25,7 +25,7 @@ function install({FrontGame:Game,TYPES}){
  p.rollSupply=function(){const value=this.random();let sum=0;for(const [kind,chance]of Object.entries(config.odds)){sum+=chance;if(value<sum)return kind;}return'toyStunner';};
  p.rollCombatDrop=function(enemy){
   if(this.mode!=='pve')return;
-  const roll=this.random(),kind=roll<.003?'magnet':roll<.01?'heal':null;
+  const roll=this.random(),kind=roll<.006?'magnet':roll<.021?'heal':null;
   if(!kind)return;
   this.pickups.push({x:enemy.x,y:enemy.y,active:true,combatDrop:kind,owner:this.coop?this.coopOwner:0});
  };

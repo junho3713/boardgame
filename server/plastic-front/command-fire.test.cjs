@@ -48,6 +48,27 @@ test('only the five manually controlled troop types use the held angle',()=>{
  assert.equal(received.get('sniper'),heavy);assert.ok(wounded.hp>hp);assert.equal(received.has(medic.type),false);
 });
 
+test('mouse aim converges from each soldier and hits the body beneath a raised enemy sprite',()=>{
+ const g=field(),left=add(g,'machinegun',1000,1320),right=add(g,'machinegun',1200,1330);
+ const bomb=add(g,'bombBug',1100,1145,2);
+ bomb.hp=bomb.maxHp=3000;
+ g.move=g.navigate=g.separateCrowd=()=>{};
+ const point={x:bomb.x+7,y:bomb.y-44};
+ assert.equal(g.setManualAim({x:0,y:-1,point}),true);
+ assert.equal(g.setManualAim({x:0,y:-1,point:{x:-1,y:10}}),false);
+ assert.deepEqual(g.manualAim.point,point);
+ g.update(.02);
+ for(const shooter of [left,right]){
+  const shot=from(g,shooter);
+  assert.ok(Math.abs(shot.commandAngle-Math.atan2(bomb.y-shooter.y,bomb.x-shooter.x))<1e-12);
+  g.advanceCommandShot(shot,.25,[bomb]);
+  assert.equal(shot.target,bomb);
+ }
+ const empty={x:1190,y:1190};
+ g.setManualAim({x:0,y:-1,point:empty});g.shots=[];left.cooldown=0;g.update(.02);
+ assert.ok(Math.abs(from(g,left).commandAngle-Math.atan2(empty.y-left.y,empty.x-left.x))<1e-12);
+});
+
 test('manual squad fire waits for a visible hostile while the commander independently targets the nearest enemy',()=>{
  for(const map of ['livingroom-star','livingroom-pixel','bedroom-star']){
   const g=field(map),c=g.commander(0),gun=add(g,'machinegun',1080,1325);

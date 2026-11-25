@@ -302,7 +302,7 @@ soundUI();
 function pad(n){return String(n).padStart(2,'0');}
 function toast(text){$('toast').textContent=text;$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),3200);}
 function applyManualAim(next,cursor=null){
- const changed=manualAim?.x!==next?.x||manualAim?.y!==next?.y;
+ const changed=manualAim?.x!==next?.x||manualAim?.y!==next?.y||manualAim?.point?.x!==next?.point?.x||manualAim?.point?.y!==next?.point?.y;
  if((next||cursor)&&!manualAim&&!manualAimCursor)reticleOpenedAt=performance.now();
  manualAim=next;manualAimCursor=cursor;game.setManualAim?.(next);
  if(changed&&COOP?.active)COOP.setAim?.(next);
@@ -552,7 +552,8 @@ $('followOrderBtn').onclick=()=>{if(game.followCommander()){clearInput();updateU
  }
  window.addEventListener('keyup',e=>{const control=controlKey(e);if(control&&keys[control]){delete keys[control];input();}});window.addEventListener('focus',()=>{windowBlurred=false;});window.addEventListener('blur',()=>{windowBlurred=true;combatAudio.stop();clearInput();if(selectedMode!=='idle'&&!COOP?.active)openPause();else autoCheckpoint();});document.addEventListener('visibilitychange',()=>{if(document.hidden){combatAudio.stop();clearInput();if(selectedMode!=='idle'&&!COOP?.active)openPause();else autoCheckpoint();}else if(selectedMode==='idle')autoSession.tick(true);});
  function canvasPosition(e){const r=canvas.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top};}
- function worldPosition(e){const {x,y}=canvasPosition(e);return{x:(x-W/2)/scale+game.camera.x,y:(y-H/2)/scale+game.camera.y};}
+ const sceneOffset={x:0,y:0};
+ function worldPosition(e){const {x,y}=canvasPosition(e);return{x:(x-W/2)/scale+game.camera.x-sceneOffset.x,y:(y-H/2)/scale+game.camera.y-sceneOffset.y};}
  let mouseCursor=null;
  function trackMouse(e){
   if(e.pointerType!=='mouse')return;
@@ -612,11 +613,12 @@ $('followOrderBtn').onclick=()=>{if(game.followCommander()){clearInput();updateU
   }
   game.input=stickPointer!==null?{...stickInput}:{x:Number(!!keys.KeyD)-Number(!!keys.KeyA),y:Number(!!keys.KeyS)-Number(!!keys.KeyW)};
   let x=Number(!!keys.ArrowRight)-Number(!!keys.ArrowLeft),y=Number(!!keys.ArrowDown)-Number(!!keys.ArrowUp);
-  const cursor=aimPointer||(cursorAimEnabled&&!x&&!y&&mouseCursor);
+  const cursor=aimPointer||(cursorAimEnabled&&!x&&!y&&mouseCursor);let point=null;
   if(cursor){
-   const c=game.commander(0),p=worldPosition(cursor);x=p.x-c.x;y=p.y-c.y;
+   const c=game.commander(0),p=worldPosition(cursor),{width,height}=game.bounds();
+   point={x:clamp(p.x,0,width),y:clamp(p.y,0,height)};x=point.x-c.x;y=point.y-c.y;
   }
-  const length=Math.hypot(x,y);applyManualAim(length>.001?{x:x/length,y:y/length}:null,cursor||null);
+  const length=Math.hypot(x,y);applyManualAim(length>.001?{x:x/length,y:y/length,...(point?{point}:{})}:null,cursor||null);
  }
 function aimReticlePosition(player){
  if(!acceptsCombatInput())return null;
@@ -901,7 +903,10 @@ function draw(dt){
  const fxAllies=game.alive(0),fxVisible=e=>!e.team||game.time<game.scoutUntil||fxAllies.some(u=>Math.hypot(e.x-u.x,e.y-u.y)<=game.visionRadius(u));battleFx.update(game,fxVisible);
  const player=game.commander(0),halfW=W/scale/2,halfH=H/scale/2;const tx=clamp(player.x,Math.min(game.bounds().width/2,halfW),Math.max(game.bounds().width/2,game.bounds().width-halfW)),ty=clamp(player.y-H/scale*.16,Math.min(game.bounds().height/2,halfH),Math.max(game.bounds().height/2,game.bounds().height-halfH));
  const intro=game.bossIntro;if(intro?.remaining>0){const q=1-intro.remaining/intro.total,smooth=v=>{v=clamp(v,0,1);return v*v*(3-2*v);},bx=clamp(intro.x,Math.min(game.bounds().width/2,halfW),Math.max(game.bounds().width/2,game.bounds().width-halfW)),by=clamp(intro.y-40,Math.min(game.bounds().height/2,halfH),Math.max(game.bounds().height/2,game.bounds().height-halfH)),k=q<.24?smooth(q/.24):q>.72?smooth((q-.72)/.28):0;game.camera.x=q<.24?intro.from.x+(bx-intro.from.x)*k:q>.72?bx+(tx-bx)*k:bx;game.camera.y=q<.24?intro.from.y+(by-intro.from.y)*k:q>.72?by+(ty-by)*k:by;}else{game.camera.x+=(tx-game.camera.x)*Math.min(1,dt*6);game.camera.y+=(ty-game.camera.y)*Math.min(1,dt*6);}
- ctx.setTransform(DPR,0,0,DPR,0,0);ctx.fillStyle='#809669';ctx.fillRect(0,0,W,H);ctx.translate(W/2,H/2);ctx.scale(scale,scale);ctx.translate(-game.camera.x,-game.camera.y);const impactShake=window.FrontHitFeedback.shake(game);ctx.translate(impactShake.x,impactShake.y);if(!reduceMotion.matches)ctx.translate(...window.FrontSummonHud.shake(game));if(terrain)ctx.drawImage(terrain,0,0,game.bounds().width,game.bounds().height);
+ ctx.setTransform(DPR,0,0,DPR,0,0);ctx.fillStyle='#809669';ctx.fillRect(0,0,W,H);ctx.translate(W/2,H/2);ctx.scale(scale,scale);ctx.translate(-game.camera.x,-game.camera.y);
+ const impactShake=window.FrontHitFeedback.shake(game),[summonX,summonY]=reduceMotion.matches?[0,0]:window.FrontSummonHud.shake(game);
+ sceneOffset.x=impactShake.x+summonX;sceneOffset.y=impactShake.y+summonY;
+ ctx.translate(sceneOffset.x,sceneOffset.y);if(terrain)ctx.drawImage(terrain,0,0,game.bounds().width,game.bounds().height);
  window.FrontGuardianFX.ground(ctx,game);battleFx.ground(ctx,fxVisible);battleFx.luckyGround(ctx,game,fxVisible);
  for(const u of game.units)if(u.type==='bikeRaider'||u.bossPattern==='rhinoCharge')battleFx.drawBikeWarning(ctx,u,game.time);
  if(game.isRoomCampaign())window.FrontPortal.ground(ctx,game.bases[1],game.time);

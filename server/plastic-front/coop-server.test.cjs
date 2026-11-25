@@ -85,7 +85,12 @@ test('two clients authenticate, grow independently without pausing, reconnect an
   assert.equal((await input(a.token,{x:1,y:0},0,-1)).status,200);
   assert.equal(angle(0),0);assert.equal(angle(1),null);
   assert.deepEqual(g.withOwner(0,()=>g.input),{x:0,y:-1});
-  assert.equal((await input(b.token,{x:0,y:1})).status,200);
+  const point={x:1100,y:1600};
+  assert.equal((await input(b.token,{x:0,y:1,point})).status,200);
+  assert.deepEqual(g.withOwner(1,()=>g.manualAim.point),point);
+  assert.equal(g.withOwner(0,()=>g.manualAim.point),undefined);
+  assert.equal((await input(b.token,{x:0,y:1,point:{x:Infinity,y:1600}})).status,400);
+  assert.equal((await input(b.token,{x:0,y:1,point:{x:-1,y:1600}})).status,400);
   assert.equal(angle(0),0);assert.equal(angle(1),Math.PI/2);
   assert.equal((await input(a.token,{x:0,y:0})).status,400);
   assert.equal((await input(a.token,null)).status,200);

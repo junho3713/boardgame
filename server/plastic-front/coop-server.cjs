@@ -77,11 +77,14 @@ function createCoopHandler({now=Date.now,automatic=true}={}){
      const x=Number(body.x),y=Number(body.y),aim=body.aim??null;
      if(!Number.isFinite(x)||!Number.isFinite(y)||Math.abs(x)>1||Math.abs(y)>1)fail(400,'잘못된 이동 입력입니다.');
      if(aim!==null&&(!Number.isFinite(aim.x)||!Number.isFinite(aim.y)||Math.abs(aim.x)>1||Math.abs(aim.y)>1||Math.hypot(aim.x,aim.y)===0))fail(400,'잘못된 조준 입력입니다.');
+     const point=aim?.point,{width,height}=g.bounds();
+     if(point!=null&&(!Number.isFinite(point.x)||!Number.isFinite(point.y)||point.x<0||point.x>width||point.y<0||point.y>height))fail(400,'잘못된 조준 좌표입니다.');
      if(r.paused||g.phase!=='playing'||g.coopChoosing[p.owner])clearInput(r,p);
      else{
       g.withOwner(p.owner,()=>{
-       const previous=g.manualAimAngle();g.input={x,y};g.setManualAim(aim);
-       if(g.manualAimAngle()!==previous)r.cached=null;
+       const previous=g.manualAim;g.input={x,y};g.setManualAim(aim);
+       const next=g.manualAim;
+       if(previous?.x!==next?.x||previous?.y!==next?.y||previous?.point?.x!==next?.point?.x||previous?.point?.y!==next?.point?.y)r.cached=null;
       });p.inputAt=now();
      }
      return json(req,res,200,{ok:true});

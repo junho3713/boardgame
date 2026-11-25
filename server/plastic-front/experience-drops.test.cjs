@@ -55,10 +55,10 @@ test('rare rolls create a map magnet or a healing pack at the enemy position',()
   g.damage(foe,1e9,leader);
   return g.pickups.find(p=>p.combatDrop&&p.x===foe.x&&p.y===foe.y);
  };
- const magnet=defeat(.0029,50),heal=defeat(.003,95);
+ const magnet=defeat(.0059,50),heal=defeat(.006,95);
  assert.equal(magnet?.combatDrop,'magnet');
  assert.equal(heal?.combatDrop,'heal');
- assert.equal(defeat(.01,145),undefined);
+ assert.equal(defeat(.021,145),undefined);
  g.earnDefeatXP({x:100,y:100},80);
  assert.ok(g.collectFieldSupply(magnet));
  assert.ok(g.experienceDrops.every(drop=>drop.pulling));
