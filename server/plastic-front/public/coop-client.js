@@ -22,7 +22,7 @@ function updateRoom(){
  $('coopStart').hidden=state.started||!state.host;$('coopStart').disabled=state.players.length!==2||state.players.some(p=>!p.connected);
  $('coopResume').hidden=!state.started||!state.paused;$('coopResume').disabled=state.players.some(p=>!p.connected);
  $('coopLobbyTitle').textContent=!state.started?'두 대장이 모이면 출격합니다.':state.paused?'작전을 잠시 멈췄습니다.':'협동 작전';
- $('coopStatus').textContent=!connected?'서버에 다시 연결하는 중입니다…':state.paused?state.pauseReason:!state.started?state.host?'방 코드나 초대 링크를 친구에게 알려주세요.':'초록 대장이 출격하면 함께 시작합니다.':'2성 거실 · 일반 적 1.8배';
+ $('coopStatus').textContent=!connected?'서버에 다시 연결하는 중입니다…':state.paused?state.pauseReason:!state.started?state.host?'방 코드나 초대 링크를 친구에게 알려주세요.':'초록 대장이 출격하면 함께 시작합니다.':'거실 · 일반 적 1.8배';
  $('coopConnection').textContent=connected?(state.paused?'일시정지':'연결됨'):'재연결 중';
  $('coopStrip').hidden=false;$('coopPause').disabled=!state.started;
  modal(!state.started||state.paused||!connected);
@@ -72,7 +72,7 @@ function apply(data){
   if(data.phase==='ended'&&lastPhase!=='ended')bridge.events.end({result:game.result,reason:game.result==='win'?'finalBoss':'commander'});
   lastPhase=data.phase;
   $('coopShield').hidden=!(data.invulnerable>0);$('coopShield').textContent='내 분대 무적 '+data.invulnerable.toFixed(1)+'초';
-  $('headerMode').textContent='2인 협동 · 2성 거실 · 개인 성장';
+  $('headerMode').textContent='2인 협동 · 거실 · 개인 성장';
   const opening=data.phase==='choice'&&game.time===0;
   $('initialAllyWait').hidden=!(opening&&!data.choosing&&!data.paused);
   if(opening&&data.choosing)$('promotionDescription').textContent='각자 초기 병과를 고르면 두 분대가 함께 출격해요.';
@@ -90,7 +90,7 @@ async function poll(){
 function mount(){
  document.body.classList.add('coop-mode');
  document.querySelector('.choice-foot>b').textContent='전투 계속 · 내 분대만 5초 무적';
- const panel=document.createElement('div');panel.id='coopLobby';panel.className='overlay';panel.innerHTML=`<section class="modal coop-modal" role="dialog" aria-modal="true" aria-labelledby="coopLobbyTitle"><div class="eyebrow">TWO COMMANDERS / LIVING ROOM ★★</div><h2 id="coopLobbyTitle">초록과 파랑, 함께 진격.</h2><p>기존 2성 거실맵 · 일반 적 등장 수 1.8배<br>자원·경험치·강화·병력은 개인별로 성장합니다.</p><p class="coop-rule">강화를 골라도 전투는 계속됩니다.<br>레벨업 선택창이 열리면 내 분대만 5초 무적.</p><button type="button" id="coopPlanSettings">목표 편성 · 자동 충원 설정 ↗</button><div id="coopEntry"><label for="coopName">대장 이름</label><input id="coopName" maxlength="16" autocomplete="nickname" value="대장"><label for="coopMedicSkin">내 의무병 스킨</label><select id="coopMedicSkin"><option value="classic">기본 의무병</option><option value="rina">리나 · 입체 모션</option></select><button id="coopCreate" class="primary">초록 대장으로 방 만들기</button><label for="coopJoinCode">친구의 방 코드</label><input id="coopJoinCode" maxlength="6" autocapitalize="characters" autocomplete="off" placeholder="6자리 코드"><button id="coopJoin">파랑 대장으로 입장</button></div><div id="coopWaiting" hidden><p class="coop-code">방 코드 <strong id="coopCode"></strong></p><div id="coopMembers"></div><button id="coopCopy">초대 링크 복사</button><button id="coopStart" class="primary">둘이 함께 출격 →</button><button id="coopResume" class="primary" hidden>함께 작전 재개 →</button></div><p id="coopStatus" role="status" aria-live="polite">방을 만들거나 친구의 코드를 입력하세요.</p><p class="coop-note">방은 서버 재시작 시 종료됩니다. 연결이 끊기면 작전이 멈추며, 같은 탭을 새로고침하면 재접속합니다.</p><button id="coopLeave" class="pause-reset">협동에서 나가기</button></section>`;
+ const panel=document.createElement('div');panel.id='coopLobby';panel.className='overlay';panel.innerHTML=`<section class="modal coop-modal" role="dialog" aria-modal="true" aria-labelledby="coopLobbyTitle"><div class="eyebrow">TWO COMMANDERS / LIVING ROOM</div><h2 id="coopLobbyTitle">초록과 파랑, 함께 진격.</h2><p>거실 · 일반 적 등장 수 1.8배<br>자원·경험치·강화·병력은 개인별로 성장합니다.</p><p class="coop-rule">강화를 골라도 전투는 계속됩니다.<br>레벨업 선택창이 열리면 내 분대만 5초 무적.</p><button type="button" id="coopPlanSettings">목표 편성 · 자동 충원 설정 ↗</button><div id="coopEntry"><label for="coopName">대장 이름</label><input id="coopName" maxlength="16" autocomplete="nickname" value="대장"><label for="coopMedicSkin">내 의무병 스킨</label><select id="coopMedicSkin"><option value="classic">기본 의무병</option><option value="rina">리나 · 입체 모션</option></select><button id="coopCreate" class="primary">초록 대장으로 방 만들기</button><label for="coopJoinCode">친구의 방 코드</label><input id="coopJoinCode" maxlength="6" autocapitalize="characters" autocomplete="off" placeholder="6자리 코드"><button id="coopJoin">파랑 대장으로 입장</button></div><div id="coopWaiting" hidden><p class="coop-code">방 코드 <strong id="coopCode"></strong></p><div id="coopMembers"></div><button id="coopCopy">초대 링크 복사</button><button id="coopStart" class="primary">둘이 함께 출격 →</button><button id="coopResume" class="primary" hidden>함께 작전 재개 →</button></div><p id="coopStatus" role="status" aria-live="polite">방을 만들거나 친구의 코드를 입력하세요.</p><p class="coop-note">방은 서버 재시작 시 종료됩니다. 연결이 끊기면 작전이 멈추며, 같은 탭을 새로고침하면 재접속합니다.</p><button id="coopLeave" class="pause-reset">협동에서 나가기</button></section>`;
  document.body.append(panel);
  const strip=document.createElement('div');strip.id='coopStrip';strip.hidden=true;strip.innerHTML='<strong id="coopIdentity"></strong><span>방 <b id="coopRoomCode"></b></span><span id="coopConnection"></span><strong id="coopShield" hidden></strong><button id="coopPause">함께 일시정지</button><button id="coopExit">나가기</button>';
  document.querySelector('.topbar').after(strip);
