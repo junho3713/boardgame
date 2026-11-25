@@ -107,6 +107,7 @@ function mount(){
 }
 api.configureReinforcement=plan=>{if(!globalThis.FrontReinforcementPlan.valid(plan))return false;if(!token)return bridge.getGame().setReinforcementPlan(plan);return command('reinforcementPlan',{plan}).then(data=>{if(!data)return false;const g=bridge.getGame();if(!state.started)g.setReinforcementPlan(plan);return JSON.stringify(g.reinforcementPlan().targets)===JSON.stringify(plan.targets)&&g.reinforcementPlan().enabled===plan.enabled&&g.reinforcementPlan().mode===plan.mode;});};
 api.install=value=>{bridge=value;mount();};
+api.summon=slot=>inputAllowed()?command('summon',{slot}):false;
 api.pause=()=>{bridge.clearInput();command('pause');};
 api.frame=game=>{
  if(!inputAllowed())return;

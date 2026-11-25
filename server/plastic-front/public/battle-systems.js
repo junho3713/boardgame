@@ -88,6 +88,7 @@ class UnitSystem extends BattleSystem{
 
 class SupportSystem extends BattleSystem{
  update(game,{dt,player}){
+  game.updateDropPods?.();
   const live=game.units.filter(unit=>unit.hp>0);
   game.updateLuckyObjects(dt);
   game.separateCrowd(live);

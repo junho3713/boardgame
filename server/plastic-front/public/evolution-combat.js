@@ -8,7 +8,7 @@ function install(api){
  const details={machinegun:'3초 예열 → 4초 과열 관통',sniper:'최대 3명 관통 · 100/50/25%',mortar:'비행 1초 · 0.25초 간격 2발 · 각 70%',tank:'전방 연쇄 폭발 · 100/60/40% · 중복 적중 없음',lucky:'보스킬러 기본 5000 · 방어력 65% 무시 · 보스 출현 시 꽝 일부 전환',medic:'기존 상태이상 정화 · 파동·연결 연출'};
  EVOLUTIONS.mortar.detail=EVOLUTIONS.mortar.detail.replace('낙탄 시간 2초 유지','진화 포탄 비행 1초');
  for(const [type,detail]of Object.entries(details))EVOLUTIONS[type].detail+=' · '+detail;
- p.evolutionEnabled=function(u){if(!u||u.team!==0)return false;return !!(this.coop?this.withOwner(u.coopOwner,()=>this.evolved[u.type]):this.evolved[u.type]);};
+ p.evolutionEnabled=function(u){if(!u||u.team!==0)return false;return u.summonEvolved===true||!!(this.coop?this.withOwner(u.coopOwner,()=>this.evolved[u.type]):this.evolved[u.type]);};
  p.evolutionEnemies=function(u){return this.combatCandidates().filter((t,i,a)=>a.indexOf(t)===i&&t.hp>0&&!t.hidden&&this.canTarget(u,t));};
  p.stats=function(u){const s=stats.call(this,u);if(u.type==='machinegun'&&this.evolutionEnabled(u)){const active=this.time<(u.overheatUntil||0),heat=active?1:Math.min(1,(u.evolutionHeat||0)/3);s.rate/=1+.35*heat;}return s;};
  p.evolutionMuzzle=function(u,target,style){this.effects.push({kind:'evoMuzzle',x:u.x,y:u.y,angle:Math.atan2(target.y-u.y,target.x-u.x),style,t:.22,max:.22,team:0});};

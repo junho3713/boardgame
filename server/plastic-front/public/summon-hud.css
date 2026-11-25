@@ -1,0 +1,66 @@
+/* Compact recruitment bar above the existing command strip. */
+.summon-hud{
+ --slot-size:65px;--slot-gap:5px;--summon-bottom:70px;
+ position:absolute;left:50%;bottom:calc(var(--summon-bottom) + env(safe-area-inset-bottom,0px));transform:translateX(-50%);
+ z-index:10;display:flex;align-items:stretch;gap:var(--slot-gap);
+ padding:5px;border:1px solid #acc39d80;border-radius:8px;background:#192e28f5;
+ box-shadow:0 5px 18px #10211e70;touch-action:manipulation;
+}
+.summon-hud[hidden]{display:none}
+.summon-slot{
+ --summon-accent:#43594c;--charge:0%;
+ position:relative;isolation:isolate;width:var(--slot-size);height:64px;padding:2px 2px 4px;
+ display:grid;grid-template-rows:13px 25px 12px 1fr;grid-template-columns:1fr 1fr;
+ align-items:center;justify-items:center;overflow:hidden;border:1px solid #98ad8b;border-radius:5px;
+ color:#fff5da;background:var(--summon-accent);font-weight:700;font-variant-numeric:tabular-nums;
+ line-height:1;touch-action:manipulation;cursor:pointer;
+}
+.summon-slot::before{
+ content:"";position:absolute;inset:0 0 auto;height:calc(100% - var(--charge));z-index:-1;
+ background:#172523b8;box-shadow:0 1px 0 #f4df956e;
+}
+.summon-slot[aria-disabled=true]:not(.empty){cursor:default}
+.summon-slot.affordable{border-color:#d6eca6;box-shadow:inset 0 0 0 1px #c4e8888c,0 0 8px #d2ed755c}
+.summon-slot.affordable:hover{background:color-mix(in srgb,var(--summon-accent),#ffffff 14%)}
+.summon-slot.evolved{border-color:#f1cc62;box-shadow:inset 0 0 0 1px #f1cc6280}
+.summon-slot.evolved.affordable{box-shadow:inset 0 0 0 1px #ffd97f,0 0 10px #f1cc626e}
+.summon-slot.empty{opacity:.85;cursor:default}
+.summon-key,.summon-level{font-size:10px;align-self:start}
+.summon-key{justify-self:start;padding:2px 3px;border-radius:3px;background:#162921;color:#f5e7bd}
+.summon-level{justify-self:end;padding:3px 2px 0 0;color:#fff4cc}
+.summon-icon,.summon-caption,.summon-cost{grid-column:1/-1;white-space:nowrap}
+.summon-icon{display:grid;place-items:center;width:29px;height:24px}
+.summon-icon svg{width:29px;height:25px;filter:drop-shadow(0 1px 1px #131b18)}
+.summon-slot.empty .summon-icon::before{content:"";width:15px;height:12px;border:1px dashed #a7b9a8;border-radius:2px}
+.summon-caption{font-size:11px}
+.summon-cost{font-size:10px;color:#f9df91}
+.summon-slot:last-child{margin-left:6px}
+.summon-slot:focus-visible{outline:2px solid #fff2b2;outline-offset:-3px}
+.summon-preview-badge{align-self:center;padding:4px 7px;border:1px solid #738a61;background:#dbe8c2;color:#2e4635;font-size:11px;font-weight:750}
+.summon-active.game-hud .battle-frame>.mission-label{bottom:154px}
+.summon-active.game-hud .battle-frame>.toast{bottom:calc(188px + env(safe-area-inset-bottom,0px))}
+.summon-active.game-hud .battle-frame>.field-supply-bar{bottom:160px}
+@media(max-width:760px){
+ .summon-hud{--slot-size:clamp(38px,10vw,61px);--slot-gap:4px;--summon-bottom:66px;padding:4px}
+ .summon-slot{height:60px;grid-template-rows:12px 21px 12px 1fr}
+ .summon-icon,.summon-icon svg{width:24px;height:21px}
+ .summon-key,.summon-level,.summon-cost{font-size:9px}
+ .summon-caption{font-size:9px}
+ .summon-slot:last-child{margin-left:3px}
+ .summon-active.game-hud .battle-frame>#joystick,.summon-active.game-hud .battle-frame>#ultimateBtn{bottom:142px}
+ .summon-active.game-hud .battle-frame>.mission-label{bottom:149px;max-width:calc(100% - 188px)}
+ .summon-active.game-hud .battle-frame>.toast{bottom:calc(222px + env(safe-area-inset-bottom,0px))}
+ .summon-active.game-hud .battle-frame>.field-supply-bar{bottom:223px}
+}
+@media(max-height:480px) and (orientation:landscape){
+ .summon-hud{--slot-size:55px;--summon-bottom:60px}
+ .summon-slot{height:52px;grid-template-rows:11px 19px 11px 1fr}
+ .summon-active.game-hud .battle-frame>#joystick,.summon-active.game-hud .battle-frame>#ultimateBtn{bottom:74px}
+ .summon-active.game-hud .battle-frame>.toast{bottom:calc(131px + env(safe-area-inset-bottom,0px))}
+ .summon-active.game-hud .battle-frame>.field-supply-bar{bottom:127px}
+}
+
+
+@media(max-width:600px) and (max-height:480px) and (orientation:landscape){
+ .summon-active.game-hud .battle-frame>#joystick,.summon-active.game-hud .battle-frame>#ultimateBtn{bottom:126px}
+}

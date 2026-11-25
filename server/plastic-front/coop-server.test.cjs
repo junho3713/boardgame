@@ -12,7 +12,7 @@ test('co-op plans can be set before starting and while paused, are validated, an
   const room=handler.rooms.get(green.state.code),g=room.game;assert.equal(g.withOwner(0,()=>g.reinforcementPlan().targets.rifle),3);assert.equal(g.withOwner(1,()=>g.reinforcementPlan().targets.rifle),6);
   assert.equal((await call('/command',{action:'pause'},green.token)).status,200);const cash=g.withOwner(0,()=>g.cash[0]);assert.equal((await call('/command',{action:'reinforcementPlan',owner:0,plan:plan('medic',3)},blue.token)).status,200);assert.equal(g.withOwner(0,()=>g.reinforcementPlan().targets.rifle),3);assert.equal(g.withOwner(1,()=>g.reinforcementPlan().targets.medic),3);assert.equal(g.withOwner(0,()=>g.cash[0]),cash);
   const bad=plan('rifle',3);bad.targets.rifle=-1;assert.equal((await call('/command',{action:'reinforcementPlan',plan:bad},blue.token)).status,400);assert.equal(g.withOwner(1,()=>g.reinforcementPlan().targets.medic),3);
-  assert.equal((await call('/command',{action:'reinforcementPlan',plan:plan('rifle',6)},blue.token)).status,200);for(const owner of [0,1])g.withOwner(owner,()=>{g.cash[0]=1000;g.xp=0;});assert.equal((await call('/command',{action:'resume'},green.token)).status,200);g.time=59.99;handler.step();assert.equal(g.withOwner(0,()=>g.reinforcementCounts().rifle),3);assert.equal(g.withOwner(1,()=>g.reinforcementCounts().rifle),6);assert.equal(g.coopChoosing[0],false);assert.equal(g.coopChoosing[1],false);
+  assert.equal((await call('/command',{action:'reinforcementPlan',plan:plan('rifle',6)},blue.token)).status,200);for(const owner of [0,1])g.withOwner(owner,()=>{g.cash[0]=1000;g.xp=0;});assert.equal((await call('/command',{action:'resume'},green.token)).status,200);g.time=60;handler.step();assert.equal(g.dropPods.filter(p=>p.coopOwner===0).length,1);assert.equal(g.dropPods.filter(p=>p.coopOwner===1).length,4);g.time=60.5;g.updateDropPods();assert.equal(g.withOwner(0,()=>g.reinforcementCounts().rifle),3);assert.equal(g.withOwner(1,()=>g.reinforcementCounts().rifle),6);assert.equal(g.coopChoosing[0],false);assert.equal(g.coopChoosing[1],false);
  }finally{handler.close();await new Promise(r=>app.close(r));}
 });
 test('two clients authenticate, grow independently without pausing, reconnect and reject stale choices',async()=>{
@@ -59,8 +59,15 @@ test('two clients authenticate, grow independently without pausing, reconnect an
   assert.equal((await call('/command',{action:'artillery',x:-100,y:10},b.token)).status,409);
   assert.equal((await call('/command',{action:'artillery',x:blueLeader.x+100,y:blueLeader.y},b.token)).status,200);assert.equal(g.supplyStrikes[0].coopOwner,1);
   g.withOwner(1,()=>{g.supplyState().artillery=1;g.addUnit(2,'ant',blueLeader.x+160,blueLeader.y);});assert.equal((await call('/command',{action:'artillery'},b.token)).status,200);assert.equal(g.supplyStrikes.at(-1).coopOwner,1);assert.equal(g.withOwner(1,()=>g.supplyState().artillery),0);
-  g.withOwner(1,()=>{g.supplyState().pendingSupport=1;});g.levelCheck();assert.equal(g.coopChoosing[1],true);
-  assert.equal((await call('/command',{action:'cancelRecovery'},b.token)).status,200);assert.equal(g.coopChoosing[1],false);assert.equal(g.phase,'playing');
+
+  g.withOwner(1,()=>{g.supplyState().pendingSupport=1;});g.levelCheck();
+  assert.equal(g.coopChoosing[1],false);assert.equal(g.phase,'playing');
+  const held=g.withOwner(1,()=>g.cash[0]);g.withOwner(1,()=>{g.cash[0]=300;});
+  assert.equal((await call('/command',{action:'summon',slot:'1'},b.token)).status,409);
+  assert.equal((await call('/command',{action:'summon',slot:1},b.token)).status,200);
+  const pod=g.dropPods.find(p=>p.coopOwner===1);assert(pod);assert.equal(g.withOwner(1,()=>g.cash[0]),240);
+  g.time=pod.landAt;g.updateDropPods();assert(g.owned(1).some(u=>u.summonLandedAt===pod.landAt));
+  g.withOwner(1,()=>{g.cash[0]=held;});
   g.withOwner(0,()=>{g.addSupportToy('toyDrum');g.addSupportToy('toyTurtle');g.supplyState().toyOffer={type:'toyStunner',at:g.time};});
   const greenToy=g.withOwner(0,()=>g.supportToys()[0]);
   assert.equal((await call('/command',{action:'supportToy',id:greenToy.id},b.token)).status,409);

@@ -2,10 +2,10 @@
 (function(root){'use strict';
 function isEvolved(game,u){
  if(u.team!==0)return false;
- return !!(game.coop?game.withOwner(u.coopOwner,()=>game.evolved[u.type]):game.evolved[u.type]);
+ return u.summonEvolved===true||!!(game.coop?game.withOwner(u.coopOwner,()=>game.evolved[u.type]):game.evolved[u.type]);
 }
 function evolution(game,u,ctx){
- if(u.hp<=0||!isEvolved(game,u))return null;
+ if(u.hp<=0||(!u.goldenSummon&&!isEvolved(game,u)))return null;
  const name=game.stats(u).name;
  const vehicle=['tank','crimsonAce','lucky'].includes(u.type),rina=u.type==='medic'&&u.appearance==='rina';
  const droneRise=u.type==='drone'?(u.visualFlightHeight??game.stats(u).flightHeight??54)+42:0;

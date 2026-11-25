@@ -6,7 +6,7 @@ const RULES={copies:3,maxTwoStars:3,capacityGains:[1,1,2,2,3],damage:3,hp:2.5,he
 const p=Game.prototype,stats=p.stats,upgrade=p.upgradeBalance,buy=p.buy,bonus=p.abilityBonus,remaining=p.recruitmentRemaining,lucky=p.updateLuckyUnit,scale=p.luckyScale,odds=p.luckyOdds,projectiles=p.fireUnitProjectiles;
 p.isThreeStarExperiment=function(){return false;}; // Legacy callers checking for the retired battlefield.
 p.battlefieldId=function(){return this.bedroomStar?'bedroom-star':this.pixelRoom?'livingroom-pixel':this.starExperiment?'livingroom-star':this.bounds().id;};
-p.starCount=function(type,star){return this.alive(0).filter(u=>u.type===type&&(u.star||1)===star).length;};
+p.starCount=function(type,star){return this.alive(0).filter(u=>u.type===type&&!u.summonEvolved&&!u.goldenSummon&&(u.star||1)===star).length;};
 p.threeStarCount=function(type){return this.starCount(type,3);};
 p.starRosterLabel=function(type){const three=this.threeStarCount(type);return three?`★★★ ${three}기`:`1성 ${this.fusionCandidates(type).length} · ★★ ${this.twoStarCount(type)}/3`;};
 p.abilityBonus=function(key,level=this.abilities[key]||0){if(this.starExperiment&&this.mode==='pve'&&key==='capacity')return RULES.capacityGains.slice(0,Math.max(0,Math.min(5,Math.floor(level)))).reduce((sum,gain)=>sum+gain,0);return bonus.call(this,key,level);};
@@ -16,7 +16,7 @@ p.refreshTwoStarHealth=function(){
  for(const u of this.units){if(u.team!==0||!(u.star>=2)||!roster.includes(u.type))continue;const hp=this.stats(u).hp;if(Math.abs(hp-u.maxHp)<1e-6)continue;const ratio=Math.max(0,Math.min(1,u.hp/Math.max(1,u.maxHp)));u.maxHp=hp;u.hp=hp*ratio;changed=true;}return changed;
 };
 p.upgradeBalance=function(){const changed=upgrade.call(this);return this.refreshTwoStarHealth()||changed;};
-p.fusionCandidates=function(type,star=1){return this.starExperiment&&this.mode==='pve'&&roster.includes(type)?this.alive(0).filter(u=>u.type===type&&(u.star||1)===star):[];};
+p.fusionCandidates=function(type,star=1){return this.starExperiment&&this.mode==='pve'&&roster.includes(type)?this.alive(0).filter(u=>u.type===type&&!u.summonEvolved&&!u.goldenSummon&&(u.star||1)===star):[];};
 p.twoStarCount=function(type){return this.alive(0).filter(u=>u.type===type&&u.star===2).length;};
 p.recoverTwoStarLoss=function(u){
  if(!this.starExperiment||this.mode!=='pve'||u.team!==0||u.star!==2||u.hp>0||u.merged||u.recoveredAs||!roster.includes(u.type))return null;

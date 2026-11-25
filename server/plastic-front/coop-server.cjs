@@ -68,7 +68,7 @@ function createCoopHandler({now=Date.now,automatic=true}={}){
     if(r.started){if(!r.game.withOwner(p.owner,()=>r.game.setReinforcementPlan(body.plan)))fail(409,'편성을 저장하지 못했습니다.');}else p.reinforcementPlan=globalThis.FrontReinforcementPlan.clean(body.plan);
    }else if(action==='start'){
     if(p.owner!==0)fail(403,'초록 방장만 출격할 수 있습니다.');if(r.started)fail(409,'이미 출격했습니다.');if(r.players.length!==2||r.players.some(q=>!connected(q)))fail(409,'두 대장이 연결되면 출격할 수 있습니다.');
-    r.game=new CoopGame(events(r),{medicSkins:r.players.map(p=>p.medicSkinId),reinforcementPlans:r.players.map(p=>p.reinforcementPlan)});r.started=true;r.game.start();
+    r.game=new CoopGame(events(r),{realtimeSummons:true,medicSkins:r.players.map(p=>p.medicSkinId),reinforcementPlans:r.players.map(p=>p.reinforcementPlan)});r.started=true;r.game.start();
    }else{
     if(!r.started)fail(409,'아직 출격하지 않았습니다.');const g=r.game;
     if(action==='pause')pause(r,'대장이 작전을 일시정지했습니다.');
@@ -93,6 +93,7 @@ function createCoopHandler({now=Date.now,automatic=true}={}){
       else if(action==='follow')ok=g.followCommander();
       else if(action==='focus'){const target=body.target==='enemy-base'?g.bases[1]:[...g.units,...g.structures,...g.defenses].find(u=>u.id===body.target);ok=g.setFocus(target);}
       else if(action==='ultimate')ok=g.useUltimate();
+      else if(action==='summon')ok=g.summon(body.slot);
       else if(action==='medkit')ok=g.useMedkit();
       else if(action==='artillery')ok=g.useArtilleryTicket(body.x,body.y);
       else if(action==='supportToy')ok=g.resolveSupportToyOffer(body.id);

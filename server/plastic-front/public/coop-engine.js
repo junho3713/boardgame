@@ -2,10 +2,10 @@
 (function(root){'use strict';
 const node=typeof module!=='undefined'&&module.exports,api=node?require('./engine.js'):root;if(node){require('./sword-boss.js');require('./two-star.js');}
 const Game=api.FrontGame,Profile=api.FrontProfile;
-const controls=['input','manualAim','moveOrder','focusTarget','focusAutomatic','formationFacing','formationEnemy','ultimate','cash','tech','abilities','evolved','profile','level','xp','runGold','losses','salvaged','nextRecoveryAt','cardShownCounts','choiceKind','currentOptions','turnChoice','pendingChoice','retreated','lastCommanderLoss','stageSupplied','rallyUntil','rallyReady','constructionLine','mageShieldQuest','laserExposureQuest','medicSkinId','fieldSupplyState'];
+const controls=['input','manualAim','moveOrder','focusTarget','focusAutomatic','formationFacing','formationEnemy','ultimate','cash','tech','abilities','evolved','profile','level','xp','runGold','losses','salvaged','nextRecoveryAt','cardShownCounts','choiceKind','currentOptions','turnChoice','pendingChoice','retreated','lastCommanderLoss','stageSupplied','rallyUntil','rallyReady','constructionLine','mageShieldQuest','laserExposureQuest','medicSkinId','fieldSupplyState','summonSlots'];
 class CoopGame extends Game{
  constructor(events={},settings={}){
-  super(events,new Profile(),{map:'livingroom-star',medicSkin:settings.medicSkins?.[0]});
+  super(events,new Profile(),{map:'livingroom-star',realtimeSummons:settings.realtimeSummons===true,medicSkin:settings.medicSkins?.[0]});
   this.coop=true;this.coopOwner=0;this.coopStates=[{},{}];this.coopChoosing=[false,false];this.coopRounds=[0,0];this.coopInvulnerable=[0,0];this.coopSpawnScale=1.8;this.coopSpawnRemainder=0;
   for(const key of controls){this.coopStates[0][key]=this[key];this.coopStates[1][key]=key==='profile'?new Profile():structuredClone(this[key]);}
   this.coopStates[1].medicSkinId=settings.medicSkins?.[1]==='rina'?'rina':'classic';

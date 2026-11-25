@@ -30,7 +30,7 @@ function install({FrontGame:Game,TYPES}){
   const kind=this.isSupportToy?.(pickup.supplyKind)||config.legacyOdds[pickup.supplyKind]!==undefined?pickup.supplyKind:this.rollSupply();pickup.supplyKind=kind;if(this.isSupportToy?.(kind))return this.collectSupportToy(pickup,kind);
   const state=this.supplyState();
   pickup.active=false;pickup.supplyKind=kind;state.collected++;this.gainXP(18);this.awardGold(5);
-  if(kind==='support'){this.cash[0]+=config.cash;state.pendingSupport++;this.notify('toast','희귀 지원 보급 · 전투자원 +400 · 지원창에서 즉시 충원');}
+  if(kind==='support'){this.cash[0]+=config.cash;if(!this.usesSummoning?.())state.pendingSupport++;this.notify('toast',this.usesSummoning?.()?'희귀 지원 보급 · 전투 골드 +400':'희귀 지원 보급 · 전투자원 +400 · 지원창에서 즉시 충원');}
   else if(kind==='medkit'){state.medkits++;this.notify('toast','힐팩 확보 · 전체 회복·상태이상 제거 1회 저장');}
   else if(kind==='boost'){state.boostUntil=this.time+config.boostDuration;this.notify('toast','전투 강화 60초 · 공격력 +30% / 공격속도 +20%');}
   else if(kind==='artillery'){state.artillery++;this.notify('toast','포격 지원권 확보 · 버튼을 누른 뒤 전장에 목표 지정');}
@@ -58,7 +58,9 @@ function install({FrontGame:Game,TYPES}){
   state.pendingMinute=null;this.choiceKind='periodic';this.currentOptions=[];this.phase='choice';this.turnChoice=null;this.pendingChoice=null;this.input={x:0,y:0};this.notify('level',[]);return true;
  };
  p.levelCheck=function(){
-  if(this.phase!=='playing')return;this.scheduleMinuteSupport();
+  if(this.phase!=='playing')return;
+  if(this.usesSummoning?.()){levelCheck.call(this);if(this.phase==='playing')this.runSummonPlan();return;}
+  this.scheduleMinuteSupport();
   if(this.beginSupplySupport())return;
   levelCheck.call(this);this.beginMinuteSupport();
  };
