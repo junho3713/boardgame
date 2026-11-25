@@ -2,7 +2,7 @@
 (function(root){
 'use strict';
 const BATTLE_SYSTEMS=typeof module!=='undefined'&&module.exports?require('./battle-systems.js'):root.FrontBattleSystems;
-const SWORD={damage:90,rate:.75,range:90,arc:110*Math.PI/180,windup:.14,recovery:.42,targets:3,ultimateRange:170,ultimateInterval:.5,ultimateDamage:2};
+const SWORD={damage:90,rate:.75,range:135,arc:110*Math.PI/180,windup:.14,recovery:.42,targets:3,finisherRange:180,finisherArc:150*Math.PI/180,finisherTargets:6,finisherDamage:2,ultimateRange:170,ultimateInterval:.5,ultimateDamage:2};
 const FLAME={damage:14.4,rate:.12,range:250,arc:50*Math.PI/180,armor:.65,ultimateRange:420,ultimateArc:70*Math.PI/180,ultimateDamage:2};
 const BALANCE_VERSION=71;
 const PIRATE_REINFORCEMENT={from:360,interval:55};
@@ -109,7 +109,7 @@ const TYPES={swordEmpress:{name:'사검의 군주',hp:140800,damage:0,rate:100,r
  beetle:{name:'갑충',icon:'●',hp:420,damage:24,rate:1.4,range:30,speed:74.4,r:17,cost:0,role:'느리고 튼튼한 일반 생물'}
 };
 const ENEMY_REPLACED_TYPES={rifle:TYPES.rifle,guntruck:TYPES.guntruck,rocket:TYPES.rocket};
-TYPES.rifle={...TYPES.rifle,name:'산탄총병',enemyName:TYPES.rifle.name,icon:'✦',hp:145,damage:22,rate:1,range:210,role:'자동·수동 조준 5갈래 산탄 · 기본 펌프 1초 · 4발 후 재장전'};
+TYPES.rifle={...TYPES.rifle,name:'산탄총병',enemyName:TYPES.rifle.name,icon:'✦',hp:160,damage:22,rate:1,range:210,cost:60,role:'근거리 산탄 피해 최대 +65% · 5갈래 · 4발 후 재장전'};
 TYPES.guntruck={...TYPES.guntruck,name:'통신병',enemyName:TYPES.guntruck.name,icon:'⚄',hp:200,damage:38,rate:2.4,range:620,speed:133,r:13,role:'주사위 2개 · 더블로 폭격 호출 · 5회 불발 후 다음 더블 확정'};
 TYPES.rocket={...TYPES.rocket,name:'지뢰 설치병',enemyName:TYPES.rocket.name,role:'조준 방향으로 블록 지뢰 2~3개 투척 · 지상 적이 밟으면 광역 폭발'};
 TYPES.drone={name:'미니 RC 드론',icon:'✜',hp:130,damage:9,rate:.20,range:330,speed:175,r:12,cost:125,flying:true,flightHeight:54,role:'부대 상공을 선회하며 가장 가까운 적에게 자동 연사'};
@@ -619,11 +619,12 @@ class FrontGame{
  selectCombatTarget(u,candidates=this.combatCandidates(),threats=null,s=this.stats(u)){
   if(u.team!==0||u.built)return this.selectPriorityTarget(u,candidates,threats||this.attackingEnemies(),s);
   let best=null,bestDistance=Infinity,bestHealth=-Infinity;
+  const sword=this.isSwordCommander(u),range=sword?this.swordRange(u):s.range;
   const inReach=[];
   for(const t of candidates){
    if(!t||t.team===u.team||t.hidden||t.hp<=0||!this.canTarget(u,t)||t.base&&this.baseShielded()||t.structure&&this.mission.stage<(t.activeStage||2))continue;
-   const distance=this.targetDistance(u,t),extra=this.isSwordCommander(u)?0:t.base?45:t.structure?35:0;
-   if(distance<(s.minRange||0)||distance>=s.range+extra||!this.visible(t)||!this.lineClear(u,t,0,{fireTeam:u.team}))continue;
+   const distance=this.targetDistance(u,t),extra=sword?0:t.base?45:t.structure?35:0;
+   if(distance<(s.minRange||0)||distance>=range+extra||!this.visible(t)||!this.lineClear(u,t,0,{fireTeam:u.team}))continue;
    if(u.type==='mortar'){inReach.push(t);continue;}
    const health=u.type==='sniper'?(t.maxHp??t.hp):0;
    if(health>bestHealth||health===bestHealth&&distance<bestDistance){
@@ -891,7 +892,7 @@ class FrontGame{
   else{const base=this.bases[u.team];u.x=base.x+(this.random()-.5)*90;u.y=base.y+70;}
   this.resolvePosition(u);u.route=null;u.routeGoal=null;u.regroup=null;u.aiEvade=null;u.hp=u.maxHp=this.stats(u).hp;u.deadUntil=0;u.diedAt=undefined;u.revivePoint=null;
   for(const key of ['poisonUntil','poisonDps','poisonNextAt','rootedUntil','slowUntil','windUntil','luckyRootUntil','luckySlowUntil','healingReductionUntil','hurtUntil'])u[key]=0;
-  u.poisonSource=null;u.swordAttack=null;u.swordPose=null;u.ultimatePose=null;
+  u.poisonSource=null;u.swordAttack=null;u.swordPose=null;delete u.swordComboHits;u.ultimatePose=null;
   if(u.team===0)u.reviveProtectionUntil=this.time+COMMANDER_REVIVAL.protection;
   this.effects.push({kind:'drop',x:u.x,y:u.y,t:1,max:1,team:u.team});
   if(u.team===0)this.notify('toast',`대장 제자리 부활 · ${COMMANDER_REVIVAL.protection}초 보호`);
@@ -1591,13 +1592,28 @@ class FrontGame{
  swordTargets(c,angle,range,arc=Math.PI*2){
   return [...this.units,...this.activeDefenses(),...this.structures,...this.bases].filter((t,i,all)=>all.indexOf(t)===i&&t!==c&&this.canTarget(c,t)&&!t.hidden&&this.visible(t)&&this.targetDistance(c,t)<=range&&Math.abs(Math.atan2(Math.sin(Math.atan2(t.y-c.y,t.x-c.x)-angle),Math.cos(Math.atan2(t.y-c.y,t.x-c.x)-angle)))<=arc/2&&this.lineClear(c,t,0,{fireTeam:0}));
  }
+ swordRange(c){return c.swordComboHits===2?SWORD.finisherRange:SWORD.range;}
  beginSwordAttack(c,target,attack=this.attackRoll(c)){
   if(c.hp<=0||c.swordAttack||this.ultimateStatus().active)return false;
-  const angle=Math.atan2(target.y-c.y,target.x-c.x),rate=this.stats(c).rate,tempo=Math.min(1,rate/SWORD.rate);c.face=c.aimFace=angle;c.cooldown=rate;c.swordAttack={angle,hitAt:this.time+SWORD.windup*tempo,endsAt:this.time+SWORD.recovery*tempo,startedAt:this.time,hit:false,...attack};c.swordPose={...c.swordAttack};return true;
+  const angle=Math.atan2(target.y-c.y,target.x-c.x),rate=this.stats(c).rate,tempo=Math.min(1,rate/SWORD.rate);
+  c.face=c.aimFace=angle;c.cooldown=rate;
+  c.swordAttack={angle,comboHit:(c.swordComboHits??0)+1,hitAt:this.time+SWORD.windup*tempo,endsAt:this.time+SWORD.recovery*tempo,startedAt:this.time,hit:false,...attack};
+  c.swordPose={...c.swordAttack};return true;
  }
  updateSwordAttack(c){
   const a=c.swordAttack;if(!a)return;if(c.hp<=0||this.ultimateStatus().active){c.swordAttack=null;c.swordPose=null;return;}
-  if(!a.hit&&this.time+1e-8>=a.hitAt){a.hit=true;const targets=this.swordTargets(c,a.angle,this.stats(c).range,SWORD.arc).sort((a,b)=>dist(c,a)-dist(c,b)).slice(0,SWORD.targets);for(const t of targets)this.damage(t,a.damage,c);this.effects.push({kind:'shionSlash',source:c,x:c.x,y:c.y,angle:a.angle,range:this.stats(c).range,arc:SWORD.arc,t:.28,max:.28,team:0,critical:a.critical});this.notify('fire',{...c,sword:true});}
+  if(!a.hit&&this.time+1e-8>=a.hitAt){
+   a.hit=true;
+   const comboHit=a.comboHit??1,finisher=comboHit===3;
+   c.swordComboHits=finisher?0:comboHit;
+   const range=finisher?SWORD.finisherRange:SWORD.range,arc=finisher?SWORD.finisherArc:SWORD.arc;
+   const limit=finisher?SWORD.finisherTargets:SWORD.targets,damage=a.damage*(finisher?SWORD.finisherDamage:1);
+   const targets=this.swordTargets(c,a.angle,range,arc).sort((lhs,rhs)=>this.targetDistance(c,lhs)-this.targetDistance(c,rhs)).slice(0,limit);
+   for(const target of targets)this.damage(target,damage,c);
+   const duration=finisher?.38:.28;
+   this.effects.push({kind:'shionSlash',source:c,x:c.x,y:c.y,angle:a.angle,range,arc,finisher,t:duration,max:duration,team:0,critical:a.critical});
+   this.notify('fire',{...c,sword:true});
+  }
   if(this.time>=a.endsAt)c.swordAttack=null;
  }
  recordUltimateHit(hits,target,previousHp){

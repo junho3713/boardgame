@@ -25,7 +25,7 @@ test('priority mode fills the selected class goal continuously even with two-sta
 test('affordable balance respects partial goals, ordinary maps, old saved focus and cooperative ownership',()=>{
  const g=scene(true);for(const owner of [0,1])g.withOwner(owner,()=>{g.tech[0].lucky=g.tech[0].medic=1;const p=plan(g,{lucky:3,medic:3},'balanced',['medic','lucky']);p.preferTwoStar=true;g.setReinforcementPlan(p);g.cash[0]=owner?70:160;});due(g,30);g.withOwner(0,()=>{a.equal(g.reinforcementCounts().lucky,0);a.equal(g.reinforcementCounts().medic,2);});g.withOwner(1,()=>{a.equal(g.reinforcementCounts().lucky,0);a.equal(g.reinforcementCounts().medic,1);});
  const partial=scene();const p=plan(partial,{rifle:2},'balanced');p.preferTwoStar=true;partial.setReinforcementPlan(p);partial.supplyState().autoFusionFocus={type:'medic',stars:{}};due(partial,30);a.equal(partial.reinforcementCounts().rifle,2);
- const normal=scene(false,'livingroom');normal.tech[0].medic=1;const q=plan(normal,{rifle:6,medic:3},'balanced');q.preferTwoStar=true;normal.setReinforcementPlan(q);normal.cash[0]=115;due(normal,30);a.equal(normal.reinforcementCounts().rifle,1);a.equal(normal.reinforcementCounts().medic,1);
+ const normal=scene(false,'livingroom');normal.tech[0].medic=1;const q=plan(normal,{rifle:6,medic:3},'balanced');q.preferTwoStar=true;normal.setReinforcementPlan(q);normal.cash[0]=TYPES.rifle.cost+TYPES.medic.cost;due(normal,30);a.equal(normal.reinforcementCounts().rifle,1);a.equal(normal.reinforcementCounts().medic,1);
 });
 
 test('manual support remains the default and automatic support starts at thirty seconds without pausing or consuming a level',()=>{

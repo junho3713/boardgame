@@ -34,7 +34,7 @@ class FrontEffects{
  emit(e){
   const r=e.radius||50;
   if(e.kind==='shionSlash'||e.kind==='shionSpin'){
-   const count=e.kind==='shionSpin'?14:7;for(let i=0;i<count;i++){const a=e.kind==='shionSpin'?i/count*TAU:e.angle+(i/(count-1)-.5)*e.arc,r=e.range*(.72+this.random()*.24);this.add({kind:'spark',x:e.x+Math.cos(a)*r,y:e.y+Math.sin(a)*r-12,vx:Math.cos(a)*45,vy:Math.sin(a)*30-15,life:.18+this.random()*.15,size:1.5+this.random(),team:0,color:i%3?'#ff5c87':'#fff3dc'});}
+   const count=e.kind==='shionSpin'?14:e.finisher?12:7;for(let i=0;i<count;i++){const a=e.kind==='shionSpin'?i/count*TAU:e.angle+(i/(count-1)-.5)*e.arc,r=e.range*(.72+this.random()*.24);this.add({kind:'spark',x:e.x+Math.cos(a)*r,y:e.y+Math.sin(a)*r-12,vx:Math.cos(a)*45,vy:Math.sin(a)*30-15,life:.18+this.random()*.15,size:1.5+this.random(),team:0,color:i%3?'#ff5c87':'#fff3dc'});}
   }else if(e.kind==='explosion'&&['toyBall','acid'].includes(e.visualKind)){
    for(let i=0;i<8;i++){const a=i/8*TAU,v=35+this.random()*35;this.add({kind:'toyStar',x:e.x,y:e.y-4,vx:Math.cos(a)*v,vy:Math.sin(a)*v*.6-22,size:2.5+this.random()*1.5,life:.35+this.random()*.15,gravity:95,drag:1.5,color:i%2?'#f6d97e':'#a6cfb3',team:e.team});}
   }else if(e.kind==='explosion'){
@@ -203,7 +203,24 @@ class FrontEffects{
   const k=clamp(e.t/e.max,0,1),p=1-k;
   if(!['shionSlash','shionSpin','bossSlashWarn','bossDiveWarn','bossBarrageWarn','bossGroggy','butterflyWarn','butterflyWind','healingWeaken','cleanse','muzzle','explosion','hit','burst','tracer','heal','evolve','ultimateVolley','sting','bayonetWarn','bayonetThrust','bladeSlash','flame','luckyGlueThrow','luckyGlue','luckySpray','luckyJackpot'].includes(e.kind))return false;
   ctx.save();
-  if(e.kind==='shionSlash'||e.kind==='shionSpin'){
+  if(e.kind==='shionSlash'&&e.finisher){
+   const left=e.angle-e.arc/2,right=e.angle+e.arc/2;
+   const lead=left+e.arc*Math.min(1,.42+p*2.8),tail=left+(lead-left)*Math.max(0,(p-.4)*1.5);
+   const r=e.range;
+   ctx.translate(e.x,e.y-12);ctx.lineCap='round';
+   ctx.beginPath();ctx.arc(0,0,r,tail,lead);
+   ctx.arc(0,0,r*.68,lead-.11,tail+.11,true);ctx.closePath();
+   const glow=ctx.createRadialGradient(0,0,r*.64,0,0,r);
+   glow.addColorStop(0,'#e0416300');glow.addColorStop(.75,'#ef4b83a0');glow.addColorStop(1,'#ffe0c4');
+   ctx.globalAlpha=k*.72;ctx.fillStyle=glow;ctx.fill();
+   ctx.globalCompositeOperation='lighter';
+   for(const [width,color,opacity] of [[13,'#de224a',.34],[5,'#ff6187',.78],[1.8,'#fff4dd',.94]]){
+    ctx.globalAlpha=k*opacity;ctx.strokeStyle=color;ctx.lineWidth=width;
+    ctx.beginPath();ctx.arc(0,0,r,tail,Math.min(right,lead));ctx.stroke();
+   }
+   ctx.globalAlpha=k*.55;ctx.strokeStyle='#ffe8cc';ctx.lineWidth=1.2;
+   ctx.beginPath();ctx.arc(0,0,r*.79,tail+.16,lead-.15);ctx.stroke();
+  }else if(e.kind==='shionSlash'||e.kind==='shionSpin'){
    const spin=e.kind==='shionSpin',x=spin&&e.source?.hp>0?e.source.x:e.x,y=(spin&&e.source?.hp>0?e.source.y:e.y)-15,r=e.range,start=spin?e.angle+p*TAU:e.angle-e.arc/2+p*e.arc,span=spin?Math.PI*1.05:e.arc*.72;
    ctx.translate(x,y);ctx.scale(1,.78);ctx.globalCompositeOperation='lighter';ctx.lineCap='round';
    for(const [width,color,alpha]of [[16,'#b91d56',.25],[8,'#ff416c',.65],[2,'#ffe4ed',.95]]){ctx.globalAlpha=k*alpha;ctx.strokeStyle=color;ctx.lineWidth=width;ctx.beginPath();ctx.arc(0,0,r*.85,start-span,start);ctx.stroke();}

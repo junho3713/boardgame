@@ -30,6 +30,22 @@ test('evolved shotgun uses a four-shell magazine, burning pellets and a single e
  a.equal(g.fireUnitProjectiles(u,t,{damage:100},s).length,0);
  g.time=u.shotgunReloadUntil;a.equal(g.fireUnitProjectiles(u,t,{damage:100},s).length,5);a.equal(u.shotgunRounds,3);
 });
+test('shotgun pellet damage falls with distance from the firing point',()=>{
+ const measure=distance=>{
+  const g=scene(),u=g.addUnit(0,'rifle',1000,6000),t=enemy(g,1000+distance),hits=[];
+  const shots=g.fireUnitProjectiles(u,t,{damage:100},g.stats(u));
+  const pellet=shots[2];
+  u.x=t.x+70;u.y=t.y+55;
+  g.damage=(target,amount)=>hits.push([target,amount]);
+  g.advanceCommandShot(pellet,1,[t]);
+  a.equal(hits.length,1);a.equal(hits[0][0],t);
+  return hits[0][1];
+ };
+ const close=measure(45),mid=measure(130),far=measure(210);
+ near(close,33);
+ a.ok(close>mid&&mid>far&&far>=20);
+});
+
 test('sniper pierces only two aligned enemies behind the first with 100/50/25% and honors armor',()=>{
  const g=scene(),u=actor(g,'sniper'),targets=[enemy(g,1200),enemy(g,1300),enemy(g,1400),enemy(g,1500),enemy(g,1350,6060)],hits=[];g.damage=(t,d)=>hits.push([t.id,d]);
  const b=g.fireUnitProjectiles(u,targets[0],{damage:100},g.stats(u))[0];g.impact(b);a.deepEqual(hits,targets.slice(0,3).map((t,i)=>[t.id,[100,50,25][i]]));a.deepEqual(g.effects.filter(e=>e.kind==='evoBeam').map(e=>e.width),[6,3,1.5]);

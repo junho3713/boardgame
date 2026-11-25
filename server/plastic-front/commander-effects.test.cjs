@@ -49,6 +49,33 @@ test('actual commander ultimates retain their attack counts, damage, duration an
  }
 });
 
+test('Shion uses an extended third cut, then returns to the base range',()=>{
+ const {g,c,target}=battle('shion'),fx=renderer(),ctx=canvas();
+ target.x=c.x+125;
+ const add=(d,deg)=>g.addUnit(2,'ant',c.x+d*Math.cos(deg*Math.PI/180),c.y+d*Math.sin(deg*Math.PI/180));
+ const distant=add(172,0),flank=add(119,65),extras=[add(110,-65),add(126,-59),add(121,57)];
+ const outside=add(100,84),tooFar=add(190,0),damage=new Map();
+ g.damage=(u,value)=>damage.set(u.id,value);
+ a.equal(g.stats(c).range,135);
+ a.equal(g.selectCombatTarget(c,[distant]),null);
+ for(const hit of [1,2,3,4]){
+  const finisher=hit===3;
+  a.equal(g.selectCombatTarget(c,[distant]),finisher?distant:null);
+  a.ok(g.beginSwordAttack(c,finisher?distant:target,{damage:90,critical:false}));
+  g.time=c.swordAttack.hitAt;
+  damage.clear();g.updateSwordAttack(c);
+  a.equal(damage.get(target.id),finisher?180:90);
+  for(const other of [distant,flank,...extras])a.equal(damage.get(other.id),finisher?180:undefined);
+  a.equal(damage.size,finisher?6:1);
+  a.ok(!damage.has(outside.id)&&!damage.has(tooFar.id));
+  const event=g.effects.at(-1);
+  a.equal(event.range,finisher?180:135);a.equal(event.finisher,finisher);
+  a.equal(event.arc,(finisher?150:110)*Math.PI/180);
+  for(const k of [1,.65,.2]){a.equal(fx.drawEvent(ctx,{...event,t:event.max*k}),true);ctx.assertRestored();}
+  g.time=c.swordAttack.endsAt;g.updateSwordAttack(c);
+ }
+});
+
 test('all commander skins draw finite geometry in eight directions with materials available or unavailable',()=>{
  for(const materials of [true,false])for(const [appearance,skin,,kind]of variants)for(let direction=0;direction<8;direction++){
   const {g,c}=battle(appearance,skin),fx=renderer({materials}),ctx=canvas();g.useUltimate();g.updateUltimate();const original=g.effects.find(e=>e.kind===kind);a.ok(original);

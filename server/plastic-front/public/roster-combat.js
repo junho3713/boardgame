@@ -70,6 +70,7 @@ function install({FrontGame,TYPES,multiplier}){
   effect(this,'rosterBlast',point,{source:u,radius,style,face:point.face},.47);
   return hit;
  };
+ const SHOTGUN_CLOSE_DISTANCE=55, SHOTGUN_CLOSE_BONUS=.65;
  function shotgun(g,u,target,attack,s){
   if(u.shotgunReloadUntil>g.time+1e-8||u.shotgunPumpUntil>g.time+1e-8)return [];
   if(!u.shotgunRounds)u.shotgunRounds=4;
@@ -79,7 +80,7 @@ function install({FrontGame,TYPES,multiplier}){
   const bullets=[];
   for(let i=-2;i<=2;i++){
    const shot=forwardShot(g,u,u,angle+i*Math.PI/36,s.range,damage/5,attack.critical,'shotgunPellet',850);
-   Object.assign(shot,{hot,finisher,muzzleAngle:angle,sequence:seq,shellDamage:damage,exploding:finisher&&i===0});
+   Object.assign(shot,{hot,finisher,muzzleAngle:angle,sequence:seq,shellDamage:damage,shotgunRange:s.range,exploding:finisher&&i===0});
    bullets.push(shot);
   }
   effect(g,'rosterShotgun',u,{source:u,angle,hot,finisher},.38);u.shotgunRounds--;
@@ -92,7 +93,11 @@ function install({FrontGame,TYPES,multiplier}){
  }
  p.impact=function(b){
   if(b.rosterKind!=='shotgunPellet')return impact.call(this,b);
-  const t=b.target,u=b.source,hp=t.hp,result=impact.call(this,b);
+  const t=b.target,u=b.source,hp=t.hp;
+  // Use the distance this pellet traveled, even if the shooter has moved since firing.
+  const range=b.shotgunRange;
+  const close=range>SHOTGUN_CLOSE_DISTANCE?Math.max(0,Math.min(1,b.travelLeft/(range-SHOTGUN_CLOSE_DISTANCE))):0;
+  const result=impact.call(this,{...b,damage:b.damage*(1+SHOTGUN_CLOSE_BONUS*close)});
   if(t.hp<hp&&t.hp>0){
    if(b.hot)this.applyShotgunBurn(t,u,b.shellDamage*.18);
    if(t.lastShotgunPush?.source!==u.id||t.lastShotgunPush.seq!==b.sequence){
