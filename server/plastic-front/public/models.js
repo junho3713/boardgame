@@ -17,6 +17,7 @@ class FrontModels{
  ensureRina(){if(!this.rina&&window.FrontMedicSkin)this.rina=new window.FrontMedicSkin();return this.rina?.ready||Promise.resolve();}
  async prepare(game){
   await this.ready;const jobs=[];
+  if(this.pixelMode&&game.pixelRoom){this.ensure('bayonet',1);this.ensure('bladeGuard',2);}
   for(const u of Array.isArray(game.units)?game.units:[])if(u.team===0&&u.hp>0){jobs.push(this.ensure(this.visualFor(u,game.evolutionEnabled?.(u)??game.evolved?.[u.type]),u.type==='bayonetCaptain'?1:u.team)?.loading);if(u.type==='medic'&&u.appearance==='rina')jobs.push(this.ensureRina());}
   if(game.medicSkinId==='rina')jobs.push(this.ensureRina());if(game.sniperSkinId==='kayla')jobs.push(this.ensure('sniperKayla',0)?.loading);
   const c=game.commander?.(0)||{type:'leader',team:0,appearance:game.commanderId||'sarge',flameSkin:game.flameSkinId||'classic'};jobs.push(this.ensure(this.visualFor(c),0)?.loading);if(c.ultimatePose?.active)jobs.push(this.ensure(this.visualFor({...c,ultimatePose:null}),0)?.loading);if(c&&game.level>=8&&['sarge','shino'].includes(c.appearance||'sarge'))jobs.push(this.ensure(c.appearance==='shino'?'commanderShinoUltimate':'commanderSargeUltimate',0)?.loading);

@@ -42,3 +42,19 @@ test('the current picker serves independent classic and pixel room previews and 
  assert.match(html,/name="battlefield" value="desktop"/);
  assert.ok(fs.existsSync(path.join(dir,'assets/previews/start-livingroom-pixel.png')));
 });
+
+test('the pixel infantry override is reserved for player troops; hostile melee retain their authored poses',()=>{
+ const vm=require('node:vm'),root={};
+ const image=class {complete=true;naturalWidth=1280;};
+ vm.runInNewContext(fs.readFileSync(path.join(__dirname,'public/pixel-infantry.js'),'utf8'),{window:root,Image:image});
+ let calls=0;
+ const ctx={drawImage(){calls++;}},art=root.FrontPixelInfantry;
+ for(const team of [1,2])for(const type of ['bladeGuard','bayonet','bayonetCaptain','rifle','machinegun','sniper','mortar','rocket','medic','leader']){
+  assert.equal(art.draw(ctx,{type,team,x:0,y:0,bayonetAttack:true},10,false),false,type+' team '+team);
+ }
+ assert.equal(calls,0);
+ for(const type of ['rifle','guntruck','medic','rocket']){
+  assert.equal(art.draw(ctx,{type,team:0,x:0,y:0},10,false),true,type);
+ }
+ assert.equal(calls,4);
+});

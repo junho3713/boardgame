@@ -23,6 +23,18 @@ PALETTE = (
 )
 
 
+# Keep the artists' faction colours when snapping the shield infantry.
+# The pink blade edges otherwise map to the room's wood ramp.
+SHIELD_PALETTE = (
+    "171722,292332,3c3543,554958,756774,93808d,b29ba6,c7afb8,dfc9cd,f3e3dd,"
+    "4b263f,753352,9b3e6b,c54b88,ef589f,ff9cc9,79565e,ae7f8a,dba7ac,f5c7bf,ffe3d4"
+)
+ENEMY_PALETTES = {
+    "bladeGuard-walk-v126.webp": SHIELD_PALETTE,
+    "bladeGuard-side-walk-v127.webp": SHIELD_PALETTE,
+}
+
+
 def sources():
     specs = {}
     def add(group, filename, cell=0, scale=.25):
@@ -47,9 +59,13 @@ def sources():
     return specs
 
 
+
 def convert(item, binary, temp):
     path, (cell, scale) = item
     name = path.relative_to(ASSETS).as_posix()
+    if name == "models/bayonet-1-body.webp":
+        from pixel_bayonet import build_sheet
+        return name, build_sheet()
     stem = name.replace("/", "_")
     with Image.open(path) as source:
         rgba = source.convert("RGBA")
@@ -65,7 +81,7 @@ def convert(item, binary, temp):
     # logical cell across every orientation and transparent frame gutter.
     inp, out = temp / (stem + ".png"), temp / (stem + ".snapped.png")
     small.resize((size[0]*4, size[1]*4), Image.Resampling.NEAREST).save(inp, compress_level=1)
-    subprocess.run([binary, str(inp), str(out), "24", "--pixel-size", "4", "--palette", PALETTE],
+    subprocess.run([binary, str(inp), str(out), "24", "--pixel-size", "4", "--palette", ENEMY_PALETTES.get(path.name, PALETTE)],
                    capture_output=True, text=True, check=True)
     with Image.open(out) as result:
         # A final one-source-pixel interval can produce one trailing row/column.

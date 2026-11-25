@@ -1,7 +1,7 @@
 /* Native-grid infantry cels and matching promotion emblems for the pixel room. */
 (() => {
  'use strict';
- const roles=['shotgun','machinegun','sniper','engineer','mortar','medic','radio','leader','rifle','launcher','bayonet','shield'];
+ const roles=['shotgun','machinegun','sniper','engineer','mortar','medic','radio','leader'];
  const abilities=['damage','speed','haste','critChance','critDamage','gold','capacity','defense','health','xpGain','fieldSupply','fieldGold','fieldRepair'];
  const units=['rifle','machinegun','sniper','rocket','mortar','medic','guntruck','drone','tank','lucky'];
  const iconKeys=[...abilities,...units];
@@ -15,14 +15,14 @@
   return ready;
  }
  function roleFor(u){
-  if(u.boss||u.defenseKind||u.ultimatePose?.active)return null;
-  if(u.type==='leader'&&u.team===0&&u.appearance&&u.appearance!=='sarge')return null;
-  if(u.team===0&&((u.type==='medic'&&u.appearance==='rina')||(u.type==='sniper'&&['kayla','hayeon'].includes(u.appearance))))return null;
-  if(u.type==='rifle')return u.team===0?'shotgun':'rifle';
-  if(u.type==='rocket')return u.team===0?'engineer':'launcher';
-  if(u.type==='guntruck')return u.team===0?'radio':null;
-  if(u.type==='bladeGuard')return 'shield';
-  if(['leader','machinegun','sniper','mortar','medic','bayonet'].includes(u.type))return u.type;
+  // The hand-drawn atlas represents the player's green squad only.
+  if(u.team!==0||u.boss||u.defenseKind||u.ultimatePose?.active)return null;
+  if(u.type==='leader'&&u.appearance&&u.appearance!=='sarge')return null;
+  if((u.type==='medic'&&u.appearance==='rina')||(u.type==='sniper'&&['kayla','hayeon'].includes(u.appearance)))return null;
+  if(u.type==='rifle')return 'shotgun';
+  if(u.type==='rocket')return 'engineer';
+  if(u.type==='guntruck')return 'radio';
+  if(['leader','machinegun','sniper','mortar','medic'].includes(u.type))return u.type;
   return null;
  }
  function poseFor(u,role,time){
@@ -34,7 +34,6 @@
    step.pose=delta>.04?[1,2,3,0][Math.floor(step.distance/11.5)]:0;
    step.x=u.x;step.y=u.y;step.time=time;
   }
-  if(u.bayonetAttack)return 5;
   if(role==='shotgun'&&time>=u.shotgunPumpStartedAt&&time<u.shotgunPumpUntil){
    const cycle=(time-u.shotgunPumpStartedAt)/(u.shotgunPumpUntil-u.shotgunPumpStartedAt);
    if(cycle<.17)return 4;
@@ -45,7 +44,7 @@
    if(time-u.radioRollAt>=0&&time-u.radioRollAt<.5)return 5;
   }
   if(role==='engineer'&&u.cooldown>=0&&u.cooldown<.13)return 5;
-  if(u.recoil>.04||time<u.bayonetThrustUntil||time-u.blockMineThrownAt>=0&&time-u.blockMineThrownAt<.18)return 4;
+  if(u.recoil>.04||time-u.blockMineThrownAt>=0&&time-u.blockMineThrownAt<.18)return 4;
   return step.pose;
  }
  function draw(ctx,u,time,evolved){
@@ -53,7 +52,7 @@
   const role=roleFor(u);if(!role)return false;
   const facing=u.aimFace??u.face??u.moveFace??0;
   const dir=(Math.round(facing*4/Math.PI)%8+8)%8;
-  const column=(u.team!==0?16:0)+(evolved?8:0)+dir;
+  const column=(evolved?8:0)+dir;
   const row=roles.indexOf(role)*6+poseFor(u,role,time);
   const cell=40, unitSize=2;
   ctx.drawImage(body,column*cell,row*cell,cell,cell,-20*unitSize,-32*unitSize,cell*unitSize,cell*unitSize);
