@@ -214,12 +214,12 @@ function install({FrontGame,TYPES,multiplier}){
   }
   const angle=heading(u,target),obstacles=g.solidObstacles();
   let point;
-  for(const offset of [0,.85,-.85,1.6,-1.6,Math.PI]){
+  for(const offset of [0,.78,-.78,1.56,-1.56,Math.PI]){
    const bearing=angle+offset;
-   point={x:target.x-Math.cos(bearing)*56,y:target.y-Math.sin(bearing)*56};
-   if(g.freePosition(point.x,point.y,20,obstacles)&&turrets.every(t=>distance(t,point)>34))break;
+   point={x:target.x-Math.cos(bearing)*76,y:target.y-Math.sin(bearing)*76};
+   if(g.freePosition(point.x,point.y,26,obstacles)&&turrets.every(t=>distance(t,point)>48))break;
   }
-  g.resolvePosition(point,20);
+  g.resolvePosition(point,26);
   const landAt=g.time+turretRules.flight;
   const turret={...point,source:u,owner,rank,scale:radiusScale,range:turretRules.range*radiusScale,splash:turretRules.splash*radiusScale,
    damage:damage*turretRules.damage,angle:heading(point,target),startedAt:g.time,landAt,until:landAt+turretRules.lifetime,
