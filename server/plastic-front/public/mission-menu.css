@@ -305,11 +305,31 @@
   font-size: 12px;
 }
 #manualStorageStatus.save-error { color: #ffbca3; }
-.mission-menu .mission-resume { flex-wrap: wrap; min-height: 46px; }
-.mission-resume span { color: var(--menu-muted); font-size: 11px; }
+.mission-menu .mission-resume {
+  display: grid;
+  justify-content: start;
+  align-content: center;
+  align-self: stretch;
+  gap: 4px;
+  min-width: 0;
+  min-height: 60px;
+  padding: 9px 14px;
+  font-size: 14px;
+  line-height: 1.35;
+  text-align: left;
+}
+
+.mission-resume strong { font-weight: 800; }
+.mission-resume span {
+  color: var(--menu-muted);
+  font-size: 12px;
+  font-weight: 500;
+  word-break: keep-all;
+}
 
 #startOverlay #startBtn {
   flex: 0 0 min(27%, 260px);
+  align-self: stretch;
   min-height: 50px;
   padding: 9px 14px;
   border: 1px solid #ffdf88;

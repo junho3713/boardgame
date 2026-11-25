@@ -23,8 +23,34 @@ function install({FrontGame:Game,TYPES}){
  p.defenseFactor=function(target,source){const factor=defense.call(this,target,source);return source?.team===0&&source.type==='spectre'?1/(1+(1/factor-1)*.65):factor;};
  p.selectCombatTarget=function(u,candidates,threats,s=this.stats(u)){if(u.team===0&&u.type==='spectre'){const targets=(candidates||this.combatCandidates()).filter(t=>this.canTarget(u,t)&&this.visible(t)&&this.targetDistance(u,t)<s.range&&this.lineClear(u,t,0,{fireTeam:0}));const rank=t=>t.boss?0:t.type==='blizzardMage'?1:t.type==='mortar'?2:(TYPES[t.type]?this.stats(t).defense:18)>=15?3:4;return targets.sort((a,b)=>rank(a)-rank(b)||this.targetDistance(u,a)-this.targetDistance(u,b))[0]||null;}return select.call(this,u,candidates,threats,s);};
  p.rollSupply=function(){const value=this.random();let sum=0;for(const [kind,chance]of Object.entries(config.odds)){sum+=chance;if(value<sum)return kind;}return'toyStunner';};
+ p.rollCombatDrop=function(enemy){
+  if(this.mode!=='pve')return;
+  const roll=this.random(),kind=roll<.003?'magnet':roll<.01?'heal':null;
+  if(!kind)return;
+  this.pickups.push({x:enemy.x,y:enemy.y,active:true,combatDrop:kind,owner:this.coop?this.coopOwner:0});
+ };
+ p.canCollectCombatDrop=function(pickup,leader){
+  if(!pickup?.active||leader.hp<=0||this.coop&&pickup.owner!==this.coopOwner)return false;
+  if(pickup.combatDrop==='heal')return this.supplySquad().some(u=>u.hp<u.maxHp);
+  return pickup.combatDrop==='magnet'&&this.experienceDrops.some(drop=>drop.owner===pickup.owner&&!drop.pulling);
+ };
+ p.collectCombatDrop=function(pickup,leader){
+  if(!this.canCollectCombatDrop(pickup,leader))return false;
+  pickup.active=false;
+  if(pickup.combatDrop==='magnet'){
+   for(const drop of this.experienceDrops)if(drop.owner===pickup.owner)drop.pulling=true;
+   this.notify('toast','전맵 자석 · 전장에 떨어진 경험치 결정을 끌어옵니다');
+  }else{
+   let healed=0;
+   for(const unit of this.supplySquad())if(this.heal(unit,unit.maxHp*.25)>0)healed++;
+   this.notify('toast',`회복템 · 분대원 ${healed}기 회복`);
+  }
+  this.effects.push({kind:'drop',x:pickup.x,y:pickup.y,t:.6,max:.6,team:0});
+  this.notify('change');return true;
+ };
  p.collectFieldSupply=function(pickup){
   if(!pickup?.active)return false;if(pickup.rareSupply&&this.time>=(pickup.expires||Infinity)){pickup.active=false;return false;}const c=this.commander(0);if(c.hp<=0||Math.hypot(c.x-pickup.x,c.y-pickup.y)>=60)return false;
+  if(pickup.combatDrop)return this.collectCombatDrop(pickup,c);
   this.updateRareSupplySecurity();
     if(!pickup.rareSupply){pickup.active=false;this.gainXP(18);this.cash[0]+=25;this.awardGold(5);this.notify('toast','보급품 확보 · +25 자원 / +18 XP');this.effects.push({kind:'drop',x:pickup.x,y:pickup.y,t:.6,max:.6,team:0});return true;}
   const kind=this.isSupportToy?.(pickup.supplyKind)||config.legacyOdds[pickup.supplyKind]!==undefined?pickup.supplyKind:this.rollSupply();pickup.supplyKind=kind;if(this.isSupportToy?.(kind))return this.collectSupportToy(pickup,kind);

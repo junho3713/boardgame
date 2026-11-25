@@ -140,14 +140,14 @@ const PERMANENT={
  turretDamage:{name:'포탑 데미지 증가',icon:'✹',gain:5,unit:'%',max:10,detail:'기관총·미사일 포탑 공격력 · 단계당 +5%'},
  turretDefense:{name:'포탑 방어력 증가',icon:'⬟',gain:3,unit:'',max:10,detail:'기관총·미사일 포탑 방어력 · 단계당 +3 · 기본 10'}
 };
-const ABILITIES={...Object.fromEntries(Object.entries(PERMANENT).filter(([k])=>!k.startsWith('turret')).map(([k,b])=>[k,{...b,max:5,gain:{damage:10,speed:6,haste:8,critChance:4,critDamage:15,gold:15,capacity:2,defense:5}[k]}])),health:{name:'체력',icon:'♥',gain:10,unit:'%',max:5,detail:'대장과 모든 분대원의 최대 체력 · 단계당 +10%'},xpGain:{name:'경험치 획득량',icon:'✧',gain:5,unit:'%',max:5,detail:'작전 중 획득하는 경험치 · 단계당 +5%'}};
+const ABILITIES={...Object.fromEntries(Object.entries(PERMANENT).filter(([k])=>k!=='gold'&&!k.startsWith('turret')).map(([k,b])=>[k,{...b,max:5,gain:{damage:10,speed:6,haste:8,critChance:4,critDamage:15,capacity:2,defense:5}[k]}])),magnet:{name:'자석',icon:'🧲',gain:24,unit:'',max:5,detail:'대장이 경험치 결정을 끌어오는 범위 증가'},health:{name:'체력',icon:'♥',gain:10,unit:'%',max:5,detail:'대장과 모든 분대원의 최대 체력 · 단계당 +10%'},xpGain:{name:'경험치 획득량',icon:'✧',gain:5,unit:'%',max:5,detail:'작전 중 획득하는 경험치 · 단계당 +5%'}};
 const EVOLUTIONS={
  tank:{name:'공성 전차',ability:'damage',detail:'공격력 +35% · 폭발 범위 +35 · 사거리 +35 · 최대 체력 +20%'},
  guntruck:{name:'전략 폭격 통신관',ability:'haste',detail:'1·2 더블 기관포탑 · 3·4 더블 강화 소이탄 · 5-5 미사일 4발 · 6-6 즉시 전술 핵 발사'},
  rifle:{name:'드래곤 브레스 산탄병',ability:'health',detail:'화염 산탄 · 지속 화상 · 마지막 4번째 탄의 폭발 범위와 넉백 강화'},
  sniper:{name:'정예 저격병',ability:'critChance',detail:'치명타 확률 +25%p · 치명타 피해 +50%p · 사거리 +65'},
  rocket:{name:'연쇄 폭파병',ability:'critDamage',detail:'강화 블록 지뢰 · 더 큰 폭발 · 주변 지뢰 도미노 연쇄 폭파'},
- machinegun:{name:'보급 기관총병',ability:'gold',detail:'사격 속도 +33% · 공격력 +20% · 최대 체력 +20%'},
+ machinegun:{name:'보급 기관총병',ability:'magnet',detail:'사격 속도 +33% · 공격력 +20% · 최대 체력 +20%'},
  mortar:{name:'중박격포 분대',ability:'capacity',detail:'공격력 +35% · 폭발 범위 +30 · 사거리 +70 · 낙탄 시간 2초 유지'},
  lucky:{name:'슈퍼 럭키 레토나',ability:'speed',detail:'꽝 40→30% · 스프레이 10→17% · 777 미사일 2→5% · 끈끈이 폭탄/혼란 섬광탄 확률 유지 · 섬광에 맞은 적은 서로 공격'},
  drone:{name:'레이저 쿼드콥터',ability:'xpGain',detail:'기체 확대 · 주기적으로 적을 향해 부채꼴 관통 레이저'},
@@ -177,7 +177,7 @@ class FrontGame{
  setMedicSkin(id){if(!['classic','rina'].includes(id)||this.phase!=='ready')return false;this.medicSkinId=id;for(const u of this.units)if(u.type==='medic'&&u.team===0)u.appearance=id;return true;}
  random(){return Math.random();}
  reset(mode=this.mode||'pve'){
-  this.manualAim=null;this.rerollCount=3;this.dropPods=[];
+  this.manualAim=null;this.rerollCount=3;this.dropPods=[];this.experienceDrops=[];
   this.roomCampaign=null;this.bossIntro=null;this.roomHealthVersion=ROOM_CAMPAIGN.config.combat.healthVersion;this.roomHQAlarm=null;this.roomFenceVersion=0;this.roomEncounterVersion=0;this.enemyLuckySalvos=[];this.balanceVersion=BALANCE_VERSION;this.mode=['duel','crisis'].includes(mode)?mode:'pve';this.world={id:'backyard',width:1600,height:2800,scale:1};this.viewport=null;this.buildings=[];this.buildSerial=0;this.constructionLine=null;this.finalBattle={spawned:false,killed:false};this.roomEvents=0;
   this.mageShieldQuest=null;this.laserExposureQuest=null;this.roomGuardianVersion=0;this.roomFortificationVersion=0;this.roadCaptainVersion=0;this.guardianSiege=null;this.phase='ready';this.time=0;this.runGold=0;this.salvaged=0;this.nextRecoveryAt=0;this.stageSupplied=[];this.lastEnemyGrowth=-1;this.level=1;this.xp=0;this.kills=0;this.losses=[0,0];this.scouts=0;this.turnChoice=null;this.pendingChoice=null;this.navigationCache=new Map();this.cash=[135,135];this.trucks=[2,2];this.tech=[0,1].map(()=>Object.fromEntries(ROSTER.map(t=>[t,t==='rifle'?1:0])));
   this.summonSlots=this.usesSummoning?.()?[]:['rifle'];
@@ -507,7 +507,7 @@ class FrontGame{
  selectedAbilities(){return Object.keys(ABILITIES).filter(k=>this.abilities[k]>0);}
  abilityKey(type){return typeof type==='string'&&type.startsWith('ability_')?type.slice(8):null;}
  eligibleCard(type){
-  const key=this.abilityKey(type);if(key)return !!ABILITIES[key]&&this.abilities[key]<5&&(this.abilities[key]>0||this.selectedAbilities().length<5);
+  const key=this.abilityKey(type);if(key)return !!ABILITIES[key]&&(key!=='magnet'||this.mode==='pve')&&this.abilities[key]<5&&(this.abilities[key]>0||this.selectedAbilities().length<5);
   const locked=this.summonSlotsLocked?.();
   if(ROSTER.includes(type))return this.tech[0][type]<5&&(!locked||this.summonSlots.includes(type));
   return !!FIELD_CARDS[type]&&(!locked||this.choiceKind!=='level');
@@ -527,7 +527,7 @@ class FrontGame{
  abilityBonus(key,level=this.abilities[key]||0){return (ABILITIES[key]?.gain||0)*level;}
  abilityStep(key,level){return this.abilityBonus(key,level)-this.abilityBonus(key,Math.max(0,level-1));}
  capacity(team=0){return 20+(team===0?this.profile.upgrades.capacity+this.abilityBonus('capacity'):0);}
- awardGold(base){const amount=Math.round(base*(1+.1*this.profile.upgrades.gold)*(1+.15*this.abilities.gold)*100)/100;this.profile.gold=Math.round(Math.min(1e9,this.profile.gold+amount)*100)/100;this.runGold=Math.round((this.runGold+amount)*100)/100;this.notify('profile');return amount;}
+ awardGold(base){const amount=Math.round(base*(1+.1*this.profile.upgrades.gold)*100)/100;this.profile.gold=Math.round(Math.min(1e9,this.profile.gold+amount)*100)/100;this.runGold=Math.round((this.runGold+amount)*100)/100;this.notify('profile');return amount;}
  buyPermanent(key){
   this.lastPermanentAttempt=null;
   if(!['ready','paused','choice','resupply','ended'].includes(this.phase))return false;
@@ -774,6 +774,42 @@ class FrontGame{
  }
 
  gainXP(n){this.xp+=n*(1+this.abilityBonus('xpGain')/100);}
+ experienceRadius(){return 54+this.abilityBonus('magnet');}
+ earnDefeatXP(target,amount){
+  if(this.mode!=='pve'){this.gainXP(amount);return;}
+  const owner=this.coop?this.coopOwner:0,drops=this.experienceDrops;
+  let nearest=null,best=Infinity;
+  for(const drop of drops){
+   if(drop.owner!==owner||drop.pulling)continue;
+   const distance=dist(drop,target);
+   if(distance<best){nearest=drop;best=distance;}
+  }
+  // Merge nearby drops, keeping distant or crowded battlefields bounded without losing XP.
+  if(nearest&&(best<26||drops.length>=280)){nearest.amount+=amount;return;}
+  drops.push({x:target.x,y:target.y,amount,owner,pulling:false});
+ }
+ updateExperienceDrops(dt){
+  if(!this.experienceDrops.length)return;
+  const leader=this.commander(0);
+  if(!leader||leader.hp<=0)return;
+  const owner=this.coop?this.coopOwner:0,radius=this.experienceRadius();
+  let earned=0,remaining=0;
+  for(const drop of this.experienceDrops){
+   if(drop.owner===owner){
+    const distance=dist(drop,leader);
+    if(drop.pulling||distance<=radius){
+     const step=dt*(320+distance*2);
+     if(distance<=18+step){earned+=drop.amount;continue;}
+     drop.pulling=true;
+     drop.x+=(leader.x-drop.x)*step/distance;
+     drop.y+=(leader.y-drop.y)*step/distance;
+    }
+   }
+   this.experienceDrops[remaining++]=drop;
+  }
+  this.experienceDrops.length=remaining;
+  if(earned>0)this.gainXP(earned);
+ }
  levelCheck(){
   if(this.phase!=='playing'||this.mode==='crisis')return;
   if(this.bossState.rewards>0){this.choiceKind='boss';this.currentOptions=this.options();}
@@ -947,14 +983,14 @@ class FrontGame{
    this.effects.push({kind:'burst',x:target.x,y:target.y-(target.visualFlightHeight??TYPES[target.type]?.flightHeight??0),t:.5,max:.5,team:target.team});
    if(target.base){if(this.isRoomCampaign()&&target===this.bases[1]){this.roomPortalDestroyed();return;}this.finish(source.team===0?'win':'lose','base');return;}
    if(target.built){this.navigationCache.clear();return;}
-   if(target.structure){if(target.fencePost)this.navigationCache.clear();if(source.team===0){const small=!!target.defenseKind;this.gainXP(small?25:60);this.cash[0]+=small?45:100;this.awardGold(small?10:20);this.notify('toast',`${target.name} 파괴 · +${small?45:100} 자원 / +${small?25:60} XP`);}return;}
-   if(target.type==='artillery'){this.gainXP(60);this.cash[0]+=70;}
+   if(target.structure){if(target.fencePost)this.navigationCache.clear();if(source.team===0){const small=!!target.defenseKind;this.earnDefeatXP(target,small?25:60);this.cash[0]+=small?45:100;this.awardGold(small?10:20);this.notify('toast',`${target.name} 파괴 · +${small?45:100} 자원 / ${small?25:60} XP${this.mode==='pve'?' 결정':' 획득'}`);}return;}
+   if(target.type==='artillery'){this.earnDefeatXP(target,60);this.cash[0]+=70;}
    if(source.team===0&&target.team!==0){
     this.kills++;this.awardGold(target.boss&&!target.miniBoss?30:ARMORED.has(target.type)||target.type==='hornet'?5:2);
     const originalXP={pirateCannon:28,bombBug:20,acidBeetle:22,butterfly:28,crimsonAce:65,bikeRaider:28,bladeGuard:14,bayonetCaptain:35,bayonet:20,honeybee:18,hornet:50,rhinoBeetle:65,stagBeetle:38,bruteBeetle:45,tank:22,beetle:24,soldierAnt:20,ant:13},originalCash={pirateCannon:16,bombBug:18,acidBeetle:18,butterfly:22,crimsonAce:60,bikeRaider:24,bladeGuard:12,bayonetCaptain:25,bayonet:16,honeybee:18,hornet:48,rhinoBeetle:65,stagBeetle:38,bruteBeetle:45,soldierAnt:20,ant:14,beetle:28};
     const pveCash={pirateCannon:12,bombBug:10,acidBeetle:10,butterfly:16,crimsonAce:40,bikeRaider:16,bladeGuard:7,bayonetCaptain:16,bayonet:10,honeybee:10,hornet:26,rhinoBeetle:28,stagBeetle:20,bruteBeetle:20,soldierAnt:8,ant:6,beetle:12};
     const xp=originalXP[target.type]||9,cash=(this.mode==='pve'?pveCash:originalCash)[target.type]||8;
-    this.gainXP(Math.ceil(xp*(target.ambient?.22:1)));this.cash[0]+=Math.ceil(cash*(target.ambient?.25:1));
+    this.earnDefeatXP(target,Math.ceil(xp*(target.ambient?.22:1)));this.rollCombatDrop(target);this.cash[0]+=Math.ceil(cash*(target.ambient?.25:1));
    }
    if(target.finalBoss){this.finalBattle.killed=true;if(this.isRoomCampaign()){this.finish('win','finalBoss');return;}}
    if(target.miniBoss)this.notify('toast',target.bossName+' 격파');

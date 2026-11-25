@@ -41,7 +41,7 @@ class CampaignSystem extends BattleSystem{
 
   if(game.coop)game.coopIncome(dt);
   else for(let team=0;team<2;team++)game.cash[team]+=game.income(team)*dt;
-  if(!game.coop&&game.mode!=='crisis')game.gainXP(dt*(game.mode==='pve'?1.3:3.1));
+  if(!game.coop&&game.mode==='duel')game.gainXP(dt*3.1);
   if(game.mode==='duel')game.enemyAct();
   else if(game.mode==='pve')game.updateMission(dt);
   if(game.phase!=='playing')return false;
@@ -100,9 +100,14 @@ class SupportSystem extends BattleSystem{
    if(game.coop)game.withOwner(unit.coopOwner,()=>game.updateMedicHealing(unit));
    else game.updateMedicHealing(unit);
   }
-  if(game.coop)game.coopCollectPickups();
-  else for(const pickup of game.pickups){
-   if(pickup.active&&player.hp>0&&Math.hypot(pickup.x-player.x,pickup.y-player.y)<60)game.collectFieldSupply(pickup);
+  if(game.coop){
+   game.coopCollectPickups();
+   if(game.experienceDrops.length)for(const owner of [0,1])game.withOwner(owner,()=>game.updateExperienceDrops(dt));
+  }else{
+   for(const pickup of game.pickups){
+    if(pickup.active&&player.hp>0&&Math.hypot(pickup.x-player.x,pickup.y-player.y)<60)game.collectFieldSupply(pickup);
+   }
+   game.updateExperienceDrops(dt);
   }
  }
 }

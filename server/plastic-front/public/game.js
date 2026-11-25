@@ -811,6 +811,51 @@ function drawFog(){
  window.FrontRadioArt.flyovers(fc,game,ctx);
  fc.globalCompositeOperation='source-over';ctx.setTransform(1,0,0,1,0,0);ctx.drawImage(fog,0,0);ctx.setTransform(DPR,0,0,DPR,0,0);
 }
+function drawExperienceDrop(context,drop){
+ const large=drop.amount>=40,r=large?10:7.5;
+ const lift=(reduceMotion.matches?0:Math.sin(game.time*4+drop.x*.039)*1.3)+r;
+ context.save();
+ context.translate(drop.x,drop.y);
+ if(!drop.pulling){
+  context.fillStyle='#1b242878';
+  context.beginPath();context.ellipse(0,0,r*1.07,r*.4,0,0,Math.PI*2);context.fill();
+ }
+ context.translate(0,-lift);
+ context.lineJoin='round';
+ context.fillStyle=large?'#a9a7ff':'#63dce8';
+ context.strokeStyle='#244957';context.lineWidth=1.5;
+ context.beginPath();context.moveTo(0,-r);context.lineTo(r*.69,0);
+ context.lineTo(0,r);context.lineTo(-r*.69,0);context.closePath();
+ context.fill();context.stroke();
+ context.fillStyle=large?'#e7dfff':'#bcffff';
+ context.beginPath();context.moveTo(0,-r+1);context.lineTo(0,0);
+ context.lineTo(-r*.53,0);context.closePath();context.fill();
+ context.fillStyle=large?'#7772c3':'#2fa5bd';
+ context.beginPath();context.moveTo(0,r-1);context.lineTo(r*.53,0);
+ context.lineTo(0,0);context.closePath();context.fill();
+ context.restore();
+}
+function drawCombatDrop(drop,pulse,bob){
+ const magnet=drop.combatDrop==='magnet',accent=magnet?'#9ee8ff':'#b4f8b0';
+ ctx.save();ctx.scale(1,.68);
+ circle(ctx,0,0,18+pulse*2,magnet?'#69ddfa24':'#8ef09f29',accent);
+ ctx.restore();
+ ctx.save();ctx.translate(0,-16+bob);
+ if(magnet){
+  ctx.lineCap='round';ctx.lineJoin='round';
+  ctx.beginPath();ctx.moveTo(-8,-7);ctx.lineTo(-8,1);
+  ctx.bezierCurveTo(-8,11,8,11,8,1);ctx.lineTo(8,-7);
+  ctx.lineWidth=9;ctx.strokeStyle='#24384c';ctx.stroke();
+  ctx.lineWidth=6;ctx.strokeStyle='#75c9ff';ctx.stroke();
+  rr(ctx,-11,-11,6,6,2,'#f3faff');rr(ctx,5,-11,6,6,2,'#f3faff');
+ }else{
+  rr(ctx,-13,-9,26,22,4,'#26483a');
+  rr(ctx,-11,-9,22,17,3,'#79ce83');
+  ctx.fillStyle='#efffe2';ctx.fillRect(-2,-6,4,12);ctx.fillRect(-6,-2,12,4);
+ }
+ ctx.restore();
+ text(ctx,magnet?'전맵 자석':'회복템',0,-34+bob,13,accent);
+}
 function drawDestinyStar(context,x,y,r){
  const points=Array.from({length:10},(_,i)=>{
   const angle=i*Math.PI/5-Math.PI/2,length=i%2?r*.47:r;
@@ -851,10 +896,17 @@ function draw(dt){
  if(game.mode==='pve'&&!game.isDesktopDefense()&&game.frontline()>70){const y=game.frontline();ctx.strokeStyle='#efd48caa';ctx.lineWidth=3;ctx.setLineDash([14,12]);ctx.beginPath();ctx.moveTo(45,y);ctx.lineTo(game.bounds().width-45,y);ctx.stroke();ctx.setLineDash([]);text(ctx,game.mission.stage===1?'사냥 구역 완료 후 개방':'전초기지 2곳 파괴 후 개방',game.bounds().width/2,y-18,15,'#eee2ae');}
  if(!game.isDesktopDefense()&&game.baseShielded()){const b=game.bases[1];circle(ctx,b.x,b.y,135,null,'#a3cbbd88');text(ctx,'방어막 가동',b.x,b.y+135,14,'#c4dfd1');}
 
+ const experienceOwner=game.coop?game.coopOwner:0;
+ for(const drop of game.experienceDrops){
+  if(drop.owner===experienceOwner&&Math.abs(drop.x-game.camera.x)<halfW+20&&Math.abs(drop.y-game.camera.y)<halfH+20){
+   drawExperienceDrop(ctx,drop);
+  }
+ }
  for(const p of game.pickups){
-  if(!p.active)continue;
+  if(!p.active||p.combatDrop&&p.owner!==experienceOwner)continue;
   const pulse=(Math.sin(game.time*2.2+p.x)+1)/2,bob=Math.sin(game.time*2+p.x)*2;
   ctx.save();ctx.translate(p.x,p.y);
+  if(p.combatDrop){drawCombatDrop(p,pulse,bob);ctx.restore();continue;}
   if(p.destinyStar){
    const glow=ctx.createRadialGradient(0,-17,1,0,-17,54+pulse*5);
    glow.addColorStop(0,'#ffed9eba');glow.addColorStop(1,'#ffd45e00');

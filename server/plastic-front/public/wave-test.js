@@ -29,7 +29,7 @@ function validateLoadout(game,loadout){
  const whole=(n,min,max,label)=>{if(!Number.isInteger(n)||n<min||n>max)throw Error(label+' 값을 확인하세요.');return n;};
  const result={level:whole(loadout?.level,1,100,'대장 레벨'),cash:whole(loadout?.cash,0,100000,'자원'),tech:{},abilities:{},counts:{}};
  for(const type of roster){result.tech[type]=whole(loadout?.tech?.[type]??(type==='drone'?0:undefined),0,5,'병과 강화');result.counts[type]=whole(loadout?.counts?.[type]??(type==='drone'?0:undefined),0,game.starExperiment?9:8,'투입 수');if(result.counts[type]&&!result.tech[type])throw Error('투입할 병과는 Lv.1 이상으로 해금하세요.');}
- for(const key of Object.keys(abilities))result.abilities[key]=whole(loadout?.abilities?.[key]??(key==='xpGain'?0:undefined),0,5,'작전 능력');
+ for(const key of Object.keys(abilities))result.abilities[key]=whole(loadout?.abilities?.[key]??(key==='magnet'?(loadout?.abilities?.gold??0):key==='xpGain'?0:undefined),0,5,'작전 능력');
  if(Object.values(result.abilities).filter(Boolean).length>5)throw Error('작전 능력은 최대 5종까지 선택하세요.');
  const count=roster.reduce((n,t)=>n+slots(game,result.counts[t]),0),cap=capacity(game,result.abilities);
  if(count>cap)throw Error(`합성 후 병력 ${count}기가 편성 한도 ${cap}기를 넘습니다.`);
@@ -70,7 +70,7 @@ function seek(game,seconds,{heal=false}={}){
  shiftTimers(game.ultimate,delta,seen);game.ultimate.activeUntil=target;game.ultimate.nextShotAt=target;game.nextRecoveryAt+=delta;game.mission.stageStarted+=delta;
  game.evolutionLinkState={owners:[]};for(const u of game.units)delete u.evolutionLinkMarks;game.nextRareSupply=(Math.floor(target/120)+1)*120;game.supplyStrikes=[];if(game.fieldSupplyState?.boostUntil)game.fieldSupplyState.boostUntil+=delta;
  game.time=target;game.nextPirateCannonAt=target;game.waveTestTarget=target;game.result=null;game.phase='paused';game.focusTarget=null;game.focusAutomatic=false;game.formationEnemy=null;game.aiHQTarget=null;game.bossIntro=null;game.guardianSiege=null;game.navigationCache=new Map();
- for(const key of ['evolutionAttacks','evolutionBlasts','supportBursts','supportWaves','shots','effects','pickups','barrages','mortarShells','butterflyGusts','luckyMines','luckyGlues','luckyGlueHistory','luckySprays','luckySalvos','enemyLuckySalvos','blockMines','luckyFlashes','pirateShells','radioStrikes','radioFireZones','radioTurrets'])game[key]=[];
+ for(const key of ['evolutionAttacks','evolutionBlasts','supportBursts','supportWaves','shots','effects','pickups','experienceDrops','barrages','mortarShells','butterflyGusts','luckyMines','luckyGlues','luckyGlueHistory','luckySprays','luckySalvos','enemyLuckySalvos','blockMines','luckyFlashes','pirateShells','radioStrikes','radioFireZones','radioTurrets'])game[key]=[];
  game.radioNextWhiteoutAt=0;
  game.trialBoss=null;game.currentOptions=[];game.pendingChoice=null;game.turnChoice=null;game.choiceKind='level';game.bossState.claimed=Math.max(0,game.bossState.claimed||0);game.bossState.rewards=game.bossState.claimed;
  const s=game.roomCampaign,index=room.bosses.findIndex(b=>b.at>=target),rush=room.bossRush.pairs.findIndex(b=>b.at>=target);

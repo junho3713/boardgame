@@ -2,8 +2,8 @@
 (function(root){'use strict';
 const api=typeof module!=='undefined'?require('./engine.js'):null,T=root.FrontTypes||api.TYPES,ROLES=root.FrontRoster||api.ROSTER,Game=root.FrontGame||api.FrontGame,Profile=root.FrontProfile||api.FrontProfile;
 const BIKE=root.FrontBike||api.BIKE,GUARDIANS=root.FrontGuardians||api.GUARDIANS;
-const STRATEGIES={balanced:{name:'균형 성장',keys:['damage','haste','defense','critChance','gold']},fire:{name:'화력 집중',keys:['damage','critDamage','critChance','defense','capacity']},rapid:{name:'연사 중심',keys:['haste','damage','speed','critChance','gold']},durable:{name:'생존 중심',keys:['defense','damage','haste','capacity','gold']}};
-const GROWTH=['damage','speed','haste','critChance','critDamage','gold','capacity','defense','health','xpGain'];
+const STRATEGIES={balanced:{name:'균형 성장',keys:['damage','haste','defense','critChance','magnet']},fire:{name:'화력 집중',keys:['damage','critDamage','critChance','defense','capacity']},rapid:{name:'연사 중심',keys:['haste','damage','speed','critChance','magnet']},durable:{name:'생존 중심',keys:['defense','damage','haste','capacity','magnet']}};
+const GROWTH=['damage','speed','haste','critChance','critDamage','magnet','capacity','defense','health','xpGain'];
 const PRESETS={balanced:{name:'균형 분대',counts:{rifle:3,machinegun:2,rocket:2,tank:1,medic:2},strategy:'balanced'},roomBalanced:{name:'거실 균형 분대',counts:{rifle:2,machinegun:2,rocket:1,tank:1,medic:2,mortar:1,sniper:1},strategy:'balanced'},rapid:{name:'기동 화력',counts:{rifle:2,guntruck:2,sniper:2,rocket:2,medic:2},strategy:'rapid'},siege:{name:'중장갑 공성',counts:{rifle:2,tank:2,mortar:2,rocket:2,medic:2},strategy:'durable'}};
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n)),dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y),finite=(v,d=0)=>Number.isFinite(v)?v:d;
 // AI progress owns its wallet, ranks and pity counters. Normal profiles stay deterministic.
@@ -13,7 +13,7 @@ class FrontAutoProfile extends Profile{
  purchase(key,random){const cost=this.cost(key);if(!Number.isFinite(cost)||this.gold<cost)return null;const chance=this.chance(key),success=random()<chance;this.gold=Math.round((this.gold-cost)*100)/100;this.attempts++;if(success){this.upgrades[key]++;this.fails[key]=0;this.successes++;}else this.fails[key]++;return{success,cost,chance,level:this.upgrades[key]};}
  snapshot(){return{...super.snapshot(),mode:'idle',fails:{...this.fails},attempts:this.attempts,successes:this.successes};}
 }
-function cleanPlan(plan=PRESETS.balanced){const counts=Object.fromEntries(ROLES.map(t=>[t,clamp(Math.floor(finite(plan?.counts?.[t])),0,5)]));if(!ROLES.some(t=>counts[t]))counts.rifle=1;const strategy=STRATEGIES[plan?.strategy]?plan.strategy:'balanced',growth={};let selected=0;for(const k of GROWTH){const n=clamp(Math.floor(finite(plan?.growth?plan.growth[k]:(STRATEGIES[strategy].keys.includes(k)?3:0))),0,5);growth[k]=n&&selected++<5?n:0;}return{counts,strategy,growth,construction:['balanced','defense','siege','off'].includes(plan?.construction)?plan.construction:'balanced'};}
+function cleanPlan(plan=PRESETS.balanced){const counts=Object.fromEntries(ROLES.map(t=>[t,clamp(Math.floor(finite(plan?.counts?.[t])),0,5)]));if(!ROLES.some(t=>counts[t]))counts.rifle=1;const strategy=STRATEGIES[plan?.strategy]?plan.strategy:'balanced',growth={};let selected=0;for(const k of GROWTH){const n=clamp(Math.floor(finite(plan?.growth?(plan.growth[k]??(k==='magnet'?plan.growth.gold:undefined)):(STRATEGIES[strategy].keys.includes(k)?3:0))),0,5);growth[k]=n&&selected++<5?n:0;}return{counts,strategy,growth,construction:['balanced','defense','siege','off'].includes(plan?.construction)?plan.construction:'balanced'};}
 // Pilot routes must not share mutable arrays with a checkpoint or restored pilot.
 function copyState(v){return Array.isArray(v)?v.map(copyState):v&&typeof v==='object'?Object.fromEntries(Object.entries(v).map(([k,x])=>[k,copyState(x)])):v;}
 function pack(game){
@@ -21,6 +21,18 @@ function pack(game){
  const encode=value=>JSON.parse(JSON.stringify(value,(k,v)=>{if(v&&ids.has(v))return{$ref:ids.get(v)};if(typeof v==='number'&&!Number.isFinite(v))return{$number:String(v)};return v;}));
  const fields={};for(const [k,v]of Object.entries(game))if(!['events','profile','random','navigationCache'].includes(k)&&typeof v!=='function')fields[k]=v;
  return{nodes:nodes.map((v,i)=>['n'+i,encode({...v})]),fields:encode(fields),profile:game.profile.snapshot()};
+}
+function migrateAbilities(state){
+ const saved=state.abilities;
+ if(!saved)return;
+ const abilities=root.FrontAbilities||api.ABILITIES;
+ state.abilities=Object.fromEntries(Object.keys(abilities).map(key=>[key,saved[key]??(key==='magnet'?saved.gold:0)??0]));
+ if(Array.isArray(state.currentOptions))state.currentOptions=state.currentOptions.map(type=>type==='ability_gold'?'ability_magnet':type);
+ if(state.pendingChoice?.type==='ability_gold')state.pendingChoice.type='ability_magnet';
+ if(state.cardShownCounts&&Object.hasOwn(state.cardShownCounts,'ability_gold')){
+  state.cardShownCounts.ability_magnet??=state.cardShownCounts.ability_gold;
+  delete state.cardShownCounts.ability_gold;
+ }
 }
 function unpack(game,data){
  if(!data||!Array.isArray(data.nodes)||data.nodes.length>1000||!data.fields)throw new Error('Invalid saved operation');
@@ -33,7 +45,8 @@ function unpack(game,data){
  if(!Object.hasOwn(data.fields,'radioStrikes'))game.radioStrikes=[];
  if(!Object.hasOwn(data.fields,'radioFireZones'))game.radioFireZones=[];
  if(!Object.hasOwn(data.fields,'radioTurrets'))game.radioTurrets=[];
- if(!Object.hasOwn(data.fields,'nextPirateCannonAt'))game.nextPirateCannonAt=undefined;for(const key of ['blockMines','luckyFlashes','pirateShells'])if(!Object.hasOwn(data.fields,key))game[key]=[];if(!Object.hasOwn(data.fields,'blockMineSerial'))game.blockMineSerial=0;game.starMax=2;game.abilities={...Object.fromEntries(Object.keys(root.FrontAbilities||api.ABILITIES).map(k=>[k,0])),...game.abilities};game.roomHealthVersion=Number.isFinite(data.fields.roomHealthVersion)?data.fields.roomHealthVersion:0;game.roomGuardianVersion=Number.isFinite(data.fields.roomGuardianVersion)?data.fields.roomGuardianVersion:0;game.roomFenceVersion=Number.isFinite(data.fields.roomFenceVersion)?data.fields.roomFenceVersion:0;game.roomFortificationVersion=Number.isFinite(data.fields.roomFortificationVersion)?data.fields.roomFortificationVersion:0;game.balanceVersion=Number.isFinite(data.fields.balanceVersion)?data.fields.balanceVersion:0;game.evolutionAttacks=Object.hasOwn(data.fields,'evolutionAttacks')?game.evolutionAttacks:[];game.evolutionBlasts=Object.hasOwn(data.fields,'evolutionBlasts')?game.evolutionBlasts:[];game.evolutionLinkState=Object.hasOwn(data.fields,'evolutionLinkState')?game.evolutionLinkState:{owners:[]};game.nextRareSupply=Number.isFinite(data.fields.nextRareSupply)?data.fields.nextRareSupply:(Math.floor(game.time/120)+1)*120;game.buildings=game.buildings||[];game.butterflyGusts=game.butterflyGusts||[];game.luckyMines=game.luckyMines||[];game.luckyGlues=game.luckyGlues||[];game.luckyGlueHistory=game.luckyGlueHistory||[];game.luckySprays=game.luckySprays||[];game.luckySalvos=game.luckySalvos||[];for(const state of [game,...(game.coopStates||[])]){for(const tech of state.tech||[])for(const type of ROLES)tech[type]??=0;for(const type of ROLES)if(state.evolved)state.evolved[type]??=false;if(state.abilities)state.abilities.xpGain??=0;}game.world=game.world||{id:'backyard',width:1600,height:2800,scale:1};game.finalBattle=game.finalBattle||{spawned:false,killed:false};game.buildSerial=game.buildSerial||0;game.profile=data.profile?.mode==='idle'?new FrontAutoProfile(data.profile):new Profile(data.profile);game.navigationCache=new Map();game.upgradeBedroomMap();if(game.sniperSkinId==='hayeon')game.sniperSkinId='kayla';for(const u of game.units)if(u.team===0&&u.type==='sniper'&&u.appearance==='hayeon')u.appearance='kayla';game.medicSkinId=game.medicSkinId==='rina'?'rina':'classic';game.flameSkinId=game.flameSkinId==='hwarin'?'hwarin':'classic';const skinCommander=game.commander(0);if(skinCommander?.type==='leader')skinCommander.flameSkin=game.flameSkinId;for(const u of game.units)u.spawnedAt??=game.time;game.enforceEnemySniperLimit();game.upgradeBalance();game.refreshBuildingStats();game.migrateLuckyObjects();game.upgradeLivingRoomLayout();game.setupRoomGuardians();game.setupRoadCaptains();game.upgradeRoomCampaign();game.repairLaserLessonReward();if(game.coop)for(const owner of [0,1])game.withOwner(owner,()=>game.refreshCommanderHealth());else game.refreshCommanderHealth();game.scoutUntil=0;game.report=null;if(game.pendingChoice?.type==='scout')game.pendingChoice=null;if(game.turnChoice==='scout')game.turnChoice=null;root.FrontSwordBoss?.rebind(game);return game;
+ if(!Object.hasOwn(data.fields,'experienceDrops'))game.experienceDrops=[];
+ if(!Object.hasOwn(data.fields,'nextPirateCannonAt'))game.nextPirateCannonAt=undefined;for(const key of ['blockMines','luckyFlashes','pirateShells'])if(!Object.hasOwn(data.fields,key))game[key]=[];if(!Object.hasOwn(data.fields,'blockMineSerial'))game.blockMineSerial=0;game.starMax=2;game.roomHealthVersion=Number.isFinite(data.fields.roomHealthVersion)?data.fields.roomHealthVersion:0;game.roomGuardianVersion=Number.isFinite(data.fields.roomGuardianVersion)?data.fields.roomGuardianVersion:0;game.roomFenceVersion=Number.isFinite(data.fields.roomFenceVersion)?data.fields.roomFenceVersion:0;game.roomFortificationVersion=Number.isFinite(data.fields.roomFortificationVersion)?data.fields.roomFortificationVersion:0;game.balanceVersion=Number.isFinite(data.fields.balanceVersion)?data.fields.balanceVersion:0;game.evolutionAttacks=Object.hasOwn(data.fields,'evolutionAttacks')?game.evolutionAttacks:[];game.evolutionBlasts=Object.hasOwn(data.fields,'evolutionBlasts')?game.evolutionBlasts:[];game.evolutionLinkState=Object.hasOwn(data.fields,'evolutionLinkState')?game.evolutionLinkState:{owners:[]};game.nextRareSupply=Number.isFinite(data.fields.nextRareSupply)?data.fields.nextRareSupply:(Math.floor(game.time/120)+1)*120;game.buildings=game.buildings||[];game.butterflyGusts=game.butterflyGusts||[];game.luckyMines=game.luckyMines||[];game.luckyGlues=game.luckyGlues||[];game.luckyGlueHistory=game.luckyGlueHistory||[];game.luckySprays=game.luckySprays||[];game.luckySalvos=game.luckySalvos||[];for(const state of [game,...(game.coopStates||[])]){for(const tech of state.tech||[])for(const type of ROLES)tech[type]??=0;for(const type of ROLES)if(state.evolved)state.evolved[type]??=false;migrateAbilities(state);}game.world=game.world||{id:'backyard',width:1600,height:2800,scale:1};game.finalBattle=game.finalBattle||{spawned:false,killed:false};game.buildSerial=game.buildSerial||0;game.profile=data.profile?.mode==='idle'?new FrontAutoProfile(data.profile):new Profile(data.profile);game.navigationCache=new Map();game.upgradeBedroomMap();if(game.sniperSkinId==='hayeon')game.sniperSkinId='kayla';for(const u of game.units)if(u.team===0&&u.type==='sniper'&&u.appearance==='hayeon')u.appearance='kayla';game.medicSkinId=game.medicSkinId==='rina'?'rina':'classic';game.flameSkinId=game.flameSkinId==='hwarin'?'hwarin':'classic';const skinCommander=game.commander(0);if(skinCommander?.type==='leader')skinCommander.flameSkin=game.flameSkinId;for(const u of game.units)u.spawnedAt??=game.time;game.enforceEnemySniperLimit();game.upgradeBalance();game.refreshBuildingStats();game.migrateLuckyObjects();game.upgradeLivingRoomLayout();game.setupRoomGuardians();game.setupRoadCaptains();game.upgradeRoomCampaign();game.repairLaserLessonReward();if(game.coop)for(const owner of [0,1])game.withOwner(owner,()=>game.refreshCommanderHealth());else game.refreshCommanderHealth();game.scoutUntil=0;game.report=null;if(game.pendingChoice?.type==='scout')game.pendingChoice=null;if(game.turnChoice==='scout')game.turnChoice=null;root.FrontSwordBoss?.rebind(game);return game;
 }
 class FrontAutoPilot{
  constructor(game,plan,seed=0x61c88647){plan??=game.isRoomCampaign()?PRESETS.roomBalanced:PRESETS.balanced;this.tacticsVersion=88;this.game=game;if(!(game.profile instanceof FrontAutoProfile))game.profile=new FrontAutoProfile(game.profile.snapshot());this.plan=cleanPlan(plan);this.seed=seed>>>0||1;this.remainder=0;this.nextThink=0;this.nextBuild=0;this.nextPermanent=0;this.dodgeUntil=0;this.escape=null;this.motion=null;this.supply=null;this.supplyPauseUntil=0;this.baseDefense=null;this.hqGuardUntil=0;this.advanceState=null;this.nextAdvance=0;this.lineAnchor=null;this.lastScoutStage=0;this.lastEnd=null;this.active=false;this.action='AI 출격 대기';this.history=[];this.fails=game.profile.fails;this.attempts=game.profile.attempts;this.successes=game.profile.successes;game.random=()=>this.random();}
@@ -74,7 +87,7 @@ class FrontAutoPilot{
  growthKeys(){return GROWTH.filter(k=>this.plan.growth[k]>0).sort((a,b)=>this.plan.growth[b]-this.plan.growth[a]||STRATEGIES[this.plan.strategy].keys.indexOf(a)-STRATEGIES[this.plan.strategy].keys.indexOf(b));}
  choice(){const g=this.game;if(g.phase!=='choice')return;if(['supply','periodic'].includes(g.choiceKind)){const q=this.queue();if(Object.values(q).some(Boolean)&&g.stageChoice('support',q)&&g.confirmChoice()){g.phase='playing';g.pendingChoice=null;g.turnChoice=null;}else g.cancelRecovery();return;}let q=this.queue();const count=Object.values(q).reduce((a,b)=>a+b,0),alive=g.alive(0).length-1,goal=this.desired(),keys=this.growthKeys(),options=(g.currentOptions||[]).filter(t=>g.eligibleCard(t));
   const troops=g.alive(0).filter(u=>u.type!=='leader'),wounded=troops.filter(u=>u.hp/u.maxHp<.65),armor=g.units.some(u=>u.team!==0&&u.hp>0&&g.visible(u)&&['stagBeetle','rhinoBeetle','hornet','tank','crimsonAce','guntruck'].includes(u.type));
-  const score=t=>{const key=g.abilityKey(t);if(key)return keys.includes(key)?({damage:117,haste:114,defense:110,health:108,critChance:96,critDamage:96,speed:101,capacity:89,xpGain:g.time<480?110:78,gold:g.time<300?70:87}[key])+9+(this.plan.growth[key]-3)*15-g.abilities[key]*10:-40;if(ROLES.includes(t)){if(!goal[t])return -30;const owned=troops.filter(u=>u.type===t).length;if(!g.tech[0][t])return t==='medic'&&alive>=3?118:armor&&['rocket','tank'].includes(t)?108:82;return !owned&&g.isFlameCommander(g.commander(0))&&['machinegun','rocket'].includes(t)?105-g.tech[0][t]*10:owned?(t==='medic'?85:105)+Math.sqrt(owned)*10-g.tech[0][t]*12+(armor&&['rocket','tank'].includes(t)?10:0):25;}if(t==='fieldRepair')return wounded.length>=2||g.commander(0).hp/g.commander(0).maxHp<.45?145:5;if(t==='fieldSupply')return alive<6?70:40;return 20;};
+  const score=t=>{const key=g.abilityKey(t);if(key)return keys.includes(key)?({damage:117,haste:114,defense:110,health:108,critChance:96,critDamage:96,speed:101,capacity:89,xpGain:g.time<480?110:78,magnet:g.time<480?112:94}[key])+9+(this.plan.growth[key]-3)*15-g.abilities[key]*10:-40;if(ROLES.includes(t)){if(!goal[t])return -30;const owned=troops.filter(u=>u.type===t).length;if(!g.tech[0][t])return t==='medic'&&alive>=3?118:armor&&['rocket','tank'].includes(t)?108:82;return !owned&&g.isFlameCommander(g.commander(0))&&['machinegun','rocket'].includes(t)?105-g.tech[0][t]*10:owned?(t==='medic'?85:105)+Math.sqrt(owned)*10-g.tech[0][t]*12+(armor&&['rocket','tank'].includes(t)?10:0):25;}if(t==='fieldRepair')return wounded.length>=2||g.commander(0).hp/g.commander(0).maxHp<.45?145:5;if(t==='fieldSupply')return alive<6?70:40;return 20;};
   const unlock=options.filter(t=>ROLES.includes(t)&&goal[t]>0&&!g.tech[0][t]).sort((a,b)=>score(b)-score(a))[0],best=[...options].sort((a,b)=>score(b)-score(a))[0],unwanted=!options.some(t=>{const key=g.abilityKey(t);return key?keys.includes(key):ROLES.includes(t)?goal[t]>0:score(t)>=25;});
   const reinforcement=this.reinforcementStatus();
   const coreReady=alive>=Math.min(8,g.capacity())&&reinforcement.fighters>=Math.min(4,g.capacity())&&troops.reduce((n,u)=>n+u.hp/u.maxHp,0)/Math.max(1,alive)>=.6;
@@ -172,7 +185,7 @@ class FrontAutoPilot{
    // If cover blocks every shot, move along the protected side of the structure.
    if(attack){const b=attack.building,flanks=[-1,1].map(side=>({x:b.x+side*(b.w/2+95),y:Math.max(floor,b.y+b.h/2+95)})).filter(p=>g.freePosition(p.x,p.y,32)).sort((a,b)=>dist(c,a)-dist(c,b));for(const p of flanks){this.move(p,'AI 건설 방어 · 엄폐 옆 사선 확보',threat);if(g.moveOrder)return true;}}
   }
-  if(!threat&&this.collectSupply(enemies))return true;
+  if(!threat&&(this.collectSupply(enemies)||this.collectExperience(enemies)))return true;
   if(dist(c,line)>110){g.focusTarget=null;this.move(line,'AI 책상 방어선 복귀');return true;}
   return this.holdLine('AI 책상 방어선 유지 · 20분 생존');
  }
@@ -288,11 +301,26 @@ class FrontAutoPilot{
  }
 
  supplyThreats(){const g=this.game;return [...g.units.filter(u=>u.team!==0&&u.hp>0&&g.visible(u)),...g.activeDefenses().filter(u=>g.visible(u))].map(u=>{const s=u.type?g.stats(u):u.defenseKind?g.defenseStats(u):{range:280,damage:15,rate:1};return{x:u.x,y:u.y,radius:(s.range||30)+(T[u.type]?.r||20)+45,weight:clamp(s.damage/Math.max(.2,s.rate)/16,.6,3)};});}
- supplyCandidates(){const g=this.game,c=g.commander(0),threats=this.supplyThreats();return g.pickups.map((p,index)=>({p,index})).filter(({p})=>p.active&&(!p.destinyStar||g.destinyStarTypes().length)&&p.y>=g.frontline()-15&&p.y<=this.guardRearLimit()&&dist(p,c)<1100&&this.dangerAt(p,threats)<1.2).sort((a,b)=>dist(a.p,c)-dist(b.p,c));}
+ supplyCandidates(){const g=this.game,c=g.commander(0),threats=this.supplyThreats();return g.pickups.map((p,index)=>({p,index})).filter(({p})=>p.active&&(!p.combatDrop||g.canCollectCombatDrop(p,c))&&(!p.destinyStar||g.destinyStarTypes().length)&&p.y>=g.frontline()-15&&p.y<=this.guardRearLimit()&&dist(p,c)<1100&&this.dangerAt(p,threats)<1.2).sort((a,b)=>dist(a.p,c)-dist(b.p,c));}
  supplyGoal(){return this.supplyCandidates().find(({p})=>{const route=this.route(p,this.supplyThreats(),40);return route.points.length&&route.cost<dist(this.game.commander(0),p)*2+140;})?.p;}
+ collectExperience(enemies){
+  const g=this.game,c=g.commander(0),radius=g.experienceRadius();
+  if(!g.experienceDrops.length||enemies[0]&&dist(c,enemies[0])<radius+115)return false;
+  const frontline=g.frontline()-15;
+  const candidates=g.experienceDrops.filter(p=>!p.pulling&&p.y>=frontline).map(p=>{
+   const distance=dist(p,c);
+   return {p,distance,score:distance-Math.min(p.amount,90)};
+  });
+  const choice=candidates.filter(({distance})=>distance>radius&&distance<=310)
+   .sort((a,b)=>a.score-b.score).find(({p})=>g.lineClear(c,p,22));
+  if(!choice)return false;
+  const {p,distance}=choice,reach=radius*.6/distance;
+  this.move({x:p.x+(c.x-p.x)*reach,y:p.y+(c.y-p.y)*reach},'AI 경험치 수집');
+  return !!g.moveOrder;
+ }
  collectSupply(enemies){const g=this.game,c=g.commander(0),nearest=enemies[0],threats=this.supplyThreats();if(g.time<this.supplyPauseUntil)return false;
   let task=this.supply,pickup=task&&g.pickups[task.index];
-  if(task&&(!pickup?.active||(pickup.destinyStar&&!g.destinyStarTypes().length)||g.time-task.started>18)){this.supply=null;task=null;}
+  if(task&&(!pickup?.active||(pickup.combatDrop&&!g.canCollectCombatDrop(pickup,c))||(pickup.destinyStar&&!g.destinyStarTypes().length)||g.time-task.started>18)){this.supply=null;task=null;}
   if(task&&(this.dangerAt(pickup,threats)>3||nearest&&dist(nearest,c)<105||g.time-task.progressAt>3)){
    this.supply=null;this.supplyPauseUntil=g.time+2;return false;
   }
@@ -349,6 +377,7 @@ class FrontAutoPilot{
   if(!push&&this.engageLine(enemies,target))return;
   const advanceGuard=this.needsGuardAdvance();
   if(!advanceGuard&&(!push||g.pickups.some(p=>p.active&&(!p.destinyStar||g.destinyStarTypes().length)&&dist(p,c)<140))&&this.collectSupply(enemies))return;
+  if(!advanceGuard&&!push&&this.collectExperience(enemies))return;
   if(advanceGuard&&this.advanceGuardLine())return;
   if((!nearest||dist(nearest,c)>300)&&g.alive(0).some(u=>u.type!=='leader'&&dist(u,g.formationPoint(u,c))>230)){g.moveOrder=null;this.action='AI 분대 재집결 · 후열 합류 대기';this.log(this.action);return;}
   if(target&&target!==c&&Number.isFinite(target.x)){

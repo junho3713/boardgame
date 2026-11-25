@@ -20,7 +20,13 @@ test('movement, spending, combat credit, upgrade stats and fusion remain persona
  assert.equal(g.owned(0).filter(u=>u.type==='rifle'&&u.star===2).length,1);
  assert.equal(g.owned(1).filter(u=>u.type==='rifle').length,2);
  const enemy=g.addUnit(2,'ant',green.x+200,green.y);const greenXP=g.xp,otherXP=g.withOwner(1,()=>g.xp);
- g.damage(enemy,1e9,blue);assert.equal(g.xp,greenXP);assert.ok(g.withOwner(1,()=>g.xp)>otherXP);
+ g.damage(enemy,1e9,blue);assert.equal(g.xp,greenXP);assert.equal(g.withOwner(1,()=>g.xp),otherXP);
+ const drop=g.experienceDrops[0];assert.equal(drop.owner,1);
+ Object.assign(green,{x:drop.x,y:drop.y});g.updateExperienceDrops(.05);
+ assert.equal(g.xp,greenXP);assert.equal(g.experienceDrops.length,1);
+ Object.assign(blue,{x:drop.x,y:drop.y});
+ g.withOwner(1,()=>g.updateExperienceDrops(.05));
+ assert.equal(g.withOwner(1,()=>g.xp),otherXP+13);assert.equal(g.experienceDrops.length,0);
  const greenRifle=g.owned(0).find(u=>u.type==='rifle'),blueRifle=g.owned(1).find(u=>u.type==='rifle'),oldBlue=g.stats(blueRifle).damage;
  g.withOwner(0,()=>{g.abilities.damage=5;g.tech[0].rifle=5;});assert.equal(g.stats(blueRifle).damage,oldBlue);assert.ok(g.stats(greenRifle).damage>oldBlue);
 });
