@@ -2,6 +2,7 @@
 ((root)=>{'use strict';
 const TAU=Math.PI*2,clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const enhancedFaces=roll=>roll.bossKillerAvailable||roll.kind==='bossKiller'?['glue','mine','spray','missiles','bossKiller']:['glue','mine','spray','missiles'];
+const luckyResultNames={glue:'접착탄',mine:'섬광탄',spray:'살포',missiles:'777',bossKiller:'보스킬러'};
 class FrontEffects{
  constructor({budget=360,textures=null,weaponPoint=null}={}){this.budget=budget;this.textures=textures||this.makeTextures();this.weaponPoint=weaponPoint;this.reset();this.stickyAsset();this.cleanseAsset();this.healingReductionAsset();}
  healingReductionAsset(){
@@ -169,8 +170,65 @@ class FrontEffects{
    for(const [x,y]of [[12,17],[23,14]]){c.save();c.translate(x,y);c.rotate(.6);c.fillStyle='#f5a13b';c.beginPath();c.moveTo(-3,7);c.lineTo(0,14);c.lineTo(3,7);c.fill();c.fillStyle='#d55237';c.beginPath();c.moveTo(-3,3);c.lineTo(-6,9);c.lineTo(-1,7);c.lineTo(1,7);c.lineTo(6,9);c.lineTo(3,3);c.fill();c.stroke();c.fillStyle='#d74932';c.beginPath();c.moveTo(-3,7);c.lineTo(-3,-5);c.quadraticCurveTo(-2,-11,0,-13);c.quadraticCurveTo(2,-11,3,-5);c.lineTo(3,7);c.closePath();c.fill();c.stroke();c.fillStyle='#f4d78b';c.fillRect(-3,-2,6,3);c.strokeStyle='#ffae83';c.beginPath();c.moveTo(-1,-8);c.lineTo(-1,-4);c.stroke();c.restore();}
   }c.restore();
  }
- luckyReserveBadge(ctx,u,ammo){const x=u.x+50,y=u.y-134;ctx.save();ctx.fillStyle='#243b2df0';ctx.strokeStyle='#f0ba88';ctx.lineWidth=1;ctx.beginPath();ctx.roundRect(x,y,34,36,5);ctx.fill();ctx.stroke();this.luckySymbol(ctx,'missiles',x+17,y+12,20);ctx.fillStyle='#fff0cb';ctx.font='700 10px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('×'+ammo,x+17,y+28);ctx.restore();}
+ luckyReserveBadge(ctx,u,ammo,y=u.y-134){const x=u.x+50;ctx.save();ctx.fillStyle='#243b2df0';ctx.strokeStyle='#f0ba88';ctx.lineWidth=1;ctx.beginPath();ctx.roundRect(x,y,34,36,5);ctx.fill();ctx.stroke();this.luckySymbol(ctx,'missiles',x+17,y+12,20);ctx.fillStyle='#fff0cb';ctx.font='700 10px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('×'+ammo,x+17,y+28);ctx.restore();}
+ luckyResultRow(ctx,u,game){
+  if(u.hp<=0)return;
+  const time=game.time,slots=[],wins=new Map();
+  const channels=u.luckyChannels||[{roll:u.luckyRoll}];
+  const ammo=(game.luckySalvos||[]).reduce((total,salvo)=>total+(salvo.source?.id===u.id?salvo.remaining:0),0);
+  let visible=false;
+  for(const [index,{roll}] of channels.slice(0,3).entries()){
+   const resultAt=roll?.resultAt??roll?.endsAt;
+   const age=time-resultAt;
+   if(!roll||time<roll.startedAt||age>(roll.kind==='bossKiller'?1.33:1.04)){slots.push(null);continue;}
+   visible=true;
+   if(!roll.resolved){
+    const symbols=enhancedFaces(roll),icon=symbols[Math.floor((time-roll.startedAt)*16+index*2)%symbols.length];
+    slots.push({spin:true,kind:icon});
+    continue;
+   }
+   if(!luckyResultNames[roll.kind]){slots.push({blank:true,age});continue;}
+   let launchAt=resultAt;
+   if(roll.kind==='bossKiller'){
+    const flight=(game.shots||[]).find(shot=>shot.kind==='bossKiller'&&shot.source?.id===u.id&&shot.guidedFlight?.startedAt===resultAt)?.guidedFlight;
+    launchAt=flight?.launched?flight.startedAt+(flight.hoverDuration??1):resultAt;
+   }
+   const glow=roll.stored?0:clamp(1-(time-launchAt)/.25,0,1);
+   const existing=wins.get(roll.kind);
+   if(existing){existing.count++;existing.glow=Math.max(existing.glow,glow);continue;}
+   const slot={kind:roll.kind,count:1,glow};
+   slots.push(slot);wins.set(roll.kind,slot);
+  }
+  if(ammo)this.luckyReserveBadge(ctx,u,ammo,u.y-(visible?96:134));
+  if(!visible)return;
+  const y=u.y-135;
+  ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';
+  for(let i=0;i<3;i++){
+   const x=u.x+(i-1)*50,slot=slots[i],special=slot?.kind==='bossKiller'&&!slot.spin;
+   ctx.save();
+   if(slot?.blank)ctx.globalAlpha*=clamp(1-slot.age/.49,.22,1);
+   ctx.fillStyle=slot?.glow>.2?'#526552':'#1d3027ef';
+   ctx.strokeStyle=special?'#f8d56e':slot?.glow>.18?'#e5f1d3':'#788f71';
+   ctx.lineWidth=special?2:1;
+   ctx.beginPath();ctx.roundRect(x-23,y-15,46,30,5);ctx.fill();ctx.stroke();
+   if(slot?.kind){
+    if(slot.spin){ctx.globalAlpha*=.72;this.luckySymbol(ctx,slot.kind,x,y,21);}
+    else{
+     this.luckySymbol(ctx,slot.kind,x,y-5,16);
+     ctx.fillStyle=special?'#ffe8ab':'#f4eedc';ctx.font='bold 10px sans-serif';
+     ctx.fillText(luckyResultNames[slot.kind],x,y+8.5);
+     if(slot.count>1){
+      ctx.fillStyle='#13251e';ctx.beginPath();ctx.roundRect(x+8,y-13,14,10,3);ctx.fill();
+      ctx.fillStyle='#fff4ba';ctx.font='bold 8px sans-serif';ctx.fillText('×'+slot.count,x+15,y-8);
+     }
+    }
+   }else{ctx.fillStyle='#93a394';ctx.font='bold 14px sans-serif';ctx.fillText('·',x,y);}
+   ctx.restore();
+  }
+  ctx.restore();
+ }
  luckyReels(ctx,u,game,single=false){
+  if(!single&&u.team===0&&u.star===3)return this.luckyResultRow(ctx,u,game);
   if(!single&&u.star>=2&&u.luckyChannels){for(let i=0;i<3;i++){ctx.save();ctx.translate(0,-i*48);this.luckyReels(ctx,{...u,luckyRoll:u.luckyChannels[i].roll,luckyChannelIndex:i},game,true);ctx.restore();}return;}
   if(u.hp<=0)return;const reserve=[...(game.luckySalvos||[]),...(game.enemyLuckySalvos||[])].filter(v=>v.source?.id===u.id&&v.remaining>0&&(u.luckyChannelIndex===undefined||(v.rouletteChannel??0)===u.luckyChannelIndex)),ammo=reserve.reduce((n,v)=>n+v.remaining,0);if(ammo)this.luckyReserveBadge(ctx,u,ammo);
   const roll=u.luckyRoll;if(!roll||game.time>roll.endsAt+.95)return;

@@ -119,7 +119,7 @@ function install({FrontGame,TYPES,multiplier}){
   nuke: {radius:225, multiplier:7, delay:1.2, knockback:0}
  };
  const promotedRadio={cadence:.65,damage:1.6,radius:1.35};
- const missileSpread=[0,-21,21,0];
+ const missileSpread=[0,-21,21,0,-38,38];
  p.stats=function(u){
   const result=stats.call(this,u);
   if(this.starExperiment&&u.team===0&&u.type==='guntruck'&&u.star===3)result.rate*=promotedRadio.cadence;
@@ -181,7 +181,7 @@ function install({FrontGame,TYPES,multiplier}){
  }
  function queueRadioStrike(g,u,aim,roll,point,{golden,bonus,damage,radiusScale},offset){
   const {strike,dice}=roll,spec=RADIO[strike],radius=spec.radius*radiusScale;
-  const count=strike==='missile'?(golden?4:dice[0]-2):1;
+  const count=strike==='missile'?(roll.missileCount??(golden?4:dice[0]-2)):1;
   const angle=aim.commandShot?aim.angle:heading(u,point);
   const precise=strike!=='incendiary'&&g.hasEvolutionLink(u,'radioPrecision');
   const bounds=g.bounds();
@@ -203,6 +203,17 @@ function install({FrontGame,TYPES,multiplier}){
   const doubles=rolls.filter(roll=>roll.success);
   const bonus=doubles.length>=2?doubles.length:0;
   const launches=bonus===3?[{strike:'nuke',dice:[6,6]}]:doubles;
+  if(bonus===3||launches.some(roll=>roll.strike==='nuke')){
+   const state=g.linkState(u.coopOwner||0);
+   if(bonus===3)state.radioNukeCodes=0;
+   else for(const roll of launches){
+    if(roll.strike!=='nuke')continue;
+    const codes=(state.radioNukeCodes||0)+1;
+    if(codes>=3){state.radioNukeCodes=0;continue;}
+    state.radioNukeCodes=codes;
+    roll.strike='missile';roll.nukeCodes=codes;roll.missileCount=6;
+   }
+  }
   const multiplier=bonus===2?1.3:bonus===3&&golden?1.5:1;
   const radiusScale=(rank===3?promotedRadio.radius:1)*multiplier;
   const damage=attack.damage*(rank===3?promotedRadio.damage:1)*multiplier;

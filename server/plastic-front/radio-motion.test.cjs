@@ -49,15 +49,28 @@ test('fused radio rolls keep three separate pairs and only the successful pairs 
  assert.deepEqual(r.labels,['SYNC x2!']);
  assert.equal(r.paints.filter(x=>x==='#ffcf58').length,2);
 });
-test('rank three dice finish rolling sooner, paint gold, and show the triple jackpot once',()=>{
+test('rank three radio rolls show six gold dice before reveal and one tactical nuke after three doubles',()=>{
  const r=renderer();r.game.reducedMotion=true;
  const rolls=[1,3,6].map(n=>({dice:[n,n],success:true}));
  const e={rank:3,bonus:3,rolls,source:{id:12,x:100,y:300}};
  const superseded={...e,rolls:[{dice:[1,2],success:false}],rank:1,bonus:0,t:.1};
- assert.deepEqual(r.dice([superseded,e],.19),[1,1,3,3,6,6]);
- assert.deepEqual(r.labels,['TRIPLE JACKPOT!']);
+ assert.deepEqual(r.dice([superseded,e],.12),[0,0,0,0,0,0]);
  assert.equal(r.paints.filter(x=>x==='#f7d072').length,6);
+ assert.deepEqual(r.dice([superseded,e],.19),[]);
+ assert.deepEqual(r.labels,['전술 핵']);
  assert.ok(r.scales.every(scale=>scale<=1.09));
+});
+test('rank three keeps distinct radio successes and their code detail as the miss fades',()=>{
+ const r=renderer();
+ const e={rank:3,bonus:2,rolls:[
+  {dice:[2,2],success:true,strike:'incendiary'},
+  {dice:[2,4],success:false},
+  {dice:[6,6],success:true,strike:'missile',nukeCodes:2}
+ ]};
+ assert.deepEqual(r.dice(e,.23),[]);
+ assert.deepEqual(r.labels,['소이탄','·','핵 2/3','미사일 6발']);
+ r.dice(e,.62);
+ assert.deepEqual(r.labels,['소이탄','핵 2/3','미사일 6발']);
 });
 test('reduced motion advances the impact and the same burning pocket, and a paused battle holds the frame',()=>{
  const r=renderer();
