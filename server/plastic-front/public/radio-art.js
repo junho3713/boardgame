@@ -231,87 +231,145 @@ function rolls(c,game,visible) {
   c.restore();
  }
 }
-function flame(c,x,y,width,height,bend) {
- const fill = c.createLinearGradient(0,y-height,0,y);
- fill.addColorStop(0,'#ed4c1c59'); fill.addColorStop(.55,'#fa6824db'); fill.addColorStop(1,'#e5a633ee');
- c.fillStyle=fill; c.beginPath(); c.moveTo(x-width,y);
- c.bezierCurveTo(x-width*1.3,y-height*.43,x+bend-width*.1,y-height*.51,x+bend,y-height);
- c.bezierCurveTo(x+width*.42+bend,y-height*.53,x+width*1.6,y-height*.21,x+width,y);
- c.quadraticCurveTo(x,y+width*.4,x-width,y); c.fill();
- c.fillStyle='#ffe297'; c.beginPath(); c.moveTo(x-width*.45,y);
- c.quadraticCurveTo(x-width*.5,y-height*.22,x+bend*.5,y-height*.56);
- c.quadraticCurveTo(x+width*.67,y-height*.16,x+width*.4,y); c.closePath(); c.fill();
-}
-// Burn outward from the actual impact to each fuel pool. The pools remain fixed on the board.
-function burningTrail(c,x,y,r,progress,fade) {
- const side=(x<0?-1:1)*r*.16, cx=x*.57-side,cy=y*.56+side*.51;
- const q=ease(progress), endX=2*(1-q)*q*cx+q*q*x,endY=2*(1-q)*q*cy+q*q*y;
- const path=()=>{c.moveTo(0,0);c.quadraticCurveTo(q*cx,q*cy,endX,endY);};
- c.save();c.lineCap='round';c.globalAlpha*=fade;
- stroke(c,Math.max(3,r*.066),'#612a20b8',path);
- stroke(c,Math.max(1.4,r*.032),'#e8662dc2',path);
- if(progress<1)glow(c,endX,endY,6,3,'#fff5a0','#ff8c36aa');
+const fireFloorDepth = .62;
+const fireFlameCount = 14;
+const fireImpactTime = .15;
+const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+
+function fireFloor(c, r, age, seed, reduced) {
+ const flash = 1 - clamp(age / fireImpactTime);
+ const pulse = Math.sin(age * 5.1 + noise(seed, 1) * tau) * (reduced ? .4 : 1);
+ c.save();
+ c.scale(1, fireFloorDepth);
+ const soot = r * 1.13;
+ ellipse(c, 0, 0, soot, soot, gradient(c, 0, 0, soot,
+  [0, 'rgba(42,23,18,.4)'], [.55, 'rgba(42,23,18,.34)'],
+  [.79, 'rgba(48,27,22,.18)'], [1, 'rgba(48,27,22,0)']));
+
+ // A single pool with a soft, uneven edge and a few flecks of hot plastic.
+ const points = Array.from({length: 18}, (_, i) => {
+  const angle = i * tau / 18;
+  const edge = r * (.80 + .23 * noise(seed, i + 20));
+  return [Math.cos(angle) * edge, Math.sin(angle) * edge];
+ });
+ c.fillStyle = gradient(c, 0, 0, r * 1.03,
+  [0, '#c04c21c4'], [.36, '#8e2f21d9'], [.69, '#51221fcf'],
+  [.87, '#742e1f60'], [1, '#742e1f00']);
+ c.beginPath();
+ const last = points.at(-1);
+ c.moveTo((last[0] + points[0][0]) / 2, (last[1] + points[0][1]) / 2);
+ for (let i = 0; i < points.length; i++) {
+  const [x, y] = points[i], [nextX, nextY] = points[(i + 1) % points.length];
+  c.quadraticCurveTo(x, y, (x + nextX) / 2, (y + nextY) / 2);
+ }
+ c.closePath();
+ c.fill();
+ for (let i = 0; i < 19; i++) {
+  const angle = i * goldenAngle + noise(seed, i + 50);
+  const distance = r * .83 * Math.sqrt(noise(seed, i + 70));
+  const size = r * (.009 + .017 * noise(seed, i + 91));
+  const heat = .34 + .17 * Math.sin(age * 4 + i * goldenAngle);
+  ellipse(c, Math.cos(angle) * distance, Math.sin(angle) * distance,
+   size, size * .66, `rgba(255,138,51,${heat})`);
+ }
+
+ const reach = r * 1.25 * (1 + .018 * pulse);
+ c.globalCompositeOperation = 'lighter';
+ ellipse(c, 0, 0, reach, reach, gradient(c, 0, 0, reach,
+  [0, `rgba(255,177,68,${.25 + .028 * pulse + .46 * flash})`],
+  [.36, `rgba(255,119,33,${.18 + .019 * pulse + .30 * flash})`],
+  [.72, 'rgba(243,95,25,.047)'], [1, 'rgba(243,95,25,0)']));
  c.restore();
 }
-function ground(c,game,visible=()=>true,fx) {
+
+function fireFlames(c, r, age, seed, fade, reduced) {
+ const particles = [];
+ for (let i = 0; i < fireFlameCount; i++) {
+  const life = .63 + .52 * noise(seed, i + 119);
+  const clock = age / life + (i + noise(seed, i + 148)) / fireFlameCount;
+  const generation = Math.floor(clock), phase = clock - generation;
+  const sample = seed + generation * 181 + i * 223;
+  const angle = i * goldenAngle + (noise(sample, 1) - .5) * 1.85;
+  const orbit = r * .88 * Math.sqrt((i + noise(sample, 2)) / fireFlameCount);
+  const x = Math.cos(angle) * orbit, y = Math.sin(angle) * orbit * fireFloorDepth;
+  const sway = Math.sin(age * 6 + i * goldenAngle) * (reduced ? .21 : .60);
+  particles.push({
+   x, y, tip: sway,
+   lift: r * .27 * phase * (.42 + .58 * fade),
+   height: r * (.23 + .22 * noise(sample, 3)) * (1 - .54 * phase) * (.23 + .77 * fade),
+   width: r * (.052 + .057 * noise(sample, 4)) * (1 - .57 * phase),
+   opacity: clamp(phase / .12) * clamp((1 - phase) / .31) * .91,
+  });
+ }
+ particles.sort((a, b) => a.y - b.y);
+ for (const {x, y, tip, lift, height, width, opacity} of particles) {
+  c.save();
+  c.translate(x + width * tip * .35, y - lift);
+  c.scale(width, height);
+  c.globalAlpha *= opacity;
+  c.fillStyle = gradient(c, .10, -.25, 1.27,
+   [0, '#FFF3B0'], [.22, '#FFF3B0'], [.54, '#FF7A18'], [1, '#C8281C']);
+  c.beginPath();
+  c.moveTo(-.96, -.23);
+  c.bezierCurveTo(-.86, -.54, tip - .43, -.67, tip, -1);
+  c.bezierCurveTo(tip + .08, -.70, .91, -.49, .98, -.23);
+  c.bezierCurveTo(1, .02, -.99, .10, -.96, -.23);
+  c.closePath();
+  c.fill();
+  c.restore();
+ }
+}
+
+function fireAir(c, r, age, seed, fade, reduced) {
+ for (let i = 0; i < 8; i++) {
+  const clock = age * (.73 + .42 * noise(seed, i + 160)) + noise(seed, i + 190);
+  const phase = clock % 1, sample = seed + 29 * i + 137 * Math.floor(clock);
+  const sway = Math.sin(phase * 5.4 + i) * (reduced ? .038 : .09);
+  const x = r * ((noise(sample, 7) - .5) * 1.47 + sway);
+  const y = r * ((noise(sample, 8) - .47) * .43 - phase * .70 * (.42 + .58 * fade));
+  const size = Math.max(.55, r * (.007 + .011 * noise(sample, 9))) * (1 - .43 * phase);
+  c.save();
+  c.globalAlpha *= Math.sin(phase * Math.PI) * .83;
+  ellipse(c, x, y, size, size * 1.25, '#FFE48D');
+  c.restore();
+ }
+ for (let i = 0; i < 3; i++) {
+  const phase = (age * .45 + i / 3) % 1;
+  const x = r * ((i - 1) * .37 + phase * (reduced ? .07 : .18));
+  const y = -r * (.37 + .45 * phase) * (.46 + .54 * fade);
+  const alpha = .044 * Math.sin(phase * Math.PI) * clamp(age / .35);
+  const size = r * (.22 + .17 * phase);
+  ellipse(c, x, y, size, size, gradient(c, x, y, size,
+   [0, `rgba(84,67,62,${alpha})`], [1, 'rgba(84,67,62,0)']));
+ }
+}
+
+function fireZone(c, zone, view) {
+ const age = view.time - zone.startedAt, fade = clamp(zone.until - view.time);
+ if (age < 0 || !fade) return;
+ const r = zone.radius * (.32 + .68 * ease(age / fireImpactTime));
+ const seed = seedFor(zone) + Math.floor(zone.startedAt * 1000);
+ c.save();
+ c.translate(zone.x, zone.y);
+ c.globalAlpha *= fade;
+ fireFloor(c, r, age, seed, view.reduced);
+ fireFlames(c, r, age, seed, fade, view.reduced);
+ fireAir(c, r, age, seed, fade, view.reduced);
+ c.restore();
+}
+
+function ground(c,game,visible=()=>true) {
  const view=beginFrame(c,game);
  sky.syncOrigins(c,game);
- const events=game.effects||[],reduced=view.reduced;
+ const events=game.effects||[];
  for(const e of events){
   if(e.kind!=='radioCrater'||!visible(e))continue;
   const life=e.t/e.max;
   c.save();c.translate(e.x,e.y);c.globalAlpha*=Math.min(1,life*1.65);
   sky.scorch(c,e.radius*.79,true);c.restore();
  }
- for(const z of game.radioFireZones || []) {
-  if (!visible(z)) continue;
-  const age=view.time-z.startedAt, life=z.until-view.time;
-  if (age<0 || life<=0) continue;
-  const fade=clamp(age/.14)*clamp(life/.4), r=z.radius, seed=seedFor(z);
-  const time=age*(reduced?.47:1);
-  c.save(); c.translate(z.x,z.y); c.globalAlpha*=fade;
-  sky.scorch(c,r,false);
-  const sheet=impactSheet();
-  const textures=fx?.prepareImpactMaterials?.();
-  // Unequal pockets of spilled fuel. The scorched islands stay fixed while wisps rise from each pool.
-  const pockets=r>105?8:5;
-  for(let i=0;i<pockets;i++) {
-   const a=i*2.39996+seed*.08+(noise(seed,i+13)-.5)*.9;
-   const d=r*(i===0?.05:.32+.41*noise(seed,i+35));
-   const x=Math.cos(a)*d, y=Math.sin(a)*d;
-   const wide=r*(.14+.19*noise(seed,i+4)), depth=wide*(.38+.24*noise(seed,i+14));
-   const spread=clamp((age-i*.035)/.47);
-   burningTrail(c,x,y,r,spread,.90-.31*clamp(age/.95));
-   if(!spread)continue;
-   glow(c,x,y,wide,depth,'#462219ee','#b745139c');
-   if(textures?.smoke?.length){
-    const rise=(time*.71+noise(seed,i+42))%1;
-    const lift=wide*(.8+1.34*rise);
-    heatCloud(c,textures.smoke[i%3],x+wide*(rise*.23-.08),y-lift,wide*(.60+rise*.72),wide*(.8+rise),Math.sin(rise*Math.PI)*.40);
-   }
-   if(sheet){
-    const phase=(time*(.88+.19*noise(seed,i))+noise(seed,i+8))%1;
-    const width=Math.max(20,wide*1.82)*(.6+.4*spread);
-    const height=width*(1.46+.29*noise(seed,i+17))*(1+(reduced?.035:.10)*Math.sin(tau*phase));
-    paintVolume(c,sheet,3,phase,x,y,width*(noise(seed,i+51)>.5?1:-1),height);
-   }
-   const pieces=2+(i%3);
-   for(let j=0;j<pieces;j++) {
-    const k=5*i+j, phase=time*(3.8+2.1*noise(seed,k+40))+k*1.73;
-    const px=x+(noise(seed,k+6)-.5)*wide*1.4,py=y+(noise(seed,k+38)-.5)*depth;
-    const s=(3+r*.046)*(j===0?1.3:.39+.62*noise(seed,k+17));
-    glow(c,px,py,s*1.8,s*.64,'#ffd075c9','#ef792278');
-    if(!sheet&&textures) {
-     const h=s*(2.55+.55*Math.sin(phase));
-     c.save();c.globalAlpha*=.88;c.drawImage(textures.fire[k%3],px-s*1.32,py-h*.85,s*2.65,h);c.restore();
-    }
-    if(!sheet)flame(c,px,py,s*(.27+.19*noise(seed,k+23)),s*(1.1+.46*Math.sin(phase)),s*.83*Math.sin(phase*.71));
-    const ember=(time*(.38+.58*noise(seed,k+5))+noise(seed,k+13))%1;
-    c.save();c.globalAlpha*=1-ember;
-    ellipse(c,px+Math.sin(ember*4+k)*3+ember*5,py-s*(1.4+ember*2.4),1.15,.73,'#ffdb8c');c.restore();
-   }
-  }
-  c.restore();
+ for (const zone of game.radioFireZones || []) {
+  if (visible(zone)) fireZone(c, zone, view);
  }
  flyovers(c,game);
  groundPasses(c,game,visible,view);
@@ -573,12 +631,12 @@ function impact(c,e,p,fx,reduced){
    stroke(c,4+8*(1-q),'#fffdf2',()=>c.arc(0,0,radius,0,tau));c.restore();
   }
  }else if(e.strike==='missile')missilePressure(c,r,p,style,reduced);
- if(!reduced&&e.strike!=='incendiary')groundSurge(c,e,p,textures);
+ if(!reduced)groundSurge(c,e,p,textures);
  flash(c,r*(.40+.17*p),heat*(reduced?.46:.85),style.wake+'b8');
  c.save();c.globalAlpha*=clamp((1-p)/(nuke?.32:.23));
  const sheet=impactSheet();
  if(sheet){
-  const size=r*(nuke?1.58:e.strike==='missile'?1.92:2.05);
+  const size=r*(nuke?1.58:1.92);
   const mirrored=e.strike==='missile'&&e.seq===1;
   // Expand along the floor, then lift the plume while keeping its base on the impact point.
   const rise=ease(p/.73),lift=reduced?.075:(nuke?.25:.18);
@@ -594,6 +652,7 @@ function event(c,e,fx) {
  if(e.kind==='radioCrater')return true; // Painted under units until the soot dissipates.
  if(e.kind==='radioRoll'){impactSheet();return true;} // Heads-up result renders after units and blasts.
  if((e.kind!=='radioIncoming'&&e.kind!=='radioImpact')||!Object.hasOwn(prop,e.strike))return false;
+ if(e.kind==='radioImpact'&&e.strike==='incendiary')return true; // The fire zone draws its own flash.
  const view=displayFrames.get(c);
  const age=view&&Number.isFinite(e.at)?view.time-e.at:e.max-e.t+(view?.offset||0);
  const p=clamp(age/e.max);
