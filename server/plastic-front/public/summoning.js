@@ -24,6 +24,41 @@
    if(this.phase==='choice'&&['periodic','supply','recovery'].includes(this.choiceKind))this.cancelRecovery();
    this.supplyState().pendingSupport=0;
   };
+
+  const initialPool=ROSTER.filter(type=>type!=='medic');
+  const shuffle=(items,random)=>{
+   const shuffled=[...items];
+   for(let i=shuffled.length-1;i>0;i--){
+    const j=Math.floor(random()*(i+1));[shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]];
+   }
+   return shuffled;
+  };
+  p.initialSupportCount=function(type){return isVehicle(type)||type==='drone'?1:2;};
+  p.initialOptions=function(avoid=[]){
+   const cards=shuffle(initialPool,()=>this.random());
+   return [...cards.filter(t=>!avoid.includes(t)),...cards.filter(t=>avoid.includes(t))].slice(0,3);
+  };
+  p.beginInitialSupport=function(){
+   this.choiceKind='initial';this.phase='choice';this.turnChoice=null;this.pendingChoice=null;
+   this.currentOptions=this.initialOptions();this.notify('level',this.currentOptions);
+  };
+  p.chooseInitialSupport=function(type){
+   if(!this.usesSummoning()||this.phase!=='choice'||this.choiceKind!=='initial'||this.turnChoice||
+      !initialPool.includes(type)||!this.currentOptions.includes(type)||this.summonSlots.length)return false;
+   const units=Array.from({length:this.initialSupportCount(type)},()=>({type}));
+   const landings=this.planSummonLandings(units);
+   if(!landings)return false;
+   this.tech[0][type]=1;this.registerSummon(type);this.dropPods.push(...landings);
+   this.currentOptions=[];this.pendingChoice=null;this.choiceKind='level';this.turnChoice=null;this.phase='playing';
+   this.notify('change');return true;
+  };
+  p.rerollUpgrade=function(){
+   if(this.phase!=='choice'||!['initial','level'].includes(this.choiceKind)||this.turnChoice||this.rerollCount<1)return false;
+   const previous=this.currentOptions;
+   this.currentOptions=this.choiceKind==='initial'?this.initialOptions(previous):this.options(previous);
+   this.rerollCount--;this.pendingChoice=null;
+   this.notify('level',this.currentOptions);return true;
+  };
   p.nextSummonSlot=function(type){
    return this.usesSummoning()&&ROSTER.includes(type)&&!this.summonSlots.includes(type)&&this.summonSlots.length<rules.slots?this.summonSlots.length+1:null;
   };
@@ -45,13 +80,9 @@
    if(this.cash[0]+1e-8<cost)return {cost,reason:'전투 골드가 부족해요'};
    return {cost,reason:''};
   };
-  p.summon=function(slot){
-   const status=this.summonStatus(slot);
-   if(status.reason)return false;
-   const type=this.summonSlots[slot-1],mystery=slot===rules.slots+1;
-   const order=mystery?rollBox(ROSTER,()=>this.random()):{name:TYPES[type].name,units:[{type}]};
+  p.planSummonLandings=function(units){
    const leader=this.commander(0),bounds=this.bounds(),landings=[];
-   for(const unit of order.units){
+   for(const unit of units){
     const angle=this.random()*Math.PI*2,offset=this.random(),r=this.collisionRadius({...unit,team:0});
     let point;
     for(let i=0;i<32;i++){
@@ -61,12 +92,21 @@
         [...this.dropPods,...landings].some(q=>Math.hypot(x-q.x,y-q.y)<24))continue;
      point={x,y};break;
     }
-    if(!point)return false;
+    if(!point)return null;
     const appearance=unit.type==='medic'?this.medicSkinId:unit.type==='sniper'?this.sniperSkinId:undefined;
     landings.push({...unit,...point,team:0,hp:1,appearance,coopOwner:this.coop?this.coopOwner:undefined,face:leader.face,moveFace:leader.face,startedAt:this.time,landAt:this.time+rules.fall});
    }
+
+   return landings.sort((a,b)=>Number(isVehicle(b.type))-Number(isVehicle(a.type)));
+  };
+  p.summon=function(slot){
+   const status=this.summonStatus(slot);
+   if(status.reason)return false;
+   const type=this.summonSlots[slot-1],mystery=slot===rules.slots+1;
+   const order=mystery?rollBox(ROSTER,()=>this.random()):{name:TYPES[type].name,units:[{type}]};
+   const landings=this.planSummonLandings(order.units);
+   if(!landings)return false;
    this.cash[0]-=status.cost;
-   landings.sort((a,b)=>Number(isVehicle(b.type))-Number(isVehicle(a.type)));
    this.dropPods.push(...landings);
    if(mystery)this.notify('toast',order.name+' · '+landings.length+'기 투하');
    this.notify('change');return true;

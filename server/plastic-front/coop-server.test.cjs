@@ -1,6 +1,15 @@
 'use strict';
 const {test}=require('node:test'),assert=require('node:assert/strict'),http=require('node:http');
 const {createCoopHandler}=require('./coop-server.cjs');
+ async function selectOpening(get,token){
+  const reply=await get('/state',null,token);
+  const {round,game,choosing,phase}=reply.data;
+  assert(choosing);assert.equal(phase,'choice');
+  const type=game.fields.currentOptions.includes('rifle')?'rifle':game.fields.currentOptions[0];
+  const result=await get('/command',{action:'chooseInitial',round,type},token);
+  assert.equal(result.status,200);
+  return type;
+ }
 
 test('co-op plans can be set before starting and while paused, are validated, and affect only the authenticated squad',async()=>{
  const {FrontGame,ROSTER,TYPES}=require('./public/engine.js'),seed=new FrontGame().reinforcementPlan(),plan=(type,n)=>({...structuredClone(seed),enabled:true,mode:'balanced',targets:Object.fromEntries(ROSTER.map(t=>[t,t===type?n:0]))});
@@ -9,7 +18,9 @@ test('co-op plans can be set before starting and while paused, are validated, an
  try{
   const green=(await call('/rooms',{name:'green',reinforcementPlan:plan('rifle',3)})).data,blue=(await call('/join',{code:green.state.code,name:'blue',reinforcementPlan:plan('rifle',3)})).data;
   assert.equal((await call('/command',{action:'reinforcementPlan',plan:plan('rifle',6)},blue.token)).status,200);assert.equal((await call('/command',{action:'start'},green.token)).status,200);
-  const room=handler.rooms.get(green.state.code),g=room.game;assert.equal(g.withOwner(0,()=>g.reinforcementPlan().targets.rifle),3);assert.equal(g.withOwner(1,()=>g.reinforcementPlan().targets.rifle),6);
+  const room=handler.rooms.get(green.state.code),g=room.game;
+  for(const token of [green.token,blue.token]){const owner=token===green.token?0:1;g.withOwner(owner,()=>{g.currentOptions=['rifle','mortar','tank'];});room.cached=null;await selectOpening(call,token);}
+  g.time=.3;g.updateDropPods();assert.equal(g.withOwner(0,()=>g.reinforcementPlan().targets.rifle),3);assert.equal(g.withOwner(1,()=>g.reinforcementPlan().targets.rifle),6);
   assert.equal((await call('/command',{action:'pause'},green.token)).status,200);const cash=g.withOwner(0,()=>g.cash[0]);assert.equal((await call('/command',{action:'reinforcementPlan',owner:0,plan:plan('medic',3)},blue.token)).status,200);assert.equal(g.withOwner(0,()=>g.reinforcementPlan().targets.rifle),3);assert.equal(g.withOwner(1,()=>g.reinforcementPlan().targets.medic),3);assert.equal(g.withOwner(0,()=>g.cash[0]),cash);
   const bad=plan('rifle',3);bad.targets.rifle=-1;assert.equal((await call('/command',{action:'reinforcementPlan',plan:bad},blue.token)).status,400);assert.equal(g.withOwner(1,()=>g.reinforcementPlan().targets.medic),3);
   assert.equal((await call('/command',{action:'reinforcementPlan',plan:plan('rifle',6)},blue.token)).status,200);for(const owner of [0,1])g.withOwner(owner,()=>{g.cash[0]=1000;g.xp=0;});assert.equal((await call('/command',{action:'resume'},green.token)).status,200);g.time=60;handler.step();assert.equal(g.dropPods.filter(p=>p.coopOwner===0).length,1);assert.equal(g.dropPods.filter(p=>p.coopOwner===1).length,4);g.time=60.5;g.updateDropPods();assert.equal(g.withOwner(0,()=>g.reinforcementCounts().rifle),3);assert.equal(g.withOwner(1,()=>g.reinforcementCounts().rifle),6);assert.equal(g.coopChoosing[0],false);assert.equal(g.coopChoosing[1],false);
@@ -25,6 +36,13 @@ test('two clients authenticate, grow independently without pausing, reconnect an
   assert.equal((await call('/command',{action:'start'},b.token)).status,403);
   assert.equal((await call('/command',{action:'start'},a.token)).status,200);
   const r=handler.rooms.get(a.state.code),g=r.game;
+  const seed=(await call('/state',null,b.token)).data;
+  const rolled=await call('/command',{action:'reroll',round:seed.round},b.token);assert.equal(rolled.status,200);assert.equal(rolled.data.game.fields.rerollCount,2);
+  assert.equal((await call('/command',{action:'reroll',round:seed.round},b.token)).status,409);
+  await selectOpening(call,a.token);handler.step();assert.equal(g.time,0);
+  await selectOpening(call,b.token);assert.equal(g.phase,'playing');
+  g.time=.3;g.updateDropPods();
+  g.withOwner(1,()=>{g.summonSlots[0]='rifle';g.tech[0].rifle=1;});
   assert.equal(g.withOwner(0,()=>g.addUnit(0,'medic',800,900)).appearance,'rina');
   assert.equal(g.withOwner(1,()=>g.addUnit(0,'medic',1000,900)).appearance,'classic');
   g.withOwner(0,()=>{g.xp=g.neededXP();});handler.step();

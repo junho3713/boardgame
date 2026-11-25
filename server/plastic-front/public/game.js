@@ -392,23 +392,31 @@ function updateUI(){syncBattleMusic();if(game.phase!=='ready')unitModels.prefetc
  renderWaveTest();
 }
 function showUpgrade(options){
+ const initial=game.choiceKind==='initial';
+ $('upgradeOverlay').classList.toggle('initial-support',initial);
  if(selectedMode==='idle'&&autoPilot?.active)return;
  const pixel=game.pixelRoom&&game.isRoomCampaign();
  $('upgradeOverlay').classList.toggle('pixel-promotion',Boolean(pixel));
  clearInput();const supply=game.choiceKind==='supply',periodic=game.choiceKind==='periodic',boss=game.choiceKind==='boss',recovery=game.choiceKind==='recovery'||supply||periodic;
  document.querySelector('.upgrade-layout').classList.toggle('upgrade-only',game.mode==='pve'&&!recovery);
- $('cancelRecovery').hidden=!recovery;$('runChoiceSummary').hidden=recovery;$('upgradeCards').hidden=recovery;document.querySelector('.upgrade-layout').classList.toggle('recovery-choice',recovery);
- $('promotionLevel').textContent=recovery?'EMERGENCY SUPPORT · 유료 충원':boss?'BOSS REWARD · 추가 강화':`LEVEL ${pad(game.level)}`;
- $('promotionTitle').textContent=recovery?'분대를 다시 편성하세요.':boss?'보스 격파 보상을 선택하세요.':'레벨업 선택';
- $('promotionDescription').textContent=recovery?'보유 자원으로 해금한 병과를 충원합니다. XP·레벨·강화 기회 소비 없음 · 확정 후 90초 대기.':boss?'레벨업과 별개의 무료 강화입니다. 작전 능력은 같은 5종 선택 한도를 따릅니다.':'병과를 키우거나 능력 5종을 구성하세요. Lv.5 + 지정 능력 Lv.5면 자동 진화합니다.';
- if(!recovery&&game.completedEvolutions()>=5)$('promotionDescription').textContent='진화 5종 완성 · 남은 강화 최대 1개 + 골드 상자 + 긴급 치료. 더 올릴 강화가 없으면 골드·회복 중 선택하세요.';
+ $('cancelRecovery').hidden=!recovery;$('runChoiceSummary').hidden=recovery||initial;$('upgradeCards').hidden=recovery;document.querySelector('.upgrade-layout').classList.toggle('recovery-choice',recovery);
+ $('promotionLevel').textContent=initial?'00:00':recovery?'EMERGENCY SUPPORT · 유료 충원':boss?'BOSS REWARD · 추가 강화':`LEVEL ${pad(game.level)}`;
+ $('promotionTitle').textContent=initial?'초기 지원 병과 선택':recovery?'분대를 다시 편성하세요.':boss?'보스 격파 보상을 선택하세요.':'레벨업 선택';
+ $('promotionDescription').textContent=initial?'병과 하나를 고르면 무료 지원군이 착지하고 작전이 시작돼요.':recovery?'보유 자원으로 해금한 병과를 충원합니다. XP·레벨·강화 기회 소비 없음 · 확정 후 90초 대기.':boss?'레벨업과 별개의 무료 강화입니다. 작전 능력은 같은 5종 선택 한도를 따릅니다.':'병과를 키우거나 능력 5종을 구성하세요. Lv.5 + 지정 능력 Lv.5면 자동 진화합니다.';
+ if(!initial&&!recovery&&game.completedEvolutions()>=5)$('promotionDescription').textContent='진화 5종 완성 · 남은 강화 최대 1개 + 골드 상자 + 긴급 치료. 더 올릴 강화가 없으면 보급 보상을 선택하세요.';
  document.querySelector('.support-panel').hidden=boss||game.mode==='pve'&&!recovery;document.querySelector('.upgrade-layout').classList.toggle('boss-reward',boss);
- $('continueBattle').disabled=true;$('continueBattle').innerHTML='선택 후 확정하고 진격 <span>→</span>';
- $('choiceStatus').textContent=recovery?'지원 편성을 선택하거나 취소하고 계속 진격하세요.':boss?'강화 보상 1개를 선택하세요. 확정 전에는 변경할 수 있습니다.':game.mode==='pve'?(game.usesSummoning()?'강화를 선택하세요. 등록한 병과는 전투 중 하단에서 소환할 수 있어요.':'강화 1개를 선택하세요. 병력 지원은 1분부터 매분 제공됩니다.'):'강화 · 지원 중 하나를 선택하세요. 확정 전에는 변경할 수 있습니다.';
+ $('continueBattle').hidden=initial;$('continueBattle').disabled=true;syncReroll();
+ document.querySelector('.choice-foot>b').textContent=initial||!COOP?.active?'선택 중 전투 일시정지':'전투 계속 · 내 분대만 5초 무적';
+ $('continueBattle').innerHTML='선택 후 확정하고 진격 <span>→</span>';
+ $('choiceStatus').textContent=initial?'첫 병과는 하단 1번 슬롯에 등록돼요.':recovery?'지원 편성을 선택하거나 취소하고 계속 진격하세요.':boss?'강화 보상 1개를 선택하세요. 확정 전에는 변경할 수 있습니다.':game.mode==='pve'?(game.usesSummoning()?'강화를 선택하세요. 등록한 병과는 전투 중 하단에서 소환할 수 있어요.':'강화 1개를 선택하세요. 병력 지원은 1분부터 매분 제공됩니다.'):'강화 · 지원 중 하나를 선택하세요. 확정 전에는 변경할 수 있습니다.';
  document.querySelector('.support-note').textContent=recovery?'보유 자원으로 충원 · 강화·XP 소비 없음':'매 레벨업마다 제공 · 강화와 하나만 선택';
  document.querySelector('.support-menu>small').textContent=recovery?'생산 자원만 사용 · 확정 후 90초 대기 ↗':'자원 + 이번 강화 기회 사용 ↗';
  $('supportMenuBtn').disabled=boss;$('supportMenuBtn').classList.remove('selected');
  $('upgradeCards').innerHTML=options.map((t,i)=>{
+  if(initial){
+   const b=types[t],count=game.initialSupportCount(t);
+   return `<button type="button" class="upgrade-card" data-upgrade="${t}"><span class="card-icon unit-card-icon">${cardArt(t,()=>unitArt.icon(t,b.icon))}</span><h3>${b.name}</h3><span class="summon-preview-badge">[1번 슬롯 등록]</span><p>${b.role}</p><span class="card-bottom"><b>Lv.1 · ${count}기 무료</b><span class="card-select-label">출격</span></span></button>`;
+  }
   const key=game.abilityKey(t);
   if(key){const b=abilities[key],lv=game.abilities[key],hint=evolutionHint(t);return `<button class="upgrade-card ability-card" aria-pressed="false" data-upgrade="${t}"><span class="card-num">전체 부대</span><span class="card-icon">${cardArt(key,()=>upgradeArt.icon(key,b.icon))}</span><span class="card-badge">${lv?'작전 능력 강화':'새 능력 · 5종 중 1칸'}</span><h3>${b.name} 증가</h3><p><strong class="card-effect">${b.name} <em>+${game.abilityStep(key,lv+1)}${b.unit}</em></strong><span class="card-detail">${b.detail}${key==='critDamage'?'<br>기본 치명타 확률 5%':''}</span><small class="evolution-hint">${hint||'이번 작전의 부대 전체에 적용'}</small></p><span class="card-bottom"><span>Lv.${lv} → Lv.${lv+1}<small>누적 ${abilityValue(key,lv+1)} / 최대 5단계</small></span><span class="card-select-label">선택</span></span></button>`;}
   if(fieldCards[t]){const b=fieldCards[t];return `<button class="upgrade-card" aria-pressed="false" data-upgrade="${t}"><span class="card-num">즉시 보급</span><span class="card-icon">${cardArt(t,()=>upgradeArt.icon(t,b.icon))}</span><span class="card-badge">능력 슬롯을 사용하지 않음</span><h3>${b.name}</h3><p><strong class="card-effect">${b.detail}</strong></p><span class="card-bottom">즉시 보상<span class="card-select-label">선택</span></span></button>`;}
@@ -428,8 +436,37 @@ function choiceDone(selected){
 }
 $('emergencySupportBtn').onclick=()=>game.beginRecovery();
 $('cancelRecovery').onclick=()=>{if(game.cancelRecovery()){$('upgradeOverlay').hidden=true;$('supportOverlay').hidden=true;clearInput();updateUI();}};
-$('upgradeCards').addEventListener('click',e=>{const b=e.target.closest('[data-upgrade]');if(b&&game.stageChoice(b.dataset.upgrade))choiceDone(b.dataset.upgrade);});
-$('continueBattle').onclick=()=>{if(game.confirmChoice()){$('upgradeOverlay').hidden=true;clearInput();game.phase='playing';game.levelCheck();updateUI();}else{toast('선택과 자원을 확인하고 다시 확정하세요.');}};
+
+let choiceRequestPending=false;
+async function submitOpening(type){
+ if(choiceRequestPending)return;
+ if(!COOP?.active){
+  if(game.chooseInitialSupport(type)){$('upgradeOverlay').hidden=true;clearInput();updateUI();}
+  else toast('초기 지원 병과를 선택할 수 없어요.');
+  return;
+ }
+ choiceRequestPending=true;syncReroll();
+ const overlay=$('upgradeOverlay');overlay.setAttribute('aria-busy','true');
+ try{await COOP.chooseInitial(type);}finally{choiceRequestPending=false;overlay.removeAttribute('aria-busy');syncReroll();}
+}
+function syncReroll(){
+ const button=$('rerollUpgrade'),available=['initial','level'].includes(game.choiceKind);
+ button.hidden=!available;button.disabled=choiceRequestPending||game.rerollCount<=0;
+ button.querySelector('small').textContent='남은 횟수: '+game.rerollCount;
+}
+$('rerollUpgrade').onclick=async()=>{
+ if(game.phase!=='choice'||choiceRequestPending)return;
+ if(!COOP?.active){game.rerollUpgrade();return;}
+ choiceRequestPending=true;syncReroll();
+ try{await COOP.reroll();}finally{choiceRequestPending=false;syncReroll();}
+};
+$('upgradeCards').addEventListener('click',e=>{
+ const button=e.target.closest('[data-upgrade]');
+ if(!button||choiceRequestPending||game.phase!=='choice')return;
+ if(game.choiceKind==='initial'){submitOpening(button.dataset.upgrade);return;}
+ if(game.stageChoice(button.dataset.upgrade))choiceDone(button.dataset.upgrade);
+});
+$('continueBattle').onclick=()=>{if(!choiceRequestPending&&game.confirmChoice()){$('upgradeOverlay').hidden=true;clearInput();game.phase='playing';game.levelCheck();updateUI();}else{toast('선택과 자원을 확인하고 다시 확정하세요.');}};
 
 function showResult({result,reason}){cursorAimEnabled=false;if(!COOP?.active&&selectedMode!=='idle'){runSave.clear(game);refreshManualSave();}clearInput();$('upgradeOverlay').hidden=true;$('resultTitle').textContent=result==='win'?'작전 성공.':result==='lose'?'작전 실패.':'팽팽한 대치.';const elapsed=`${Math.floor(game.time/60)}분 ${Math.floor(game.time%60)}초`;$('resultText').textContent=game.isDesktopDefense()?(result==='win'?`20분 동안 기지를 지켰습니다! ${game.bedroomStar?'방바닥':'책상'} 방어 성공 · 남은 기지 체력 ${Math.ceil(game.bases[0].hp)}/${game.bases[0].maxHp}.`:`아군 방어 기지가 파괴되었습니다. 생존 시간 ${elapsed} / 목표 20분.`):game.mode==='crisis'?(result==='win'?`포병 2기를 파괴해 포격이 중단되었습니다. 피격 ${game.crisis.hits}회 · 완전 회피 ${game.crisis.dodges}회 · 작전 시간 ${elapsed}.`:`지휘관이 세 번 후퇴해 연습이 종료되었습니다. 피격 ${game.crisis.hits}회 · 다음에는 포격 원이 고정된 뒤 부대 전체를 이동하세요.`):game.mode==='pve'?(result==='win'?(game.isRoomCampaign()?`최종 보스를 처치했습니다. 거실 작전 성공 · 작전 시간 ${elapsed}.`:`최종 기지를 파괴했습니다. 사냥 구역과 전초기지를 모두 돌파했습니다. 작전 시간 ${elapsed}.`):`지휘관의 후퇴 기회 3회를 모두 사용했습니다. 도달 단계 ${game.mission.stage}/3 · 작전 시간 ${elapsed}.`):reason==='base'?(result==='win'?'상대 본진을 파괴했습니다.':'아군 본진이 파괴되었습니다.'):'3분 대결이 끝나 남은 본진 체력으로 판정했습니다.';$('resultText').textContent+=` 분대원 전사 ${game.losses[0]}기.`;$('runGoldText').textContent=`이번 작전 획득 ◈ ${Math.floor(game.runGold)} · 보유 골드 ${Math.floor(profile.gold)}`;$('resultStats').innerHTML=`<div><b>${game.mode==='crisis'?game.crisis.hits:game.level}</b><span>${game.mode==='crisis'?'포격 피격 횟수':'최종 레벨'}</span></div><div><b>${game.kills}</b><span>처치 수</span></div><div><b>${pad(Math.floor(game.time/60))}:${pad(Math.floor(game.time%60))}</b><span>작전 시간</span></div>`;$('resultOverlay').hidden=false;updateUI();}
 async function newGame(start=true){if(COOP?.active)return;if(waveTestBackup)stopWaveTest(false);if(start&&selectedMode!=='idle'&&!runSave.claim()){toast(runSave.error);return;}battleMusic.reset();if(start){enableAudio(true);await gameAssetsReady;if(game.pixelRoom)await window.FrontPixelRoom.load();}if(selectedMode==='idle')autoSession.detach();cursorAimEnabled=false;clearInput();for(const id of ['displayOverlay','constructionOverlay','resultOverlay','upgradeOverlay','pauseOverlay','helpOverlay','intelOverlay','supportOverlay','permanentOverlay','evolutionOverlay','fusionOverlay','battleSquadOverlay','battleMenuOverlay'])$(id).hidden=true;game.commanderId=selectedCommander;game.sniperSkinId=selectedSniperSkin;game.medicSkinId=selectedMedicSkin;game.flameSkinId=selectedFlameSkin;game.reset();if(start&&selectedMode!=='idle')runSave.begin(game);if(selectedMode==='idle'){if(start){if(!startAuto())return;}else{autoPilot=new window.FrontAutoPilot(game,idlePlan);autoPilot.prepare();renderIdlePlan();}}rosterKey='';updateIntel();buildTerrain();if(start){$('startOverlay').hidden=true;if(selectedMode!=='idle')game.start();toast(game.bedroomStar&&game.isDesktopDefense()?'2성 분대 합성 · 사방 공세 / 중앙 기지를 20분 지키세요':game.isDesktopDefense()?'20분 동안 버티세요 · 북쪽 공세 / 건설 한도 2배':selectedMode==='idle'?'AI 지휘 시작 · 기존 돌파 작전 규칙으로 진행합니다.':game.mode==='crisis'?'15초 뒤 포병 도착 · 부대를 이동해 포격을 피하고 적 포병을 격파하세요.':(game.reinforcementPlan().enabled?'채집 트럭 2대가 자원을 생산합니다. 자동충원은 30초마다 목표 편성을 확인합니다.':'채집 트럭 2대가 고정 수입을 생산합니다. 첫 병력 지원은 1분 뒤 제공됩니다.'));}else{$('startOverlay').hidden=false;runSave.release();}refreshManualSave();updateUI();}

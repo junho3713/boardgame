@@ -88,8 +88,17 @@ function createCoopHandler({now=Date.now,automatic=true}={}){
     }else{
      if(r.paused||r.players.some(q=>!connected(q)))fail(409,'연결 후 작전을 재개해 주세요.');
      g.withOwner(p.owner,()=>{
-      let ok=false;const worldPhase=g.phase;try{
-      if(action==='move')ok=g.setMoveOrder(body.x,body.y,false);
+      let ok=false;const worldPhase=g.phase;const opening=worldPhase==='choice'&&g.time===0;try{
+      if(action==='chooseInitial'||action==='reroll'){
+       if(body.round!==g.coopRounds[p.owner]||!g.coopChoosing[p.owner])fail(409,'선택지가 갱신되었습니다.');
+       g.phase='choice';
+       if(action==='chooseInitial'){
+        ok=g.chooseInitialSupport(body.type);if(ok)g.coopChoosing[p.owner]=false;
+       }else{
+        ok=g.rerollUpgrade();if(ok)g.coopRounds[p.owner]++;
+       }
+      }else if(opening)fail(409,'두 대장이 초기 병과를 선택하면 작전이 시작됩니다.');
+      else if(action==='move')ok=g.setMoveOrder(body.x,body.y,false);
       else if(action==='follow')ok=g.followCommander();
       else if(action==='focus'){const target=body.target==='enemy-base'?g.bases[1]:[...g.units,...g.structures,...g.defenses].find(u=>u.id===body.target);ok=g.setFocus(target);}
       else if(action==='ultimate')ok=g.useUltimate();
@@ -107,7 +116,7 @@ function createCoopHandler({now=Date.now,automatic=true}={}){
        if(body.round!==g.coopRounds[p.owner]||!g.coopChoosing[p.owner])fail(409,'강화 선택이 갱신되었습니다.');g.phase='choice';ok=g.confirmChoice();if(ok)g.coopChoosing[p.owner]=false;
       }
       if(!ok)fail(409,'현재 상태에서 실행할 수 없습니다.');
-      }finally{if(g.phase!=='ended')g.phase=worldPhase;}
+      }finally{if(g.phase!=='ended')g.phase=opening&&!g.coopChoosing.some(Boolean)?'playing':worldPhase;}
      });
     }
    }

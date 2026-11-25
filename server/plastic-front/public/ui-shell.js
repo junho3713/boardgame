@@ -15,7 +15,7 @@ if(start){
  function update(){const selected=name=>{const i=content.querySelector('input[name="'+name+'"]:checked');return i?.closest('label')?.querySelector('b')?.textContent||'';};summary.textContent=[selected('commander'),selected('battlefield')].filter(Boolean).join(' · ');}
  content.addEventListener('change',update);update();
 }
-const upgrade=$('upgradeOverlay')?.querySelector('.modal');if(upgrade){const footer=document.createElement('footer');footer.className='ui-actions';const button=$('continueBattle');const content=document.createElement('div');content.className='ui-scroll';if(button)footer.append(button);while(upgrade.firstChild)content.append(upgrade.firstChild);upgrade.append(content,footer);upgrade.classList.add('ui-split');}
+const upgrade=$('upgradeOverlay')?.querySelector('.modal');if(upgrade){const footer=document.createElement('footer');footer.className='ui-actions';const button=$('continueBattle');footer.append($('rerollUpgrade'));const content=document.createElement('div');content.className='ui-scroll';if(button)footer.append(button);while(upgrade.firstChild)content.append(upgrade.firstChild);upgrade.append(content,footer);upgrade.classList.add('ui-split');}
 const overlays=[...document.querySelectorAll('.overlay')],app=document.querySelector('.app');let active=null;const previous=new WeakMap();
 function sync(){const open=overlays.filter(o=>!o.hidden);const top=open.sort((a,b)=>(Number(getComputedStyle(a).zIndex)||0)-(Number(getComputedStyle(b).zIndex)||0)).at(-1)||null;
  if(top===active)return;const old=active;active=top;if(app)app.inert=!!top;for(const o of overlays)o.inert=!!top&&o!==top;

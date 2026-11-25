@@ -64,3 +64,40 @@
 @media(max-width:600px) and (max-height:480px) and (orientation:landscape){
  .summon-active.game-hud .battle-frame>#joystick,.summon-active.game-hud .battle-frame>#ultimateBtn{bottom:126px}
 }
+
+/* Keep the reroll action available beside confirmation on short screens. */
+#upgradeOverlay .ui-actions{grid-template-columns:auto minmax(0,1fr);align-items:stretch}
+#upgradeOverlay :is(.upgrade-reroll,#continueBattle,#runChoiceSummary)[hidden]{display:none}
+#upgradeOverlay .ui-actions:has(.upgrade-reroll[hidden]){grid-template-columns:minmax(0,1fr)}
+#upgradeOverlay .upgrade-reroll{
+ display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:3px 7px;
+ min-height:48px;padding:6px 13px;border:1px solid #77926a;border-radius:5px;
+ background:#e6ecd8;color:#284535;font-size:13px;font-weight:750;touch-action:manipulation
+}
+#upgradeOverlay .upgrade-reroll small{color:#45634b;font-size:11px}
+#upgradeOverlay .upgrade-reroll:hover:not(:disabled){background:#d8e5c5}
+#upgradeOverlay .upgrade-reroll:disabled{background:#d1d4c8;color:#60695f;border-color:#a5aa9b;opacity:.84;cursor:default}
+#upgradeOverlay .upgrade-reroll:disabled small{color:inherit}
+#upgradeOverlay .upgrade-reroll:focus-visible{outline:3px solid #526e44;outline-offset:2px}
+#upgradeOverlay.initial-support>.upgrade-modal.ui-split{height:auto;max-height:calc(var(--ui-height,100dvh) - 20px)}
+#upgradeOverlay.initial-support .ui-actions{display:flex;justify-content:center}
+#upgradeOverlay.initial-support .upgrade-card h3{margin:4px 0 6px}
+#upgradeOverlay.initial-support .upgrade-card p{margin:9px 0 12px}
+#upgradeOverlay.initial-support .summon-preview-badge{align-self:center}
+#upgradeOverlay.initial-support[aria-busy=true] .upgrade-cards{pointer-events:none}
+#upgradeOverlay.pixel-promotion .upgrade-reroll{border-radius:0}
+#initialAllyWait{
+ position:absolute;z-index:12;top:44%;left:50%;transform:translateX(-50%);
+ width:max-content;max-width:calc(100% - 32px);margin:0;padding:12px 16px;
+ border:1px solid #a7bda1;border-radius:5px;background:#20382e;color:#f8f0d7;
+ text-align:center;font-size:13px;pointer-events:none
+}
+@media(max-width:600px){
+ #upgradeOverlay .upgrade-reroll{min-width:86px;padding:5px 8px}
+ #upgradeOverlay .ui-actions{gap:8px}
+ #upgradeOverlay.initial-support .ui-scroll{padding:13px 14px}
+ #upgradeOverlay.initial-support .upgrade-card{padding:10px 11px;row-gap:4px}
+ #upgradeOverlay.initial-support .upgrade-card h3,#upgradeOverlay.initial-support .upgrade-card p{margin:0}
+ #upgradeOverlay.initial-support .summon-preview-badge{grid-column:2;justify-self:start}
+ #upgradeOverlay.initial-support .card-bottom{padding-top:3px}
+}

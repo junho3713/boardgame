@@ -176,9 +176,11 @@ class FrontGame{
  setMedicSkin(id){if(!['classic','rina'].includes(id)||this.phase!=='ready')return false;this.medicSkinId=id;for(const u of this.units)if(u.type==='medic'&&u.team===0)u.appearance=id;return true;}
  random(){return Math.random();}
  reset(mode=this.mode||'pve'){
-  this.manualAim=null;this.summonSlots=['rifle'];this.dropPods=[];
+  this.manualAim=null;this.rerollCount=3;this.dropPods=[];
   this.roomCampaign=null;this.bossIntro=null;this.roomHealthVersion=ROOM_CAMPAIGN.config.combat.healthVersion;this.roomHQAlarm=null;this.roomFenceVersion=0;this.roomEncounterVersion=0;this.enemyLuckySalvos=[];this.balanceVersion=BALANCE_VERSION;this.mode=['duel','crisis'].includes(mode)?mode:'pve';this.world={id:'backyard',width:1600,height:2800,scale:1};this.viewport=null;this.buildings=[];this.buildSerial=0;this.constructionLine=null;this.finalBattle={spawned:false,killed:false};this.roomEvents=0;
   this.mageShieldQuest=null;this.laserExposureQuest=null;this.roomGuardianVersion=0;this.roomFortificationVersion=0;this.roadCaptainVersion=0;this.guardianSiege=null;this.phase='ready';this.time=0;this.runGold=0;this.salvaged=0;this.nextRecoveryAt=0;this.stageSupplied=[];this.lastEnemyGrowth=-1;this.level=1;this.xp=0;this.kills=0;this.losses=[0,0];this.scouts=0;this.turnChoice=null;this.pendingChoice=null;this.navigationCache=new Map();this.cash=[135,135];this.trucks=[2,2];this.tech=[0,1].map(()=>Object.fromEntries(ROSTER.map(t=>[t,t==='rifle'?1:0])));
+  this.summonSlots=this.usesSummoning?.()?[]:['rifle'];
+  if(this.usesSummoning?.())this.tech[0].rifle=0;
   this.cardShownCounts={};this.choiceKind='level';this.abilities=Object.fromEntries(Object.keys(ABILITIES).map(k=>[k,0]));this.evolved=Object.fromEntries(ROSTER.map(k=>[k,false]));this.bossState={nextAt:this.waveRules().boss.firstAt,warned:false,spawned:0,killed:0,rewards:0,claimed:0};
   this.aiHQTarget=null;this.nextPirateCannonAt=PIRATE_REINFORCEMENT.from;this.ultimate={readyAt:0,activeUntil:0,startedAt:0,nextShotAt:0,shots:0,angle:-Math.PI/2};this.moveOrder=null;this.focusTarget=null;this.focusAutomatic=false;this.formationFacing=-Math.PI/2;this.formationEnemy=null;this.lastPressure=0;this.barrages=[];this.crisis={phase:this.mode==='duel'?'disabled':'idle',warnAt:this.mode==='crisis'?0:450,startAt:this.mode==='crisis'?15:480,nextSalvo:0,nextEscort:0,salvos:0,hits:0,dodges:0,canceled:0,battery:[]};
   this.units=[];this.shots=[];this.evolutionAttacks=[];this.evolutionBlasts=[];this.butterflyGusts=[];this.mortarShells=[];this.luckyMines=[];this.luckyGlues=[];this.luckyGlueHistory=[];this.luckySprays=[];this.luckySalvos=[];this.effects=[];this.serial=0;this.scoutUntil=0;this.report=null;this.enemyNext=15;this.enemyTechNext=40;this.enemyAdvanceAt=65;this.enemyPlan=['tank','sniper','guntruck','rocket','machinegun','mortar'][Math.floor(this.random()*6)];this.rallyUntil=0;this.rallyReady=0;this.camera={x:800,y:2170};this.input={x:0,y:0};
@@ -197,7 +199,7 @@ class FrontGame{
   ].map(([id,name,x,y,defenseKind,activeStage])=>({id,name,x,y,defenseKind,activeStage,hp:defenseKind==='missileTower'?ENEMY_MISSILE.hp:defenseKind==='bunker'?1500:1100,maxHp:defenseKind==='missileTower'?ENEMY_MISSILE.hp:defenseKind==='bunker'?1500:1100,team:1,structure:true,r:42,cooldown:1.5}));
   this.obstacles=[{x:360,y:2190,w:150,h:70,color:'#d4c58e',label:'A'},{x:1080,y:2180,w:125,h:85,color:'#a3b5bd',label:'B'},{x:480,y:1720,w:145,h:75,color:'#c5b39b',label:'C'},{x:1030,y:1670,w:165,h:75,color:'#d6c789',label:'D'},{x:230,y:1210,w:150,h:80,color:'#a9b8ad',label:'E'},{x:1180,y:1180,w:140,h:95,color:'#c4b69e',label:'F'},{x:510,y:790,w:155,h:75,color:'#d0c591',label:'G'},{x:1050,y:660,w:110,h:80,color:'#a3b5bd',label:'H'}];
   this.pickups=[{x:450,y:2330},{x:1160,y:2040},{x:350,y:1780},{x:1270,y:1460},{x:520,y:1330},{x:900,y:1050},{x:350,y:850},{x:1270,y:650}].map(p=>({...p,active:true}));
-  this.addUnit(0,'leader',800,2370);this.addUnit(0,'rifle',760,2435);this.addUnit(0,'rifle',840,2435);
+  this.addUnit(0,'leader',800,2370);if(!this.usesSummoning?.()){this.addUnit(0,'rifle',760,2435);this.addUnit(0,'rifle',840,2435);}
   if(this.mode==='duel'){
    this.addUnit(1,'leader',800,450);this.addUnit(1,'rifle',755,380);this.addUnit(1,'rifle',845,380);
    this.spawnPatrol(790,2080);this.spawnPatrol(490,1880);this.spawnPatrol(1130,1740);this.spawnPatrol(650,1370);this.spawnPatrol(1050,1030);
@@ -236,7 +238,7 @@ class FrontGame{
   this.obstacles=[['keyboard','기계식 키보드',410,100,1160,260],['notebook','작전 노트',65,1010,415,510],['mug','아이스 커피',1960,410,280,250],['tape','테이프',1910,1370,250,210],['eraser','지우개',725,697.875,170,89.25],['books','책 더미',105,1870,370,240],['pencilbox','연필 케이스',1930,1920,300,155]].map(([kind,label,x,y,w,h])=>({kind,label,x,y,w,h}));
   this.obstacles.push(...this.desktopCovers(),...this.desktopDecorations(),this.desktopPencil());
   this.pickups=[{x:1020,y:1670,active:true},{x:1430,y:1690,active:true},{x:1230,y:1330,active:true}];
-  this.addUnit(0,'leader',1200,1760);this.addUnit(0,'rifle',1140,1700);this.addUnit(0,'rifle',1260,1700);
+  this.addUnit(0,'leader',1200,1760);if(!this.usesSummoning?.()){this.addUnit(0,'rifle',1140,1700);this.addUnit(0,'rifle',1260,1700);}
   for(const x of [1060,1340]){const spec=BUILDINGS.barricade;this.buildings.push({id:'built-'+(++this.buildSerial),...spec,kind:'barricade',x,y:1600,team:0,built:true,structure:true,r:spec.w/2,maxHp:spec.hp,buildAt:-ROOM_RULES.assembly,buildUntil:0,cooldown:0,face:-Math.PI/2,walk:0,starter:true});}
  }
  setupDesktopStar(){
@@ -244,7 +246,7 @@ class FrontGame{
   this.bases=[{...cfg.hq,maxHp:cfg.hq.hp,team:0,base:true,r:85},{x:cfg.width/2,y:100,hp:0,maxHp:900,team:1,base:true,r:85,hidden:true}];
   this.structures=[];this.defenses=[];this.units=[];this.buildings=[];this.pickups=cfg.supplies.slice(0,3).map(p=>({...p,active:true}));this.crisis.phase='disabled';
   this.mission={stage:1,wave:0,totalWaves:0,nextWave:Infinity,nextAssault:this.waveRules().assault.firstAt,stageStarted:0};this.desktop={nextSupply:75,entries:0,stage:0};this.camera={x:cfg.start.x,y:cfg.start.y-168};this.obstacles=map.obstacles();
-  this.addUnit(0,'leader',cfg.start.x,cfg.start.y);this.addUnit(0,'rifle',cfg.start.x-45,cfg.start.y+60);this.addUnit(0,'rifle',cfg.start.x+45,cfg.start.y+60);
+  this.addUnit(0,'leader',cfg.start.x,cfg.start.y);if(!this.usesSummoning?.()){this.addUnit(0,'rifle',cfg.start.x-45,cfg.start.y+60);this.addUnit(0,'rifle',cfg.start.x+45,cfg.start.y+60);}
   for(const [kind,x,y]of cfg.starters){const spec=BUILDINGS[kind];this.buildings.push({id:'built-'+(++this.buildSerial),...spec,kind,x,y,team:0,built:true,structure:true,r:spec.w/2,maxHp:spec.hp,buildAt:-ROOM_RULES.assembly,buildUntil:0,cooldown:0,face:-Math.PI/2,walk:0,starter:true});}
  }
  desktopCovers(){return [[650,1390,180,70],[1510,1390,180,70],[1060,1200,260,65],[1500,1780,180,70],[600,2010,220,60],[1110,2250,180,55]].map(([x,y,w,h],i)=>({x:x-w*.25,y:y-h*.25,w:w*1.5,h:h*1.5,kind:'deskCover',label:'멀티탭 '+(i+1),cover:true}));}
@@ -469,7 +471,7 @@ class FrontGame{
  solidObstacles(fireTeam=null){const c=collisionState(this);if(!c.views.has(fireTeam))c.views.set(fireTeam,[...c.static.filter(o=>!o.firePass),...c.solid.filter(b=>!(b.team===fireTeam&&b.kind==='barricade')).map(b=>b.body)]);return c.views.get(fireTeam);}
  baseShielded(){if(this.isRoomCampaign())return false;return this.isDesktopDefense()||this.mode==='pve'&&(this.mission.stage<3||this.bounds().id==='livingroom'&&(this.time<ROOM_RULES.finalAt||!this.finalBattle?.killed||this.crisis.phase!=='cleared'));}
  notify(type,data){if(this.events[type])this.events[type](data);}
- start(){this.phase='playing';this.notify('change');}
+ start(){if(this.phase!=='ready')return;if(this.usesSummoning?.())this.beginInitialSupport();else{this.phase='playing';this.notify('change');}}
  neededXP(){return (18+this.level*5)*(this.isRoomCampaign()?2:1);}
  waveRules(){if(this.starDefense()&&this.mode==='pve')return this.starDefense().waves(WAVE_CONFIGS.defense);if(this.isRoomCampaign())return ROOM_WAVES;return this.mode==='pve'&&(this.mapId==='desktop'||this.world?.id==='desktop')?WAVE_CONFIGS.defense:WAVE_CONFIGS.survival;}
  flyingStart(){const state={};for(const [type,r]of Object.entries(this.waveRules().flying)){state[type+'Next']=r.at;state[type+'Spawned']=0;}return state;}
@@ -697,7 +699,7 @@ class FrontGame{
   this.phase='playing';this.choiceKind='level';this.pendingChoice=null;this.turnChoice=null;this.notify('change');return true;
  }
  stageChoice(type,queue){
-  if(this.phase!=='choice'||this.turnChoice||type==='scout')return false;
+  if(this.phase!=='choice'||this.turnChoice||this.choiceKind==='initial'||type==='scout')return false;
   if(type==='support'){if(!this.supportValid(queue))return false;this.pendingChoice={type,queue:{...queue}};}
   else{if(['recovery','supply','periodic'].includes(this.choiceKind))return false;if(!this.currentOptions?.includes(type)||!this.eligibleCard(type)||this.choiceKind==='boss'&&!this.bossRewardEligible(type))return false;this.pendingChoice={type};}
   return true;
@@ -718,11 +720,13 @@ class FrontGame{
   this.effects.push({kind:'drop',x:u.x,y:u.y,t:.8,max:.8,team});if(!team)this.notify('toast',`${TYPES[type].name} 합류 · −${TYPES[type].cost} 자원`);this.notify('change');return true;
  }
  completedEvolutions(){return ROSTER.filter(type=>this.evolved[type]).length;}
- options(){
+ options(avoid=[]){
+  const unseen=t=>!avoid.includes(t);
   if(this.completedEvolutions()>=5){
    const boss=this.choiceKind==='boss',owned=new Set(this.units.filter(u=>u.team===0&&u.hp>0&&(!this.coop||u.coopOwner===this.coopOwner)).map(u=>u.type));
    const pool=[...ROSTER.filter(t=>this.eligibleCard(t)&&(!boss||owned.has(t))),...Object.keys(ABILITIES).filter(k=>!boss||this.abilities[k]>0).map(k=>'ability_'+k).filter(t=>this.eligibleCard(t))];
-   const result=[...(pool.length?[pool[Math.floor(this.random()*pool.length)]]:[]),'fieldGold','fieldRepair'];
+   const fresh=avoid.length?pool.filter(unseen):pool,choices=fresh.length?fresh:pool;
+   const result=[...(choices.length?[choices[Math.floor(this.random()*choices.length)]]:!boss&&this.usesSummoning?.()?['fieldSupply']:[]),'fieldGold','fieldRepair'];
    if(!boss)for(const t of result)this.cardShownCounts[t]=(this.cardShownCounts[t]||0)+1;
    return result;
   }
@@ -732,13 +736,17 @@ class FrontGame{
   // unselected abilities share the same eligible pools as existing upgrades.
   const units=shuffle(ROSTER.filter(t=>this.eligibleCard(t))),abilities=shuffle(Object.keys(ABILITIES).map(k=>'ability_'+k).filter(t=>this.eligibleCard(t)));
   const eligible=[...units,...abilities],picks=[];
-  if(units.length)picks.push(units[0]);if(abilities.length)picks.push(abilities[0]);
-  for(const t of shuffle(eligible))if(picks.length<3&&!picks.includes(t))picks.push(t);
+  for(const group of [units,abilities]){
+   const first=group.find(unseen);if(first)picks.push(first);
+  }
+  const mixed=shuffle(eligible);
+  const order=avoid.length?[...mixed.filter(unseen),...Object.keys(FIELD_CARDS).filter(unseen),...mixed.filter(t=>!unseen(t))]:mixed;
+  for(const t of order)if(picks.length<3&&!picks.includes(t))picks.push(t);
   const early=this.level<8&&this.time<150;
   const unlock=this.mode==='pve'&&this.choiceKind!=='boss'?(early&&this.time>=45&&!this.tech[0].rocket&&!this.cardShownCounts.rocket?'rocket':early&&this.level>=3&&!this.tech[0].medic&&!this.cardShownCounts.medic?'medic':early&&this.level>=4&&!this.tech[0].lucky&&!this.cardShownCounts.lucky?'lucky':early&&this.time>=90&&!this.tech[0].tank&&!this.cardShownCounts.tank?'tank':this.mission.stage>=2&&!this.tech[0].mortar&&!this.cardShownCounts.mortar?'mortar':null):null;
   // An introductory unlock may appear once; declining it never pins a slot.
-  if(unlock&&this.eligibleCard(unlock)&&!picks.includes(unlock)){if(picks.length>=3)picks[2]=unlock;else picks.push(unlock);}
-  for(const t of Object.keys(FIELD_CARDS))if(picks.length<3)picks.push(t);
+  if(unlock&&unseen(unlock)&&this.eligibleCard(unlock)&&!picks.includes(unlock)){if(picks.length>=3)picks[2]=unlock;else picks.push(unlock);}
+  for(const t of Object.keys(FIELD_CARDS))if(picks.length<3&&!picks.includes(t))picks.push(t);
   const result=picks.slice(0,3);for(const t of result)this.cardShownCounts[t]=(this.cardShownCounts[t]||0)+1;
   return result;
  }

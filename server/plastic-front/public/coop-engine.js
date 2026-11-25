@@ -2,7 +2,7 @@
 (function(root){'use strict';
 const node=typeof module!=='undefined'&&module.exports,api=node?require('./engine.js'):root;if(node){require('./sword-boss.js');require('./two-star.js');}
 const Game=api.FrontGame,Profile=api.FrontProfile;
-const controls=['input','manualAim','moveOrder','focusTarget','focusAutomatic','formationFacing','formationEnemy','ultimate','cash','tech','abilities','evolved','profile','level','xp','runGold','losses','salvaged','nextRecoveryAt','cardShownCounts','choiceKind','currentOptions','turnChoice','pendingChoice','retreated','lastCommanderLoss','stageSupplied','rallyUntil','rallyReady','constructionLine','mageShieldQuest','laserExposureQuest','medicSkinId','fieldSupplyState','summonSlots'];
+const controls=['input','manualAim','moveOrder','focusTarget','focusAutomatic','formationFacing','formationEnemy','ultimate','cash','tech','abilities','evolved','profile','level','xp','runGold','losses','salvaged','nextRecoveryAt','cardShownCounts','choiceKind','currentOptions','turnChoice','pendingChoice','retreated','lastCommanderLoss','stageSupplied','rallyUntil','rallyReady','constructionLine','mageShieldQuest','laserExposureQuest','medicSkinId','fieldSupplyState','summonSlots','rerollCount'];
 class CoopGame extends Game{
  constructor(events={},settings={}){
   super(events,new Profile(),{map:'livingroom-star',realtimeSummons:settings.realtimeSummons===true,medicSkin:settings.medicSkins?.[0]});
@@ -13,7 +13,7 @@ class CoopGame extends Game{
   for(const u of this.units)if(u.team===0)u.coopOwner=0;
   for(const owner of [0,1])if(settings.reinforcementPlans?.[owner])this.withOwner(owner,()=>this.setReinforcementPlan(settings.reinforcementPlans[owner]));
   const c=this.commander(0);
-  this.withOwner(1,()=>{const blue=this.addUnit(0,'leader',c.x+160,c.y+20);for(const dx of [-40,40])this.addUnit(0,'rifle',blue.x+dx,blue.y+70);});
+  this.withOwner(1,()=>{const blue=this.addUnit(0,'leader',c.x+160,c.y+20);if(!this.usesSummoning())for(const dx of [-40,40])this.addUnit(0,'rifle',blue.x+dx,blue.y+70);});
   for(const u of this.units)if(u.team===0&&u.type!=='leader')Object.assign(u,this.formationPoint(u,this.withOwner(u.coopOwner,()=>this.commander(0))));
   for(const u of this.units)if(u.team===0)this.resolvePosition(u);
  }
@@ -59,6 +59,13 @@ class CoopGame extends Game{
     .sort((a,b)=>Math.hypot(p.x-a.x,p.y-a.y)-Math.hypot(p.x-b.x,p.y-b.y));
    for(const leader of nearby)if(this.withOwner(leader.coopOwner,()=>this.collectFieldSupply(p))||!p.destinyStar)break;
   }
+ }
+ start(){
+  if(this.phase!=='ready'||!this.usesSummoning())return super.start();
+  for(const owner of [0,1])this.withOwner(owner,()=>{
+   this.coopChoosing[owner]=true;this.coopRounds[owner]++;
+   this.beginInitialSupport();
+  });
  }
  levelCheck(){
   if(!this.coop)return super.levelCheck();if(this.phase!=='playing')return;

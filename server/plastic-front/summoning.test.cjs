@@ -6,10 +6,14 @@ const {rules,rollBox}=require('./public/summoning');
 const {pack,unpack}=require('./public/autoplay');
 const {CoopGame:FrontCoopGame}=require('./public/coop-engine');
 
+function landInitial(g,type='rifle'){
+  g.start();g.currentOptions=[type];assert(g.chooseInitialSupport(type));
+  g.time=.3;g.updateDropPods();g.time=0;
+  return g;
+}
 function battle(){
  const g=new FrontGame({},undefined,{map:'livingroom-star',realtimeSummons:true});
- g.start();
- return g;
+ return landInitial(g);
 }
 function upgrade(g,type){
  g.phase='choice';g.choiceKind='level';g.turnChoice=null;g.currentOptions=[type];
@@ -66,6 +70,8 @@ test('regular support appointments do not interrupt realtime battles',()=>{
 });
 test('co-op owns each slot list, purchase, and deployed reinforcement separately',()=>{
  const g=new FrontCoopGame({}, {realtimeSummons:true});g.start();
+ for(const owner of [0,1])g.withOwner(owner,()=>{g.phase='choice';g.currentOptions=['rifle'];assert(g.chooseInitialSupport('rifle'));g.coopChoosing[owner]=false;});
+ g.time=.3;g.updateDropPods();g.time=0;
  g.withOwner(1,()=>upgrade(g,'medic'));
  assert.deepEqual(g.summonSlots,['rifle']);
  g.withOwner(1,()=>{assert.deepEqual(g.summonSlots,['rifle','medic']);assert(g.summon(2));assert.equal(g.cash[0],135-70);});
