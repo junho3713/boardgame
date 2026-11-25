@@ -298,10 +298,11 @@ function renderFusion(){
  $('fusionTitle').textContent=destiny?'병과 합성과 운명의 별':'병과 합성';
  const rules=[
   '같은 병과 1성 3기가 모이면 2성 1기로 자동 합성됩니다.',
-  '2성 공격력 ×3 · 체력과 치료량 ×2.5 · 럭키 레토나 룰렛 3개',
+  '일반 2성 공격력 ×3 · 체력과 치료량 ×2.5 · 럭키 레토나 룰렛 3개',
+  '통신병은 성급마다 주사위 한 쌍 · 2성 화력 ×3.4, 폭발 반경 ×1.15',
   '2성이 전사하면 같은 병과 1성 1기가 최대 체력으로 복귀합니다.'
  ];
- if(destiny)rules.push('14분 정식 보스를 처치한 뒤 운명의 별을 주우세요. 같은 병과 2성 3기가 모인 병과마다 3성 1기로 합성됩니다.','3성 공격력과 치료량 ×7.2 · 체력 ×7.8 · 병과별 최대 1기');
+ if(destiny)rules.push('14분 정식 보스를 처치한 뒤 운명의 별을 주우세요. 같은 병과 2성 3기가 모인 병과마다 3성 1기로 합성됩니다.','일반 3성 공격력과 치료량 ×7.2 · 체력 ×7.8 · 병과별 최대 1기','3성 통신병 화력 ×10.5 · 폭발 반경 ×1.30');
  $('fusionRules').innerHTML=rules.join('<br>');
  $('fusionGrid').innerHTML=roster.map(type=>{
   const status=game.threeStarCount(type)?'3성 완성':game.twoStarCount(type)>=3?(destiny?'운명의 별로 3성 합성 가능':'2성 최대 편성'):'같은 병과 1성 3기 → 2성';

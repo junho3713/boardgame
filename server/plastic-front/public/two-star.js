@@ -3,6 +3,7 @@
 const api=typeof module!=='undefined'&&module.exports?require('./engine.js'):root,Game=api.FrontGame,roster=api.ROSTER||root.FrontRoster;
 const RULES={copies:3,maxTwoStars:3,capacityGains:[1,1,2,2,3],damage:3,hp:2.5,heal:2.5,roulettes:3,
  three:{damage:7.2,hp:7.8,heal:7.2,roulettes:3,sniperShots:2,lucky:{normal:{glue:.44,mine:.20,spray:.24,missiles:.06,blank:.06},evolved:{glue:.29,mine:.13,spray:.41,missiles:.14,blank:.03}}}};
+const rankDamage=(type,star,rules)=>type==='guntruck'?(star===3?10.5:3.4):rules.damage;
 const p=Game.prototype,stats=p.stats,upgrade=p.upgradeBalance,buy=p.buy,bonus=p.abilityBonus,remaining=p.recruitmentRemaining,lucky=p.updateLuckyUnit,scale=p.luckyScale,odds=p.luckyOdds,projectiles=p.fireUnitProjectiles;
 p.isThreeStarExperiment=function(){return false;}; // Legacy callers checking for the retired battlefield.
 p.battlefieldId=function(){return this.bedroomStar?'bedroom-star':this.pixelRoom?'livingroom-pixel':this.starExperiment?'livingroom-star':this.bounds().id;};
@@ -10,7 +11,7 @@ p.starCount=function(type,star){return this.alive(0).filter(u=>u.type===type&&!u
 p.threeStarCount=function(type){return this.starCount(type,3);};
 p.starRosterLabel=function(type){const three=this.threeStarCount(type);return three?`★★★ ${three}기`:`1성 ${this.fusionCandidates(type).length} · ★★ ${this.twoStarCount(type)}/3`;};
 p.abilityBonus=function(key,level=this.abilities[key]||0){if(this.starExperiment&&this.mode==='pve'&&key==='capacity')return RULES.capacityGains.slice(0,Math.max(0,Math.min(5,Math.floor(level)))).reduce((sum,gain)=>sum+gain,0);return bonus.call(this,key,level);};
-p.stats=function(u){const s=stats.call(this,u),r=u.star===3?RULES.three:RULES;return this.starExperiment&&u.team===0&&u.star>=2?{...s,hp:s.hp*r.hp,damage:s.damage*r.damage,heal:s.heal*r.heal}:s;};
+p.stats=function(u){const s=stats.call(this,u),r=u.star===3?RULES.three:RULES;return this.starExperiment&&u.team===0&&u.star>=2?{...s,hp:s.hp*r.hp,damage:s.damage*rankDamage(u.type,u.star,r),heal:s.heal*r.heal}:s;};
 p.refreshTwoStarHealth=function(){
  if(!this.starExperiment||this.mode!=='pve')return false;let changed=false;
  for(const u of this.units){if(u.team!==0||!(u.star>=2)||!roster.includes(u.type))continue;const hp=this.stats(u).hp;if(Math.abs(hp-u.maxHp)<1e-6)continue;const ratio=Math.max(0,Math.min(1,u.hp/Math.max(1,u.maxHp)));u.maxHp=hp;u.hp=hp*ratio;changed=true;}return changed;
@@ -37,7 +38,7 @@ function mergeCopies(type,fromStar){
  if(type==='rocket')for(const mine of this.blockMines||[])if(copies.includes(mine.source))mine.source=survivor;
  if(type==='lucky')for(const list of [this.luckySalvos,this.luckySprays,this.luckyMines,this.luckyGlues,this.luckyFlashes])for(const effect of list||[])if(copies.includes(effect.source)){const index=copies.indexOf(effect.source);effect.source=survivor;if(effect.ownerId!==undefined)effect.ownerId=survivor.id;effect.rouletteChannel=fromStar===1?index:(effect.rouletteChannel??0);}
  for(const u of copies.slice(1)){u.hp=0;u.merged=true;u.trialDodge=null;}
- const r=survivor.star===3?RULES.three:RULES;this.notify('toast',this.stats(survivor).name+' '+'★'.repeat(survivor.star)+` 합성 · 공격 ×${r.damage} / 체력 ×${r.hp}`+(type==='medic'?` / 치료 ×${r.heal}`:''));this.notify('change');return survivor;
+ const r=survivor.star===3?RULES.three:RULES;this.notify('toast',this.stats(survivor).name+' '+'★'.repeat(survivor.star)+` 합성 · 공격 ×${rankDamage(type,survivor.star,r)} / 체력 ×${r.hp}`+(type==='medic'?` / 치료 ×${r.heal}`:''));this.notify('change');return survivor;
 }
 p.fuseUnit=function(type,fromStar=1){return fromStar===1?mergeCopies.call(this,type,1):null;};
 p.dropDestinyStar=function(boss){

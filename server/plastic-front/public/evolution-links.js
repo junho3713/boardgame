@@ -12,7 +12,7 @@ const links=[
  {id:'medicalFire',types:['machinegun','medic'],name:'전선 유지',detail:'진화 의무병에게 치료받은 기관총병은 2초간 받는 피해 12% 감소'},
  {id:'volatile',types:['rocket','lucky'],name:'연쇄 폭약',detail:'레토나가 맞힌 적이 블록 지뢰에 걸리면 0.2초 뒤 20% 추가 폭발 · 반경 65 / 분대 재사용 6초'},
  {id:'fieldRepair',types:['tank','medic'],name:'야전 수리',detail:'진화 의무병의 전차 치료량 +15% · 치료 간격 유지'},
- {id:'gamblers',types:['guntruck','lucky'],name:'행운의 핫라인',detail:'777 또는 보스킬러 당첨 때 같은 분대의 핵 코드 +1 · 2칸까지 충전'},
+ {id:'gamblers',types:['guntruck','lucky'],name:'행운의 핫라인',detail:'진화 레토나의 777·보스킬러 발동 시 5초간 강화 미사일 6발씩 발사 · 진화 통신병이 있으면 시작과 함께 분대 전술 핵 1발'},
  {id:'chainBombard',types:['guntruck','mortar'],name:'초토화 포격',detail:'같은 분대의 통신병 화염 지대에 착탄한 박격포는 폭발 반경·피해 +15%'},
  {id:'radioPrecision',types:['guntruck','sniper'],name:'정밀 좌표 수신',detail:'미사일·핵은 저격 표식 적을 우선 조준하고 해당 적에게 피해 +20%'},
  {id:'airObserver',types:['drone','sniper'],name:'공중 관측',detail:'드론 레이저는 저격 표식 대상을 우선 조준하며 해당 대상 피해 +20%'},
@@ -24,6 +24,7 @@ function install({FrontGame:Game}){
  const p=Game.prototype;if(p.evolutionLinksVersion)return;p.evolutionLinksVersion=1;
  const reset=p.reset,damage=p.damage,impact=p.impact,select=p.selectCombatTarget,mortar=p.launchMortar,twin=p.evolutionMortar,missile=p.luckyMissileTarget,boss=p.bossKillerTarget,stats=p.stats,update=p.updateEvolutionCombat,heal=p.heal;
  const owner=u=>u?.coopOwner||0,dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+ const meetsEvolution=(link,type,evolved)=>evolved?.[type]||link.id==='gamblers'&&type==='guntruck';
  const {shotgunReloadTime,droneLaserPeriod,droneLaserTarget,droneLaserDamage,castLucky}=p;
  const overheated=(game,u,id)=>game.hasEvolutionLink(u,id)&&game.units.some(gunner=>
   gunner.type==='machinegun'&&gunner.team===0&&gunner.hp>0&&owner(gunner)===owner(u)&&gunner.overheatUntil>game.time
@@ -32,12 +33,12 @@ function install({FrontGame:Game}){
  p.linkState=function(id=0){const state=this.evolutionLinkState??={owners:[]};return state.owners[id]??={ready:{},announced:{}};};
  p.evolutionLinks=function(id=this.coopOwner||0){
   const state=this.coop?this.coopStates?.[id]:this,evolved=this.coop&&id===this.coopOwner?this.evolved:state?.evolved||{},live=new Set(this.units.filter(u=>u.team===0&&u.hp>0&&(!this.coop||owner(u)===id)).map(u=>u.type));
-  return links.map(link=>({...link,active:link.types.every(t=>evolved[t]&&live.has(t)),progress:link.types.filter(t=>evolved[t]&&live.has(t)).length}));
+  return links.map(link=>({...link,active:link.types.every(t=>meetsEvolution(link,t,evolved)&&live.has(t)),progress:link.types.filter(t=>meetsEvolution(link,t,evolved)&&live.has(t)).length}));
  };
  p.hasEvolutionLink=function(u,id){
   const l=byId[id];if(!l||u?.team!==0||u.hp<=0||!l.types.includes(u.type))return false;
   const idOwner=owner(u),evolved=this.coop&&idOwner!==this.coopOwner?this.coopStates?.[idOwner]?.evolved:this.evolved;
-  return l.types.every(type=>evolved?.[type]&&this.units.some(v=>v.team===0&&v.type===type&&v.hp>0&&(!this.coop||owner(v)===idOwner)));
+  return l.types.every(type=>meetsEvolution(l,type,evolved)&&this.units.some(v=>v.team===0&&v.type===type&&v.hp>0&&(!this.coop||owner(v)===idOwner)));
  };
  p.linkMark=function(target,u,key,duration=4){const marks=target.evolutionLinkMarks??={};(marks[owner(u)]??={})[key]=this.time+duration;};
  p.linkMarked=function(target,u,key){return this.time<(target?.evolutionLinkMarks?.[owner(u)]?.[key]||0);};
@@ -132,13 +133,20 @@ function install({FrontGame:Game}){
   const salvos=this.luckySalvos.length,shots=this.shots.length;
   const outcome=castLucky.call(this,u,result);
   if(this.luckySalvos.length>salvos||this.shots.slice(shots).some(shot=>shot.kind==='bossKiller'&&shot.source===u)){
-   const state=this.linkState(owner(u)),codes=state.radioNukeCodes||0;
-   if(codes<2&&state.radioHotlineAt!==this.time){
-    state.radioNukeCodes=codes+1;state.radioHotlineAt=this.time;
-    const partner=this.units.find(v=>v.type==='guntruck'&&v.team===0&&v.hp>0&&owner(v)===owner(u));
-    if(partner)this.linkCue(u,partner,'gamblers');
-    this.notify('toast',`행운의 핫라인 · 핵 코드 ${state.radioNukeCodes}/3`);
+   const state=this.linkState(owner(u));
+   if(this.time<(state.radioHotlineUntil??0))return outcome;
+   state.radioHotlineUntil=this.time+5;
+   let partner,signalman,damage=0;
+   for(const v of this.units){
+    if(v.type!=='guntruck'||v.team!==0||v.hp<=0||owner(v)!==owner(u))continue;
+    signalman??=v;
+    if(!this.evolutionEnabled(v))continue;
+    const strength=this.stats(v).damage;
+    if(!partner||strength>damage){partner=v;damage=strength;}
    }
+   if(partner)this.launchRadioHotline(partner,damage);
+   this.linkCue(u,partner??signalman,'gamblers');
+   this.notify('toast',partner?'행운의 핫라인 · 전술 핵 1발 · 5초간 강화 미사일':'행운의 핫라인 · 5초간 강화 미사일');
   }
   return outcome;
  };

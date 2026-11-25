@@ -9,7 +9,7 @@ function install({FrontGame,TYPES,multiplier}){
  const foes=(g,u)=>g.combatCandidates().filter(t=>t.team!==u.team&&t.hp>0&&!t.hidden&&!(t.base&&g.baseShielded())&&g.canTarget(u,t));
 
  p.reset=function(...args){
-  const result=reset.apply(this,args);this.radioStrikes=[];this.radioFireZones=[];this.rosterLasers=[];return result;
+  const result=reset.apply(this,args);this.radioStrikes=[];this.radioFireZones=[];this.radioNextWhiteoutAt=0;this.rosterLasers=[];return result;
  };
  p.shotgunReloadTime=function(u,s=this.stats(u)){return 1.8*s.rate/TYPES.rifle.rate;};
  p.shotgunShotMultiplier=function(){return 1;};
@@ -115,14 +115,15 @@ function install({FrontGame,TYPES,multiplier}){
 
  const RADIO = {
   incendiary: {radius:96, multiplier:2.2, delay:.65, knockback:0},
-  missile: {radius:88, multiplier:1.7, delay:.58, knockback:44},
-  nuke: {radius:225, multiplier:7, delay:1.2, knockback:0}
+  missile: {radius:88, multiplier:1.7, delay:1.16, knockback:44},
+  nuke: {radius:225, multiplier:7, delay:2.4, knockback:0}
  };
- const promotedRadio={cadence:.65,damage:1.6,radius:1.35};
+ const radioRadius={1:1,2:1.15,3:1.30};
+ const radioRank=(g,u)=>g.starExperiment?(u.star||1):1;
  const missileSpread=[0,-21,21,0,-38,38];
  p.stats=function(u){
   const result=stats.call(this,u);
-  if(this.starExperiment&&u.team===0&&u.type==='guntruck'&&u.star===3)result.rate*=promotedRadio.cadence;
+  if(u.team===0&&u.type==='guntruck'&&radioRank(this,u)===3)result.rate*=.65;
   return result;
  };
  function doubleStrike(face,golden){
@@ -171,70 +172,61 @@ function install({FrontGame,TYPES,multiplier}){
   }
   return best||g.commandFirePoint(origin,aim.range,aim.angle);
  }
- function rollRadio(g,u,golden,rank,set){
-  const a=g.diceFace(u,golden,set);
-  let b=rank===1&&u.radioMisses>=5?a:g.diceFace(u,golden,set);
-  // Single-set officers retain their existing 25% natural double chance.
-  if(rank===1&&golden&&a!==b&&g.random()<.10)b=a;
+ function rollRadio(g,u,golden){
+  if(g.time<(g.linkState(u.coopOwner||0).radioHotlineUntil??0)){
+   return {dice:[6,6],success:true,strike:'missile',missileCount:6};
+  }
+  const a=g.diceFace(u,golden,0);
+  let b=u.radioMisses>=5?a:g.diceFace(u,golden,0);
+  // Every rank uses the same 25% evolved chance and five-miss guarantee.
+  if(golden&&a!==b&&g.random()<.10)b=a;
   const success=a===b;
   return {dice:[a,b],success,strike:success?doubleStrike(a,golden):null};
  }
- function queueRadioStrike(g,u,aim,roll,point,{golden,bonus,damage,radiusScale},offset){
+ function queueRadioStrike(g,u,aim,roll,point,{golden,damage,radiusScale}){
   const {strike,dice}=roll,spec=RADIO[strike],radius=spec.radius*radiusScale;
   const count=strike==='missile'?(roll.missileCount??(golden?4:dice[0]-2)):1;
   const angle=aim.commandShot?aim.angle:heading(u,point);
   const precise=strike!=='incendiary'&&g.hasEvolutionLink(u,'radioPrecision');
   const bounds=g.bounds();
   for(let seq=0;seq<count;seq++){
-   const spread=missileSpread[seq],delay=spec.delay+offset+seq*.26;
+   const spread=missileSpread[seq],delay=spec.delay+seq*.26;
    const x=Math.max(0,Math.min(bounds.width,point.x-Math.sin(angle)*spread));
    const y=Math.max(0,Math.min(bounds.height,point.y+Math.cos(angle)*spread));
-   const shell={source:u,x,y,angle,seq,strike,radius,radiusScale,golden,precise,damage,bonus,landAt:g.time+delay};
+   const shell={source:u,x,y,angle,seq,strike,radius,radiusScale,golden,precise,damage,landAt:g.time+delay};
    g.radioStrikes.push(shell);
-   effect(g,'radioIncoming',shell,{source:u,strike,angle,seq,radius,bonus,landAt:shell.landAt,visualUntil:shell.landAt},delay);
+   effect(g,'radioIncoming',shell,{source:u,strike,angle,seq,radius,landAt:shell.landAt,visualUntil:shell.landAt},delay);
    if(strike==='nuke')g.notify('radioWarning',{team:0,id:u.id,x,y});
   }
  }
+ function launchRadio(g,u,aim,contacts,roll,damage,golden,rank){
+  const radiusScale=radioRadius[rank];
+  const radius=RADIO[roll.strike].radius*radiusScale;
+  const point=radioTarget(g,u,contacts,aim,roll.strike,radius)??g.commandFirePoint(u,radius+48,u.face??-Math.PI/2);
+  roll.tx=point.x;roll.ty=point.y;
+  queueRadioStrike(g,u,aim,roll,point,{golden,damage,radiusScale});
+ }
+ p.launchRadioHotline=function(u,damage){
+  const launch=()=>launchRadio(this,u,{},this.radioContacts(u),{strike:'nuke',dice:[6,6]},damage,true,radioRank(this,u));
+  if(this.coop)this.withOwner(u.coopOwner,launch);else launch();
+ };
  function callRadio(g,u,aim,attack){
   const contacts=g.radioContacts(u);
   if(!contacts.length)return [];
-  const golden=g.evolutionEnabled(u),rank=g.starExperiment?(u.star||1):1;
-  const rolls=Array.from({length:rank>=2?3:1},(_,set)=>rollRadio(g,u,golden,rank,set));
-  const doubles=rolls.filter(roll=>roll.success);
-  const bonus=doubles.length>=2?doubles.length:0;
-  const launches=bonus===3?[{strike:'nuke',dice:[6,6]}]:doubles;
-  if(bonus===3||launches.some(roll=>roll.strike==='nuke')){
-   const state=g.linkState(u.coopOwner||0);
-   if(bonus===3)state.radioNukeCodes=0;
-   else for(const roll of launches){
-    if(roll.strike!=='nuke')continue;
-    const codes=(state.radioNukeCodes||0)+1;
-    if(codes>=3){state.radioNukeCodes=0;continue;}
-    state.radioNukeCodes=codes;
-    roll.strike='missile';roll.nukeCodes=codes;roll.missileCount=6;
-   }
-  }
-  const multiplier=bonus===2?1.3:bonus===3&&golden?1.5:1;
-  const radiusScale=(rank===3?promotedRadio.radius:1)*multiplier;
-  const damage=attack.damage*(rank===3?promotedRadio.damage:1)*multiplier;
+  const golden=g.evolutionEnabled(u),rank=radioRank(g,u);
+  const roll=rollRadio(g,u,golden);
   u.radioRollAt=g.time;
-  if(doubles.length)u.radioDoubleAt=g.time;
-  if(rank===1)u.radioMisses=doubles.length?0:(u.radioMisses||0)+1;
+  if(roll.success)u.radioDoubleAt=g.time;
+  u.radioMisses=roll.success?0:(u.radioMisses||0)+1;
   g.notify('fire',u);
-  for(const [index,roll] of launches.entries()){
-   const point=radioTarget(g,u,contacts,aim,roll.strike,RADIO[roll.strike].radius*radiusScale);
-   roll.tx=point.x;
-   roll.ty=point.y;
-   // A short stagger separates the aircraft and impacts of independent calls.
-   queueRadioStrike(g,u,aim,roll,point,{golden,bonus,damage,radiusScale},index*.13);
-  }
-  const [a,b]=rolls[0].dice,first=launches[0];
-  effect(g,'radioRoll',u,{source:u,a,b,golden,rank,rolls,bonus,strike:first?.strike??null,tx:first?.tx,ty:first?.ty},.85);
+  if(roll.success)launchRadio(g,u,aim,contacts,roll,attack.damage,golden,rank);
+  const [a,b]=roll.dice;
+  effect(g,'radioRoll',u,{source:u,a,b,golden,rank,rolls:[roll],strike:roll.strike,tx:roll.tx,ty:roll.ty},.85);
   return [];
  }
  function inRadius(g,area,t){return distance(t,area)<=area.radius+Math.max(0,g.collisionRadius(t)-5);}
  function impactRadio(g,shell){
-  const {source,x,y,angle,strike,seq,radius,radiusScale=1,golden,damage,landAt,precise,bonus}=shell;
+  const {source,x,y,angle,strike,seq,radius,radiusScale=1,golden,damage,landAt,precise}=shell;
   const spec=RADIO[strike];
   for(const t of foes(g,source)){
    if(!inRadius(g,shell,t))continue;
@@ -243,7 +235,9 @@ function install({FrontGame,TYPES,multiplier}){
    if(spec.knockback&&t.hp<hp)push(g,t,distance(t,shell)>.01?heading(shell,t):angle,spec.knockback);
   }
   const impactLife=strike==='nuke'?1.6:.65;
-  effect(g,'radioImpact',shell,{source,strike,angle,seq,radius,bonus,landAt,at:g.time,visualUntil:g.time+impactLife},impactLife);
+  const screenFlash=strike==='nuke'&&g.time+1e-8>=(g.radioNextWhiteoutAt??0);
+  if(screenFlash)g.radioNextWhiteoutAt=g.time+3.5;
+  effect(g,'radioImpact',shell,{source,strike,angle,seq,radius,screenFlash,landAt,at:g.time,visualUntil:g.time+impactLife},impactLife);
   if(strike==='nuke')effect(g,'radioCrater',shell,{radius,visualUntil:g.time+6},6);
   g.notify('radioImpact',{team:0,id:source.id,x,y,strike});
   if(strike==='incendiary'||golden&&strike==='nuke'){

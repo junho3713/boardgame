@@ -109,7 +109,7 @@ const TYPES={swordEmpress:{name:'사검의 군주',hp:140800,damage:0,rate:100,r
 };
 const ENEMY_REPLACED_TYPES={rifle:TYPES.rifle,guntruck:TYPES.guntruck,rocket:TYPES.rocket};
 TYPES.rifle={...TYPES.rifle,name:'산탄총병',enemyName:TYPES.rifle.name,icon:'✦',hp:160,damage:22,rate:1,range:210,cost:60,role:'근거리 산탄 피해 최대 +65% · 5갈래 · 4발 후 재장전'};
-TYPES.guntruck={...TYPES.guntruck,name:'통신병',enemyName:TYPES.guntruck.name,icon:'⚄',hp:200,damage:38,rate:2.4,range:620,speed:133,r:13,role:'주사위 더블로 폭격 · 2성부터 3세트 동시 굴림'};
+TYPES.guntruck={...TYPES.guntruck,name:'통신병',enemyName:TYPES.guntruck.name,icon:'⚄',hp:200,damage:38,rate:2.4,range:620,speed:133,r:13,role:'주사위 한 쌍의 더블로 폭격 · 성급이 오르면 화력과 폭발 범위 증가'};
 TYPES.rocket={...TYPES.rocket,name:'지뢰 설치병',enemyName:TYPES.rocket.name,role:'조준 방향으로 블록 지뢰 2~3개 투척 · 지상 적이 밟으면 광역 폭발'};
 TYPES.drone={name:'미니 RC 드론',icon:'✜',hp:130,damage:9,rate:.20,range:330,speed:175,r:12,cost:125,flying:true,flightHeight:54,role:'부대 상공을 선회하며 가장 가까운 적에게 자동 연사'};
 const ROSTER=['rifle','machinegun','sniper','guntruck','rocket','mortar','tank','medic','lucky','drone'];
@@ -143,7 +143,7 @@ const PERMANENT={
 const ABILITIES={...Object.fromEntries(Object.entries(PERMANENT).filter(([k])=>!k.startsWith('turret')).map(([k,b])=>[k,{...b,max:5,gain:{damage:10,speed:6,haste:8,critChance:4,critDamage:15,gold:15,capacity:2,defense:5}[k]}])),health:{name:'체력',icon:'♥',gain:10,unit:'%',max:5,detail:'대장과 모든 분대원의 최대 체력 · 단계당 +10%'},xpGain:{name:'경험치 획득량',icon:'✧',gain:5,unit:'%',max:5,detail:'작전 중 획득하는 경험치 · 단계당 +5%'}};
 const EVOLUTIONS={
  tank:{name:'공성 전차',ability:'damage',detail:'공격력 +35% · 폭발 범위 +35 · 사거리 +35 · 최대 체력 +20%'},
- guntruck:{name:'전략 폭격 통신관',ability:'haste',detail:'1·2 더블 강화 소이탄 · 3~5 더블 미사일 4발 · 6-6은 분대 공용 핵 코드 충전 및 미사일 6발 · 코드 3개로 전술 핵'},
+ guntruck:{name:'전략 폭격 통신관',ability:'haste',detail:'1·2 더블 강화 소이탄 · 3~5 더블 미사일 4발 · 6-6 즉시 전술 핵 발사'},
  rifle:{name:'드래곤 브레스 산탄병',ability:'health',detail:'화염 산탄 · 지속 화상 · 마지막 4번째 탄의 폭발 범위와 넉백 강화'},
  sniper:{name:'정예 저격병',ability:'critChance',detail:'치명타 확률 +25%p · 치명타 피해 +50%p · 사거리 +65'},
  rocket:{name:'연쇄 폭파병',ability:'critDamage',detail:'강화 블록 지뢰 · 더 큰 폭발 · 주변 지뢰 도미노 연쇄 폭파'},

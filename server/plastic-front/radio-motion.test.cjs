@@ -52,38 +52,25 @@ test('rolling dice only show pips for the settled outcome, including misses that
   }
  }
 });
-test('fused radio rolls keep three separate pairs and only the successful pairs pop',()=>{
+test('each rank displays a single pair and the dice still pop on success',()=>{
  const r=renderer();r.game.reducedMotion=false;
- const rolls=[{dice:[1,1],success:true,strike:'incendiary'},{dice:[2,4],success:false},{dice:[5,5],success:true,strike:'missile'}];
- assert.deepEqual(r.dice({rank:2,bonus:2,rolls},.19),[0,0,0,0,0,0]);
- assert.deepEqual(r.labels,[]);
- assert.deepEqual(r.dice({rank:2,bonus:2,rolls},.31),[1,1,2,4,5,5]);
- assert.deepEqual(r.scales.filter(x=>x===1.5),[1.5,1.5]);
- assert.deepEqual(r.labels,['SYNC x2!']);
- assert.equal(r.paints.filter(x=>x==='#ffcf58').length,2);
+ for(const rank of [1,2,3]){
+  const e={rank,rolls:[{dice:[4,4],success:true,strike:'missile'}]};
+  assert.deepEqual(r.dice(e,.10),[0,0]);
+  assert.deepEqual(r.dice(e,rank===3?.217:.287),[4,4]);
+  assert.ok(r.scales.some(x=>x>1.45));
+  assert.deepEqual(r.labels,['미사일 2발']);
+  assert.equal(r.paints.filter(x=>x==='#f7d072').length,rank===3?2:0);
+ }
 });
-test('rank three radio rolls show six gold dice before reveal and one tactical nuke after three doubles',()=>{
- const r=renderer();r.game.reducedMotion=true;
- const rolls=[1,3,6].map(n=>({dice:[n,n],success:true}));
- const e={rank:3,bonus:3,rolls,source:{id:12,x:100,y:300}};
- const superseded={...e,rolls:[{dice:[1,2],success:false}],rank:1,bonus:0,t:.1};
- assert.deepEqual(r.dice([superseded,e],.12),[0,0,0,0,0,0]);
- assert.equal(r.paints.filter(x=>x==='#f7d072').length,6);
- assert.deepEqual(r.dice([superseded,e],.19),[]);
- assert.deepEqual(r.labels,['전술 핵']);
- assert.ok(r.scales.every(scale=>scale<=1.09));
-});
-test('rank three keeps distinct radio successes and their code detail as the miss fades',()=>{
+test('nuclear and hotline sixes have distinct labels over the same two dice',()=>{
  const r=renderer();
- const e={rank:3,bonus:2,rolls:[
-  {dice:[2,2],success:true,strike:'incendiary'},
-  {dice:[2,4],success:false},
-  {dice:[6,6],success:true,strike:'missile',nukeCodes:2}
- ]};
- assert.deepEqual(r.dice(e,.23),[]);
- assert.deepEqual(r.labels,['소이탄','·','핵 2/3','미사일 6발']);
- r.dice(e,.62);
- assert.deepEqual(r.labels,['소이탄','핵 2/3','미사일 6발']);
+ for(const [strike,label,missileCount] of [['nuke','전술 핵'],['missile','강화 미사일 6발',6]]){
+  const e={rank:3,golden:true,rolls:[{dice:[6,6],success:true,strike,missileCount}]};
+  assert.deepEqual(r.dice(e,.23),[6,6]);
+  assert.deepEqual(r.labels,[label]);
+  assert.ok(r.scales.every(scale=>scale<=1.09));
+ }
 });
 const flames=layers=>layers.filter(({gradient})=>gradient.stops[0][1]==='#FFF3B0');
 test('the fire zone draws a soft floor and fourteen flames, then fades and settles in the final second',()=>{

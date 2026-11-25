@@ -61,7 +61,6 @@ function noise(seed, i) {
  let h = Math.imul(seed + Math.imul(i, 1597334677), 2246822519);
  return ((h ^ (h >>> 13)) >>> 0) / 4294967296;
 }
-const pairPositions=[[0,-42],[-36,0],[36,0]];
 function face(c,x,y,n,rim,angle,gold) {
  c.save(); c.translate(x,y); c.rotate(angle);
  c.fillStyle=gold?'#9e611e':'#434543';c.beginPath();c.roundRect(-8,-8,18,20,3.5);c.fill();
@@ -74,110 +73,31 @@ function face(c,x,y,n,rim,angle,gold) {
  }
  c.restore();
 }
-function drawRollPair(c,roll,x,y,{rank,age,spinning,reduced,duration,grouped,index}) {
+function drawRollPair(c,roll,rank,age,spinning,reduced,duration) {
  const popup=(age-duration)/.25, accented=roll.success&&popup>=0&&popup<1;
  const zoom=accented?1+(reduced?.09:.5)*Math.min(1,popup/.22,(1-popup)/.30):1;
- const golden=rank===3, revealed=roll.success&&!spinning;
- const twist=spinning&&!reduced ? .34*Math.sin(age*38+index*1.2):0;
- const jump=spinning&&!reduced ? 2.6*Math.sin(age/duration*Math.PI):0;
- c.save();c.translate(x,y);c.scale(zoom,zoom);
- if(grouped){
-  const plate=()=>c.roundRect(-22,-12,44,24,5);
-  c.fillStyle='rgba(18,30,23,.92)';c.beginPath();plate();c.fill();
-  stroke(c,accented?2.1:1.1,accented?'#ffcf58':revealed?'#d4a345':'#8e9380',plate);
- }
- if(spinning&&!reduced)c.scale(.55+.33*Math.abs(Math.sin(age*35+index)),1);
- const rim=!grouped&&accented?(roll.strike==='nuke'?'#ff472f':'#ffbf33'):null;
+ const golden=rank===3;
+ const twist=spinning&&!reduced?.34*Math.sin(age*38):0;
+ const jump=spinning&&!reduced?2.6*Math.sin(age/duration*Math.PI):0;
+ c.save();c.scale(zoom,zoom);
+ if(spinning&&!reduced)c.scale(.55+.33*Math.abs(Math.sin(age*35)),1);
+ const rim=accented?(roll.strike==='nuke'?'#ff472f':'#ffbf33'):null;
  face(c,-10.6,-jump,spinning?0:roll.dice[0],rim,twist-.035,golden);
  face(c,10.6,-jump*.55,spinning?0:roll.dice[1],rim,-twist+.035,golden);
  c.restore();
 }
-const strikeResults={
- incendiary:{name:'소이탄',ink:'#ffd48c',border:'#bb8250'},
- missile:{name:'미사일',ink:'#c6e7f5',border:'#709cb1'},
- nuke:{name:'전술 핵',ink:'#ffd1bc',border:'#e16d55'}
-};
-function strikeIcon(c,strike,x,color){
- if(strike==='incendiary'){
-  c.fillStyle=color;c.beginPath();c.moveTo(x,5);
-  c.quadraticCurveTo(x-9,1,x-2,-5);c.quadraticCurveTo(x-2,-1,x+2,-7);
-  c.quadraticCurveTo(x+9,3,x,5);c.fill();
- }else if(strike==='missile'){
-  polygon(c,[[x-5,3],[x+2,-5],[x+6,-5],[x+6,-1],[x-2,6]],color);
-  polygon(c,[[x-4,0],[x-7,4],[x-4,4],[x-4,7],[x,5]],'#92b4c2');
- }else{
-  ellipse(c,x,0,5,3.6,color);
-  ellipse(c,x,-2.5,6.7,2.6,color);
-  c.fillStyle=color;c.fillRect(x-1,1,2,5);
- }
-}
-function strikeResult(c,x,strike,{flash=0,opacity=1,wide=false,angle,codes}={}){
- const style=strikeResults[strike],width=wide?76:48;
- c.save();c.translate(x,0);c.globalAlpha*=opacity;
- c.fillStyle=flash>.18?'#425143':'rgba(18,30,23,.92)';
- const plate=()=>c.roundRect(-width/2,-13,width,26,5);
- c.beginPath();plate();c.fill();
- stroke(c,flash>.24?1.9:1.1,style?(flash>.24?style.ink:style.border):'#788475',plate);
- c.textBaseline='middle';c.textAlign='center';
- if(style){
-  strikeIcon(c,strike,wide?-26:-16,style.ink);
-  c.fillStyle=style.ink;c.font=wide?'bold 12px sans-serif':'bold 10px sans-serif';
-  if(codes){
-   c.fillText('핵 '+codes+'/3',6,-4.5);
-   c.font='bold 8px sans-serif';c.fillText('미사일 6발',5,6.5);
-  }else c.fillText(style.name,6,0);
-  if(Number.isFinite(angle)){
-   c.translate(width/2-6,-8);c.rotate(angle);
-   polygon(c,[[4,0],[-2,-2.4],[-1,0],[-2,2.4]],style.ink);
-  }
- }else{c.fillStyle='#a1ad9e';c.font='bold 14px sans-serif';c.fillText('·',0,0);}
- c.restore();
-}
-function promotedRoll(c,pairs,e,u,tr,{age,spinning,reduced,duration}){
- const rank=3;
- if(spinning){
-  pairs.forEach((pair,index)=>drawRollPair(c,pair,(index-1)*51,0,{rank,age,spinning,reduced,duration,grouped:true,index}));
-  return;
- }
- const since=age-duration;
- if(e.bonus===3){
-  const merge=reduced?1:ease(since/.13);
-  if(merge<1)for(let i=-1;i<=1;i++)strikeResult(c,i*51*(1-merge),null,{opacity:1-merge});
-  strikeResult(c,0,'nuke',{wide:true,flash:clamp(1-since/.28),opacity:.4+.6*merge});
-  return;
- }
- let wins=0;
- pairs.forEach((pair,index)=>{
-  const center=(index-1)*51;
-  if(!pair.success){
-   if(since<.35)strikeResult(c,center,null,{opacity:clamp(1-since/.35)});
-   return;
-  }
-  const strike=pair.strike??e.strike,elapsed=since-wins++*.13;
-  const x=pair.tx??e.tx,y=pair.ty??e.ty;
-  const sx=tr.a*x+tr.c*y+tr.e,sy=tr.b*x+tr.d*y+tr.f;
-  const away=strike==='incendiary'&&Number.isFinite(sx)&&Number.isFinite(sy)&&
-   (sx<0||sx>c.canvas.width||sy<0||sy>c.canvas.height);
-  strikeResult(c,center,strike,{flash:elapsed<0?0:clamp(1-elapsed/.22),angle:away?Math.atan2(y-u.y,x-u.x):undefined,codes:pair.nukeCodes});
- });
-}
-function rollLabel(c,label,top,bonus,incendiary,e,u,tr) {
- c.font=bonus?'800 13px sans-serif':'bold 12px sans-serif';
+function rollLabel(c,label,roll,u,tr) {
+ const top=-21;
+ c.font='bold 12px sans-serif';
  c.textAlign='center';c.textBaseline='bottom';c.lineJoin='round';
- const width=c.measureText(label).width;
- if(bonus){
-  const tag=()=>c.roundRect(-width/2-7,top-16,width+14,19,5);
-  c.fillStyle=bonus===3?'#431b15':'#293520';c.beginPath();tag();c.fill();
-  stroke(c,1.3,bonus===3?'#e96a3c':'#d6a246',tag);
- }
- c.strokeStyle='#382115';c.lineWidth=bonus?2:3;c.strokeText(label,0,top);
- c.fillStyle=bonus===3?'#fff0bb':'#ffdb89';c.fillText(label,0,top);
- if(bonus||!incendiary)return;
- const tx=incendiary.tx??e.tx, ty=incendiary.ty??e.ty;
+ c.strokeStyle='#382115';c.lineWidth=3;c.strokeText(label,0,top);
+ c.fillStyle='#ffdb89';c.fillText(label,0,top);
+ if(roll.strike!=='incendiary')return;
+ const {tx,ty}=roll;
  if(Number.isFinite(tx)&&Number.isFinite(ty)){
   const sx=tr.a*tx+tr.c*ty+tr.e,sy=tr.b*tx+tr.d*ty+tr.f;
   if(sx<0||sx>c.canvas.width||sy<0||sy>c.canvas.height){
-   c.translate(width/2+7,top-7);c.rotate(Math.atan2(ty-u.y,tx-u.x));
+   c.translate(c.measureText(label).width/2+7,top-7);c.rotate(Math.atan2(ty-u.y,tx-u.x));
    polygon(c,[[5,0],[-4,-4],[-2,0],[-4,4]],'#ffc568');
   }
  }
@@ -194,17 +114,19 @@ function rolls(c,game,visible) {
  const lanes = [], offset=displayFrames.get(c)?.offset||0, reduced=quiet(game);
  for (const e of rolling.values()) {
   const u=e.source || e, age=e.max-e.t+offset, rank=e.rank||1;
-  // Older saves resolve the single displayed pair from the original roll fields.
-  const pairs=e.rolls||[{dice:[e.a,e.b],success:e.a===e.b,strike:e.strike}];
-  const grouped=pairs.length>1, duration=rank===3?.16:.23, spinning=age<duration;
-  const compact=rank===3&&pairs.length===3;
-  const successful=pairs.some(roll=>roll.success), bonus=e.bonus||0;
-  const incendiary=pairs.find(roll=>roll.success&&roll.strike==='incendiary');
-  const charge=pairs.findLast(roll=>roll.nukeCodes);
-  const label=bonus===3?'TRIPLE JACKPOT!':charge?`핵 코드 ${charge.nukeCodes}/3 · 미사일 ×6`:bonus===2?'SYNC x2!':e.strike==='nuke'?'전술 핵':incendiary?(e.golden?'강화 소이탄':'소이탄'):'';
+  const pair=e.rolls?.[0]??{dice:[e.a,e.b],success:e.a===e.b};
+  const roll={tx:e.tx,ty:e.ty,strike:e.strike,...pair};
+  const duration=rank===3?.16:.23,spinning=age<duration;
+  let label='';
+  if(roll.strike==='nuke')label='전술 핵';
+  if(roll.strike==='incendiary')label=e.golden?'강화 소이탄':'소이탄';
+  if(roll.strike==='missile'){
+   const count=roll.missileCount??(e.golden?4:roll.dice[0]-2);
+   label=count===6?'강화 미사일 6발':`미사일 ${count}발`;
+  }
   const x=u.x*scale;
-  let y=(u.y-(grouped?68:57))*scale-10;
-  const width=compact?77:grouped?71:35, top=compact?15:(grouped?61:19)+(label?22:0), bottom=compact?15:19;
+  let y=(u.y-57)*scale-10;
+  const width=label?48:35,top=label?41:19,bottom=19;
   let overlap;
   while((overlap=lanes.find(lane=>Math.abs(lane.x-x)<lane.width+width
    && y+bottom>lane.y-lane.top && y-top<lane.y+lane.bottom))){
@@ -212,7 +134,7 @@ function rolls(c,game,visible) {
   }
   lanes.push({x,y,width,top,bottom});
   c.save();
-  if (successful && !spinning) {
+  if (roll.success && !spinning) {
    const lampX=u.x+7, lampY=u.y-38;
    glow(c,lampX,lampY,15,15,'#fff9b6','#ffc44772');
    ellipse(c,lampX,lampY,2.3,2.3,'#fffdee');
@@ -222,15 +144,12 @@ function rolls(c,game,visible) {
    stroke(c,1.2,'#ffeab0',()=>c.arc(lampX,lampY,r+4,-1.5,-.22)); c.restore();
   }
   c.translate(x/scale,y/scale); c.scale(1/scale,1/scale);
-  if(compact){promotedRoll(c,pairs,e,u,tr,{age,spinning,reduced,duration});c.restore();continue;}
-  pairs.forEach((roll,index)=>{
-   const [px,py]=grouped?pairPositions[index]:[0,0];
-   drawRollPair(c,roll,px,py,{rank,age,spinning,reduced,duration,grouped,index});
-  });
-  if(label&&!spinning)rollLabel(c,label,grouped?-64:-21,bonus,incendiary,e,u,tr);
+  drawRollPair(c,roll,rank,age,spinning,reduced,duration);
+  if(label&&!spinning)rollLabel(c,label,roll,u,tr);
   c.restore();
  }
 }
+
 const fireFloorDepth = .62;
 const fireFlameCount = 14;
 const fireImpactTime = .15;

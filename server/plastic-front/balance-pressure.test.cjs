@@ -6,8 +6,8 @@ const {config}=require('./public/room-campaign.js');
 const near=(a,b)=>assert.ok(Math.abs(a-b)<1e-6,`${a} != ${b}`);
 function scene(map='livingroom-star',coop=false){const g=coop?new CoopGame():new FrontGame({},undefined,{map});g.start();g.units=g.units.filter(u=>u.team===0&&u.type==='leader');g.obstacles=[];g.structures=[];g.defenses=[];g.buildings=[];g.pickups=[];for(const c of g.units)Object.assign(c,{x:1500,y:6000,cooldown:1e6});g.random=()=>.99;return g;}
 
-test('every two-star class has triple normal attack and 2.5 times health with the same speed, rate and defenses',()=>{
- for(const type of ROSTER){const g=scene();g.tech[0][type]=5;g.abilities.health=3;g.abilities.damage=2;g.evolved[type]=true;const u=g.addUnit(0,type,1500,6000),one=g.stats(u),lucky=type==='lucky'?g.luckyScale(u):null;u.star=2;const two=g.stats(u);near(two.damage,one.damage*3);near(two.hp,one.hp*2.5);for(const k of ['speed','rate','range','defense'])near(two[k],one[k]);if(type==='medic')near(two.heal,one.heal*2.5);if(type==='lucky')near(g.luckyScale(u),lucky);}
+test('two-star classes gain 2.5 times health and the specified damage without speed, rate or defense changes',()=>{
+ for(const type of ROSTER){const g=scene();g.tech[0][type]=5;g.abilities.health=3;g.abilities.damage=2;g.evolved[type]=true;const u=g.addUnit(0,type,1500,6000),one=g.stats(u),lucky=type==='lucky'?g.luckyScale(u):null;u.star=2;const two=g.stats(u);near(two.damage,one.damage*(type==='guntruck'?3.4:3));near(two.hp,one.hp*2.5);for(const k of ['speed','rate','range','defense'])near(two[k],one[k]);if(type==='medic')near(two.heal,one.heal*2.5);if(type==='lucky')near(g.luckyScale(u),lucky);}
  const g=scene('livingroom-star3'),u=g.addUnit(0,'rifle',1500,6000),one=g.stats(u);u.star=3;near(g.stats(u).damage,one.damage*7.2);near(g.stats(u).hp,one.hp*7.8);
 });
 

@@ -67,7 +67,6 @@ test('each basic and officer double schedules the right salvo and burns enemies 
  for(const evolved of [false,true])for(const face of [1,2,3,4,5,6]){
   const g=scene(),u=g.addUnit(0,'guntruck',1000,6000),target=enemy(g,1200);
   g.evolved.guntruck=evolved;g.random=()=>(face-.5)/6;
-  if(evolved&&face===6)g.linkState().radioNukeCodes=2;
   g.fireUnitProjectiles(u,target,{damage:100});
   const shell=g.radioStrikes[0],strike=(evolved?officer:base)[face-1];
   const count=(evolved?[1,1,4,4,4,1]:[1,1,1,2,3,4])[face-1];

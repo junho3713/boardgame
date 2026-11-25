@@ -12,19 +12,20 @@ function pose(u,time){
 }
 function transform(c,u,time){const p=pose(u,time);if(!p)return;c.translate(p.x,p.y);c.rotate(p.angle);c.scale(p.scaleX,p.scaleY);if(p.flash>0)c.filter='brightness('+(1+p.flash*.7)+') saturate('+(1-p.flash*.35)+')';}
 const motionPreference=root.matchMedia?.('(prefers-reduced-motion: reduce)');
-const networkImpacts=new WeakMap();
-function nuclearAge(game){
+const networkImpacts=new WeakMap(),networkFlashes=new WeakMap();
+function nuclearAge(game,whiteout=false){
  if(game.reducedMotion??motionPreference?.matches)return Infinity;
- const hit=game.effects?.findLast(e=>e.kind==='radioImpact'&&e.strike==='nuke');
+ const hit=game.effects?.findLast(e=>e.kind==='radioImpact'&&e.strike==='nuke'&&(!whiteout||e.screenFlash!==false));
  if(!hit)return Infinity;
  const age=Number.isFinite(hit.at)?game.time-hit.at:hit.max-hit.t;
  if(!root.FrontCoopClient?.active||!Number.isFinite(hit.at))return age;
  // The networking interval is longer than the flash. Play a fresh, confirmed impact once
  // on the display clock, including when the server has already advanced past 50 ms.
- const now=root.performance.now(),seen=networkImpacts.get(game);
+ const timeline=whiteout?networkFlashes:networkImpacts;
+ const now=root.performance.now(),seen=timeline.get(game);
  if(seen&&seen.at===hit.at&&seen.x===hit.x&&seen.y===hit.y)return (now-seen.first)/1000;
  if(age<0||age>.25)return age;
- networkImpacts.set(game,{at:hit.at,x:hit.x,y:hit.y,first:now});
+ timeline.set(game,{at:hit.at,x:hit.x,y:hit.y,first:now});
  return 0;
 }
 function nuclearShake(game,age=nuclearAge(game)){
@@ -33,7 +34,7 @@ function nuclearShake(game,age=nuclearAge(game)){
  return{x:Math.sin(age*88+.8)*11*strength,y:Math.cos(age*109)*13*strength};
 }
 function screenFlash(c,game){
- const age=nuclearAge(game);
+ const age=nuclearAge(game,true);
  if(age<0||age>=.05||game.phase!=='playing')return;
  c.save();c.setTransform(1,0,0,1,0,0);c.globalAlpha=.55*(1-(age/.05)**2);
  c.fillStyle='#fff';c.fillRect(0,0,c.canvas.width,c.canvas.height);c.restore();

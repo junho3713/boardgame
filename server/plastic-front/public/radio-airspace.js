@@ -3,8 +3,8 @@
 'use strict';
 const tau=2*Math.PI,clamp=n=>Math.max(0,Math.min(1,n));
 const directions={incendiary:-.34,missile:1/Math.tan(65*Math.PI/180),nuke:0};
-const flightSeconds={incendiary:.55,missile:.47,nuke:.81};
-const pass={incendiary:{length:.4,lead:0,size:98},missile:{length:.45,lead:.35,size:96},nuke:{length:.7,lead:flightSeconds.nuke,size:282}};
+const flightSeconds={incendiary:.55,missile:.94,nuke:1.62};
+const pass={incendiary:{length:.8,lead:0,size:98},missile:{length:.90,lead:.70,size:96},nuke:{length:1.40,lead:flightSeconds.nuke,size:282}};
 const flightOrigins=new WeakMap(), silhouettes=new Map(), decals=new Map();
 
 function flightPose(strike,secondsLeft,drop){

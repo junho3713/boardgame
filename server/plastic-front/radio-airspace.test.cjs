@@ -30,8 +30,10 @@ test('offscreen release position survives camera movement and a fresh network sn
  air.syncOrigins(c,{time:11.7,effects:[{...e}]});
  assert.deepEqual(air.pose(c,{...e},air.flightSeconds.missile),start);
 });
-test('aircraft passes cross at the impact or release cue and last for the specified duration',()=>{
- for(const [kind,cross,duration] of [['incendiary',0,.4],['missile',.35,.45],['nuke',air.flightSeconds.nuke,.7]]){
+const passes=[['incendiary',0,.8],['missile',.70,.90],['nuke',1.62,1.40]];
+test('aircraft passes cross at the impact or release cue and last twice as long',()=>{
+ assert.deepEqual(air.flightSeconds,{incendiary:.55,missile:.94,nuke:1.62});
+ for(const [kind,cross,duration] of passes){
   close(air.passPhase(kind,cross+duration/2),0);close(air.passPhase(kind,cross),.5);close(air.passPhase(kind,cross-duration/2),1);
  }
 });
@@ -43,9 +45,19 @@ test('nuclear flash uses the entire viewport for 50ms and shake ends at 300ms',(
  g.time=.3;assert.deepEqual(feedback.nuclearShake(g),{x:0,y:0});
  g.time=.01;g.reducedMotion=true;feedback.screenFlash(ctx,g);assert.equal(count,1);assert.deepEqual(feedback.nuclearShake(g),{x:0,y:0});
 });
+test('a suppressed impact still shakes and does not replace the simultaneous permitted whiteout',()=>{
+ let flashes=0;const c={canvas:{width:100,height:100},save(){},restore(){},setTransform(){},fillRect(){flashes++;}};
+ const first={kind:'radioImpact',strike:'nuke',at:1,screenFlash:true};
+ const next={kind:'radioImpact',strike:'nuke',at:1,screenFlash:false};
+ const g={phase:'playing',time:1,effects:[first,next]};
+ feedback.screenFlash(c,g);assert.equal(flashes,1);
+ next.at=1.5;g.time=1.5;
+ feedback.screenFlash(c,g);assert.equal(flashes,1);
+ assert.notDeepEqual(feedback.nuclearShake(g),{x:0,y:0});
+});
 test('aircraft sweeps both horizontal edges with centered, edge, and offscreen impacts',()=>{
  for(const [width,height] of [[1280,720],[2560,1080],[780,1688]]){
-  for(const [kind,lead,duration] of [['incendiary',0,.4],['missile',.35,.45],['nuke',.81,.7]]){
+  for(const [kind,lead,duration] of passes){
    for(const [targetX,targetY] of [[width*.6,height*.6],[0,0],[width,height],[-900,height+100]]){
     const pose=p=>air.aircraftPass(kind,lead+(.5-p)*duration,width,height,1,targetX,targetY);
     const frames=[.001,.2,.5,.8,.999].map(pose);

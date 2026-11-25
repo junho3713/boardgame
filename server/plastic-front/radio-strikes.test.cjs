@@ -31,7 +31,6 @@ test('normal and evolved one-star signals preserve their six separate outcomes',
   for(let face=1;face<=6;face++){
    const {g,radio,enemy}=field();
    g.evolved.guntruck=evolved;
-   if(evolved&&face===6)g.linkState().radioNukeCodes=2;
    const outcome=fire(g,radio,g.commandFirePoint(radio,620,Math.PI),[face,face]);
    const strikes=evolved?['incendiary','incendiary','missile','missile','missile','nuke']:
     ['incendiary','incendiary','incendiary','missile','missile','missile'];
@@ -49,100 +48,74 @@ test('normal and evolved one-star signals preserve their six separate outcomes',
  }
 });
 
-test('a single roll has a forced double after five misses; fused rolls do not use that pity',()=>{
- const {g,radio,enemy}=field();
- for(let n=0;n<5;n++){const roll=fire(g,radio,enemy,[1,2]);assert.equal(roll.strike,null);}
- assert.equal(radio.radioMisses,5);
- const guaranteed=fire(g,radio,enemy,[1]);
- assert.equal(guaranteed.strike,'incendiary');assert.equal(radio.radioMisses,0);
- g.evolved.guntruck=true;radio.radioMisses=5;radio.star=2;g.radioStrikes=[];
- const roll=fire(g,radio,enemy,[1,2,3,4,5,6]);
- assert.deepEqual(roll.rolls.map(pair=>pair.dice),[[1,2],[3,4],[5,6]]);
- assert.ok(roll.rolls.every(pair=>!pair.success));assert.equal(g.radioStrikes.length,0);
-});
-
-test('a real three-troop fusion rolls three pairs and only two doubles boost every hit and fire zone',()=>{
- const {g,radio,enemy}=field();
- g.addUnit(0,'guntruck',920,5900);g.addUnit(0,'guntruck',940,5900);
- assert.equal(g.fuseUnit('guntruck'),radio);
- const roll=fire(g,radio,enemy,[2,2,4,4,1,6]);
- assert.equal(roll.rank,2);assert.equal(roll.bonus,2);
- assert.deepEqual(roll.rolls.map(pair=>pair.success),[true,true,false]);
- assert.deepEqual(g.radioStrikes.map(s=>s.strike),['incendiary','missile','missile']);
- assert.deepEqual(g.radioStrikes.map(s=>s.radius),[96*1.3,88*1.3,88*1.3]);
- assert.ok(g.radioStrikes.every(s=>s.damage===130&&s.source===radio));
- assert.ok(g.effects.filter(e=>e.kind==='radioIncoming').every(e=>e.bonus===2));
- const fireAt=g.radioStrikes.find(s=>s.strike==='incendiary').landAt;
- g.time=fireAt;g.updateEvolutionCombat();
- assert.equal(g.radioFireZones[0].radius,104);
- close(g.radioFireZones[0].damage,41.6);
-});
-
-test('three sets of any doubles replace their strikes with one nuke while evolved amplifies it',()=>{
- for(const evolved of [false,true]){
-  const {g,radio,enemy}=field();
-  radio.star=2;g.evolved.guntruck=evolved;g.linkState().radioNukeCodes=2;
-  const roll=fire(g,radio,enemy,[1,1,2,2,3,3]);
-  assert.equal(roll.bonus,3);assert.equal(roll.strike,'nuke');
-  assert.equal(g.linkState().radioNukeCodes,0);
-  assert.deepEqual(roll.rolls.map(pair=>pair.dice),[[1,1],[2,2],[3,3]]);
-  assert.equal(g.radioStrikes.length,1);const [nuke]=g.radioStrikes;
-  assert.equal(nuke.strike,'nuke');assert.equal(nuke.landAt,g.time+1.2);
-  assert.equal(nuke.damage,evolved?150:100);assert.equal(nuke.radius,evolved?337.5:225);
-  g.time=nuke.landAt;const prior=enemy.hp;
-  g.updateEvolutionCombat();close(prior-enemy.hp,nuke.damage*7*g.defenseFactor(enemy,radio));
-  assert.equal(g.radioFireZones.length,evolved?1:0);
-  if(evolved)assert.equal(g.radioFireZones[0].radius,237);
+test('all ranks have one pair and a forced double on the sixth attempt',()=>{
+ for(const rank of [1,2,3]){
+  const {g,radio,enemy}=field();radio.star=rank;
+  for(let n=0;n<5;n++)assert.equal(fire(g,radio,enemy,[1,2]).strike,null);
+  assert.equal(radio.radioMisses,5);
+  const roll=fire(g,radio,enemy,[1]);
+  assert.deepEqual(roll.rolls.map(pair=>pair.dice),[[1,1]]);
+  assert.equal(roll.strike,'incendiary');assert.equal(radio.radioMisses,0);
  }
 });
 
-test('Destiny Star retains three sets and gives the promoted signal corps faster and bigger strikes',()=>{
+test('real fusion and the Destiny Star scale damage once and scale every blast radius',()=>{
  const {g,radio,enemy}=field(),leader=g.commander(0);
- for(let i=0;i<2;i++)g.addUnit(0,'guntruck',960+i*20,5900);
- for(const u of g.fusionCandidates('guntruck')){
-  u.star=2;u.hp=u.maxHp=g.stats(u).hp;
+ g.addUnit(0,'guntruck',920,5900);g.addUnit(0,'guntruck',940,5900);
+ g.evolved.guntruck=true;
+ const base=g.stats(radio);
+ for(const [rank,damageScale,radiusScale] of [[1,1,1],[2,3.4,1.15],[3,10.5,1.30]]){
+  if(rank===2)assert.equal(g.fuseUnit('guntruck'),radio);
+  if(rank===3){
+   for(let i=0;i<2;i++)g.addUnit(0,'guntruck',960+i*20,5900).star=2;
+   const destiny={destinyStar:true,active:true,x:leader.x,y:leader.y};
+   g.pickups.push(destiny);assert.ok(g.collectFieldSupply(destiny));
+  }
+  const stats=g.stats(radio);
+  close(stats.damage,base.damage*damageScale);
+  close(stats.rate,base.rate*(rank===3?.65:1));
+  for(const [face,strike,count,radius,delay] of [[1,'incendiary',1,96,.65],[5,'missile',4,88,1.16],[6,'nuke',1,225,2.4]]){
+   g.radioStrikes=[];
+   const roll=fire(g,radio,enemy,[face,face],stats.damage);
+   assert.equal(roll.rank,rank);assert.equal(roll.strike,strike);
+   assert.deepEqual(roll.rolls.map(pair=>pair.dice),[[face,face]]);
+   assert.equal(g.radioStrikes.length,count);
+   close(g.radioStrikes[0].landAt-g.time,delay);
+   for(const shell of g.radioStrikes){
+    close(shell.damage,base.damage*damageScale);
+    close(shell.radius,radius*radiusScale);
+   }
+   if(strike==='missile'){
+    g.time=g.radioStrikes[0].landAt;g.updateEvolutionCombat();
+    close(g.effects.findLast(e=>e.kind==='radioImpact').radius,radius*radiusScale);
+   }
+   if(strike==='incendiary'){
+    g.time=g.radioStrikes[0].landAt;g.updateEvolutionCombat();
+    close(g.radioFireZones.at(-1).radius,120*radiusScale);
+    close(g.radioFireZones.at(-1).damage,base.damage*damageScale*.32);
+   }
+  }
  }
- const old=g.stats(radio);
- const destiny={destinyStar:true,active:true,x:leader.x,y:leader.y};
- g.pickups.push(destiny);assert.ok(g.collectFieldSupply(destiny));
- close(g.stats(radio).rate,old.rate*.65);assert.equal(radio.star,3);
- const roll=fire(g,radio,enemy,[6,6,3,4,4,5],g.stats(radio).damage);
- assert.equal(roll.rank,3);assert.equal(roll.rolls.length,3);assert.equal(roll.bonus,0);
- assert.equal(g.radioStrikes.length,4);assert.ok(g.radioStrikes.every(s=>s.strike==='missile'));
- close(g.radioStrikes[0].damage,g.stats(radio).damage*1.6);
- close(g.radioStrikes[0].radius,88*1.35);
  const saved=unpack(new FrontGame(),JSON.parse(JSON.stringify(pack(g))));
  assert.equal(saved.radioStrikes[0].source,saved.units.find(u=>u.id===radio.id));
- assert.deepEqual(saved.effects.findLast(e=>e.kind==='radioRoll').rolls,roll.rolls);
 });
 
-test('evolved sixes share codes through a save and the third launches a single nuke',()=>{
- const {g,radio,enemy}=field();
- const partner=g.addUnit(0,'guntruck',940,5900);
- g.evolved.guntruck=true;g.linkState(1).radioNukeCodes=1;
- for(const [index,caller] of [radio,partner].entries()){
-  g.radioStrikes=[];
-  const roll=fire(g,caller,enemy,[6,6]);
-  assert.equal(roll.strike,'missile');
-  assert.equal(roll.rolls[0].nukeCodes,index+1);
-  assert.equal(g.linkState().radioNukeCodes,index+1);
-  assert.equal(g.radioStrikes.length,6);
-  assert.ok(g.radioStrikes.every(shell=>shell.strike==='missile'&&Number.isFinite(shell.x)&&Number.isFinite(shell.y)));
+test('evolved sixes always cause damage, but only one nuke per 3.5 seconds can cause screen whiteout',()=>{
+ const {g,radio,enemy}=field(),partner=g.addUnit(0,'guntruck',940,5900);
+ g.evolved.guntruck=true;
+ for(const [time,caller] of [[0,radio],[.2,partner],[3.5,radio]]){
+  g.time=time;
+  assert.equal(fire(g,caller,enemy,[6,6]).strike,'nuke');
  }
- const saved=unpack(new FrontGame(),JSON.parse(JSON.stringify(pack(g))));
- saved.radioStrikes=[];
- const savedRadio=saved.units.find(u=>u.id===radio.id),savedEnemy=saved.units.find(u=>u.id===enemy.id);
- const third=fire(saved,savedRadio,savedEnemy,[6,6]);
- assert.equal(third.strike,'nuke');assert.equal(saved.radioStrikes.length,1);
- assert.equal(saved.linkState().radioNukeCodes,0);assert.equal(saved.linkState(1).radioNukeCodes,1);
-});
-
-test('independent radio results retain their order when a pair spends the third code',()=>{
- const {g,radio,enemy}=field();
- radio.star=3;g.evolved.guntruck=true;g.linkState().radioNukeCodes=2;
- const outcome=fire(g,radio,enemy,[6,6,6,6,1,2]);
- assert.deepEqual(outcome.rolls.map(roll=>[roll.strike,roll.nukeCodes??0]),[['nuke',0],['missile',1],[null,0]]);
- assert.equal(g.radioStrikes.filter(shell=>shell.strike==='nuke').length,1);
- assert.equal(g.radioStrikes.filter(shell=>shell.strike==='missile').length,6);
- assert.equal(g.linkState().radioNukeCodes,1);
+ assert.equal(g.radioStrikes.length,3);
+ const landings=g.radioStrikes.map(s=>s.landAt);
+ for(const landAt of landings){
+  g.time=landAt;
+  const prior=enemy.hp;
+  g.updateEvolutionCombat();
+  assert.ok(prior-enemy.hp>=700*g.defenseFactor(enemy,radio)-1e-6);
+ }
+ const blasts=g.effects.filter(e=>e.kind==='radioImpact'&&e.strike==='nuke');
+ assert.deepEqual(blasts.map(e=>e.screenFlash),[true,false,true]);
+ assert.equal(g.effects.filter(e=>e.kind==='radioCrater').length,3);
 });
