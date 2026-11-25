@@ -811,16 +811,26 @@ function drawFog(){
  window.FrontRadioArt.flyovers(fc,game,ctx);
  fc.globalCompositeOperation='source-over';ctx.setTransform(1,0,0,1,0,0);ctx.drawImage(fog,0,0);ctx.setTransform(DPR,0,0,DPR,0,0);
 }
+const fieldPickupSprite=new Image(),fieldPickupCell=80;
+fieldPickupSprite.decoding='async';
+fieldPickupSprite.src='assets/models/field-pickups-v2.webp';
+function drawFieldPickupModel(context,index,bob){
+ if(!fieldPickupSprite.complete||!fieldPickupSprite.naturalWidth)return false;
+ const size=fieldPickupCell;
+ context.drawImage(fieldPickupSprite,index*size,0,size,size,-size/2,-size*.70+bob,size,size);
+ return true;
+}
 function drawExperienceDrop(context,drop){
  const large=drop.amount>=40,r=large?10:7.5;
- const lift=(reduceMotion.matches?0:Math.sin(game.time*4+drop.x*.039)*1.3)+r;
+ const bob=reduceMotion.matches?0:Math.sin(game.time*4+drop.x*.039)*1.3;
  context.save();
  context.translate(drop.x,drop.y);
  if(!drop.pulling){
   context.fillStyle='#1b242878';
   context.beginPath();context.ellipse(0,0,r*1.07,r*.4,0,0,Math.PI*2);context.fill();
  }
- context.translate(0,-lift);
+ if(drawFieldPickupModel(context,large?1:0,bob)){context.restore();return;}
+ context.translate(0,bob-r);
  context.lineJoin='round';
  context.fillStyle=large?'#a9a7ff':'#63dce8';
  context.strokeStyle='#244957';context.lineWidth=1.5;
@@ -836,10 +846,15 @@ function drawExperienceDrop(context,drop){
  context.restore();
 }
 function drawCombatDrop(drop,pulse,bob){
- const magnet=drop.combatDrop==='magnet',accent=magnet?'#9ee8ff':'#b4f8b0';
- ctx.save();ctx.scale(1,.68);
- circle(ctx,0,0,18+pulse*2,magnet?'#69ddfa24':'#8ef09f29',accent);
+ const magnet=drop.combatDrop==='magnet',accent=magnet?'#b7ecff':'#ffc9bf';
+ ctx.save();ctx.scale(1,.56);
+ circle(ctx,2,2,16,'#281f2180');
+ circle(ctx,0,0,18+pulse*2,null,magnet?'#84c9ee86':'#ff9a8786');
  ctx.restore();
+ if(drawFieldPickupModel(ctx,magnet?2:3,bob)){
+  text(ctx,magnet?'전맵 자석':'회복템',0,-35+bob,13,accent);
+  return;
+ }
  ctx.save();ctx.translate(0,-16+bob);
  if(magnet){
   ctx.lineCap='round';ctx.lineJoin='round';
@@ -849,9 +864,10 @@ function drawCombatDrop(drop,pulse,bob){
   ctx.lineWidth=6;ctx.strokeStyle='#75c9ff';ctx.stroke();
   rr(ctx,-11,-11,6,6,2,'#f3faff');rr(ctx,5,-11,6,6,2,'#f3faff');
  }else{
-  rr(ctx,-13,-9,26,22,4,'#26483a');
-  rr(ctx,-11,-9,22,17,3,'#79ce83');
-  ctx.fillStyle='#efffe2';ctx.fillRect(-2,-6,4,12);ctx.fillRect(-6,-2,12,4);
+  ctx.beginPath();ctx.moveTo(0,10);
+  ctx.bezierCurveTo(-29,-8,-9,-19,0,-9);
+  ctx.bezierCurveTo(9,-19,29,-8,0,10);ctx.closePath();
+  ctx.fillStyle='#e86871';ctx.fill();ctx.strokeStyle='#802e44';ctx.lineWidth=2;ctx.stroke();
  }
  ctx.restore();
  text(ctx,magnet?'전맵 자석':'회복템',0,-34+bob,13,accent);
