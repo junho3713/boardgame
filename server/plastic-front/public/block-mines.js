@@ -9,8 +9,8 @@ function install({FrontGame}){
  function cue(g,kind,point,data,max){
   g.effects.push({kind,x:point.x,y:point.y,team:0,...data,t:max,max});
  }
- function landing(g,u,angle,forward,side){
-  const dx=Math.cos(angle)*forward-Math.sin(angle)*side,dy=Math.sin(angle)*forward+Math.cos(angle)*side;
+ function landing(g,u,angle,forward){
+  const dx=Math.cos(angle)*forward,dy=Math.sin(angle)*forward;
   const b=g.bounds(),solids=g.solidObstacles();
   // Keep each landing spot on reachable floor, including map edges and cover.
   for(let step=1;step>0;step-=.06){
@@ -28,28 +28,24 @@ function install({FrontGame}){
   if(u.team!==0||u.type!=='rocket'||u.built)return fire.call(this,u,target,attack,s);
   const evolved=this.evolutionEnabled(u),owner=u.coopOwner||0;
   const level=this.coop?this.withOwner(owner,()=>this.tech[0].rocket):this.tech[0].rocket;
-  const count=evolved||level>=5?3:2;
+  // Carry the combined damage of the previous spread into the single mine.
+  const damageScale=evolved?3.15:level>=5?2.76:1.84;
   const angle=target.commandShot?target.angle:Math.atan2(target.y-u.y,target.x-u.x);
   const reach=target.commandShot?s.range:Math.min(s.range,dist(u,target));
   let mines=this.blockMines??=[];
   // Retire the oldest blocks of this squad without touching its partner's mines.
-  const excess=mines.filter(m=>m.owner===owner).length+count-limit;
+  const excess=mines.filter(m=>m.owner===owner).length+1-limit;
   if(excess>0){
    let removed=0;mines=this.blockMines=mines.filter(m=>m.owner!==owner||removed++>=excess);
   }
-  const placed=[];
-  for(let i=0;i<count;i++){
-   // One block lands on the auto target; the other blocks cover its approach.
-   const forward=target.commandShot?reach*([.62,.93,.78][i]):Math.max(0,reach-i*39);
-   const point=landing(this,u,angle,forward,[0,-16,18][i]);
-   const landAt=this.time+.3+dist(u,point)/750+i*.065,radius=Math.max(54,s.splash||0)+(evolved?21:0);
-   const m={id:this.blockMineSerial=(this.blockMineSerial||0)+1,source:u,owner,index:i,
-    x:u.x,y:u.y,fromX:u.x,fromY:u.y,toX:point.x,toY:point.y,angle,startedAt:this.time,landAt,armAt:landAt,expiresAt:landAt+life,
-    evolved,damage:attack.damage*(evolved ? 1.05 : .92),critical:!!attack.critical,radius,triggerRadius:14,chainAt:null};
-   mines.push(m);placed.push(m);
-  }
+  const point=landing(this,u,angle,target.commandShot?reach*.62:reach);
+  const landAt=this.time+.3+dist(u,point)/750,radius=Math.max(54,s.splash||0)+(evolved?21:0);
+  const mine={id:this.blockMineSerial=(this.blockMineSerial||0)+1,source:u,owner,index:0,
+   x:u.x,y:u.y,fromX:u.x,fromY:u.y,toX:point.x,toY:point.y,angle,startedAt:this.time,landAt,armAt:landAt,expiresAt:landAt+life,
+   evolved,damage:attack.damage*damageScale,critical:!!attack.critical,radius,triggerRadius:14,chainAt:null};
+  mines.push(mine);
   u.blockMineThrownAt=this.time;
-  return placed;
+  return [mine];
  };
  // Evolution links modify the primary contact's damage/radius before this method
  // evaluates the blast. Each victim is charged once, centered on the block.

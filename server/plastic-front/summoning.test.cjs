@@ -141,7 +141,7 @@ test('normal action gates reject unaffordable or capped orders without charging;
  const g=battle();
  assert.equal(g.income(0),2.5);
  g.cash[0]=59;assert(!g.summon(1));assert.equal(g.cash[0],59);
- g.cash[0]=1000;g.capacity=()=>3;
+ g.cash[0]=1000;g.capacity=()=>2;
  assert(g.summon(1));assert(!g.summon(1));assert.equal(g.cash[0],940);
  g.dropPods=[];g.capacity=()=>20;upgrade(g,'tank');assert(g.summon(2));
  const pod=g.dropPods[0],foe=g.addUnit(2,'ant',pod.x+75,pod.y);
@@ -156,7 +156,7 @@ test('box uses the stated odds, keeps full rewards, and evolves mercenaries indi
  assert(rollBox(ROSTER,rng(.95,.499)).units[0].goldenSummon);
  assert.equal(rollBox(ROSTER,rng(.96,.501,.499)).units.length,5);
  assert.equal(rollBox(ROSTER,rng(.96,.501,.5)).units.length,6);
- const g=battle();g.capacity=()=>7;g.cash[0]=500;
+ const g=battle();g.capacity=()=>6;g.cash[0]=500;
  assert(!g.summon(6));assert.equal(g.cash[0],500);
  g.capacity=()=>20;g.random=rng(.8,.8);assert(g.summon(6));
  assert.equal(g.cash[0],500-rules.boxCost);
@@ -175,6 +175,7 @@ test('co-op owns each slot list, purchase, and deployed reinforcement separately
  const g=new FrontCoopGame({}, {realtimeSummons:true});g.start();
  for(const owner of [0,1])g.withOwner(owner,()=>{g.phase='choice';g.currentOptions=['rifle'];assert(g.chooseInitialSupport('rifle'));g.coopChoosing[owner]=false;});
  g.time=rules.fall;g.updateDropPods();g.time=0;
+ assert.deepEqual([0,1].map(owner=>g.owned(owner).filter(u=>u.type==='rifle').length),[1,1]);
  g.withOwner(1,()=>upgrade(g,'medic'));
  assert.deepEqual(g.summonSlots,['rifle']);
  g.withOwner(1,()=>{assert.deepEqual(g.summonSlots,['rifle','medic']);assert(g.summon(2));assert.equal(g.cash[0],135-70);});

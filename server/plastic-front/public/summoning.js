@@ -33,7 +33,7 @@
    }
    return shuffled;
   };
-  p.initialSupportCount=function(type){return isVehicle(type)||type==='drone'?1:2;};
+  p.initialSupportCount=function(){return 1;};
   p.initialOptions=function(avoid=[]){
    const cards=shuffle(initialPool,()=>this.random());
    return [...cards.filter(t=>!avoid.includes(t)),...cards.filter(t=>avoid.includes(t))].slice(0,3);
@@ -45,7 +45,7 @@
   p.chooseInitialSupport=function(type){
    if(!this.usesSummoning()||this.phase!=='choice'||this.choiceKind!=='initial'||this.turnChoice||
       !initialPool.includes(type)||!this.currentOptions.includes(type)||this.summonSlots.length)return false;
-   const units=Array.from({length:this.initialSupportCount(type)},()=>({type}));
+   const units=Array.from({length:this.initialSupportCount()},()=>({type}));
    const landings=this.planSummonLandings(units);
    if(!landings)return false;
    this.tech[0][type]=1;this.registerSummon(type);this.dropPods.push(...landings);

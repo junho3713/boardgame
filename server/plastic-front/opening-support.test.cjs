@@ -27,12 +27,12 @@ test('starter reroll replaces all three cards, with three rerolls shared through
  const finalCards=restored.currentOptions;assert(!restored.rerollUpgrade());assert.equal(restored.currentOptions,finalCards);
  restored.reset();assert.equal(restored.rerollCount,3);
 });
-test('opening cards use free drops, level 1, and reserve the next slot for future upgrades',()=>{
- for(const [type,count] of [['rifle',2],['guntruck',2],['tank',1],['lucky',1],['drone',1]]){
+test('each opening card deploys one free level-one unit and reserves the next slot for future upgrades',()=>{
+ for(const type of ROSTER.filter(t=>t!=='medic')){
   const g=make('livingroom');g.start();g.currentOptions=[type];const gold=g.cash[0];assert(g.chooseInitialSupport(type));
   assert.equal(g.cash[0],gold);assert.deepEqual(g.summonSlots,[type]);assert.equal(g.tech[0][type],1);
-  assert.equal(g.dropPods.length,count);assert.equal(g.alive(0).length,1);assert(!g.chooseInitialSupport(type));
-  g.time=g.dropPods[0].landAt;g.updateDropPods();assert.equal(g.alive(0).filter(u=>u.type===type).length,count);
+  assert.equal(g.dropPods.length,1);assert.equal(g.alive(0).length,1);assert(!g.chooseInitialSupport(type));
+  g.time=g.dropPods[0].landAt;g.updateDropPods();assert.equal(g.alive(0).filter(u=>u.type===type).length,1);
   g.phase='choice';g.currentOptions=['medic'];assert.equal(g.nextSummonSlot('medic'),2);
   assert(g.stageChoice('medic'));assert(g.confirmChoice());assert.deepEqual(g.summonSlots,[type,'medic']);
  }

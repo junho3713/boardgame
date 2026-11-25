@@ -6,6 +6,7 @@ const upgradeArt=window.FrontUpgradeArt,unitArt=window.FrontUnitArt;
 const abilities=window.FrontAbilities,evolutions=window.FrontEvolutions,fieldCards=window.FrontFieldCards;let evolutionReturn='ready';
 const types=window.FrontTypes,roster=window.FrontRoster,production=[...roster],emptyQueue=()=>Object.fromEntries(production.map(t=>[t,0]));let W=1,H=1,DPR=1,scale=1,toastTimer,returnPhase='playing',last=0,uiTime=0,terrain,movePointer=null,pageTouch=null,stickPointer=null,aimPointer=null,manualAim=null,stickInput={x:0,y:0},keys={},rosterKey='',queue=emptyQueue();
 let cursorAimEnabled=false,manualAimCursor=null,reticleOpenedAt=0,windowBlurred=false;
+const aimReticleScale=1.5;
 const display=window.FrontDisplay;let displayPrefs;try{displayPrefs=display.read(localStorage);}catch{displayPrefs={...display.defaults};}let displayReturn='ready',displayFocus=null;
 const profileKey='plastic-front-profile-v1',permanent=window.FrontPermanent;let profile,profileSaveError='',permanentReturn='ready';
 try{profile=window.FrontProfile.read(localStorage,profileKey);}catch{profile=new window.FrontProfile();profileSaveError='브라우저 저장을 읽을 수 없습니다. 현재 세션의 진행만 유지됩니다.';}
@@ -416,7 +417,7 @@ function showUpgrade(options){
  $('supportMenuBtn').disabled=boss;$('supportMenuBtn').classList.remove('selected');
  $('upgradeCards').innerHTML=options.map((t,i)=>{
   if(initial){
-   const b=types[t],count=game.initialSupportCount(t);
+   const b=types[t],count=game.initialSupportCount();
    return `<button type="button" class="upgrade-card" data-upgrade="${t}"><span class="card-icon unit-card-icon">${cardArt(t,()=>unitArt.icon(t,b.icon))}</span><h3>${b.name}</h3><span class="summon-preview-badge">[1번 슬롯 등록]</span><p>${b.role}</p><span class="card-bottom"><b>Lv.1 · ${count}기 무료</b><span class="card-select-label">출격</span></span></button>`;
   }
   const key=game.abilityKey(t);
@@ -603,7 +604,7 @@ function aimReticlePosition(player){
   return p.x>=0&&p.x<W&&p.y>=0&&p.y<H?p:null;
  }
  if(!manualAim)return null;
- const origin=point(player),{x,y}=manualAim,pad=16;
+ const origin=point(player),{x,y}=manualAim,pad=16*aimReticleScale;
  const reachX=x?(x>0?W-pad-origin.x:origin.x-pad)/Math.abs(x):Infinity;
  const reachY=y?(y>0?H-pad-origin.y:origin.y-pad)/Math.abs(y):Infinity;
  const distance=Math.max(0,Math.min(136,W*.24,H*.24,reachX,reachY));
@@ -617,6 +618,7 @@ function drawAimReticle(player){
  const gap=2+5*(1-(1-progress)**2),outer=gap+7;
  ctx.save();
  ctx.translate(p.x,p.y);
+ ctx.scale(aimReticleScale,aimReticleScale);
  ctx.lineCap='round';
  ctx.beginPath();
  ctx.moveTo(-outer,0);ctx.lineTo(-gap,0);

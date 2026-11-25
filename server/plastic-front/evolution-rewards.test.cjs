@@ -132,11 +132,11 @@ test('siege explosions extend forward at .15/.30 seconds and never hit an enemy 
  const g=scene(),u=actor(g,'tank'),first=enemy(g,1200),overlap=enemy(g,1280),second=enemy(g,1305),third=enemy(g,1430),hits=[];g.damage=(t,d)=>hits.push([t.id,d]);
  const b=g.fireUnitProjectiles(u,first,{damage:100},g.stats(u))[0];g.impact(b);g.time=.149;g.updateEvolutionCombat();a.equal(hits.length,2);g.time=.15;g.updateEvolutionCombat();a.ok(hits.some(([id])=>id===second.id));g.time=.3;g.updateEvolutionCombat();a.ok(hits.some(([id])=>id===third.id));a.equal(new Set(hits.map(([id])=>id)).size,hits.length);a.equal(hits.filter(([id])=>id===overlap.id).length,1);
 });
-test('evolved allied bazookas lay a stronger, wider three-block minefield and retain critical damage',()=>{
+test('evolved allied mine layers lay one stronger mine with a wider blast and retain critical damage',()=>{
  const g=scene(),u=actor(g,'rocket'),t=enemy(g);const mines=g.fireUnitProjectiles(u,t,{damage:100,critical:true},g.stats(u));
- a.equal(mines.length,3);a.ok(mines.every(m=>m.evolved&&m.critical));a.equal(g.shots.length,0);
+ a.equal(mines.length,1);a.ok(mines[0].evolved&&mines[0].critical);a.equal(g.shots.length,0);
  const other=scene(),rookie=other.addUnit(0,'rocket',1000,6000),baseline=other.fireUnitProjectiles(rookie,enemy(other),{damage:100},other.stats(rookie));
- a.equal(baseline.length,2);a.ok(mines[0].radius>baseline[0].radius&&mines[0].damage>baseline[0].damage);
+ a.equal(baseline.length,1);a.ok(mines[0].radius>baseline[0].radius&&mines[0].damage>baseline[0].damage);
 });
 test('evolved mortar releases two 70% shells with one-second flights and .25-second launch spacing',()=>{
  const g=scene(),u=actor(g,'mortar'),t=enemy(g,1400);g.launchMortar(u,t,{damage:100});a.equal(g.mortarShells[0].damage,70);a.equal(g.mortarShells[0].landAt,1);
