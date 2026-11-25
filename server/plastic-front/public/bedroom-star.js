@@ -1,6 +1,10 @@
 /* Bedroom floor: oversized household props, approved room art and a warm traversable rug. */
 (function(root){'use strict';
-const defense=typeof module!=='undefined'&&module.exports?require('./desktop-star.js'):root.FrontDesktopStar;
+const variants=new WeakMap();
+function waves(base){if(variants.has(base))return variants.get(base);const r=JSON.parse(JSON.stringify(base));r.opening=[];r.swarm.firstAt=8;r.boss.firstAt=240;r.assault.firstAt=210;const eliteAt={bladeGuard:240,beetle:90,stagBeetle:360,rhinoBeetle:480,bruteBeetle:420};r.swarm.mix=r.swarm.mix.map(m=>({...m,at:eliteAt[m.type]??m.at}));
+ Object.assign(r.pressure.early,{swarmBatch:{base:2,add:1,every:3,max:4},swarmInterval:{base:6.5,perTier:-.25,min:4.5}});
+ Object.assign(r.pressure.late,{combatCap:{base:34,perTier:2,max:80,absolute:true},swarmBatch:{base:4,add:1,every:3,max:8},swarmInterval:{base:4,perTier:-.1,min:2.8},swarmCap:{base:40,perTier:2,max:64},assaultBatch:{base:5,add:1,every:3,max:10}});variants.set(base,r);return r;
+}
 const config={id:'bedroom-star',worldId:'bedroom',name:'방바닥 · 2성',width:3200,height:3400,
  hq:{x:1600,y:1750,hp:4000},start:{x:1600,y:2000},
  starters:[['barricade',1420,1940],['barricade',1780,1940],['mgTower',1370,1720],['mgTower',1830,1720]],
@@ -34,7 +38,12 @@ function obstacle(c,o){if(o.kind!=='bedroomBin'){root.FrontLivingRoom.furniture(
 function visible(o,camera,halfW,halfH){if(o.kind!=='bedroomBin')return root.FrontLivingRoom.furnitureVisible(o,camera,halfW,halfH);const r=binRect(o);return r.x+r.w+80>camera.x-halfW&&r.x-80<camera.x+halfW&&r.y+r.h+80>camera.y-halfH&&r.y-80<camera.y+halfH;}
 function opacity(o,units){if(o.kind!=='bedroomBin')return root.FrontLivingRoom.furnitureOpacity(o,units);const r=binRect(o);return units.some(u=>u.hp>0&&u.x>r.x&&u.x<r.x+r.w&&u.y>r.y&&u.y<o.y)?.45:1;}
 function migrate(game){
- if(!game.factoryStar&&game.world?.id!=='factory')return false;
+ const outpost=game.desktopStar||game.world?.variant==='desktop-star';
+ if(!outpost&&!game.factoryStar&&game.world?.id!=='factory')return false;
+ if(outpost){
+  Object.assign(game.bases[0],{x:config.hq.x,y:config.hq.y});
+  delete game.desktopStar;
+ }
  game.factoryStar=false;game.bedroomStar=true;game.starExperiment=true;game.starMax=2;game.mapId='bedroom';game.world={id:'bedroom',variant:config.id,width:config.width,height:config.height,scale:1,layoutVersion:7};game.obstacles=obstacles();game.navigationCache.clear();
  // Keep progress, casualties, resources and damage; resolve only positions covered by the new household objects.
  for(const u of [...game.units,...(game.buildings||[]).filter(b=>b.mobile)])if(u.hp>0){game.resolvePosition(u);u.route=null;u.routeGoal=null;}
@@ -42,6 +51,6 @@ function migrate(game){
  for(const b of game.buildings||[])if(b.hp>0&&!b.mobile){const hp=b.hp;b.hp=0;game.resolvePosition(b,Math.hypot(b.w,b.h)/2+8);b.hp=hp;}
  game.moveOrder=null;return true;
 }
-const api={config,obstacles,waves:base=>defense.waves(base),terrain,obstacle,visible,opacity,depth:o=>o.y+o.h,prepare,binRect,migrate,diagnostics:()=>({bin:!!bin?.naturalWidth,failures})};
+const api={config,obstacles,waves,terrain,obstacle,visible,opacity,depth:o=>o.y+o.h,prepare,binRect,migrate,diagnostics:()=>({bin:!!bin?.naturalWidth,failures})};
 if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.FrontBedroom=api;
 })(typeof window==='undefined'?globalThis:window);

@@ -34,7 +34,6 @@ function collisionState(game){
  const all=[...c.static,...c.solid.map(b=>b.body)];c.views.set(null,all);c.signature=all.map(o=>`${o.x},${o.y},${o.w},${o.h}`).join(';');collisionCaches.set(game,c);return c;
 }
 const ROOM_CAMPAIGN=typeof module!=='undefined'&&module.exports?require('./room-campaign.js'):root.FrontRoomCampaign;
-const DESKTOP_STAR=typeof module!=='undefined'&&module.exports?require('./desktop-star.js'):root.FrontDesktopStar;
 const BEDROOM_STAR=typeof module!=='undefined'&&module.exports?require('./bedroom-star.js'):root.FrontBedroom;
 const WAVE_CONFIGS=typeof module!=='undefined'&&module.exports?{survival:require('./waves-survival.js'),defense:require('./waves-defense.js')}:root.FrontWaveConfigs;
 if(!WAVE_CONFIGS?.survival||!WAVE_CONFIGS?.defense)throw Error('웨이브 설정 파일을 engine.js보다 먼저 불러오세요.');
@@ -169,8 +168,8 @@ class FrontProfile{
  save(storage,key='plastic-front-profile-v1'){storage.setItem(key,JSON.stringify(this.snapshot()));}
 }
 class FrontGame{
- static normalizeBattlefield(id){return id==='livingroom-star3'?'livingroom-star':id==='factory-star'?'bedroom-star':id;}
- constructor(events={},profile=new FrontProfile(),settings={}){const map=FrontGame.normalizeBattlefield(settings.map);this.bedroomStar=map==='bedroom-star';this.desktopStar=map==='desktop-star';this.starExperiment=['livingroom-star','desktop-star','bedroom-star'].includes(map);this.starMax=2;this.mapId=this.bedroomStar?'bedroom':this.desktopStar?'desktop':this.starExperiment?'livingroom':['livingroom','desktop'].includes(map)?map:'backyard';this.commanderId=['shino','blaze','shion'].includes(settings.commander)?settings.commander:'sarge';this.flameSkinId=settings.flameSkin==='hwarin'?'hwarin':'classic';this.sniperSkinId=['kayla','hayeon'].includes(settings.sniperSkin)?'kayla':'classic';this.medicSkinId=settings.medicSkin==='rina'?'rina':'classic';this.events=events;this.profile=profile instanceof FrontProfile?profile:new FrontProfile(profile);this.reset();}
+ static normalizeBattlefield(id){return id==='desktop-star'?'livingroom-pixel':id==='livingroom-star3'?'livingroom-star':id==='factory-star'?'bedroom-star':id;}
+ constructor(events={},profile=new FrontProfile(),settings={}){const map=FrontGame.normalizeBattlefield(settings.map);this.bedroomStar=map==='bedroom-star';this.pixelRoom=map==='livingroom-pixel';this.starExperiment=['livingroom-star','livingroom-pixel','bedroom-star'].includes(map);this.starMax=2;this.mapId=this.bedroomStar?'bedroom':this.starExperiment?'livingroom':['livingroom','desktop'].includes(map)?map:'backyard';this.commanderId=['shino','blaze','shion'].includes(settings.commander)?settings.commander:'sarge';this.flameSkinId=settings.flameSkin==='hwarin'?'hwarin':'classic';this.sniperSkinId=['kayla','hayeon'].includes(settings.sniperSkin)?'kayla':'classic';this.medicSkinId=settings.medicSkin==='rina'?'rina':'classic';this.events=events;this.profile=profile instanceof FrontProfile?profile:new FrontProfile(profile);this.reset();}
  setCommander(id){if(!['sarge','shino','blaze','shion'].includes(id)||this.phase!=='ready')return false;this.commanderId=id;const c=this.commander(0);if(c){c.appearance=id;c.flameSkin=this.flameSkinId;this.refreshCommanderHealth();for(const u of this.alive(0).filter(u=>u.type!=='leader')){Object.assign(u,this.formationPoint(u,c));this.resolvePosition(u);}}return true;}
  setFlameSkin(id){if(!['classic','hwarin'].includes(id)||this.phase!=='ready')return false;this.flameSkinId=id;const c=this.commander(0);if(c?.type==='leader')c.flameSkin=id;return true;}
  setSniperSkin(id){if(id==='hayeon')id='kayla';if(!['classic','kayla'].includes(id)||this.phase!=='ready')return false;this.sniperSkinId=id;for(const u of this.units)if(u.type==='sniper'&&u.team===0)u.appearance=id;return true;}
@@ -224,7 +223,7 @@ class FrontGame{
   this.balanceVersion=BALANCE_VERSION;return true;
  }
  isDesktopDefense(){return this.mode==='pve'&&['desktop','bedroom'].includes(this.bounds().id);}
- starDefense(){return this.bedroomStar?BEDROOM_STAR:this.desktopStar?DESKTOP_STAR:null;}
+ starDefense(){return this.bedroomStar?BEDROOM_STAR:null;}
  upgradeBedroomMap(){return BEDROOM_STAR.migrate(this);}
  hasInvulnerableHQ(){return this.mode==='pve'&&!this.isDesktopDefense();}
  setupDesktop(){
@@ -1763,7 +1762,7 @@ class FrontGame{
  objective(){
   if(this.isDesktopDefense()){
    const left=Math.max(0,Math.ceil(DESKTOP_RULES.duration-this.time)),boss=this.activeBoss(),home=this.bases[0],threat=this.units.filter(u=>u.team!==0&&u.hp>0).sort((a,b)=>dist(a,home)-dist(b,home))[0];
-   return{title:this.bedroomStar?'방바닥 · 2성 / 중앙 기지 방어':this.desktopStar?'책상 전초기지 · 2성 / 중앙 기지 방어':'책상 디펜스 / 20분 동안 버티세요',progress:`남은 시간 ${String(Math.floor(left/60)).padStart(2,'0')}:${String(left%60).padStart(2,'0')} · 기지 ${Math.ceil(home.hp)}/${home.maxHp}${boss?' · 보스 '+boss.bossName:''}`,target:threat||{x:home.x,y:home.y-370},targetName:threat?'접근 중인 적':'방어선 유지',showMarker:!!threat};
+   return{title:this.bedroomStar?'방바닥 · 2성 / 중앙 기지 방어':'책상 디펜스 / 20분 동안 버티세요',progress:`남은 시간 ${String(Math.floor(left/60)).padStart(2,'0')}:${String(left%60).padStart(2,'0')} · 기지 ${Math.ceil(home.hp)}/${home.maxHp}${boss?' · 보스 '+boss.bossName:''}`,target:threat||{x:home.x,y:home.y-370},targetName:threat?'접근 중인 적':'방어선 유지',showMarker:!!threat};
   }
   if(this.crisis.phase==='active'){
    const player=this.commander(0),guns=this.artilleryUnits().sort((a,b)=>dist(a,player)-dist(b,player));

@@ -19,8 +19,8 @@ function addTwos(g,type,count){
 const destiny=g=>g.pickups.find(p=>p.destinyStar);
 function defeat(g,boss){g.damage(boss,1e9,g.commander(0));assert.equal(boss.hp,0);}
 
-test('a late 14-minute room boss leaves a reachable reward once; its earlier mini drops none',()=>{
- const g=game();g.time=780;g.roomCampaign.bossCursor=5;
+for(const map of ['livingroom-star','livingroom-pixel'])test(map+' drops a reachable star from the 14-minute hornet, never the earlier mini',()=>{
+ const g=game(map);g.time=780;g.roomCampaign.bossCursor=5;
  g.roomEntry=g.northernSpawn=()=>({x:1500,y:6000});
  g.updateRoomBosses();
  const mini=g.units.find(u=>u.type==='hornet'&&u.miniBoss);defeat(g,mini);
@@ -33,17 +33,15 @@ test('a late 14-minute room boss leaves a reachable reward once; its earlier min
  g.dropDestinyStar(boss);assert.equal(g.pickups.filter(p=>p.destinyStar).length,1);
 });
 
-test('both star defense maps grant the sixth scheduled boss drop even after delay',()=>{
- for(const map of ['desktop-star','bedroom-star']){
-  const g=game(map);
+test('the bedroom defense grants the sixth scheduled boss drop even after delay',()=>{
+ const g=game('bedroom-star');
   for(let ordinal=1;ordinal<=6;ordinal++){
    g.time=g.bossState.nextAt+10;g.updateBosses();
    const boss=g.units.find(u=>u.boss&&u.hp>0);
    assert.equal(boss.bossNumber,ordinal);defeat(g,boss);
    assert.equal(!!destiny(g),ordinal===6);
   }
-  assert.ok(g.time>840);
- }
+ assert.ok(g.time>840);
  const regular=game('desktop');regular.time=840;
  regular.bossState.spawned=6;regular.updateBosses();
  defeat(regular,regular.units.find(u=>u.boss&&u.hp>0));assert.equal(destiny(regular),undefined);

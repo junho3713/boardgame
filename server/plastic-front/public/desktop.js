@@ -3,7 +3,6 @@
 const box=(c,x,y,w,h,r,fill,stroke)=>{c.beginPath();c.roundRect(x,y,w,h,r);if(fill){c.fillStyle=fill;c.fill();}if(stroke){c.strokeStyle=stroke;c.stroke();}},oval=(c,x,y,rx,ry,fill,stroke)=>{c.beginPath();c.ellipse(x,y,rx,ry,0,0,Math.PI*2);if(fill){c.fillStyle=fill;c.fill();}if(stroke){c.strokeStyle=stroke;c.stroke();}},text=(c,s,x,y,size=16,color='#dbe3cd')=>{c.font=`600 ${size}px sans-serif`;c.textAlign='center';c.fillStyle=color;c.fillText(s,x,y);};
 function terrain(c,game){
  if(game.bedroomStar){window.FrontBedroom.terrain(c,game);return;}
- if(game.desktopStar){window.FrontDesktopStar.terrain(c,game);return;}
  const {width:w,height:h}=game.bounds();let seed=77;const random=()=>{seed=seed*16807%2147483647;return seed/2147483647;};
  const wood=c.createLinearGradient(0,0,w,h);wood.addColorStop(0,'#ae8459');wood.addColorStop(.45,'#d0ad7f');wood.addColorStop(1,'#9e7851');c.fillStyle=wood;c.fillRect(0,0,w,h);
  for(let i=0;i<1000;i++){const y=random()*h;c.strokeStyle=i%3?'#56341b19':'#ffdfa82e';c.lineWidth=.5+random()*2;c.beginPath();c.moveTo(0,y);c.bezierCurveTo(w*.3,y+random()*12,w*.7,y-8,w,y+random()*18);c.stroke();}

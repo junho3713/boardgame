@@ -5,7 +5,7 @@ const RULES={copies:3,maxTwoStars:3,capacityGains:[1,1,2,2,3],damage:3,hp:2.5,he
  three:{damage:7.2,hp:7.8,heal:7.2,roulettes:3,sniperShots:2,lucky:{normal:{glue:.44,mine:.20,spray:.24,missiles:.06,blank:.06},evolved:{glue:.29,mine:.13,spray:.41,missiles:.14,blank:.03}}}};
 const p=Game.prototype,stats=p.stats,upgrade=p.upgradeBalance,buy=p.buy,bonus=p.abilityBonus,remaining=p.recruitmentRemaining,lucky=p.updateLuckyUnit,scale=p.luckyScale,odds=p.luckyOdds,projectiles=p.fireUnitProjectiles;
 p.isThreeStarExperiment=function(){return false;}; // Legacy callers checking for the retired battlefield.
-p.battlefieldId=function(){return this.bedroomStar?'bedroom-star':this.desktopStar?'desktop-star':this.starExperiment?'livingroom-star':this.bounds().id;};
+p.battlefieldId=function(){return this.bedroomStar?'bedroom-star':this.pixelRoom?'livingroom-pixel':this.starExperiment?'livingroom-star':this.bounds().id;};
 p.starCount=function(type,star){return this.alive(0).filter(u=>u.type===type&&(u.star||1)===star).length;};
 p.threeStarCount=function(type){return this.starCount(type,3);};
 p.starRosterLabel=function(type){const three=this.threeStarCount(type);return three?`★★★ ${three}기`:`1성 ${this.fusionCandidates(type).length} · ★★ ${this.twoStarCount(type)}/3`;};

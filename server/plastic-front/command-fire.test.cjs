@@ -49,7 +49,7 @@ test('only the five manually controlled troop types use the held angle',()=>{
 });
 
 test('manual squad fire waits for a visible hostile while the commander independently targets the nearest enemy',()=>{
- for(const map of ['livingroom-star','desktop-star','bedroom-star']){
+ for(const map of ['livingroom-star','livingroom-pixel','bedroom-star']){
   const g=field(map),c=g.commander(0),gun=add(g,'machinegun',1080,1325);
   g.input={x:-1,y:0};g.setManualAim({x:1,y:0});g.update(.02);
   assert.equal(from(g,gun),undefined,map);

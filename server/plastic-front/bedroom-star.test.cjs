@@ -4,8 +4,8 @@ const {FrontGame}=require('./public/engine.js');require('./public/two-star.js');
 const {pack,unpack,FrontAutoPilot}=require('./public/autoplay.js'),{FrontRunSave}=require('./public/run-save.js'),floor=require('./public/bedroom-star.js');
 const create=()=>new FrontGame({},undefined,{map:'bedroom-star'});
 test('bedroom floor is an independent household map and the removed factory URL selects it',()=>{
- const g=create();a.equal(g.world.id,'bedroom');a.equal(g.battlefieldId(),'bedroom-star');a.equal(g.bedroomStar,true);a.equal(g.desktopStar,false);a.equal(g.starExperiment,true);a.equal(g.starMax,2);a.deepEqual([g.bounds().width,g.bounds().height],[3200,3400]);a.ok(g.obstacles.every(o=>o.bedroom));a.ok(g.obstacles.every(o=>!o.kind.startsWith('factory')));a.equal(new FrontGame({},undefined,{map:'factory-star'}).battlefieldId(),'bedroom-star');
- const other=create();g.obstacles[0].x=12;a.notEqual(other.obstacles[0].x,12);a.equal(new FrontGame({},undefined,{map:'desktop-star'}).world.id,'desktop');
+ const g=create();a.equal(g.world.id,'bedroom');a.equal(g.battlefieldId(),'bedroom-star');a.equal(g.bedroomStar,true);a.equal(g.pixelRoom,false);a.equal(g.starExperiment,true);a.equal(g.starMax,2);a.deepEqual([g.bounds().width,g.bounds().height],[3200,3400]);a.ok(g.obstacles.every(o=>o.bedroom));a.ok(g.obstacles.every(o=>!o.kind.startsWith('factory')));a.equal(new FrontGame({},undefined,{map:'factory-star'}).battlefieldId(),'bedroom-star');
+ const other=create();g.obstacles[0].x=12;a.notEqual(other.obstacles[0].x,12);a.equal(new FrontGame({},undefined,{map:'livingroom-pixel'}).world.id,'livingroom');
 });
 test('normal recruitment creates a real two-star squad and keeps medic and lucky vehicle rules',()=>{
  const g=create();g.start();g.phase='choice';g.cash[0]=10000;a.equal(g.buy('rifle'),true);a.equal(g.twoStarCount('rifle'),1);const rifle=g.alive(0).find(u=>u.type==='rifle'),one=g.stats({...rifle,star:1});a.equal(g.stats(rifle).damage,one.damage*3);a.equal(g.stats(rifle).hp,one.hp*2.5);
@@ -32,7 +32,7 @@ test('old factory checkpoints migrate to household geometry without refunding re
  const restored=unpack(new FrontGame(),data);a.equal(restored.battlefieldId(),'bedroom-star');a.equal(restored.factoryStar,false);a.ok(restored.obstacles.every(o=>o.bedroom));a.equal(restored.time,190);a.equal(restored.cash[0],33);a.equal(restored.bases[0].hp,1234);a.equal(restored.buildings[0].hp,87);a.equal(restored.alive(0).length,2);a.equal(restored.upgradeBedroomMap(),false);
 });
 test('legacy desk and room checkpoints retain their own geometry and map identities',()=>{
- for(const map of ['livingroom-star','desktop','desktop-star']){const g=new FrontGame({},undefined,{map}),before=JSON.stringify(g.obstacles),restored=unpack(new FrontGame(),pack(g));a.equal(restored.battlefieldId(),map);a.equal(JSON.stringify(restored.obstacles),before);}
+ for(const map of ['livingroom-star','desktop','livingroom-pixel']){const g=new FrontGame({},undefined,{map}),before=JSON.stringify(g.obstacles),restored=unpack(new FrontGame(),pack(g));a.equal(restored.battlefieldId(),map);a.equal(JSON.stringify(restored.obstacles),before);}
 });
 test('the factory has no selectable map or executable asset and browser plus worker load the replacement',()=>{
  const pub=path.join(__dirname,'public');for(const name of ['index.html','boss-test.html','combat-lab.html','autoplay-worker.js']){const s=fs.readFileSync(path.join(pub,name),'utf8');a.ok(s.indexOf('bedroom-star.js?')<s.indexOf('engine.js?'));a.equal(s.includes('factory-star.js?'),false);}const html=fs.readFileSync(path.join(pub,'index.html'),'utf8');a.equal(html.includes('value="factory-star"'),false);a.ok(html.includes('value="bedroom-star"'));a.equal(fs.existsSync(path.join(pub,'factory-star.js')),false);a.equal(fs.existsSync(path.join(pub,'assets/previews/start-factory-star-v20261115.svg')),false);

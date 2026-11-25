@@ -50,7 +50,7 @@ test('a resumed shield blade keeps its health fraction through the durability mi
 });
 
 test('pirate cannons use one existing wave slot from minute six with a shared 55-second interval and one alive limit',()=>{
- for(const map of ['livingroom-star','desktop-star','bedroom-star','livingroom','desktop','backyard','coop']){
+ for(const map of ['livingroom-star','livingroom-pixel','bedroom-star','livingroom','desktop','backyard','coop']){
   const g=map==='coop'?scene(true):new FrontGame({},undefined,{map});g.start();
   g.units=g.units.filter(u=>u.team===0);g.obstacles=[];
   g.roomEntry=g.desktopEntry=g.northernSpawn=()=>({x:1100,y:1900,entrySide:0});
