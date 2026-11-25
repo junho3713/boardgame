@@ -61,7 +61,7 @@ test('machinegun heats for three seconds, pierces for four, then restarts; pause
  g.phase='paused';const before=JSON.stringify(u);g.update(.05);a.equal(JSON.stringify(u),before);g.time=7;g.updateEvolutionCombat();a.equal(u.overheatUntil,0);a.equal(u.evolutionHeat,0);
  const h=scene(),v=actor(h,'machinegun'),q=enemy(h);h.fireUnitProjectiles(v,q,{damage:100},h.stats(v));h.time=.5;h.fireUnitProjectiles(v,q,{damage:100},h.stats(v));h.time=1.3;h.updateEvolutionCombat();a.equal(v.evolutionHeat,0);
 });
-test('radio doubles schedule three distinct barrages and burn moving targets for 3.5 seconds',()=>{
+test('radio doubles schedule three distinct barrages and burn moving targets for 5 seconds',()=>{
  for(const face of [1,2,3,4,5,6]){
   const g=scene(),u=g.addUnit(0,'guntruck',1000,6000),target=enemy(g,1200);
   g.diceFace=()=>face;g.random=()=>0;
@@ -73,9 +73,14 @@ test('radio doubles schedule three distinct barrages and burn moving targets for
   g.time=shell.landAt;g.updateEvolutionCombat();a.ok(target.hp<hp);
   if(strike==='missile'){a.notEqual(target.x,x);a.equal(g.radioStrikes.length,2);}
   if(strike==='incendiary'){
-   const zone=g.radioFireZones[0],late=enemy(g,zone.x+zone.radius/2);near(zone.until-zone.startedAt,3.5);
+   const zone=g.radioFireZones[0],late=enemy(g,zone.x+zone.radius/2);near(zone.until-zone.startedAt,5);
    g.time+=.5;g.updateEvolutionCombat();a.ok(late.hp<late.maxHp);
-   const burnt=late.hp;late.x+=400;g.time=zone.until;g.updateEvolutionCombat();a.equal(late.hp,burnt);a.equal(g.radioFireZones.length,0);
+   const burnt=late.hp;
+   g.time=zone.until-.5;g.updateEvolutionCombat();a.ok(late.hp<burnt);a.equal(g.radioFireZones.length,1);
+   const lastBurn=late.hp;
+   g.time=zone.until;g.updateEvolutionCombat();a.ok(late.hp<lastBurn);a.equal(g.radioFireZones.length,0);
+   const expired=late.hp;
+   g.time+=.5;g.updateEvolutionCombat();a.equal(late.hp,expired);
   }else a.equal(g.radioFireZones.length,0);
  }
 });
@@ -95,7 +100,7 @@ test('the evolved operator rolls only 3–6, can miss, and leaves a larger burn 
  const picks=[3,4,5,5];g.diceFace=()=>picks.shift();
  g.fireUnitProjectiles(u,t,{damage:10});a.equal(g.radioStrikes.length,0);
  g.fireUnitProjectiles(u,t,{damage:10});a.equal(g.radioStrikes.length,1);
- g.time=1.2;g.updateEvolutionCombat();a.equal(g.radioFireZones[0].radius,158);
+ g.time=1.2;g.updateEvolutionCombat();a.equal(g.radioFireZones[0].radius,158);near(g.radioFireZones[0].until-g.time,3.5);
 });
 test('an evolved drone circles its commander, shoots the nearest visible enemy and sweeps a piercing laser on a cooldown',()=>{
  const g=scene(),u=actor(g,'drone'),c=g.addUnit(0,'leader',1000,6100),behind=enemy(g,970,6000),a1=enemy(g,1120),a2=enemy(g,1220),off=enemy(g,1130,6150);

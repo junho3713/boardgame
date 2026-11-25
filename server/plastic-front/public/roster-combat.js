@@ -186,7 +186,8 @@ function install({FrontGame,TYPES,multiplier}){
   effect(g,'radioImpact',shell,{source,strike,angle,seq,radius},strike==='nuke'?1.6:.65);
   g.notify('radioImpact',{team:0,id:source.id,x,y,strike});
   if(strike==='incendiary'||golden&&strike==='nuke'){
-   g.radioFireZones.push({source,x,y,radius:strike==='nuke'?158:80,damage:damage*.32,startedAt:landAt,nextAt:landAt+.5,until:landAt+3.5});
+   const duration=strike==='incendiary'?5:3.5;
+   g.radioFireZones.push({source,x,y,radius:strike==='nuke'?158:80,damage:damage*.32,startedAt:landAt,nextAt:landAt+.5,until:landAt+duration});
   }
  }
  function updateRadio(g){
