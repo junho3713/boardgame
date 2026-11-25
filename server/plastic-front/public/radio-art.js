@@ -86,13 +86,15 @@ function rolls(c,game,visible) {
   const spinning=age<.23;
   const popup=(age-.23)/.25, accented=hit&&popup>=0&&popup<1;
   const zoom=accented?1+(reduced?.09:.5)*Math.min(1,popup/.22,(1-popup)/.30):1;
-  const rim=accented?(e.a>=5?'#ff342e':'#ffbb26'):null;
-  const tick=Math.floor(age*(reduced?10:23)), first=e.golden?3:1, count=7-first;
-  const faces=spinning ? [first+(e.a-first+tick)%count,first+(e.b-first+5*tick)%count] : [e.a,e.b];
+  // Older saves carry the already-scheduled impact but omit its type on the roll.
+  const nuclear=e.strike===undefined?e.a>=5:e.strike==='nuke';
+  const rim=accented?(nuclear?'#ff342e':'#ffbb26'):null;
+  const incendiary=!spinning&&hit&&e.strike==='incendiary';
+  const labelHeight=incendiary?13:0;
   const x=u.x*scale;
   let y=(u.y-57)*scale-10;
-  while(lanes.some(lane=>Math.abs(lane.x-x)<lane.w+22*zoom && Math.abs(lane.y-y)<lane.h+13*zoom)) y-=14+13*zoom;
-  lanes.push({x,y,w:22*zoom,h:13*zoom});
+  while(lanes.some(lane=>Math.abs(lane.x-x)<lane.w+22*zoom && Math.abs(lane.y-y)<lane.h+13*zoom+labelHeight)) y-=14+13*zoom+labelHeight;
+  lanes.push({x,y,w:Math.max(22*zoom,incendiary?43:0),h:13*zoom+labelHeight});
   c.save();
   if (hit && !spinning) {
    const lampX=u.x+7, lampY=u.y-38;
@@ -106,8 +108,27 @@ function rolls(c,game,visible) {
   c.translate(x/scale,y/scale); c.scale(zoom/scale,zoom/scale);
   const jump=spinning&&!reduced ? 3*Math.sin(age/.23*Math.PI):0;
   const twist=spinning&&!reduced ? .37*Math.sin(age*38):0;
-  face(c,-11,-jump,faces[0],rim,twist-.035);
-  face(c,11,-jump*.55,faces[1],rim,-twist+.035);
+  // Tumble unreadable edges first. Every readable pair is the resolved roll.
+  c.save();
+  if(spinning)c.scale(.40+.35*Math.abs(Math.sin(age*32)),1);
+  face(c,-11,-jump,spinning?0:e.a,rim,twist-.035);
+  face(c,11,-jump*.55,spinning?0:e.b,rim,-twist+.035);
+  c.restore();
+  if(incendiary){
+   c.scale(1/zoom,1/zoom);
+   const top=-11*zoom-3, label=e.golden?'강화 소이탄':'소이탄';
+   c.font='bold 12px sans-serif';c.textAlign='center';c.textBaseline='bottom';c.lineJoin='round';
+   c.strokeStyle='#382115';c.lineWidth=3;c.strokeText(label,0,top);
+   c.fillStyle='#ffdb89';c.fillText(label,0,top);
+   if(Number.isFinite(e.tx)&&Number.isFinite(e.ty)){
+    const sx=tr.a*e.tx+tr.c*e.ty+tr.e,sy=tr.b*e.tx+tr.d*e.ty+tr.f;
+    if(sx<0||sx>c.canvas.width||sy<0||sy>c.canvas.height){
+     c.translate(c.measureText(label).width/2+7,top-7);
+     c.rotate(Math.atan2(e.ty-u.y,e.tx-u.x));
+     polygon(c,[[5,0],[-4,-4],[-2,0],[-4,4]],'#ffc568');
+    }
+   }
+  }
   c.restore();
  }
 }
@@ -204,6 +225,14 @@ function groundPasses(c,game,visible,view){
   c.save();c.translate(e.x,e.y);
   sky.aircraft(c,e,left,view.reduced);
   if(incoming){sky.shadow(c,e,left);sky.marker(c,e,left,view.reduced);}
+  if(incoming&&e.strike==='incendiary'&&left>0){
+   const closing=clamp(1-left/e.max);
+   glow(c,0,0,15+12*closing,7+6*closing,'#ffdd7ece','#f2762866');
+   for(let i=0;i<3;i++){
+    const a=i*tau/3+.4,d=6+16*(1-closing);
+    ellipse(c,Math.cos(a)*d,Math.sin(a)*d*.55,2.4,1.4,'#ffc169');
+   }
+  }
   c.restore();
  }
 }

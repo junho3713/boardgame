@@ -67,15 +67,15 @@ test('shotgun healing strengthens all four shots of the next magazine exactly on
 test('real 777 and Boss Killer rewards force sixes for five seconds, including a saved 777',()=>{
  const g=scene(true),l=actor(g,'lucky',0),d=actor(g,'guntruck',0),other=actor(g,'guntruck',1);
  g.random=()=>0;
- a.equal(g.diceFace(d),3);
+ a.equal(g.diceFace(d),1);
  g.castLucky(l,'missiles');
  a.equal(g.luckySalvos.at(-1).waiting,true);
  a.equal(g.diceFace(d),6);
- a.equal(g.diceFace(other),3);
+ a.equal(g.diceFace(other),1);
  const saved=unpack(scene(true),JSON.parse(JSON.stringify(pack(g))));
  a.equal(saved.diceFace(saved.units.find(unit=>unit.id===d.id)),6);
  g.time=5;
- a.equal(g.diceFace(d),3);
+ a.equal(g.diceFace(d),1);
  g.random=()=>.99;
  g.castLucky(l,'bossKiller');
  a.equal(g.linkState().diceSixUntil,5);

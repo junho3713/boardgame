@@ -117,7 +117,7 @@ test('shotgun and radio alternate between automatic targeting and a held manual 
   assert.equal(pellets.length,5);assert.equal(pellets[2].commandAngle,0);assert.ok(pellets.every(s=>s.hot));
   assert.equal(g.radioStrikes.find(d=>d.source===dice).angle,0);assert.equal(enemy.hp,enemy.maxHp);
   g.shots=[];enemy.hp=0;shotgun.cooldown=dice.cooldown=0;g.update(.01);
-  assert.equal(g.shots.filter(s=>s.source===shotgun).length,0);assert.equal(g.radioStrikes.length,1);
+  assert.equal(g.shots.filter(s=>s.source===shotgun).length,0);assert.equal(g.radioStrikes.length,4);
   g.setManualAim(null);enemy.hp=enemy.maxHp;g.radioStrikes=[];g.move=()=>{};
   g.time=shotgun.shotgunPumpUntil;shotgun.cooldown=dice.cooldown=0;g.update(.01);
   assert.ok(Math.cos(g.shots.find(s=>s.source===shotgun).muzzleAngle)<0);
@@ -154,15 +154,19 @@ test('a visible distant contact starts an incendiary call, and its random positi
  const shell=g.radioStrikes.find(v=>v.source===radio);
  assert.equal(shell.strike,'incendiary');assert.deepEqual([shell.x,shell.y],[far.x,far.y]);
  const near=add(g,'rifle',1160,1310,1);
- const contacts=g.radioContacts(radio);g.random=()=>(contacts.indexOf(near)+.5)/contacts.length;g.fireUnitProjectiles(radio,g.commandFirePoint(radio,620,Math.PI),{damage:10});
+ // Keep the same random draw and manual bearing. The far contact is still in
+ // allied vision, but a contact on the player's board now takes precedence.
+ g.fireUnitProjectiles(radio,g.commandFirePoint(radio,620,Math.PI),{damage:10});
  const second=g.radioStrikes.at(-1);assert.deepEqual([second.x,second.y],[near.x,near.y]);
+ const rolls=g.effects.filter(e=>e.kind==='radioRoll');
+ assert.deepEqual(rolls.map(r=>[r.tx,r.ty]),[[far.x,far.y],[near.x,near.y]]);
 });
 test('an automatic missile salvo selects the packed group and attack speed shortens the next roll',()=>{
  const g=field(),radio=add(g,'guntruck',1100,1320);
  add(g,'rifle',1170,1320,1);
  g.scoutUntil=g.time+10;
  const cluster=add(g,'rifle',1360,2020,1);add(g,'rifle',1390,2020,1);add(g,'rifle',1415,2020,1);
- g.move=g.navigate=g.separateCrowd=()=>{};g.diceFace=()=>3;
+ g.move=g.navigate=g.separateCrowd=()=>{};g.diceFace=()=>4;
  const base=g.stats(radio).rate;g.abilities.haste=5;
  g.update(.01);assert.ok(radio.cooldown<base);
  const first=g.radioStrikes[0];assert.equal(first.strike,'missile');assert.equal(first.x,cluster.x);

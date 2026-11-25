@@ -16,8 +16,8 @@ function install({FrontGame,TYPES,multiplier}){
  p.droneLaserDamage=function(u,t,amount){return amount;};
  p.droneLaserPeriod=function(){return 6;};
  p.droneLaserTarget=function(u,range,target){return target;};
- p.diceFace=function(u,evolved=this.evolutionEnabled(u)){
-  const low=evolved?3:1;return Math.min(6,low+Math.floor(this.random()*(7-low)));
+ p.diceFace=function(){
+  return Math.min(6,1+Math.floor(this.random()*6));
  };
  p.dronePatrolPoint=function(u,c){
   const phase=this.time*.85+u.id*2.4;
@@ -114,10 +114,15 @@ function install({FrontGame,TYPES,multiplier}){
  };
 
  const RADIO = {
-  incendiary: {radius:96, multiplier:2.2, count:1, delay:.65, knockback:0},
-  missile: {radius:88, multiplier:1.7, count:3, delay:.58, knockback:44},
-  nuke: {radius:225, multiplier:7, count:1, delay:1.2, knockback:0}
+  incendiary: {radius:96, multiplier:2.2, delay:.65, knockback:0},
+  missile: {radius:88, multiplier:1.7, delay:.58, knockback:44},
+  nuke: {radius:225, multiplier:7, delay:1.2, knockback:0}
  };
+ const missileSpread=[0,-21,21,0];
+ function doubleStrike(face,golden){
+  if(face<=(golden?2:3))return 'incendiary';
+  return golden&&face===6?'nuke':'missile';
+ }
  p.radioContacts=function(u,candidates=this.combatCandidates()){
   return candidates.filter(t=>t.team!==u.team&&t.hp>0&&!t.hidden&&
    !(t.base&&this.baseShielded())&&!(t.structure&&this.mission.stage<(t.activeStage||2))&&this.canTarget(u,t)&&this.visible(t));
@@ -133,7 +138,18 @@ function install({FrontGame,TYPES,multiplier}){
   return best;
  }
  function radioTarget(g,u,contacts,aim,strike){
-  if(strike==='incendiary')return contacts[Math.min(contacts.length-1,Math.floor(g.random()*contacts.length))];
+  if(strike==='incendiary'){
+   let inView;
+   if(!g.coop&&g.viewport&&g.camera){
+    const {width,height}=g.viewport;
+    inView=contacts.filter(t=>Math.abs(t.x-g.camera.x)<=width/2&&Math.abs(t.y-g.camera.y)<=height/2);
+   }else{
+    const view=g.coop?g.withOwner(u.coopOwner,()=>g.spawnView(true)):g.spawnView(true);
+    inView=contacts.filter(t=>t.x>=view.left&&t.x<=view.right&&t.y>=view.top&&t.y<=view.bottom);
+   }
+   const pool=inView.length?inView:contacts;
+   return pool[Math.min(pool.length-1,Math.floor(g.random()*pool.length))];
+  }
   if(g.hasEvolutionLink(u,'radioPrecision')){
    const marked=contacts.filter(t=>g.linkMarked(t,u,'snipe'));
    const rank=t=>t.boss?2:Number(!!(t.roadCaptain||t.miniBoss||t.type==='pirateCannon'||t.type==='bombBug'));
@@ -152,18 +168,24 @@ function install({FrontGame,TYPES,multiplier}){
  function callRadio(g,u,aim,attack){
   const contacts=g.radioContacts(u);
   if(!contacts.length)return [];
-  const golden=g.evolutionEnabled(u),a=g.diceFace(u,golden),b=u.radioMisses>=5?a:g.diceFace(u,golden);
+  const golden=g.evolutionEnabled(u),a=g.diceFace(u,golden);
+  let b=u.radioMisses>=5?a:g.diceFace(u,golden);
+  // With six faces, matching one in ten ordinary misses preserves the officer's
+  // 25% double chance and leaves all six double results equally likely.
+  if(golden&&a!==b&&g.random()<.10)b=a;
+  const strike=a===b?doubleStrike(a,golden):null;
   u.radioRollAt=g.time;
   g.notify('fire',u);
-  effect(g,'radioRoll',u,{source:u,a,b,golden},.85);
+  const point=strike?radioTarget(g,u,contacts,aim,strike):null;
+  effect(g,'radioRoll',u,{source:u,a,b,golden,strike,tx:point?.x,ty:point?.y},.85);
   if(a!==b){u.radioMisses=(u.radioMisses||0)+1;return [];}
   u.radioMisses=0;u.radioDoubleAt=g.time;
-  const strike=a<=2?'incendiary':a<=4?'missile':'nuke',spec=RADIO[strike];
-  const point=radioTarget(g,u,contacts,aim,strike),angle=aim.commandShot?aim.angle:heading(u,point);
+  const spec=RADIO[strike],count=strike==='missile'?(golden?4:a-2):1;
+  const angle=aim.commandShot?aim.angle:heading(u,point);
   const precise=strike!=='incendiary'&&g.hasEvolutionLink(u,'radioPrecision');
   const bounds=g.bounds();
-  for(let seq=0;seq<spec.count;seq++){
-   const spread=[0,-21,21][seq],delay=spec.delay+seq*.26;
+  for(let seq=0;seq<count;seq++){
+   const spread=missileSpread[seq],delay=spec.delay+seq*.26;
    const x=Math.max(0,Math.min(bounds.width,point.x-Math.sin(angle)*spread));
    const y=Math.max(0,Math.min(bounds.height,point.y+Math.cos(angle)*spread));
    const shell={source:u,x,y,angle,seq,strike,radius:spec.radius,golden,precise,damage:attack.damage,landAt:g.time+delay};
@@ -188,8 +210,9 @@ function install({FrontGame,TYPES,multiplier}){
   if(strike==='nuke')effect(g,'radioCrater',shell,{radius,visualUntil:g.time+6},6);
   g.notify('radioImpact',{team:0,id:source.id,x,y,strike});
   if(strike==='incendiary'||golden&&strike==='nuke'){
-   const duration=strike==='incendiary'?5:3.5;
-   g.radioFireZones.push({source,x,y,radius:strike==='nuke'?158:80,damage:damage*.32,startedAt:landAt,nextAt:landAt+.5,until:landAt+duration});
+   const duration=strike==='nuke'?3.5:(golden?7:5);
+   const burnRadius=strike==='nuke'?158:(golden?120:80);
+   g.radioFireZones.push({source,x,y,radius:burnRadius,damage:damage*.32,startedAt:landAt,nextAt:landAt+.5,until:landAt+duration});
   }
  }
  function updateRadio(g){

@@ -61,26 +61,39 @@ test('machinegun heats for three seconds, pierces for four, then restarts; pause
  g.phase='paused';const before=JSON.stringify(u);g.update(.05);a.equal(JSON.stringify(u),before);g.time=7;g.updateEvolutionCombat();a.equal(u.overheatUntil,0);a.equal(u.evolutionHeat,0);
  const h=scene(),v=actor(h,'machinegun'),q=enemy(h);h.fireUnitProjectiles(v,q,{damage:100},h.stats(v));h.time=.5;h.fireUnitProjectiles(v,q,{damage:100},h.stats(v));h.time=1.3;h.updateEvolutionCombat();a.equal(v.evolutionHeat,0);
 });
-test('radio doubles schedule three distinct barrages and burn moving targets for 5 seconds',()=>{
- for(const face of [1,2,3,4,5,6]){
+test('each basic and officer double schedules the right salvo and burns enemies entering its footprint',()=>{
+ const base=['incendiary','incendiary','incendiary','missile','missile','missile'];
+ const officer=['incendiary','incendiary','missile','missile','missile','nuke'];
+ for(const evolved of [false,true])for(const face of [1,2,3,4,5,6]){
   const g=scene(),u=g.addUnit(0,'guntruck',1000,6000),target=enemy(g,1200);
-  g.diceFace=()=>face;g.random=()=>0;
+  g.evolved.guntruck=evolved;g.random=()=>(face-.5)/6;
   g.fireUnitProjectiles(u,target,{damage:100});
-  const shell=g.radioStrikes[0],strike=face<=2?'incendiary':face<=4?'missile':'nuke';
-  a.equal(shell.strike,strike);a.equal(g.radioStrikes.length,strike==='missile'?3:1);
-  const roll=g.effects.find(e=>e.kind==='radioRoll');a.deepEqual([roll.a,roll.b],[face,face]);
+  const shell=g.radioStrikes[0],strike=(evolved?officer:base)[face-1];
+  const count=(evolved?[1,1,4,4,4,1]:[1,1,1,2,3,4])[face-1];
+  a.equal(shell.strike,strike);a.equal(g.radioStrikes.length,count);
+  for(const [i,round] of g.radioStrikes.entries()){
+   a.ok(Number.isFinite(round.x)&&Number.isFinite(round.y));near(round.landAt,shell.landAt+i*.26);
+  }
+  const roll=g.effects.find(e=>e.kind==='radioRoll');a.deepEqual([roll.a,roll.b,roll.strike],[face,face,strike]);
   const hp=target.hp,x=target.x;g.time=shell.landAt-.001;g.updateEvolutionCombat();a.equal(target.hp,hp);
   g.time=shell.landAt;g.updateEvolutionCombat();a.ok(target.hp<hp);
-  if(strike==='missile'){a.notEqual(target.x,x);a.equal(g.radioStrikes.length,2);}
+  if(strike==='missile'){
+   a.notEqual(target.x,x);a.equal(g.radioStrikes.length,count-1);
+   g.time=shell.landAt+1;g.updateEvolutionCombat();a.equal(g.radioStrikes.length,0);
+   a.equal(g.effects.filter(e=>e.kind==='radioImpact').length,count);
+  }
   if(strike==='incendiary'){
-   const zone=g.radioFireZones[0],late=enemy(g,zone.x+zone.radius/2);near(zone.until-zone.startedAt,5);
+   const zone=g.radioFireZones[0],late=enemy(g,zone.x+zone.radius-1),outside=enemy(g,zone.x+zone.radius+40);
+   near(zone.until-zone.startedAt,evolved?7:5);a.equal(zone.radius,evolved?120:80);
    g.time+=.5;g.updateEvolutionCombat();a.ok(late.hp<late.maxHp);
    const burnt=late.hp;
    g.time=zone.until-.5;g.updateEvolutionCombat();a.ok(late.hp<burnt);a.equal(g.radioFireZones.length,1);
    const lastBurn=late.hp;
    g.time=zone.until;g.updateEvolutionCombat();a.ok(late.hp<lastBurn);a.equal(g.radioFireZones.length,0);
    const expired=late.hp;
-   g.time+=.5;g.updateEvolutionCombat();a.equal(late.hp,expired);
+   g.time+=.5;g.updateEvolutionCombat();a.equal(late.hp,expired);a.equal(outside.hp,outside.maxHp);
+  }else if(strike==='nuke'){
+   const zone=g.radioFireZones[0];a.equal(zone.radius,158);near(zone.until-zone.startedAt,3.5);
   }else a.equal(g.radioFireZones.length,0);
  }
 });
@@ -92,15 +105,20 @@ test('five separate misses force the sixth roll for that operator, even through 
  g.fireUnitProjectiles(other,t,{damage:10});a.equal(other.radioMisses,1);
  const restored=unpack(scene(),pack(g)),saved=restored.units.find(v=>v.id===u.id);
  restored.diceFace=()=>5;restored.fireUnitProjectiles(saved,restored.units.find(v=>v.id===t.id),{damage:10});
- a.equal(saved.radioMisses,0);a.equal(restored.radioStrikes[0].strike,'nuke');
+ a.equal(saved.radioMisses,0);a.equal(restored.radioStrikes[0].strike,'missile');a.equal(restored.radioStrikes.length,3);
 });
-test('the evolved operator rolls only 3–6, can miss, and leaves a larger burn zone after a nuclear call',()=>{
- const g=scene(),u=actor(g,'guntruck'),t=enemy(g);
- for(const [sample,face] of [[0,3],[.26,4],[.51,5],[.999,6]]){g.random=()=>sample;a.equal(g.diceFace(u),face);}
- const picks=[3,4,5,5];g.diceFace=()=>picks.shift();
- g.fireUnitProjectiles(u,t,{damage:10});a.equal(g.radioStrikes.length,0);
- g.fireUnitProjectiles(u,t,{damage:10});a.equal(g.radioStrikes.length,1);
- g.time=1.2;g.updateEvolutionCombat();a.equal(g.radioFireZones[0].radius,158);near(g.radioFireZones[0].until-g.time,3.5);
+test('ordinary rolls retain fair double faces and the evolved 25 percent chance before pity or hotline',()=>{
+ for(const evolved of [false,true]){
+  const g=scene(),u=g.addUnit(0,'guntruck',1000,6000),target=enemy(g),hits=Array(6).fill(0);
+  g.evolved.guntruck=evolved;
+  for(let a=1;a<=6;a++)for(let b=1;b<=6;b++)for(let bucket=0;bucket<10;bucket++){
+   const samples=[(a-.5)/6,(b-.5)/6,(bucket+.5)/10];
+   g.random=()=>samples.shift()??0;u.radioMisses=0;g.radioStrikes=[];g.effects=[];
+   g.fireUnitProjectiles(u,target,{damage:10});
+   if(g.radioStrikes.length)hits[a-1]++;
+  }
+  a.deepEqual(hits,Array(6).fill(evolved?15:10));
+ }
 });
 test('an evolved drone circles its commander, shoots the nearest visible enemy and sweeps a piercing laser on a cooldown',()=>{
  const g=scene(),u=actor(g,'drone'),c=g.addUnit(0,'leader',1000,6100),behind=enemy(g,970,6000),a1=enemy(g,1120),a2=enemy(g,1220),off=enemy(g,1130,6150);

@@ -13,14 +13,29 @@ function renderer(coop=false){
  const window={Image:Atlas,matchMedia:()=>({matches:true}),performance:{now:()=>now},
   FrontCoopClient:{active:coop},FrontRadioAirspace:{syncOrigins(){},scorch(){},aircraft(){},marker(){},shadow(){}}};
  vm.runInNewContext(fs.readFileSync(require.resolve('./public/radio-art.js'),'utf8'),{window});
- const cells=[],gradient={addColorStop(){}},c=new Proxy({
+ const cells=[],faces=[],gradient={addColorStop(){}},c=new Proxy({
   globalAlpha:1,createRadialGradient:()=>gradient,createLinearGradient:()=>gradient,
+  canvas:{width:800,height:600,clientWidth:800},getTransform:()=>({a:1,b:0,c:0,d:1,e:0,f:0}),
+  fill(){if(this.fillStyle==='#434543')faces.push(0);if(this.fillStyle==='#0e0e0e')faces[faces.length-1]++;},
   drawImage(img,sx,sy,sw,sh){if(sw===192)cells.push((sy/192%4)*6+sx/192);}
  },{get:(o,k)=>o[k]??(()=>{})});
  const game={time:0,phase:'playing',coop,effects:[],radioFireZones:[]};
  return {game,paint(t,ms){now=ms;game.time=t;window.FrontRadioArt.ground(c,game);},cells,
+  dice(e,age){faces.length=0;game.effects=[{kind:'radioRoll',x:0,y:0,max:.85,t:.85-age,...e}];
+   window.FrontRadioArt.rolls(c,game,()=>true);return [...faces];},
   impact(at=0){window.FrontRadioArt.event(c,{kind:'radioImpact',strike:'nuke',at,x:0,y:0,radius:225,t:1,max:1});}};
 }
+test('rolling dice only show pips for the settled outcome, including misses that previously flashed a low double',()=>{
+ const r=renderer();
+ for(const reducedMotion of [false,true]){
+  r.game.reducedMotion=reducedMotion;
+  for(const [a,b] of [[1,3],[3,5],[1,1],[2,2],[6,6]]){
+   const e={a,b,strike:a!==b?null:a===6?'nuke':'incendiary'};
+   for(const age of [0,.06,.11,.16,.22])assert.deepEqual(r.dice(e,age),[0,0]);
+   for(const age of [.24,.4,.8])assert.deepEqual(r.dice(e,age),[a,b]);
+  }
+ }
+});
 test('reduced motion advances the impact and the same burning pocket, and a paused battle holds the frame',()=>{
  const r=renderer();
  r.game.radioFireZones=[{x:50,y:32,radius:80,startedAt:0,until:5}];

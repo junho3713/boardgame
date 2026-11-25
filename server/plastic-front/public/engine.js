@@ -144,7 +144,7 @@ const PERMANENT={
 const ABILITIES={...Object.fromEntries(Object.entries(PERMANENT).filter(([k])=>!k.startsWith('turret')).map(([k,b])=>[k,{...b,max:5,gain:{damage:10,speed:6,haste:8,critChance:4,critDamage:15,gold:15,capacity:2,defense:5}[k]}])),health:{name:'체력',icon:'♥',gain:10,unit:'%',max:5,detail:'대장과 모든 분대원의 최대 체력 · 단계당 +10%'},xpGain:{name:'경험치 획득량',icon:'✧',gain:5,unit:'%',max:5,detail:'작전 중 획득하는 경험치 · 단계당 +5%'}};
 const EVOLUTIONS={
  tank:{name:'공성 전차',ability:'damage',detail:'공격력 +35% · 폭발 범위 +35 · 사거리 +35 · 최대 체력 +20%'},
- guntruck:{name:'전략 폭격 통신관',ability:'haste',detail:'눈금 3~6 · 더블로 미사일 또는 핵 호출 · 핵 착탄 후 대형 화염 지대'},
+ guntruck:{name:'전략 폭격 통신관',ability:'haste',detail:'1·2 더블은 강화 소이탄 · 3~5 더블은 미사일 4발 · 6-6은 전술 핵'},
  rifle:{name:'드래곤 브레스 산탄병',ability:'health',detail:'화염 산탄 · 지속 화상 · 마지막 4번째 탄의 폭발 범위와 넉백 강화'},
  sniper:{name:'정예 저격병',ability:'critChance',detail:'치명타 확률 +25%p · 치명타 피해 +50%p · 사거리 +65'},
  rocket:{name:'연쇄 폭파병',ability:'critDamage',detail:'강화 블록 지뢰 · 더 큰 폭발 · 주변 지뢰 도미노 연쇄 폭파'},
