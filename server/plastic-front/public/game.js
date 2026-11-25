@@ -806,7 +806,7 @@ function draw(dt){
   const entities=[...game.units.filter(u=>!types[u.type].flying).map(u=>({depth:u.y,u})),...props,...view.grassPatches(game).filter(p=>view.grassVisible(p,game.camera,halfW,halfH)).map(p=>({depth:p.y+3,grass:p}))].sort((a,b)=>a.depth-b.depth);
   for(const e of entities)if(e.u)drawUnit(e.u);else if(e.grass)view.grass(ctx,e.grass,visibleTroops,game.time);else view.obstacle(ctx,e.o,e.i,worldModels,view.opacity(e.o,e.i,visibleTroops));
  }
- window.FrontSummonHud.airborne(ctx,game,(pod,evolved)=>unitModels.draw(ctx,pod,game.time,evolved));
+ window.FrontSummonHud.airborne(ctx,game,(pod,evolved)=>unitModels.draw(ctx,pod,game.time,evolved),reduceSummonMotion.matches);
  for(const u of game.units.filter(u=>types[u.type].flying).sort((a,b)=>a.y-b.y))drawUnit(u);
  for(const u of game.units.filter(u=>u.hp>0&&u.type==='sniper'&&game.visible(u)&&u.sniperAim&&(u.sniperAim.target.commandShot||game.visible(u.sniperAim.target))).slice(0,12))battleFx.drawLaser(ctx,u,game.time,{crouched:unitModels.crouched(u),muzzle:unitModels.weaponPoint(u)});
  window.FrontGuardianFX.air(ctx,game);battleFx.drawLuckySprays(ctx,game,fxVisible);

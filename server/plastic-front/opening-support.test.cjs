@@ -32,7 +32,7 @@ test('opening cards use free drops, level 1, and reserve the next slot for futur
   const g=make('livingroom');g.start();g.currentOptions=[type];const gold=g.cash[0];assert(g.chooseInitialSupport(type));
   assert.equal(g.cash[0],gold);assert.deepEqual(g.summonSlots,[type]);assert.equal(g.tech[0][type],1);
   assert.equal(g.dropPods.length,count);assert.equal(g.alive(0).length,1);assert(!g.chooseInitialSupport(type));
-  g.time=.3;g.updateDropPods();assert.equal(g.alive(0).filter(u=>u.type===type).length,count);
+  g.time=g.dropPods[0].landAt;g.updateDropPods();assert.equal(g.alive(0).filter(u=>u.type===type).length,count);
   g.phase='choice';g.currentOptions=['medic'];assert.equal(g.nextSummonSlot('medic'),2);
   assert(g.stageChoice('medic'));assert(g.confirmChoice());assert.deepEqual(g.summonSlots,[type,'medic']);
  }

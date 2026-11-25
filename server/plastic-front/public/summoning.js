@@ -1,6 +1,6 @@
 /* Shared realtime orders for the player and the authoritative co-op battle. */
 (function(root){'use strict';
- const rules={slots:5,boxCost:150,boxReserve:6,income:2.5,fall:.3,height:200};
+ const rules={slots:5,boxCost:150,boxReserve:6,income:2.5,fall:.58,height:200,chuteFade:.3};
  const vehicles=['tank','lucky'];
  const isVehicle=type=>vehicles.includes(type);
  const choose=(pool,random)=>pool[Math.min(pool.length-1,Math.floor(random()*pool.length))];
@@ -107,7 +107,7 @@
    const landings=this.planSummonLandings(order.units);
    if(!landings)return false;
    this.cash[0]-=status.cost;
-   this.dropPods.push(...landings);
+   this.dropPods.push(...landings.map(pod=>({...pod,mystery})));
    if(mystery)this.notify('toast',order.name+' · '+landings.length+'기 투하');
    this.notify('change');return true;
   };
@@ -150,6 +150,7 @@
       this.pushSupportTarget(unit,target,heavy?.9:.32,{duration:heavy?.18:.10,pop:heavy?16:6});
      }
      const duration=heavy?.34:.20;
+     this.effects.push({kind:'summonChute',x:unit.x,y:unit.y,heavy,mystery:pod.mystery===true,drone:pod.type==='drone',t:rules.chuteFade,max:rules.chuteFade,visualUntil:this.time+rules.chuteFade,team:0});
      this.effects.push({kind:'summonLanding',x:unit.x,y:unit.y,heavy,radius,t:duration,max:duration,at:this.time,team:0});
     };
     if(this.coop)this.withOwner(pod.coopOwner,deploy);else deploy();

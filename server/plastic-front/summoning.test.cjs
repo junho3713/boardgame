@@ -8,7 +8,7 @@ const {CoopGame:FrontCoopGame}=require('./public/coop-engine');
 
 function landInitial(g,type='rifle'){
   g.start();g.currentOptions=[type];assert(g.chooseInitialSupport(type));
-  g.time=.3;g.updateDropPods();g.time=0;
+  g.time=rules.fall;g.updateDropPods();g.time=0;
   return g;
 }
 function battle(){
@@ -29,7 +29,7 @@ test('slot order is committed once and round trips through saves with pending or
  assert.deepEqual(restored.summonSlots,g.summonSlots);
  assert.equal(restored.dropPods.length,1);
  const pod=restored.dropPods[0],c=restored.commander(0),distance=Math.hypot(c.x-pod.x,c.y-pod.y);
- assert(distance>=60&&distance<=100);assert.equal(pod.landAt,restored.time+.3);
+ assert(distance>=60&&distance<=100);assert.equal(pod.landAt,restored.time+rules.fall);
  const size=restored.units.length;restored.time=pod.landAt-.01;restored.updateDropPods();assert.equal(restored.units.length,size);
  restored.time=pod.landAt;restored.updateDropPods();restored.updateDropPods();
  assert.equal(restored.units.length,size+1);assert.equal(restored.dropPods.length,0);
@@ -71,11 +71,11 @@ test('regular support appointments do not interrupt realtime battles',()=>{
 test('co-op owns each slot list, purchase, and deployed reinforcement separately',()=>{
  const g=new FrontCoopGame({}, {realtimeSummons:true});g.start();
  for(const owner of [0,1])g.withOwner(owner,()=>{g.phase='choice';g.currentOptions=['rifle'];assert(g.chooseInitialSupport('rifle'));g.coopChoosing[owner]=false;});
- g.time=.3;g.updateDropPods();g.time=0;
+ g.time=rules.fall;g.updateDropPods();g.time=0;
  g.withOwner(1,()=>upgrade(g,'medic'));
  assert.deepEqual(g.summonSlots,['rifle']);
  g.withOwner(1,()=>{assert.deepEqual(g.summonSlots,['rifle','medic']);assert(g.summon(2));assert.equal(g.cash[0],135-70);});
- assert.equal(g.cash[0],135);g.time=.3;g.updateDropPods();
+ assert.equal(g.cash[0],135);g.time=rules.fall;g.updateDropPods();
  assert.equal(g.owned(1).filter(u=>u.type==='medic').length,1);
  assert.equal(g.owned(0).filter(u=>u.type==='medic').length,0);
 });

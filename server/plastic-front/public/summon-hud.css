@@ -101,3 +101,5 @@
  #upgradeOverlay.initial-support .summon-preview-badge{grid-column:2;justify-self:start}
  #upgradeOverlay.initial-support .card-bottom{padding-top:3px}
 }
+
+#joystick[hidden]{display:none}
