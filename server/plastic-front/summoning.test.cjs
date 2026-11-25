@@ -73,6 +73,56 @@ test('skipping a drafted upgrade grants 30 spendable combat gold once and clears
  const legacy=new FrontGame();legacy.start();legacy.xp=legacy.neededXP();legacy.levelCheck();
  assert(!legacy.skipLevelUpgrade());
 });
+function maxRegisteredUpgrades(g){
+ g.summonSlots=ROSTER.slice(0,rules.slots);
+ for(const type of g.summonSlots)g.tech[0][type]=5;
+ for(const key of Object.keys(ABILITIES).slice(0,5))g.abilities[key]=5;
+}
+test('a fully upgraded roster automatically collects combat gold for each earned level without opening a draft',()=>{
+ const g=battle(),drafts=[];
+ maxRegisteredUpgrades(g);
+ g.events.level=options=>drafts.push(options);
+ const {level,rerollCount}=g, cash=g.cash[0];
+ g.input={x:1,y:0};
+ g.xp=g.neededXP();
+ g.levelCheck();
+ g.levelCheck();
+ assert.equal(g.level,level+1);
+ assert.equal(g.xp,0);
+ assert.equal(g.cash[0],cash+rules.skipGold);
+ assert.equal(g.rerollCount,rerollCount);
+ assert.deepEqual(g.input,{x:1,y:0});
+ assert.equal(g.phase,'playing');
+ assert.deepEqual(drafts,[]);
+ g.bossState.rewards=1;
+ g.levelCheck();
+ assert.equal(g.choiceKind,'boss');
+ assert.deepEqual(drafts,[['fieldGold','fieldRepair']]);
+});
+test('a saved empty level-up grants combat gold once and clears the old choice',()=>{
+ const g=battle();
+ maxRegisteredUpgrades(g);
+ g.phase='choice';g.choiceKind='level';g.currentOptions=[];
+ const restored=unpack(battle(),pack(g)), cash=restored.cash[0];
+ restored.reconcileSummonChoices();
+ restored.reconcileSummonChoices();
+ assert.equal(restored.phase,'playing');
+ assert.equal(restored.cash[0],cash+rules.skipGold);
+ assert.equal(restored.level,g.level);
+});
+test('a maxed co-op squad does not enter the choice round while its partner can still draft',()=>{
+ const g=new FrontCoopGame({}, {realtimeSummons:true});
+ g.phase='playing';g.coopChoosing=[false,false];
+ g.withOwner(0,()=>{maxRegisteredUpgrades(g);g.xp=g.neededXP();});
+ g.withOwner(1,()=>{g.xp=g.neededXP();});
+ const cash=g.cash[0],rounds=[...g.coopRounds];
+ g.levelCheck();
+ assert.deepEqual(g.coopChoosing,[false,true]);
+ assert.deepEqual(g.coopRounds,[rounds[0],rounds[1]+1]);
+ assert.equal(g.phase,'playing');
+ assert.equal(g.cash[0],cash+rules.skipGold);
+ assert.equal(g.withOwner(1,()=>g.currentOptions.length),3);
+});
 test('normal action gates reject unaffordable or capped orders without charging; vehicle landing pushes enemies',()=>{
  const g=battle();
  assert.equal(g.income(0),2.5);

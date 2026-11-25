@@ -68,9 +68,10 @@
   };
   p.skipLevelUpgrade=function(){
    if(!this.canSkipLevelUpgrade())return false;
+   const label=this.currentOptions.length?'강화 건너뛰기':'강화 완료';
    this.cash[0]+=rules.skipGold;
    this.pendingChoice=null;this.currentOptions=[];this.phase='playing';
-   this.notify('toast','강화 건너뛰기 · 전투 골드 +'+rules.skipGold+'G');
+   this.notify('toast',label+' · 전투 골드 +'+rules.skipGold+'G');
    this.notify('change');return true;
   };
   p.summonSlotsLocked=function(){
@@ -80,8 +81,9 @@
    if(this.phase!=='choice'||!['level','boss'].includes(this.choiceKind)||!this.summonSlotsLocked())return;
    const allowed=this.currentOptions.filter(type=>this.eligibleCard(type)&&
     (this.choiceKind!=='boss'||this.bossRewardEligible(type)));
-   if(allowed.length!==this.currentOptions.length)this.currentOptions=[...new Set([...allowed,...this.options()])].slice(0,3);
+   if(!allowed.length||allowed.length!==this.currentOptions.length)this.currentOptions=[...new Set([...allowed,...this.options()])].slice(0,3);
    if(this.pendingChoice&&!this.currentOptions.includes(this.pendingChoice.type))this.pendingChoice=null;
+   if(!this.currentOptions.length)this.skipLevelUpgrade();
   };
   p.nextSummonSlot=function(type){
    return this.usesSummoning()&&ROSTER.includes(type)&&!this.summonSlots.includes(type)&&!this.summonSlotsLocked()?this.summonSlots.length+1:null;

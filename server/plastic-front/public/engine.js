@@ -774,7 +774,9 @@ class FrontGame{
   if(this.bossState.rewards>0){this.choiceKind='boss';this.currentOptions=this.options();}
   else if(this.xp>=this.neededXP()){this.xp-=this.neededXP();this.level++;this.refreshCommanderHealth();if(this.level%10===0)this.notify('toast','대장 성장 · 최대 체력 +20% / 방어력 +6 누적');this.choiceKind='level';this.currentOptions=this.options();}
   else return;
-  this.phase='choice';this.turnChoice=null;this.pendingChoice=null;this.input={x:0,y:0};this.notify('level',this.currentOptions);
+  this.phase='choice';this.turnChoice=null;this.pendingChoice=null;
+  if(!this.currentOptions.length&&this.skipLevelUpgrade?.())return;
+  this.input={x:0,y:0};this.notify('level',this.currentOptions);
  }
  activeBoss(){if(this.isRoomCampaign())return this.units.find(u=>u.boss&&!u.miniBoss&&!u.roadCaptain&&u.hp>0)||this.units.find(u=>u.miniBoss&&u.hp>0)||null;return this.units.find(u=>u.boss&&!u.roadCaptain&&u.hp>0)||this.units.find(u=>u.roadCaptain&&u.hp>0&&this.mission.stage>=u.roadStage&&dist(this.commander(0),u)<800)||null;}
  updateBosses(){
