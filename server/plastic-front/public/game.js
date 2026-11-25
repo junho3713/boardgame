@@ -741,6 +741,9 @@ function drawFog(){
  if(game.isDesktopDefense()||game.time<game.scoutUntil||game.bossIntro?.remaining>0)return;
  fc.setTransform(DPR,0,0,DPR,0,0);fc.clearRect(0,0,W,H);fc.fillStyle='#243b30d6';fc.fillRect(0,0,W,H);fc.globalCompositeOperation='destination-out';
  for(const u of [...game.alive(0),...game.buildings.filter(b=>b.hp>0&&b.kind==='repairBot'&&b.buildUntil<=game.time),game.bases[0]]){const p=point(u),sight=game.visionRadius(u),longRange=sight>380,r=(longRange?sight+32:u.base?335:sight)*scale;const g=fc.createRadialGradient(p.x,p.y,longRange?sight*scale:r*.64,p.x,p.y,r);g.addColorStop(0,'#000');g.addColorStop(1,'#0000');fc.fillStyle=g;fc.beginPath();fc.arc(p.x,p.y,r,0,Math.PI*2);fc.fill();}
+ // Keep the same aircraft shadow readable on the fog without drawing over revealed troops.
+ fc.globalCompositeOperation='source-atop';fc.setTransform(ctx.getTransform());
+ window.FrontRadioArt.flyovers(fc,game,ctx);
  fc.globalCompositeOperation='source-over';ctx.setTransform(1,0,0,1,0,0);ctx.drawImage(fog,0,0);ctx.setTransform(DPR,0,0,DPR,0,0);
 }
 function drawDestinyStar(context,x,y,r){

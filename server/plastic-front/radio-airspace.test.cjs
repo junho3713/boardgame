@@ -43,3 +43,22 @@ test('nuclear flash uses the entire viewport for 50ms and shake ends at 300ms',(
  g.time=.3;assert.deepEqual(feedback.nuclearShake(g),{x:0,y:0});
  g.time=.01;g.reducedMotion=true;feedback.screenFlash(ctx,g);assert.equal(count,1);assert.deepEqual(feedback.nuclearShake(g),{x:0,y:0});
 });
+test('aircraft sweeps both horizontal edges with centered, edge, and offscreen impacts',()=>{
+ for(const [width,height] of [[1280,720],[2560,1080],[780,1688]]){
+  for(const [kind,lead,duration] of [['incendiary',0,.4],['missile',.35,.45],['nuke',.81,.7]]){
+   for(const [targetX,targetY] of [[width*.6,height*.6],[0,0],[width,height],[-900,height+100]]){
+    const pose=p=>air.aircraftPass(kind,lead+(.5-p)*duration,width,height,1,targetX,targetY);
+    const frames=[.001,.2,.5,.8,.999].map(pose);
+    assert.ok(frames[0].x-frames[0].size/2>width);
+    assert.ok(frames.at(-1).x+frames.at(-1).size/2<0);
+    for(let i=1;i<frames.length;i++)assert.ok(frames[i].x<frames[i-1].x);
+    for(const {x,y} of frames)if(x>=0&&x<=width)assert.ok(y>0&&y<height);
+    if(targetX===width*.6){close(frames[2].x,targetX);close(frames[2].y,targetY);}
+    for(const boundary of [width*.15,width*.85]){
+     const y=frames[2].y+(frames[2].x-boundary)*Math.tan(frames[2].angle-Math.PI/2)*-1;
+     assert.ok(y>0&&y<height);
+    }
+   }
+  }
+ }
+});

@@ -241,18 +241,31 @@ function ground(c,game,visible=()=>true,fx) {
   }
   c.restore();
  }
+ flyovers(c,game);
  groundPasses(c,game,visible,view);
+}
+
+function secondsToImpact(e,view){
+ return Number.isFinite(e.landAt)?e.landAt-view.time:
+  (e.kind==='radioIncoming'?e.t:e.t-e.max)-view.offset;
+}
+function flyovers(c,game,timeline=c){
+ const view=displayFrames.get(timeline);
+ if(!view)return;
+ for(const e of game.effects||[]){
+  if(e.kind==='radioIncoming'||e.kind==='radioImpact'&&e.strike==='incendiary'){
+   sky.aircraft(c,e,secondsToImpact(e,view),view.reduced);
+  }
+ }
 }
 
 function groundPasses(c,game,visible,view){
  for(const e of game.effects||[]){
-  const incoming=e.kind==='radioIncoming',follow=e.kind==='radioImpact'&&e.strike==='incendiary';
-  if((!incoming&&!follow)||!visible(e))continue;
-  const left=Number.isFinite(e.landAt)?e.landAt-view.time:(incoming?e.t:e.t-e.max)-view.offset;
+  if(e.kind!=='radioIncoming'||!visible(e))continue;
+  const left=secondsToImpact(e,view);
   c.save();c.translate(e.x,e.y);
-  sky.aircraft(c,e,left,view.reduced);
-  if(incoming){sky.shadow(c,e,left);sky.marker(c,e,left,view.reduced);}
-  if(incoming&&e.strike==='incendiary'&&left>0){
+  sky.shadow(c,e,left);sky.marker(c,e,left,view.reduced);
+  if(e.strike==='incendiary'&&left>0){
    const closing=clamp(1-left/e.max);
    glow(c,0,0,15+12*closing,7+6*closing,'#ffdd7ece','#f2762866');
    for(let i=0;i<3;i++){
@@ -516,6 +529,6 @@ function event(c,e,fx) {
  if(e.kind==='radioIncoming')incoming(c,e,fx);else impact(c,e,p,fx,view?.reduced??quiet());
  c.restore();return true;
 }
-root.FrontRadioArt={event,rolls,ground};
+root.FrontRadioArt={event,rolls,ground,flyovers};
 })(typeof window==='undefined'?globalThis:window);
 

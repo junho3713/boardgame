@@ -3,7 +3,7 @@ const {test}=require('node:test'),assert=require('node:assert/strict');
 const fs=require('node:fs'),vm=require('node:vm');
 
 function renderer(coop=false){
- let now=0;
+ let now=0;const planes=[],markers=[];
  class Atlas{
   set src(url){
    this.complete=true;
@@ -11,7 +11,7 @@ function renderer(coop=false){
   }
  }
  const window={Image:Atlas,matchMedia:()=>({matches:true}),performance:{now:()=>now},
-  FrontCoopClient:{active:coop},FrontRadioAirspace:{syncOrigins(){},scorch(){},aircraft(){},marker(){},shadow(){}}};
+  FrontCoopClient:{active:coop},FrontRadioAirspace:{syncOrigins(){},scorch(){},aircraft(_ctx,e){planes.push(e.strike);},marker(_ctx,e){markers.push(e.strike);},shadow(){}}};
  vm.runInNewContext(fs.readFileSync(require.resolve('./public/radio-art.js'),'utf8'),{window});
  const cells=[],faces=[],labels=[],scales=[],paints=[],gradient={addColorStop(){}},c=new Proxy({
   globalAlpha:1,createRadialGradient:()=>gradient,createLinearGradient:()=>gradient,
@@ -21,7 +21,7 @@ function renderer(coop=false){
   drawImage(img,sx,sy,sw,sh){if(sw===192)cells.push((sy/192%4)*6+sx/192);}
  },{get:(o,k)=>o[k]??(()=>{})});
  const game={time:0,phase:'playing',coop,effects:[],radioFireZones:[]};
- return {game,paint(t,ms){now=ms;game.time=t;window.FrontRadioArt.ground(c,game);},cells,labels,scales,paints,
+ return {game,planes,markers,paint(t,ms,visible){now=ms;game.time=t;window.FrontRadioArt.ground(c,game,visible);},cells,labels,scales,paints,
   dice(e,age){
    faces.length=0;labels.length=0;scales.length=0;paints.length=0;
    game.effects=[e].flat().map(roll=>({kind:'radioRoll',x:0,y:0,max:.85,t:.85-age,...roll}));
@@ -77,4 +77,14 @@ test('cooperative display advances between snapshots, bounds prediction and leav
  r.paint(4,2300);r.impact(4);assert.equal(r.cells.at(-1),limit);
  r.paint(4.15,2350);r.impact(4);assert.ok(r.cells.at(-1)>=limit);
  r.paint(1,2400);r.impact(1);assert.equal(r.cells.at(-1),initial);
+});
+test('a radio flyover draws separately from its impact visibility and continues after incendiary impact',()=>{
+ const r=renderer();
+ r.game.effects=[
+  {kind:'radioIncoming',strike:'missile',x:100,y:100,landAt:.58},
+  {kind:'radioImpact',strike:'incendiary',x:-100,y:100,landAt:0}
+ ];
+ r.paint(.05,50,()=>false);
+ assert.deepEqual(r.planes,['missile','incendiary']);
+ assert.deepEqual(r.markers,[]);
 });

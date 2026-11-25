@@ -5,7 +5,6 @@ const tau=2*Math.PI,clamp=n=>Math.max(0,Math.min(1,n));
 const directions={incendiary:-.34,missile:1/Math.tan(65*Math.PI/180),nuke:0};
 const flightSeconds={incendiary:.55,missile:.47,nuke:.81};
 const pass={incendiary:{length:.4,lead:0,size:98},missile:{length:.45,lead:.35,size:96},nuke:{length:.7,lead:flightSeconds.nuke,size:282}};
-const bearing=65*Math.PI/180, dx=-Math.cos(bearing),dy=Math.sin(bearing);
 const flightOrigins=new WeakMap(), silhouettes=new Map(), decals=new Map();
 
 function flightPose(strike,secondsLeft,drop){
@@ -89,19 +88,36 @@ function silhouette(kind){
 function passPhase(kind,secondsLeft){
  const spec=pass[kind];return .5+(spec.lead-secondsLeft)/spec.length;
 }
+function aircraftPass(strike,left,width,height,scale,targetX,targetY){
+ const spec=pass[strike],p=passPhase(strike,left);
+ if(p<0||p>1)return null;
+ const shortSide=Math.min(width,height);
+ const size=Math.min(shortSide*.42,Math.max(shortSide*(strike==='nuke'?.23:.10),spec.size*scale));
+ const margin=size*(strike==='missile'?.93:.75);
+ // Keep the crossing in view even when the target itself is near an edge.
+ const crossX=Math.max(width*.25,Math.min(width*.75,targetX));
+ const crossY=Math.max(height*.22,Math.min(height*.78,targetY));
+ const slope=Math.min(.42,.44*height/width,(crossY-size*.34)/(width-crossX),(height-crossY-size*.34)/crossX);
+ const bias=4*p*(1-p)*(crossX-width/2);
+ const x=width+margin-p*(width+2*margin)+bias;
+ return {x,y:crossY+(crossX-x)*slope,angle:Math.atan2(slope,-1)+Math.PI/2,
+  size,opacity:Math.min(1,p*9,(1-p)*9)};
+}
 function aircraft(c,e,left,reduced){
  if(e.seq>0)return;
- const spec=pass[e.strike],p=passPhase(e.strike,left);
- if(p<0||p>1)return;
- const tr=c.getTransform(),worldH=c.canvas.height/tr.d;
- const span=reduced?spec.size*.85:worldH*1.36+spec.size*1.2,d=(p-.5)*span;
- c.save();c.translate(dx*d,dy*d);
- c.rotate(Math.atan2(dy,dx)+Math.PI/2);
- c.globalAlpha*=(reduced?.23:.32)*Math.min(1,p*9,(1-p)*9);
- const img=silhouette(e.strike),s=spec.size;
+ const m=c.getTransform(),{width,height}=c.canvas;
+ if(!width||!height)return;
+ const path=aircraftPass(e.strike,left,width,height,Math.hypot(m.a,m.b),
+  m.a*e.x+m.c*e.y+m.e,m.b*e.x+m.d*e.y+m.f);
+ if(!path)return;
+ const {x,y,angle,size:s,opacity}=path;
+ c.save();c.setTransform(1,0,0,1,x,y);c.rotate(angle);
+ // A softer pass still marks the strike cue with reduced motion enabled.
+ c.globalAlpha*=(reduced?.16:.34)*opacity;
+ const img=silhouette(e.strike);
  if(e.strike==='missile'){
   // The wingman trails to the side of the lead aircraft.
-  c.drawImage(img,-s*.5-23,-s*.5-17,s,s);c.drawImage(img,-s*.5+23,-s*.5+17,s,s);
+  c.drawImage(img,-s*.74,-s*.68,s,s);c.drawImage(img,-s*.26,-s*.32,s,s);
  }else c.drawImage(img,-s/2,-s/2,s,s);
  c.restore();
 }
@@ -123,6 +139,6 @@ function scorchTile(crater){
 function scorch(c,r,crater){
  const depth=crater?.73:.90;c.drawImage(scorchTile(crater),-r,-r*depth,r*2,r*2*depth);
 }
-root.FrontRadioAirspace={flightPose,flightSeconds,pose,syncOrigins,marker,shadow,passPhase,aircraft,scorch};
+root.FrontRadioAirspace={flightPose,flightSeconds,pose,syncOrigins,marker,shadow,passPhase,aircraftPass,aircraft,scorch};
 if(typeof module!=='undefined'&&module.exports)module.exports=root.FrontRadioAirspace;
 })(typeof window==='undefined'?globalThis:window);
