@@ -25,6 +25,29 @@ test('ordinary enemy tanks finish aiming and hit even as almost equidistant targ
  }
 });
 
+test('an ordinary tank keeps aiming at the firing range edge and lands real shots',()=>{
+ const g=scene();
+ g.time=720;
+ durable(g.addUnit(0,'leader',1500,7000));
+ const left=durable(g.addUnit(0,'tank',1186,6000)),right=durable(g.addUnit(0,'tank',1814,6000));
+ const tank=g.spawnRoomEnemy('tank',0,{x:1500,y:6000,entrySide:3});
+ a.ok(tank&&!tank.boss);
+ tank.cooldown=0;
+ g.navigate=()=>{};
+ let fired=0;g.events.fire=u=>{if(u===tank)fired++;};
+ g.update(.05);
+ a.equal(tank.tankAimTargetId,null,'the extra tracking distance must not acquire a new target');
+ for(let i=0;i<120;i++){
+  const phase=i%12;
+  left.x=1500-(phase<3?306:314);
+  right.x=1500+(phase>=6&&phase<9?306:314);
+  for(const u of [left,right])u.aiEvade={x:u.x,y:u.y,until:g.time+1};
+  g.update(.05);
+ }
+ a.ok(fired>=2,'the turret has time to fire at the acquired target');
+ a.ok(left.hp<left.maxHp||right.hp<right.maxHp,'a fired shell damages the squad');
+});
+
 
 test('a tank drops a dead, missing, friendly or out-of-range aiming target and acquires another',()=>{
  for(const invalidate of [u=>u.hp=0,(u,g)=>g.units=g.units.filter(v=>v!==u),u=>u.team=1,u=>u.x=2000]){

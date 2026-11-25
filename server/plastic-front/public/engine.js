@@ -155,6 +155,7 @@ const EVOLUTIONS={
 };
 const FIELD_CARDS={fieldSupply:{name:'현장 보급',icon:'▣',detail:'생산 자원 +90',kind:'supply'},fieldRepair:{name:'긴급 치료',icon:'✚',detail:'살아 있는 아군 최대 체력의 40% 회복',kind:'repair'},fieldGold:{name:'골드 상자',icon:'◈',detail:'기본 골드 +15 · 골드 획득량 보너스 적용',kind:'gold'}};
 const ROOM_RULES={width:ROOM_CAMPAIGN.config.layout.width,height:ROOM_CAMPAIGN.config.layout.height,stage2At:120,stage3At:360,finalAt:WAVE_CONFIGS.survival.boss.final.at,assembly:2,sniperAim:.5,turretSpeed:5};
+const ENEMY_TANK_AIM_MARGIN=18;
 const BUILDINGS={mgTower:{name:'기관총 포탑',cost:125,hp:900,w:72,h:72,range:355,rate:.3,damage:TYPES.machinegun.damage*2,cap:3,type:'machinegun'},missileBase:{name:'미사일 포탑',cost:175,hp:650,w:90,h:82,range:600,minRange:0,rate:1.05,damage:180,splash:90,flightTime:1,cap:2,type:'rocket'},barricade:{name:'바리케이드',cost:50,hp:1950,defense:40,w:110,h:40,range:100,rate:0,damage:0,cap:4,type:'barricade'},repair:{name:'수리시설',cost:200,hp:420,w:86,h:86,range:260,rate:1.5,damage:0,cap:2,type:'repair'},repairBot:{name:'수리로봇',cost:50,hp:300,defense:10,w:30,h:24,range:85,rate:1,repair:15,speed:90,damage:0,cap:3,type:'repairBot',mobile:true}};
 class FrontProfile{
  constructor(data={}){
@@ -1922,10 +1923,13 @@ class FrontGame{
      if(u.type==='rocket'||commandEngaged.get(player))target=this.commandFirePoint(u,s.range,manualAngle);
     }else if(u.team===0&&u.type==='drone')target=this.droneTarget(u,s.range);
     else if(u.team===0)target=this.selectCombatTarget(u,combatCandidates,combatThreats,s);else for(const a of [...this.units,...this.buildings.filter(b=>b.hp>0)]){if(!this.canTarget(u,a))continue;const d=this.targetDistance(u,a),score=d/Math.max(.25,multiplier(u.type,combatKind(a)));if(d<s.range&&d>=(s.minRange||0)&&score<nearest){target=a;nearest=score;}}
-    // Finish the turret's aim before reconsidering almost equidistant moving targets.
+    // A tank can finish tracking a target that just crossed the edge of its firing range.
     if(u.team!==0&&u.type==='tank'){
      const locked=[...this.units,...this.buildings].find(a=>a.id===u.tankAimTargetId);
-     if(locked&&this.canTarget(u,locked)&&this.targetDistance(u,locked)<s.range&&this.targetDistance(u,locked)>=(s.minRange||0)){target=locked;tankLocked=true;}
+     if(locked&&this.canTarget(u,locked)){
+      const distance=this.targetDistance(u,locked);
+      if(distance<=s.range+ENEMY_TANK_AIM_MARGIN&&distance>=(s.minRange||0)){target=locked;tankLocked=true;}
+     }
     }
     if(u.team!==0&&u.type==='mortar'&&u.roomWave)target=this.selectEnemyMortarTarget(u,s)||target;
     const decoy=this.supportDecoyTarget?.(u);if(decoy)target=this.canTarget(u,decoy)&&dist(u,decoy)<=Math.min(65,s.range*.85)?decoy:null;
