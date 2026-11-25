@@ -83,7 +83,7 @@ test('a Lucky jackpot calls one nuke from the strongest evolved radio and forces
  g.fireUnitProjectiles(d,t,{damage:100});
  a.equal(g.radioStrikes.filter(s=>s.strike==='missile').length,6);
  g.fireUnitProjectiles(other,t,{damage:100});
- a.equal(g.effects.findLast(e=>e.kind==='radioRoll').strike,'incendiary');
+ a.equal(g.effects.findLast(e=>e.kind==='radioRoll').strike,'turret');
  g.time=5;g.diceFace=()=>6;
  g.fireUnitProjectiles(d,t,{damage:100});
  a.equal(g.radioStrikes.at(-1).strike,'nuke');

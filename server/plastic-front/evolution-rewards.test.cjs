@@ -62,14 +62,21 @@ test('machinegun heats for three seconds, pierces for four, then restarts; pause
  const h=scene(),v=actor(h,'machinegun'),q=enemy(h);h.fireUnitProjectiles(v,q,{damage:100},h.stats(v));h.time=.5;h.fireUnitProjectiles(v,q,{damage:100},h.stats(v));h.time=1.3;h.updateEvolutionCombat();a.equal(v.evolutionHeat,0);
 });
 test('each basic and officer double schedules the right salvo and burns enemies entering its footprint',()=>{
- const base=['incendiary','incendiary','incendiary','missile','missile','missile'];
- const officer=['incendiary','incendiary','missile','missile','missile','nuke'];
+ const base=['turret','turret','incendiary','incendiary','missile','missile'];
+ const officer=['turret','turret','incendiary','incendiary','missile','nuke'];
  for(const evolved of [false,true])for(const face of [1,2,3,4,5,6]){
   const g=scene(),u=g.addUnit(0,'guntruck',1000,6000),target=enemy(g,1200);
   g.evolved.guntruck=evolved;g.random=()=>(face-.5)/6;
   g.fireUnitProjectiles(u,target,{damage:100});
   const shell=g.radioStrikes[0],strike=(evolved?officer:base)[face-1];
-  const count=(evolved?[1,1,4,4,4,1]:[1,1,1,2,3,4])[face-1];
+  const count=(evolved?[0,0,1,1,4,1]:[0,0,1,1,3,4])[face-1];
+  if(strike==='turret'){
+   a.equal(g.radioStrikes.length,0);a.equal(g.radioTurrets.length,1);
+   const turret=g.radioTurrets[0],hp=target.hp;
+   g.time=turret.landAt-.001;g.updateEvolutionCombat();a.equal(target.hp,hp);
+   g.time=turret.landAt;g.updateEvolutionCombat();a.ok(target.hp<hp);
+   continue;
+  }
   a.equal(shell.strike,strike);a.equal(g.radioStrikes.length,count);
   for(const [i,round] of g.radioStrikes.entries()){
    a.ok(Number.isFinite(round.x)&&Number.isFinite(round.y));near(round.landAt,shell.landAt+i*.26);
@@ -113,9 +120,9 @@ test('ordinary rolls retain fair double faces and the evolved 25 percent chance 
   g.evolved.guntruck=evolved;
   for(let a=1;a<=6;a++)for(let b=1;b<=6;b++)for(let bucket=0;bucket<10;bucket++){
    const samples=[(a-.5)/6,(b-.5)/6,(bucket+.5)/10];
-   g.random=()=>samples.shift()??0;u.radioMisses=0;g.radioStrikes=[];g.effects=[];
+   g.random=()=>samples.shift()??0;u.radioMisses=0;g.radioStrikes=[];g.radioTurrets=[];g.effects=[];
    g.fireUnitProjectiles(u,target,{damage:10});
-   if(g.radioStrikes.length)hits[a-1]++;
+   if(g.radioStrikes.length||g.radioTurrets.length)hits[a-1]++;
   }
   a.deepEqual(hits,Array(6).fill(evolved?15:10));
  }

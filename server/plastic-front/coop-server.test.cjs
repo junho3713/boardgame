@@ -55,6 +55,14 @@ test('two clients authenticate, grow independently without pausing, reconnect an
   assert.equal((await call('/command',{action:'confirm',round:green.round},b.token)).status,409);
   assert.equal((await call('/command',{action:'confirm',round:green.round},a.token)).status,200);
   assert.equal(g.coopChoosing[0],false);assert.equal(g.phase,'playing');
+  g.withOwner(0,()=>{g.xp=g.neededXP();});g.levelCheck();
+  const nextRound=g.coopRounds[0],instant=g.currentOptions[0];
+  assert.equal((await call('/command',{action:'chooseUpgrade',round:nextRound-1,type:instant},a.token)).status,409);
+  assert.equal((await call('/command',{action:'chooseUpgrade',round:nextRound,type:instant},b.token)).status,409);
+  const applied=await call('/command',{action:'chooseUpgrade',round:nextRound,type:instant},a.token);
+  assert.equal(applied.status,200);assert.equal(applied.data.choosing,false);
+  assert.equal(applied.data.game.fields.pendingChoice,null);
+  assert.equal((await call('/command',{action:'chooseUpgrade',round:nextRound,type:instant},a.token)).status,409);
   g.withOwner(0,()=>{
    g.summonSlots=['rifle','tank','rocket','lucky','medic'];
    for(const type of g.summonSlots)g.tech[0][type]=1;

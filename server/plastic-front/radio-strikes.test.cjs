@@ -32,12 +32,13 @@ test('normal and evolved one-star signals preserve their six separate outcomes',
    const {g,radio,enemy}=field();
    g.evolved.guntruck=evolved;
    const outcome=fire(g,radio,g.commandFirePoint(radio,620,Math.PI),[face,face]);
-   const strikes=evolved?['incendiary','incendiary','missile','missile','missile','nuke']:
-    ['incendiary','incendiary','incendiary','missile','missile','missile'];
+   const strikes=evolved?['turret','turret','incendiary','incendiary','missile','nuke']:
+    ['turret','turret','incendiary','incendiary','missile','missile'];
    const strike=strikes[face-1];
    assert.deepEqual(outcome.rolls.map(r=>r.dice),[[face,face]]);
    assert.equal(outcome.strike,strike);assert.ok(g.radioStrikes.every(s=>s.strike===strike));
-   assert.equal(g.radioStrikes.length,strike==='missile'?(evolved?4:face-2):1);
+   assert.equal(g.radioStrikes.length,strike==='turret'?0:strike==='missile'?(evolved?4:face-2):1);
+   assert.equal(g.radioTurrets.length,strike==='turret'?1:0);
    if(strike==='incendiary'){
     assert.equal(outcome.rolls[0].tx,enemy.x);
     g.time=g.radioStrikes[0].landAt;g.updateEvolutionCombat();
@@ -55,7 +56,7 @@ test('all ranks have one pair and a forced double on the sixth attempt',()=>{
   assert.equal(radio.radioMisses,5);
   const roll=fire(g,radio,enemy,[1]);
   assert.deepEqual(roll.rolls.map(pair=>pair.dice),[[1,1]]);
-  assert.equal(roll.strike,'incendiary');assert.equal(radio.radioMisses,0);
+  assert.equal(roll.strike,'turret');assert.equal(radio.radioMisses,0);
  }
 });
 
@@ -74,7 +75,11 @@ test('real fusion and the Destiny Star scale damage once and scale every blast r
   const stats=g.stats(radio);
   close(stats.damage,base.damage*damageScale);
   close(stats.rate,base.rate*(rank===3?.65:1));
-  for(const [face,strike,count,radius,delay] of [[1,'incendiary',1,96,.65],[5,'missile',4,88,1.16],[6,'nuke',1,225,2.4]]){
+  const turretRoll=fire(g,radio,enemy,[1,1],stats.damage),turret=g.radioTurrets.at(-1);
+  assert.equal(turretRoll.strike,'turret');assert.equal(turret.rank,rank);
+  close(turret.damage,base.damage*damageScale*.24);
+  close(turret.range,285*radiusScale);close(turret.splash,18*radiusScale);close(turret.scale,radiusScale);
+  for(const [face,strike,count,radius,delay] of [[3,'incendiary',1,96,.65],[5,'missile',4,88,1.16],[6,'nuke',1,225,2.4]]){
    g.radioStrikes=[];
    const roll=fire(g,radio,enemy,[face,face],stats.damage);
    assert.equal(roll.rank,rank);assert.equal(roll.strike,strike);
@@ -98,6 +103,38 @@ test('real fusion and the Destiny Star scale damage once and scale every blast r
  }
  const saved=unpack(new FrontGame(),JSON.parse(JSON.stringify(pack(g))));
  assert.equal(saved.radioStrikes[0].source,saved.units.find(u=>u.id===radio.id));
+});
+
+test('airdrop guns are independent of units, fire at 6.5 rounds per second and expire 6.5 seconds after landing',()=>{
+ const {g,radio,enemy}=field();
+ const units=[...g.units],solids=g.solidObstacles();
+ fire(g,radio,enemy,[2,2]);
+ const [turret]=g.radioTurrets;
+ assert.deepEqual(g.units,units);assert.deepEqual(g.solidObstacles(),solids);
+ close(turret.until-turret.landAt,6.5);
+ g.time=turret.landAt-.01;g.updateEvolutionCombat();assert.equal(enemy.hp,enemy.maxHp);
+ for(let i=0;i<650;i++){g.time=turret.landAt+i/100;g.updateEvolutionCombat();}
+ const shots=g.effects.filter(e=>e.kind==='radioTurretShot');
+ assert.equal(shots.length,43);
+ assert.ok(shots.every(s=>s.tx===enemy.x&&s.ty===enemy.y&&!s.boosted));
+ close(enemy.maxHp-enemy.hp,43*24*g.defenseFactor(enemy,radio));
+ g.time=turret.until;g.updateEvolutionCombat();assert.deepEqual(g.radioTurrets,[]);
+ assert.equal(g.effects.filter(e=>e.kind==='radioTurretEnd').length,1);
+});
+
+test('a fifth airdrop refreshes the shortest-lived gun, overclocks for three seconds and survives restore',()=>{
+ const {g,radio,enemy}=field(),partner=g.addUnit(0,'guntruck',1000,5900);
+ for(let i=0;i<4;i++){g.time=i*.25;fire(g,i%2?partner:radio,enemy,[1,1]);}
+ const [first,second]=g.radioTurrets,oldSecond=second.until;
+ g.time=2;g.updateEvolutionCombat();
+ fire(g,partner,enemy,[2,2]);
+ assert.equal(g.radioTurrets.length,4);close(first.until,8.5);close(first.overclockUntil,5);
+ close(second.until,oldSecond);assert.equal(second.overclockUntil,0);
+ g.time=first.nextShot;g.updateEvolutionCombat();
+ const next=first.nextShot;close(next-g.time,1/(6.5*1.6));
+ const copy=unpack(new FrontGame(),JSON.parse(JSON.stringify(pack(g))));
+ assert.equal(copy.radioTurrets[0].source,copy.units.find(u=>u.id===radio.id));
+ close(copy.radioTurrets[0].nextShot,next);close(copy.radioTurrets[0].overclockUntil,5);
 });
 
 test('evolved sixes always cause damage, but only one nuke per 3.5 seconds can cause screen whiteout',()=>{

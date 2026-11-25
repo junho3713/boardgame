@@ -111,6 +111,7 @@ function mount(){
 api.configureReinforcement=plan=>{if(!globalThis.FrontReinforcementPlan.valid(plan))return false;if(!token)return bridge.getGame().setReinforcementPlan(plan);return command('reinforcementPlan',{plan}).then(data=>{if(!data)return false;const g=bridge.getGame();if(!state.started)g.setReinforcementPlan(plan);return JSON.stringify(g.reinforcementPlan().targets)===JSON.stringify(plan.targets)&&g.reinforcementPlan().enabled===plan.enabled&&g.reinforcementPlan().mode===plan.mode;});};
 api.install=value=>{bridge=value;mount();};
 api.chooseInitial=type=>state?.choosing&&!state.paused?command('chooseInitial',{type}):false;
+api.chooseUpgrade=type=>state?.choosing&&!state.paused?command('chooseUpgrade',{type}):false;
 api.reroll=()=>state?.choosing&&!state.paused?command('reroll'):false;
 api.skipLevelUpgrade=()=>state?.choosing&&!state.paused?command('skipLevelUpgrade'):false;
 api.summon=slot=>inputAllowed()?command('summon',{slot}):false;

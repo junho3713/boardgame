@@ -149,7 +149,7 @@ test('five-pellet volleys pump for one base second and reload the fourth shell f
 test('a visible distant contact starts an incendiary call, and its random position ignores manual aim',()=>{
  const g=field(),radio=add(g,'guntruck',1100,1320),far=add(g,'rifle',2000,1580,1);
  g.visible=()=>true;g.move=g.navigate=g.separateCrowd=()=>{};
- g.diceFace=()=>2;g.random=()=>0;g.setManualAim({x:-1,y:0});
+ g.diceFace=()=>3;g.random=()=>0;g.setManualAim({x:-1,y:0});
  g.update(.01);
  const shell=g.radioStrikes.find(v=>v.source===radio);
  assert.equal(shell.strike,'incendiary');assert.deepEqual([shell.x,shell.y],[far.x,far.y]);
@@ -166,7 +166,7 @@ test('an automatic missile salvo selects the packed group and attack speed short
  add(g,'rifle',1170,1320,1);
  g.scoutUntil=g.time+10;
  const cluster=add(g,'rifle',1360,2020,1);add(g,'rifle',1390,2020,1);add(g,'rifle',1415,2020,1);
- g.move=g.navigate=g.separateCrowd=()=>{};g.diceFace=()=>4;
+ g.move=g.navigate=g.separateCrowd=()=>{};g.diceFace=()=>5;
  const base=g.stats(radio).rate;g.abilities.haste=5;
  g.update(.01);assert.ok(radio.cooldown<base);
  const first=g.radioStrikes[0];assert.equal(first.strike,'missile');assert.equal(first.x,cluster.x);

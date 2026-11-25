@@ -99,6 +99,17 @@ test('a fully upgraded roster automatically collects combat gold for each earned
  assert.equal(g.choiceKind,'boss');
  assert.deepEqual(drafts,[['fieldGold','fieldRepair']]);
 });
+test('choosing a card applies its effect at once and cannot reapply it in the same draft',()=>{
+ const g=battle();
+ g.xp=g.neededXP();g.levelCheck();
+ g.currentOptions=['ability_haste','rifle','fieldGold'];
+ assert(!g.chooseUpgradeCard('ability_damage'));
+ assert(g.chooseUpgradeCard('ability_haste'));
+ assert.equal(g.abilities.haste,1);
+ assert.equal(g.pendingChoice,null);
+ assert(!g.chooseUpgradeCard('ability_haste'));
+ assert.equal(g.abilities.haste,1);
+});
 test('a saved empty level-up grants combat gold once and clears the old choice',()=>{
  const g=battle();
  maxRegisteredUpgrades(g);

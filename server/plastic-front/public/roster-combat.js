@@ -9,7 +9,7 @@ function install({FrontGame,TYPES,multiplier}){
  const foes=(g,u)=>g.combatCandidates().filter(t=>t.team!==u.team&&t.hp>0&&!t.hidden&&!(t.base&&g.baseShielded())&&g.canTarget(u,t));
 
  p.reset=function(...args){
-  const result=reset.apply(this,args);this.radioStrikes=[];this.radioFireZones=[];this.radioNextWhiteoutAt=0;this.rosterLasers=[];return result;
+  const result=reset.apply(this,args);this.radioStrikes=[];this.radioFireZones=[];this.radioTurrets=[];this.radioNextWhiteoutAt=0;this.rosterLasers=[];return result;
  };
  p.shotgunReloadTime=function(u,s=this.stats(u)){return 1.8*s.rate/TYPES.rifle.rate;};
  p.shotgunShotMultiplier=function(){return 1;};
@@ -121,13 +121,15 @@ function install({FrontGame,TYPES,multiplier}){
  const radioRadius={1:1,2:1.15,3:1.30};
  const radioRank=(g,u)=>g.starExperiment?(u.star||1):1;
  const missileSpread=[0,-21,21,0,-38,38];
+ const turretRules={flight:.48,lifetime:6.5,range:285,splash:18,damage:.24,interval:1/6.5,limit:4,overclock:3,speedBoost:1.6};
  p.stats=function(u){
   const result=stats.call(this,u);
   if(u.team===0&&u.type==='guntruck'&&radioRank(this,u)===3)result.rate*=.65;
   return result;
  };
  function doubleStrike(face,golden){
-  if(face<=(golden?2:3))return 'incendiary';
+  if(face<=2)return 'turret';
+  if(face<=4)return 'incendiary';
   return golden&&face===6?'nuke':'missile';
  }
  p.radioContacts=function(u,candidates=this.combatCandidates()){
@@ -199,8 +201,40 @@ function install({FrontGame,TYPES,multiplier}){
    if(strike==='nuke')g.notify('radioWarning',{team:0,id:u.id,x,y});
   }
  }
+ function deployRadioTurret(g,u,target,rank,damage,radiusScale){
+  const owner=u.coopOwner||0,turrets=g.radioTurrets??=[];
+  const own=turrets.filter(t=>t.owner===owner&&t.until>g.time);
+  if(own.length>=turretRules.limit){
+   const turret=own.reduce((first,t)=>t.until<first.until?t:first);
+   const restart=Math.max(g.time,turret.landAt);
+   turret.until=restart+turretRules.lifetime;
+   turret.overclockUntil=restart+turretRules.overclock;
+   turret.nextShot=Math.min(turret.nextShot,restart+turretRules.interval/turretRules.speedBoost);
+   return turret;
+  }
+  const angle=heading(u,target),obstacles=g.solidObstacles();
+  let point;
+  for(const offset of [0,.85,-.85,1.6,-1.6,Math.PI]){
+   const bearing=angle+offset;
+   point={x:target.x-Math.cos(bearing)*56,y:target.y-Math.sin(bearing)*56};
+   if(g.freePosition(point.x,point.y,20,obstacles)&&turrets.every(t=>distance(t,point)>34))break;
+  }
+  g.resolvePosition(point,20);
+  const landAt=g.time+turretRules.flight;
+  const turret={...point,source:u,owner,rank,scale:radiusScale,range:turretRules.range*radiusScale,splash:turretRules.splash*radiusScale,
+   damage:damage*turretRules.damage,angle:heading(point,target),startedAt:g.time,landAt,until:landAt+turretRules.lifetime,
+   nextShot:landAt,overclockUntil:0,landed:false,barrel:0};
+  turrets.push(turret);
+  return turret;
+ }
  function launchRadio(g,u,aim,contacts,roll,damage,golden,rank){
   const radiusScale=radioRadius[rank];
+  if(roll.strike==='turret'){
+   const target=contacts.reduce((nearest,t)=>distance(u,t)<distance(u,nearest)?t:nearest);
+   const turret=deployRadioTurret(g,u,target,rank,damage,radiusScale);
+   roll.tx=turret.x;roll.ty=turret.y;
+   return;
+  }
   const radius=RADIO[roll.strike].radius*radiusScale;
   const point=radioTarget(g,u,contacts,aim,roll.strike,radius)??g.commandFirePoint(u,radius+48,u.face??-Math.PI/2);
   roll.tx=point.x;roll.ty=point.y;
@@ -259,6 +293,45 @@ function install({FrontGame,TYPES,multiplier}){
    return zone.until>g.time;
   });
  }
+ function updateRadioTurrets(g){
+  if(!g.radioTurrets?.length)return;
+  const now=g.time;
+  g.radioTurrets=g.radioTurrets.filter(turret=>{
+   const {source,scale}=turret;
+   if(now>=turret.until){
+    if(turret.landed)effect(g,'radioTurretEnd',turret,{scale,at:now,visualUntil:now+.43},.43);
+    return false;
+   }
+   if(now<turret.landAt)return true;
+   if(!turret.landed){
+    turret.landed=true;
+    effect(g,'radioTurretLand',turret,{scale,at:now,visualUntil:now+.33},.33);
+   }
+   if(now+1e-8<turret.nextShot)return true;
+   const contacts=foes(g,source);
+   let target,nearest=turret.range;
+   for(const enemy of contacts){
+    const d=distance(turret,enemy);
+    if(d<=nearest&&g.lineClear(turret,enemy,0,{fireTeam:0})){target=enemy;nearest=d;}
+   }
+   if(!target){turret.nextShot=now;return true;}
+   const boosted=now<turret.overclockUntil,step=turretRules.interval/(boosted?turretRules.speedBoost:1);
+   turret.nextShot+=step;
+   if(turret.nextShot<=now)turret.nextShot=now+step;
+   turret.prevAngle=turret.angle;
+   turret.angle=heading(turret,target);
+   turret.turnedAt=now;
+   const barrel=turret.barrel++%turret.rank;
+   effect(g,'radioTurretShot',turret,{scale,rank:turret.rank,barrel,angle:turret.angle,tx:target.x,ty:target.y,
+    boosted,at:now,visualUntil:now+.14},.14);
+   const hit=()=>{
+    g.damage(target,turret.damage,source);
+    for(const enemy of contacts)if(enemy!==target&&distance(enemy,target)<=turret.splash&&g.lineClear(target,enemy,0,{fireTeam:0}))g.damage(enemy,turret.damage*.3,source);
+   };
+   if(g.coop)g.withOwner(turret.owner,hit);else hit();
+   return true;
+  });
+ }
 
  function droneFire(g,u,t,attack,s){
   const bullet={x:u.x,y:u.y,target:t,source:u,damage:attack.damage,critical:attack.critical,splash:0,speed:850,kind:u.type,team:u.team,life:1.5,rosterKind:'droneBullet'};
@@ -297,7 +370,7 @@ function install({FrontGame,TYPES,multiplier}){
  };
  p.updateEvolutionCombat=function(){
   update.call(this);
-  updateRadio(this);updateLasers(this);
+  updateRadio(this);updateRadioTurrets(this);updateLasers(this);
   for(const t of this.combatCandidates())if(t.shotgunBurns?.length){
    t.shotgunBurns=t.shotgunBurns.filter(b=>{
     while(t.hp>0&&b.next<=this.time+1e-8&&b.next<=b.until+1e-8){
