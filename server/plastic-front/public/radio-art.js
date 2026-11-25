@@ -278,75 +278,75 @@ function fireZone(c, zone, view) {
  c.restore();
 }
 
-const turretModelScale=1.18,turretMountHeight=15;
-const turretReach=[0,33,35,36];
-function turretBarrel(rank,index){return (index-(rank-1)/2)*(rank===3?5.8:12);}
-function turretFootplate(c,metal,highlight){
- const feet=[[-17,-5],[17,-5],[-17,5],[17,5]];
- for(const [x,y] of feet){
-  polygon(c,[[x-6,y],[x-2,y-2],[x+6,y-2],[x+7,y+4],[x-6,y+5]],'#29302a');
-  stroke(c,1.3,'#777e62',()=>{c.moveTo(x-4,y);c.lineTo(x+5,y);});
+// Match the projection and muzzle anchors in tools/build-signal-turret.py.
+const turretModelScale=1.18,turretCell=144,turretViews=24,turretColumns=8;
+const turretMuzzles=[null,[[38,0,25]],[[40,-6.1,25],[40,6.1,25]],
+ [[42,-5.9,22.1],[42,5.9,22.1],[42,0,31.6]]];
+const turretSheets=new Map();
+function turretSheet(owner){
+ const color=owner===1?'blue':'green';
+ if(!turretSheets.has(color)&&typeof root.Image==='function'){
+  const sprite=new root.Image();
+  sprite.decoding='async';
+  sprite.src='assets/models/signal-turret-'+color+'-v1.webp';
+  turretSheets.set(color,sprite);
  }
- polygon(c,[[-17,-6],[17,-6],[23,0],[20,9],[-20,9],[-23,0]],'#344032');
- polygon(c,[[-17,-8],[17,-8],[23,-2],[19,5],[-19,5],[-23,-2]],metal);
- stroke(c,1.15,highlight,()=>{c.moveTo(-20,-2);c.lineTo(-16,-7);c.lineTo(16,-7);c.lineTo(20,-2);});
- for(const x of [-16,16]){
-  ellipse(c,x,1,3.2,2.2,'#3d4840');
-  ellipse(c,x,.3,2.4,1.6,'#d8bf71');
- }
- ellipse(c,0,-4,14,7,'#27342c');
- ellipse(c,0,-6,12,6,'#738071');
+ return turretSheets.get(color);
 }
-function turretWeapon(c,rank,metal,highlight,recoil,spin,boosted){
- c.translate(-recoil,0);
- const reach=turretReach[rank],thickness=rank===1?7:rank===2?5:4.2;
- for(let i=0;i<rank;i++){
-  const side=turretBarrel(rank,i);
-  c.fillStyle='#263032';c.beginPath();c.roundRect(7,side-thickness/2,reach-6,thickness,1.6);c.fill();
-  c.fillStyle='#9eafa8';c.fillRect(14,side-thickness/2+1,reach-16,1.5);
-  c.fillStyle=rank===1?'#738582':'#b09a64';c.fillRect(reach-6,side-thickness*.66,5,thickness*1.32);
-  c.fillStyle='#172020';c.fillRect(reach-1,side-thickness/2,2,thickness);
- }
- if(rank===3){
-  c.fillStyle='#343c39';c.beginPath();c.roundRect(9,-9,9,18,2.3);c.fill();
-  c.fillStyle='#c5aa64';c.fillRect(15,-9,3,18);c.fillRect(reach-10,-8,3,16);
-  for(let i=0;i<4;i++){
-   const angle=spin+i*Math.PI/2;
-   if(Math.cos(angle)>0)ellipse(c,reach-9,Math.sin(angle)*6.3,1.65,1.3,'#fff0a2');
-  }
- }
- const halfWidth=rank===1?8:rank===2?11:12;
- c.fillStyle='#303b30';c.beginPath();c.roundRect(-16,-halfWidth,30,2*halfWidth,4);c.fill();
- c.fillStyle=metal;c.beginPath();c.roundRect(-15,-halfWidth-2,27,2*halfWidth-1,4);c.fill();
- c.fillStyle=highlight;c.beginPath();c.roundRect(-14,-halfWidth-2,22,5,2);c.fill();
- for(let i=0;i<3;i++)c.fillRect(-11+i*3,halfWidth-6,1.3,2.7);
- c.fillStyle='#3c4a40';c.fillRect(5,-halfWidth+4,4,2*halfWidth-7);
- ellipse(c,-9,-1,2.2,2.2,boosted?'#ffad55':'#edf6ad');
+turretSheet(0);
+if(root.location&&new URLSearchParams(root.location.search).has('coop'))turretSheet(1);
+
+function turretPose(angle,age,reduced){
+ const heading=Math.atan2(Math.sin(angle)/.8,Math.cos(angle));
+ const dir=(Math.round(heading*turretViews/tau)+turretViews)%turretViews;
+ const snap=dir*tau/turretViews;
+ const recoil=reduced?0:2.7*(1-clamp(age/.10))**2;
+ return {dir,co:Math.cos(snap),si:Math.sin(snap),recoil};
 }
+function turretFrame(c,sheet,col,row,x=0,y=0){
+ c.drawImage(sheet,col*turretCell,row*turretCell,turretCell,turretCell,
+  x-turretCell/2,y-turretCell*.7,turretCell,turretCell);
+}
+function turretModel(c,t,view){
+ const pose=turretPose(t.angle,view.time-(t.turnedAt??-1),view.reduced);
+ const sheet=turretSheet(t.owner),rows=turretViews/turretColumns;
+ const x=-pose.co*pose.recoil,y=-pose.si*pose.recoil*.8;
+ if(sheet?.complete&&sheet.naturalWidth){
+  turretFrame(c,sheet,0,rows*3);
+  turretFrame(c,sheet,pose.dir%turretColumns,(t.rank-1)*rows+Math.floor(pose.dir/turretColumns),x,y);
+  return;
+ }
+ // Immediate silhouette while the WebP decodes.
+ const paint=t.owner===1?'#5989a1':'#68844a';
+ ellipse(c,0,-2,21,13,'#354735');
+ c.save();c.translate(x,y-15);c.scale(1,.8);c.rotate(Math.atan2(pose.si,pose.co));
+ polygon(c,[[-14,-12],[11,-15],[22,-7],[35,-4],[35,4],[22,7],[11,15],[-14,12]],'#374641');
+ polygon(c,[[-14,-12],[11,-15],[19,-8],[11,11],[-14,12]],paint);
+ c.restore();
+}
+
 function turretBody(c,t,view){
  const descent=clamp((view.time-t.startedAt)/(t.landAt-t.startedAt));
  const height=158*(1-descent**2.4),boosted=view.time<t.overclockUntil&&descent===1;
- const angle=t.angle-Math.atan2(Math.sin(t.angle-t.prevAngle),Math.cos(t.angle-t.prevAngle))*
-  (1-ease((view.time-t.turnedAt)/.085));
- const facing=Number.isFinite(angle)?angle:t.angle;
- const metal=t.owner===1?'#527594':'#62734c',highlight=t.owner===1?'#9ac8dc':'#b4c486';
  const scale=t.scale*turretModelScale;
- const recoil=view.reduced?0:3.5*(1-clamp((view.time-(t.turnedAt??-1))/.10));
  c.save();
  c.translate(t.x,t.y);
  c.scale(scale,scale);
- ellipse(c,0,5,25-7*(1-descent),10,'rgba(29,24,19,'+(.15+.24*descent)+')');
+ c.save();
+ c.globalAlpha*=.46+.54*descent;
+ const radius=24+4*(1-descent);
+ const shadow=gradient(c,2,6,radius,[0,'#221b15ac'],[.55,'#2c28196e'],[1,'#39271100']);
+ c.translate(2,6);c.scale(1,.61);c.translate(-2,-6);
+ ellipse(c,2,6,radius,radius,shadow);
+ c.restore();
  c.translate(0,-height);
  if(descent<1&&!view.reduced){
   c.save();c.globalAlpha=.43*Math.sin(descent*Math.PI);
   for(const x of [-15,4,15])stroke(c,1.7,'#fff2ba',()=>{c.moveTo(x,-24);c.lineTo(x,-43-descent*12);});
   c.restore();
  }
- turretFootplate(c,metal,highlight);
- c.translate(0,-turretMountHeight);
- c.save();c.scale(1,.76);c.rotate(facing);
- turretWeapon(c,t.rank,metal,highlight,recoil,t.barrel*Math.PI/3,boosted);
- c.restore();
+ turretModel(c,t,view);
+ c.translate(0,-15);
  if(boosted){
   const phase=view.time*12;
   glow(c,0,1,15,6,'#fb663bce','#ec3d1c50');
@@ -359,20 +359,22 @@ function turretBody(c,t,view){
  c.restore();
 }
 
-function turretEvent(c,e,p){
+function turretEvent(c,e,p,view){
  const scale=e.scale*turretModelScale;
  c.save();
  c.translate(e.x,e.y);
  c.globalAlpha*=1-p;
  if(e.kind==='radioTurretShot'){
-  const side=turretBarrel(e.rank,e.barrel),dx=Math.cos(e.angle),dy=Math.sin(e.angle),reach=turretReach[e.rank]-3;
-  const x=(dx*reach-dy*side)*scale,y=-turretMountHeight*scale+(dy*reach+dx*side)*.76*scale;
+  const pose=turretPose(e.angle,p*e.max,view?.reduced??quiet());
+  const [reach,side,height]=turretMuzzles[e.rank][e.barrel];
+  const x=(pose.co*(reach-pose.recoil)-pose.si*side)*scale;
+  const y=((pose.si*(reach-pose.recoil)+pose.co*side)*.8-height*.6)*scale;
   const tx=e.tx-e.x,ty=e.ty-e.y-11;
   const speed=e.boosted?'#ffae51':'#ffe174';
   stroke(c,3*scale,speed,()=>{c.moveTo(x,y);c.lineTo(tx,ty);});
   stroke(c,1*scale,'#fff4b3',()=>{c.moveTo(x,y);c.lineTo(tx,ty);});
   glow(c,x,y,13*scale,7*scale,'#fff5be',e.boosted?'#ff74399a':'#ffaa429a');
-  c.save();c.translate(x,y);c.rotate(e.angle);c.scale(scale,scale);
+  c.save();c.translate(x,y);c.rotate(Math.atan2(pose.si*.8,pose.co));c.scale(scale,scale);
   polygon(c,[[-2,0],[3,-2],[2,-6],[7,-3],[12,0],[6,3],[2,6],[3,2]],'#fff1b2');
   c.restore();
   ellipse(c,tx,ty,2.4*scale,1.7*scale,'#ffdda0');
@@ -686,7 +688,7 @@ function event(c,e,fx) {
  if(e.kind==='radioTurretShot'||e.kind==='radioTurretLand'||e.kind==='radioTurretEnd'){
   const view=displayFrames.get(c);
   const age=view?view.time-e.at:e.max-e.t;
-  if(age>=0&&age<e.max)turretEvent(c,e,age/e.max);
+  if(age>=0&&age<e.max)turretEvent(c,e,age/e.max,view);
   return true;
  }
  if(e.kind==='radioCrater')return true; // Painted under units until the soot dissipates.
