@@ -4,7 +4,7 @@
 const TAU=Math.PI*2, cell=128, size=76;
 const clamp=n=>Math.min(1,Math.max(0,n));
 const atlas=typeof Image==='function'?new Image():null;
-if(atlas){atlas.decoding='async';atlas.src='assets/models/bubble-octopus-v1.webp';}
+if(atlas){atlas.decoding='async';atlas.src='assets/models/bubble-octopus-v2.webp';}
 function oval(c,x,y,rx,ry,color){
  c.fillStyle=color;c.beginPath();c.ellipse(x,y,rx,ry,0,0,TAU);c.fill();
 }
@@ -44,7 +44,7 @@ function model(c,u,time){
   c.drawImage(atlas,dir%8*cell,(pose*2+(dir>>3))*cell,cell,cell,-size/2,-90*size/cell,size,size);
  }else fallback(c);
  if(wind){
-  const x=Math.cos(angle)*22,y=Math.sin(angle)*12-17;
+  const x=Math.cos(angle)*23,y=Math.sin(angle)*12.2-17;
   for(let i=0;i<3;i++){
    const a=cycle+i*TAU/3,spread=3+(1-windProgress)*9;
    film(c,x+Math.cos(a)*spread,y+Math.sin(a)*spread,1.2+windProgress);
@@ -53,13 +53,20 @@ function model(c,u,time){
  }
  c.restore();return true;
 }
-// A second colour in the same gauge leaves the health fill readable even at full HP.
-function shieldBar(c,u,x,y,width,height=4){
- if(!(u.bubbleShield?.hp>0&&u.maxHp>0))return;
- const fill=width*clamp(u.bubbleShield.hp/u.maxHp);
- const h=Math.max(2,Math.round(height*.55));
- c.fillStyle='#194961';c.fillRect(x,y,width,h);
- c.fillStyle='#72d8ff';c.fillRect(x,y,fill,h);
+// Use max HP as the ruler. Bonus shield can extend the track past a full health bar.
+function healthBarLayout(hp,maxHp,shieldHp=0){
+ const health=maxHp>0?clamp(hp/maxHp):0;
+ const shield=maxHp>0?clamp(shieldHp/maxHp):0;
+ const filled=health+shield;
+ return {health,shield,filled,track:Math.max(1,filled)};
+}
+function healthPaint(c,bar,x,baseWidth,hpColor){
+ if(!bar.shield)return hpColor;
+ const fill=c.createLinearGradient(x,0,x+baseWidth*bar.filled,0);
+ const seam=bar.health/bar.filled;
+ fill.addColorStop(0,hpColor);fill.addColorStop(seam,hpColor);
+ fill.addColorStop(seam,'#72d8ff');fill.addColorStop(1,'#72d8ff');
+ return fill;
 }
 function shieldCast(c,u,time){
  const s=u.bubbleShield;
@@ -101,5 +108,5 @@ function event(c,e){
  }
  c.restore();return true;
 }
-root.FrontBubbleOctopusView={model,shieldBar,shieldCast,air,event};
+root.FrontBubbleOctopusView={model,healthBarLayout,healthPaint,shieldCast,air,event};
 })(typeof window==='undefined'?globalThis:window);

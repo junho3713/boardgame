@@ -111,7 +111,7 @@ function install({FrontGame}){
    u.face=u.aimFace=fuse.angle;
    if(this.time+1e-8<fuse.fireAt)return;
    u.foamWindup=null;
-   const mouth={x:u.x+Math.cos(fuse.angle)*22,y:u.y+Math.sin(fuse.angle)*12};
+   const mouth={x:u.x+Math.cos(fuse.angle)*23,y:u.y+Math.sin(fuse.angle)*12.2};
    this.foamShots.push({...mouth,
     angle:fuse.angle,source:u,team:u.team,damage:s.damage,remaining:rules.travel,startedAt:this.time});
    return;

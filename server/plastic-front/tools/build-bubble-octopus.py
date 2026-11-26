@@ -14,7 +14,7 @@ import sys
 import tempfile
 
 CELL, VIEWS, POSES, COLUMNS = 128, 16, 4, 8
-OUTPUT = Path(__file__).resolve().parents[1] / "public/assets/models/bubble-octopus-v1.webp"
+OUTPUT = Path(__file__).resolve().parents[1] / "public/assets/models/bubble-octopus-v2.webp"
 
 
 def bake():
@@ -241,9 +241,9 @@ def face_and_mantle(pose):
         eye = sphere("Polished bead eye",center,(.102,.151,.161),eyes)
         eye.rotation_euler.z = sign*.49
     turned_ring("Round squirter mouth",(.86*puff,0,z-.065*puff),(.979,0,.205),[
-        (0,.114,0),(.055,.165,0),(.104,.194,0),(.145,.200,0),(.195,.186,0),
-        (.214,.160,0),(.215,.133,0),(.197,.116,1),(.166,.110,1),
-        (.122,.107,2),(.087,.095,2),(.080,.001,2),
+        (0,.114,0),(.055,.157,0),(.097,.168,0),(.146,.194,0),(.187,.200,0),
+        (.237,.186,0),(.256,.160,0),(.257,.133,0),(.239,.116,1),(.208,.110,1),
+        (.151,.107,2),(.100,.095,2),(.093,.001,2),
     ],[lip,innerlip,bore])
 
 

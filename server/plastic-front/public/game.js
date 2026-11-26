@@ -383,10 +383,14 @@ function updateUI(){syncBattleMusic();if(game.phase!=='ready')unitModels.prefetc
  $('enemyGrowthText').textContent=`시간 성장 · 체력 +${Math.round((pressure.hp-1)*100)}% / 공격 +${pressure.tier*10}% / 방어 +${pressure.defense}`;
  const boss=game.activeBoss(),bosses=game.isRoomCampaign()?game.units.filter(u=>u.boss&&!u.roadCaptain&&u.hp>0):boss?[boss]:[];$('bossHealthBar').hidden=!boss;if(boss){
   const capacity=bosses.reduce((sum,u)=>sum+u.maxHp,0)||1;
-  const percent=100*bosses.reduce((sum,u)=>sum+u.hp,0)/capacity;
+  const hp=bosses.reduce((sum,u)=>sum+u.hp,0);
   const shield=bosses.reduce((sum,u)=>sum+(u.bubbleShield?.hp||0),0);
-  $('bossHealthFill').style.width=percent+'%';
-  $('bossShieldFill').style.width=Math.min(100,100*shield/capacity)+'%';
+  const bar=window.FrontBubbleOctopusView.healthBarLayout(hp,capacity,shield);
+  const percent=100*bar.health;
+  // Reserve room in the panel for a full 28% shield without moving the health endpoint.
+  $('bossHealthBar').style.width=Math.min(100,100*bar.track/1.28)+'%';
+  $('bossHealthFill').style.width=100*bar.health/bar.track+'%';
+  $('bossShieldFill').style.width=100*bar.shield/bar.track+'%';
   $('bossHealthBar').setAttribute('aria-valuenow',String(Math.round(percent)));
   $('bossHealthBar').setAttribute('aria-valuetext','체력 '+Math.round(percent)+'%'+(shield?' · 거품 실드 '+Math.ceil(shield):''));
  }$('bossSchedule').hidden=game.mode!=='pve';$('bossSchedule').textContent=boss?(boss.miniBoss?'미드 보스 · 체력·공격력 30% · 처치 시 자원·경험치':bosses.length>1?'보스 2기 · 각각 강화 보상 · 모두 격파 후 16초 회복':'보스 격파 → 추가 강화 1회 보장'):game.isRoomCampaign()&&!Number.isFinite(game.bossState.nextAt)?'보스 공세 종료 · 최종 기지를 파괴하세요':`다음 보스 ${Math.max(0,Math.ceil(game.bossState.nextAt-game.time))}초 · 격파 ${game.bossState.killed}회`;if(game.isRoomCampaign()&&!boss){const next=Array.from({length:15},(_,i)=>(i+1)*60).find(at=>at>=window.FrontRoomCampaign.config.miniBoss.from&&at>game.time&&!window.FrontRoomCampaign.config.bosses.some(b=>b.at===at));if(next)$('bossSchedule').textContent+=' · 미드 보스 '+Math.ceil(next-game.time)+'초';}if(game.isRoomCampaign()&&game.time>=780)$('bossSchedule').textContent+=` · 일반 전차 증원 ${game.roomCampaign.tankSpawned||0}/3`;
@@ -806,8 +810,9 @@ function drawUnitRaw(u,mine=true){
  if(u.star>=2||u.boss||u.rareSupplyGuard||u.bubbleShield?.hp>0||u.hp<u.maxHp||u.type==='leader'||u.type==='artillery'||u.type==='bayonetCaptain'){
   const vehicle=(u.team!==0||u.type!=='guntruck')&&['tank','crimsonAce','guntruck','artillery','lucky','pirateCannon'].includes(u.type),human=roster.includes(u.type)&&!vehicle||u.type==='leader'||types[u.type].stab,w=u.boss?84:vehicle?48:30;
   const rise=(u.type==='medic'&&u.team===0&&u.appearance==='rina'?78+(u.star>=2?8:0):types[u.type].flying?(u.visualFlightHeight??types[u.type].flightHeight)+42:u.type==='crimsonAce'?140:u.type==='rhinoBeetle'?88:u.type==='stagBeetle'?76:u.type==='pirateCannon'?94:u.type==='bubbleOctopus'?52:vehicle?79:u.type==='bayonetCaptain'?90:types[u.type].stab?75:human?66:u.type==='bruteBeetle'?58:35)*(u.boss?1.35:1)-(u.star>=2?(vehicle?10:8):0),y=u.y-rise;
-  rr(ctx,u.x-w/2-1,y-1,w+2,6,2,'#172a20aa');rr(ctx,u.x-w/2,y,w,4,2,'#293d2d88');rr(ctx,u.x-w/2,y,w*u.hp/u.maxHp,4,2,u.boss?'#e6af57':t?'#e0a184':'#dceca2');
-  if(u.bubbleShield)window.FrontBubbleOctopusView.shieldBar(ctx,u,u.x-w/2,y,w);
+  const left=u.x-w/2,bar=window.FrontBubbleOctopusView.healthBarLayout(u.hp,u.maxHp,u.bubbleShield?.hp);
+  const fill=window.FrontBubbleOctopusView.healthPaint(ctx,bar,left,w,u.boss?'#e6af57':t?'#e0a184':'#dceca2');
+  rr(ctx,left-1,y-1,w*bar.track+2,6,2,'#172a20aa');rr(ctx,left,y,w*bar.track,4,2,'#293d2d88');rr(ctx,left,y,w*bar.filled,4,2,fill);
   if(u.star>=2){text(ctx,'★'.repeat(u.star),u.x,y-6,12,u.star===3?'#ffd36c':'#ffe4a0');}
  }
 
