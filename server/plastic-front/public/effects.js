@@ -253,7 +253,7 @@ class FrontEffects{
   return true;
  }
  drawEvent(ctx,e){
-  if(root.FrontBlockFlashView?.event(ctx,e)||root.FrontPirateCannonView?.event(ctx,e))return true;
+  if(root.FrontBubbleOctopusView?.event(ctx,e)||root.FrontBlockFlashView?.event(ctx,e)||root.FrontPirateCannonView?.event(ctx,e))return true;
   if(root.FrontRosterArt?.event(ctx,e,this))return true;
   if(e.kind==='explosion'&&['toyBall','acid'].includes(e.visualKind)){const k=clamp(e.t/e.max,0,1),spread=8+(1-k)*20;ctx.save();ctx.globalAlpha=k*.4;ctx.strokeStyle='#e8cd91';ctx.lineWidth=1.5;ctx.beginPath();ctx.ellipse(e.x,e.y,spread,spread*.6,0,0,TAU);ctx.stroke();ctx.restore();for(let i=0;i<3;i++){const a=i*TAU/3;this.toyStar(ctx,e.x+Math.cos(a)*spread,e.y-5+Math.sin(a)*spread*.6,3.5*k+1,a+(1-k)*3,k,'#ffe18a');}return true;}
   if(e.kind==='explosion'&&this.drawImpactMaterial?.(ctx,e,{boss:e.visualKind==='bossKiller',style:e.visualKind}))return true;

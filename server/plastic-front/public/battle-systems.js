@@ -115,6 +115,7 @@ class SupportSystem extends BattleSystem{
 class ProjectileSystem extends BattleSystem{
  update(game,{dt,combatCandidates}){
   game.updateBattleProjectiles(dt,combatCandidates);
+  game.updateFoamShots?.(dt);
   game.updateMortars();
   game.updateButterflyGusts();
   game.updateMedicCleanses();

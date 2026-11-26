@@ -351,6 +351,7 @@ function results(c,game,visible=()=>true){
 function field(c,game,visible=()=>true){
  root.FrontBlockFlashView?.air(c,game,visible);
  root.FrontPirateCannonView?.air(c,game,visible);
+ root.FrontBubbleOctopusView?.air(c,game,visible);
  for(const d of game.rosterDice||[]){
   if(!visible(d))continue;const t=Math.max(0,Math.min(1,(game.time-d.startedAt)/Math.max(.001,d.landAt-d.startedAt))),h=8+Math.sin(t*Math.PI)*(d.child?20:48)+(1-t)*17,r=d.child?6.5:10.5;
   ellipse(c,d.x,d.y,5+3*(1-t),2.4,'#443b292f');die(c,d.x,d.y-h,r,d.face,d.golden,Math.sin(Math.PI*t)*.85);

@@ -381,7 +381,15 @@ function updateUI(){syncBattleMusic();if(game.phase!=='ready')unitModels.prefetc
  const bannerHTML=announced.map(([,q])=>`<article><small>${q.title==='퀘스트 완료'?'MISSION CLEAR':'NEW QUEST'}</small><b>${q.title}</b><span>${q.progress}</span><strong>${q.reward}</strong><p>${q.hint}</p></article>`).join('');if($('lessonBanner').innerHTML!==bannerHTML)$('lessonBanner').innerHTML=bannerHTML;
  const objective=game.objective();$('objectiveTitle').textContent=objective.title;$('objectiveProgress').textContent=objective.progress;const pressure=game.pressure();$('pressureText').textContent=`위협 Lv.${pressure.tier+1} · 전사 ${game.losses[0]}기 · 상승 ${Math.max(1,Math.ceil(60-game.time%60))}초`;
  $('enemyGrowthText').textContent=`시간 성장 · 체력 +${Math.round((pressure.hp-1)*100)}% / 공격 +${pressure.tier*10}% / 방어 +${pressure.defense}`;
- const boss=game.activeBoss(),bosses=game.isRoomCampaign()?game.units.filter(u=>u.boss&&!u.roadCaptain&&u.hp>0):boss?[boss]:[];$('bossHealthBar').hidden=!boss;if(boss){const percent=Math.max(0,bosses.reduce((n,u)=>n+u.hp,0)/bosses.reduce((n,u)=>n+u.maxHp,0)*100);$('bossHealthFill').style.width=`${percent}%`;$('bossHealthBar').setAttribute('aria-valuenow',String(Math.round(percent)));}$('bossSchedule').hidden=game.mode!=='pve';$('bossSchedule').textContent=boss?(boss.miniBoss?'미드 보스 · 체력·공격력 30% · 처치 시 자원·경험치':bosses.length>1?'보스 2기 · 각각 강화 보상 · 모두 격파 후 16초 회복':'보스 격파 → 추가 강화 1회 보장'):game.isRoomCampaign()&&!Number.isFinite(game.bossState.nextAt)?'보스 공세 종료 · 최종 기지를 파괴하세요':`다음 보스 ${Math.max(0,Math.ceil(game.bossState.nextAt-game.time))}초 · 격파 ${game.bossState.killed}회`;if(game.isRoomCampaign()&&!boss){const next=Array.from({length:15},(_,i)=>(i+1)*60).find(at=>at>=window.FrontRoomCampaign.config.miniBoss.from&&at>game.time&&!window.FrontRoomCampaign.config.bosses.some(b=>b.at===at));if(next)$('bossSchedule').textContent+=' · 미드 보스 '+Math.ceil(next-game.time)+'초';}if(game.isRoomCampaign()&&game.time>=780)$('bossSchedule').textContent+=` · 일반 전차 증원 ${game.roomCampaign.tankSpawned||0}/3`;
+ const boss=game.activeBoss(),bosses=game.isRoomCampaign()?game.units.filter(u=>u.boss&&!u.roadCaptain&&u.hp>0):boss?[boss]:[];$('bossHealthBar').hidden=!boss;if(boss){
+  const capacity=bosses.reduce((sum,u)=>sum+u.maxHp,0)||1;
+  const percent=100*bosses.reduce((sum,u)=>sum+u.hp,0)/capacity;
+  const shield=bosses.reduce((sum,u)=>sum+(u.bubbleShield?.hp||0),0);
+  $('bossHealthFill').style.width=percent+'%';
+  $('bossShieldFill').style.width=Math.min(100,100*shield/capacity)+'%';
+  $('bossHealthBar').setAttribute('aria-valuenow',String(Math.round(percent)));
+  $('bossHealthBar').setAttribute('aria-valuetext','체력 '+Math.round(percent)+'%'+(shield?' · 거품 실드 '+Math.ceil(shield):''));
+ }$('bossSchedule').hidden=game.mode!=='pve';$('bossSchedule').textContent=boss?(boss.miniBoss?'미드 보스 · 체력·공격력 30% · 처치 시 자원·경험치':bosses.length>1?'보스 2기 · 각각 강화 보상 · 모두 격파 후 16초 회복':'보스 격파 → 추가 강화 1회 보장'):game.isRoomCampaign()&&!Number.isFinite(game.bossState.nextAt)?'보스 공세 종료 · 최종 기지를 파괴하세요':`다음 보스 ${Math.max(0,Math.ceil(game.bossState.nextAt-game.time))}초 · 격파 ${game.bossState.killed}회`;if(game.isRoomCampaign()&&!boss){const next=Array.from({length:15},(_,i)=>(i+1)*60).find(at=>at>=window.FrontRoomCampaign.config.miniBoss.from&&at>game.time&&!window.FrontRoomCampaign.config.bosses.some(b=>b.at===at));if(next)$('bossSchedule').textContent+=' · 미드 보스 '+Math.ceil(next-game.time)+'초';}if(game.isRoomCampaign()&&game.time>=780)$('bossSchedule').textContent+=` · 일반 전차 증원 ${game.roomCampaign.tankSpawned||0}/3`;
  const rows=roster.filter(t=>game.tech[0][t]>0);const count=game.units.filter(u=>u.team===0&&u.hp>0&&!u.patrol&&u.type!=='leader'&&(!COOP?.active||u.coopOwner===game.coopOwner)).length;
  const signature=rows.map(t=>`${t}${game.tech[0][t]}${game.evolved[t]}:${game.unitCount(t)}:${game.starExperiment?game.starRosterLabel(t):0}`).join('');
  $('unitCount').textContent=`${pad(count+(game.commander(0).hp>0?1:0))} 생존 / 한도 ${game.capacity()+1}`;$('squadLosses').textContent=`전사 ${game.losses[0]}기 · 장비 회수 ${game.salvaged} 자원`;
@@ -778,6 +786,7 @@ function drawUnitRaw(u,mine=true){
  ctx.restore();}
  ctx.restore();
  ctx.filter='none';if(game.isSupplyTroop(u)){circle(ctx,0,-46,5,'#f2d88f','#33291a');text(ctx,'✦',0,-42,9,'#201e19');}
+ if(u.bubbleShield)window.FrontBubbleOctopusView.shieldCast(ctx,u,game.time);
  if(u.type==='blizzardMage')window.FrontGuardianFX.shield(ctx,u,game.time);
  if(u.flash){ctx.globalAlpha=u.flash/.13*.65;circle(ctx,0,0,types[u.type].r+2,null,'#fff4c8');ctx.globalAlpha=1;}
  ctx.restore();
@@ -794,10 +803,11 @@ function drawUnitRaw(u,mine=true){
  if(!u.rareSupplyGuard&&u.type==='bruteBeetle')text(ctx,'거대 갑충',u.x,u.y-67,11,'#f0d597');
  if(!u.rareSupplyGuard&&(u.type==='stagBeetle'||u.type==='rhinoBeetle'))text(ctx,(u.boss?(u.miniBoss?'MID / ':'BOSS / ')+u.bossName.replace(/^(중간 보스|미드 보스) · /,''):types[u.type].name)+' · 장갑',u.x,u.y-(u.type==='rhinoBeetle'?91:78)*(u.boss?1.35:1),u.boss?13:11,'#f0d597');
  if(u.team!==0&&!u.rareSupplyGuard&&types[u.type].flying&&(u.boss||game.units.find(v=>v.type===u.type&&!v.boss&&v.hp>0&&game.visible(v))===u))text(ctx,(u.boss?(u.miniBoss?'MID / ':'BOSS / ')+u.bossName.replace(/^(중간 보스|미드 보스) · /,''):types[u.type].name)+(u.type==='hornet'?' · 중장갑':' · 경장갑'),u.x,u.y-((u.visualFlightHeight??types[u.type].flightHeight)+49)*(u.boss?1.35:1),u.boss?13:10,u.boss?'#ffc079':'#f2d694');
- if(u.star>=2||u.boss||u.rareSupplyGuard||u.hp<u.maxHp||u.type==='leader'||u.type==='artillery'||u.type==='bayonetCaptain'){
+ if(u.star>=2||u.boss||u.rareSupplyGuard||u.bubbleShield?.hp>0||u.hp<u.maxHp||u.type==='leader'||u.type==='artillery'||u.type==='bayonetCaptain'){
   const vehicle=(u.team!==0||u.type!=='guntruck')&&['tank','crimsonAce','guntruck','artillery','lucky','pirateCannon'].includes(u.type),human=roster.includes(u.type)&&!vehicle||u.type==='leader'||types[u.type].stab,w=u.boss?84:vehicle?48:30;
-  const rise=(u.type==='medic'&&u.team===0&&u.appearance==='rina'?78+(u.star>=2?8:0):types[u.type].flying?(u.visualFlightHeight??types[u.type].flightHeight)+42:u.type==='crimsonAce'?140:u.type==='rhinoBeetle'?88:u.type==='stagBeetle'?76:u.type==='pirateCannon'?94:vehicle?79:u.type==='bayonetCaptain'?90:types[u.type].stab?75:human?66:u.type==='bruteBeetle'?58:35)*(u.boss?1.35:1)-(u.star>=2?(vehicle?10:8):0),y=u.y-rise;
+  const rise=(u.type==='medic'&&u.team===0&&u.appearance==='rina'?78+(u.star>=2?8:0):types[u.type].flying?(u.visualFlightHeight??types[u.type].flightHeight)+42:u.type==='crimsonAce'?140:u.type==='rhinoBeetle'?88:u.type==='stagBeetle'?76:u.type==='pirateCannon'?94:u.type==='bubbleOctopus'?52:vehicle?79:u.type==='bayonetCaptain'?90:types[u.type].stab?75:human?66:u.type==='bruteBeetle'?58:35)*(u.boss?1.35:1)-(u.star>=2?(vehicle?10:8):0),y=u.y-rise;
   rr(ctx,u.x-w/2-1,y-1,w+2,6,2,'#172a20aa');rr(ctx,u.x-w/2,y,w,4,2,'#293d2d88');rr(ctx,u.x-w/2,y,w*u.hp/u.maxHp,4,2,u.boss?'#e6af57':t?'#e0a184':'#dceca2');
+  if(u.bubbleShield)window.FrontBubbleOctopusView.shieldBar(ctx,u,u.x-w/2,y,w);
   if(u.star>=2){text(ctx,'★'.repeat(u.star),u.x,y-6,12,u.star===3?'#ffd36c':'#ffe4a0');}
  }
 

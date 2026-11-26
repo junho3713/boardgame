@@ -4,7 +4,7 @@
  if(typeof module!=='undefined'&&module.exports)require('./two-star.js');
  const Game=api.FrontGame,TYPES=api.TYPES||root.FrontTypes,EVOS=api.EVOLUTIONS||root.FrontEvolutions;
  const TOYS=['toyStunner','toyTurtle','toyDecoyMaker','toyDrum'];
- const ENEMIES={pirateCannon:TYPES.pirateCannon.name,ant:'개미',rifle:'소총병',tank:'일반 전차',rhinoBeetle:'장수풍뎅이 보스',hornet:'장수말벌 보스',bayonetCaptain:'인간형 보스',crimsonAce:'진홍전차 보스'};
+ const ENEMIES={bubbleOctopus:TYPES.bubbleOctopus.name,pirateCannon:TYPES.pirateCannon.name,ant:'개미',rifle:'소총병',tank:'일반 전차',rhinoBeetle:'장수풍뎅이 보스',hornet:'장수말벌 보스',bayonetCaptain:'인간형 보스',crimsonAce:'진홍전차 보스'};
  const BOSSES=new Set(['rhinoBeetle','hornet','bayonetCaptain','crimsonAce']);
  const MODES={lucky:'레토나',support:'서포토이',evolution:'진화 병과',ultimate:'대장 궁극기'};
  const OUTCOMES={missiles:'777 · 미사일 7발',bossKiller:'보스킬러',mine:'섬광탄',glue:'끈끈이',spray:'살충 스프레이',blank:'꽝'};

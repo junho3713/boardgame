@@ -68,6 +68,7 @@ class TroopEncounter{
   const {game,phase,slot,mix}=batch,forced=this.forcedType(batch);
   if(this.preferPirate(batch,forced))return 'pirateCannon';
   if(forced&&phase.mix[forced]>0&&this.eligible(game,forced,batch))return forced;
+  if(!forced&&slot<4&&game.roomCanSpawn('bubbleOctopus'))return 'bubbleOctopus';
   const pool=Object.entries(mix).filter(([type])=>this.eligible(game,type,batch)&&(slot<4||meleeWaveTypes.has(type)));
   const total=pool.reduce((sum,[,weight])=>sum+weight,0);
   if(!total)return null;
@@ -291,6 +292,7 @@ const methods={
  roomEnemyTypeCap(type){const row=config.openingCaps.find(r=>this.time<r.until);return Math.min(config.caps[type]??Infinity,row?.[type]??Infinity);},
  roomEnemyReady(type){
   if(type==='pirateCannon')return this.pirateReinforcementReady();
+  if(type==='bubbleOctopus')return this.octopusReinforcementReady();
   if(type==='bombBug')return this.time>=config.insects.bombFrom;
   if(this.time<(config.introductions[type]||0)||type==='sniper'&&this.enemySniperCount()>=2)return false;
   return !config.insects.intervals[type]||this.time>=Math.max(config.insects.from,this.roomCampaign?.insectNext?.[type]||0);
@@ -302,7 +304,7 @@ const methods={
  },
  spawnRoomEnemy(type,lane=null,entry=null){
   const r=config.insects.opening,opening=entry?.openingAntPack&&this.time>=r.at&&this.time<r.until&&!this.roomCampaign.openingAntWave&&this.roomEnemyCount(null,true)<this.roomWaveCap();
-  if(!opening&&!this.roomCanSpawn(type))return null;const cursor=this.roomCampaign.entryCursor||0,p=entry||this.roomEntry(this.serial+1+(lane||0)*3,55,cursor%4);if(!p)return null;this.roomCampaign.entryCursor=Number.isInteger(p.entrySide)?p.entrySide+1:cursor+1;const team=['rifle','machinegun','sniper','crimsonAce','lucky','pirateCannon'].includes(type)?1:2,u=this.addUnit(team,type,p.x,p.y,true);if(type==='pirateCannon')this.markPirateReinforcement();if(config.insects.intervals[type]){const next=this.roomCampaign.insectNext??={};next[type]=this.time+config.insects.intervals[type];}u.roomEntrySide=p.entrySide;u.assault=true;u.roomWave=true;this.stampEvolutionWave(u);if(opening&&type==='bombBug'){u.openingBombBug=true;u.hp=u.maxHp=this.stats(u).hp;}if(type==='blizzardMage')Object.assign(u,{mobileMage:true,activeStage:1,cooldown:1.2});return u;},
+  if(!opening&&!this.roomCanSpawn(type))return null;const cursor=this.roomCampaign.entryCursor||0,p=entry||this.roomEntry(this.serial+1+(lane||0)*3,55,cursor%4);if(!p)return null;this.roomCampaign.entryCursor=Number.isInteger(p.entrySide)?p.entrySide+1:cursor+1;const team=['rifle','machinegun','sniper','crimsonAce','lucky','pirateCannon'].includes(type)?1:2,u=this.addUnit(team,type,p.x,p.y,true);if(type==='pirateCannon')this.markPirateReinforcement();if(type==='bubbleOctopus')this.markOctopusReinforcement();if(config.insects.intervals[type]){const next=this.roomCampaign.insectNext??={};next[type]=this.time+config.insects.intervals[type];}u.roomEntrySide=p.entrySide;u.assault=true;u.roomWave=true;this.stampEvolutionWave(u);if(opening&&type==='bombBug'){u.openingBombBug=true;u.hp=u.maxHp=this.stats(u).hp;}if(type==='blizzardMage')Object.assign(u,{mobileMage:true,activeStage:1,cooldown:1.2});return u;},
  roomBombEscortPoint(bomb,slot,count){
   const c=this.commander(0),offset=(bomb.openingBombBug||bomb.openingAntPack)?Math.PI+(slot===0?-.66:.66):slot*Math.PI*2/count,angle=Math.atan2(c.y-bomb.y,c.x-bomb.x)+offset;
   return{x:bomb.x+Math.cos(angle)*70,y:bomb.y+Math.sin(angle)*70,entrySide:bomb.roomEntrySide??bomb.entrySide};

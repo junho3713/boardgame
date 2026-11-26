@@ -46,6 +46,7 @@
   if(game.isSupportEntity(u)){FrontSupportToyView.draw(c,u,game);return;}if(u.hp<=0)return;
   c.save();c.translate(u.x,u.y);FrontHitFeedback.transform(c,u,game.time);if(!models.draw(c,u,game.time,!!game.evolved[u.type])){c.fillStyle=u.team?'#bc7151':'#9ccf92';c.beginPath();c.arc(0,-10,12,0,Math.PI*2);c.fill();}c.restore();
   const y=u.y-(['ant','rhinoBeetle','hornet'].includes(u.type)?u.boss?95:40:80),w=u.boss?70:36;c.fillStyle='#18362c';c.fillRect(u.x-w/2,y,w,4);c.fillStyle=u.team?'#f1b37b':'#b8de9f';c.fillRect(u.x-w/2,y,w*Math.max(0,u.hp/u.maxHp),4);
+  if(u.bubbleShield)FrontBubbleOctopusView.shieldBar(c,u,u.x-w/2,y,w);
   if(u.boss)text(api.ENEMIES[u.type],u.x,y-8,'#ffdda1',10);
   else if(u===game.actor){text(game.stats(u).name+' '+ '★'.repeat(u.star||1),u.x,y-8,'#ffe7a4');}
  }

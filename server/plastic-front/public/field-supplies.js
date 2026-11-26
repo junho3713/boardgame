@@ -119,7 +119,11 @@ function install({FrontGame:Game,TYPES}){
   const shots=this.evolutionBullet(u,target,attack,s,({commando:'heatPierce',spectre:'pierce',titan:'titan'})[u.type]);for(const b of shots)if(u.type!=='commando'){b.kind=u.type==='spectre'?'sniper':'rocket';b.speed=u.type==='spectre'?1800:800;}return shots;
  };
  p.rareSupplyGuards=function(pickup){return this.units.filter(u=>u.hp>0&&pickup.guardIds?.includes(u.id));};
- p.expireRareSupplies=function(){for(const pickup of this.pickups)if(pickup.rareSupply&&this.time>=(pickup.expires||Infinity)){pickup.active=false;for(const u of this.rareSupplyGuards(pickup)){u.hp=0;u.diedAt=this.time;u.rareSupplyWithdrawn=true;}}};
+ function withdrawGuard(game,u){
+  u.hp=0;u.diedAt=game.time;u.rareSupplyWithdrawn=true;
+  if(u.type==='bubbleOctopus')game.releaseOctopusShields?.(u);
+ }
+ p.expireRareSupplies=function(){for(const pickup of this.pickups)if(pickup.rareSupply&&this.time>=(pickup.expires||Infinity)){pickup.active=false;for(const u of this.rareSupplyGuards(pickup))withdrawGuard(this,u);}};
  p.supplyGuardPositions=function(pickup,count){
   const b=this.bounds(),taken=this.rareSupplyGuards(pickup),points=[];
   for(let i=0;i<120&&points.length<count;i++){const a=i*2.39996,r=110+i%3*35,q={x:pickup.x+Math.cos(a)*r,y:pickup.y+Math.sin(a)*r};if(q.x>55&&q.x<b.width-55&&q.y>75&&q.y<b.height-75&&this.freePosition(q.x,q.y,26)&&![...taken,...points].some(p=>Math.hypot(p.x-q.x,p.y-q.y)<57))points.push(q);}return points;
@@ -131,7 +135,7 @@ function install({FrontGame:Game,TYPES}){
   const baseCount=Math.min(8,pickup.guardIds.length-(pickup.ambushPending===false?4:0)),keep=opening?3:6;
   const removed=new Set(pickup.guardIds.slice(keep,Math.max(keep,baseCount)));
   if(opening&&pickup.ambushPending===false)for(const id of pickup.guardIds.slice(baseCount+2))removed.add(id);
-  for(const u of this.units)if(removed.has(u.id)&&u.hp>0){u.hp=0;u.diedAt=this.time;u.rareSupplyWithdrawn=true;}
+  for(const u of this.units)if(removed.has(u.id)&&u.hp>0)withdrawGuard(this,u);
   pickup.guardIds=pickup.guardIds.filter(id=>!removed.has(id));for(const u of this.rareSupplyGuards(pickup)){u.supplyAnchorX=pickup.x;u.supplyAnchorY=pickup.y;}pickup.guardVersion=version;
  }};
  p.updateRareSupplySecurity=function(){
@@ -155,7 +159,7 @@ function install({FrontGame:Game,TYPES}){
   for(let i=0;i<36;i++){const a=-Math.PI/2+((i%12)-5.5)*.22,r=700+(i%3)*75,candidate={x:Math.max(65,Math.min(bounds.width-65,c.x+Math.cos(a)*r)),y:Math.max(this.frontline()+100,Math.min(bounds.height-100,c.y+Math.sin(a)*r))};if(Math.hypot(candidate.x-c.x,candidate.y-c.y)>=550&&this.freePosition(candidate.x,candidate.y,26)&&!this.pickups.some(p=>p.active&&Math.hypot(p.x-candidate.x,p.y-candidate.y)<90)){point=candidate;break;}}
   if(!point){this.nextRareSupply=this.time+5;return;}
   const pickup={...point,active:true,rareSupply:true,spawnedAt:this.time,expires:this.time+120,ambushPending:true,guardIds:[]},opening=openingSupply(pickup);
-  const guardTypes=opening?['bladeGuard','rifle','rifle']:this.time<360?['bayonet','bayonet','bayonet','rifle','rifle','rifle']:this.time<720?['bladeGuard','bayonet','bayonet','machinegun','mortar','sniper']:['stagBeetle','bladeGuard','machinegun','mortar','mortar','sniper'];
+  const guardTypes=opening?['bladeGuard','rifle','bubbleOctopus']:this.time<360?['bayonet','bayonet','bubbleOctopus','rifle','rifle','rifle']:this.time<720?['bladeGuard','bayonet','bubbleOctopus','machinegun','mortar','sniper']:['stagBeetle','bladeGuard','machinegun','mortar','bubbleOctopus','sniper'];
   pickup.guardVersion=opening?4:3;
   const positions=this.supplyGuardPositions(pickup,guardTypes.length);
   if(positions.length<guardTypes.length){this.nextRareSupply=this.time+5;return;}

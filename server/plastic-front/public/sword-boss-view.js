@@ -9,7 +9,7 @@ class View{
  healthBar(c,b,x,y,width){
   if(!b||b.hp<=0||!Number.isFinite(b.maxHp)||b.maxHp<=0)return;
   const ratio=clamp(b.hp/b.maxHp,0,1),phase=b.swords?.phase===2;
-  c.save();c.fillStyle='#211725ed';c.fillRect(x-width/2-4,y-20,width+8,43);c.fillStyle='#493247';c.fillRect(x-width/2,y+4,width,14);c.fillStyle=phase?'#f06ca5':'#b480eb';c.fillRect(x-width/2,y+4,width*ratio,14);c.textAlign='center';c.textBaseline='middle';c.font='700 12px system-ui';c.fillStyle='#fff2fa';c.fillText('사검의 군주'+(phase?' · 각성':''),x,y-9);c.font='700 10px system-ui';c.strokeStyle='#29182c';c.lineWidth=3;const label=Math.ceil(b.hp).toLocaleString()+' / '+Math.ceil(b.maxHp).toLocaleString();c.strokeText(label,x,y+11);c.fillText(label,x,y+11);c.restore();
+  c.save();c.fillStyle='#211725ed';c.fillRect(x-width/2-4,y-20,width+8,43);c.fillStyle='#493247';c.fillRect(x-width/2,y+4,width,14);c.fillStyle=phase?'#f06ca5':'#b480eb';c.fillRect(x-width/2,y+4,width*ratio,14);if(b.bubbleShield)root.FrontBubbleOctopusView.shieldBar(c,b,x-width/2,y+4,width,5);c.textAlign='center';c.textBaseline='middle';c.font='700 12px system-ui';c.fillStyle='#fff2fa';c.fillText('사검의 군주'+(phase?' · 각성':''),x,y-9);c.font='700 10px system-ui';c.strokeStyle='#29182c';c.lineWidth=3;const label=Math.ceil(b.hp).toLocaleString()+' / '+Math.ceil(b.maxHp).toLocaleString();c.strokeText(label,x,y+11);c.fillText(label,x,y+11);c.restore();
  }
  health(c,g){const b=g.trialBoss;if(!b||b.hp<=0||g.visible&&!g.visible(b))return;this.healthBar(c,b,b.x,b.y-221,220);}
  hud(c,g,width){const b=g.trialBoss;if(!b?.finalBoss||b.hp<=0)return;this.healthBar(c,b,width/2,80,Math.max(120,Math.min(300,width-36)));}
