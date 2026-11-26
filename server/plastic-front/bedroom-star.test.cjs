@@ -8,7 +8,7 @@ test('bedroom floor is an independent household map and the removed factory URL 
  const other=create();g.obstacles[0].x=12;a.notEqual(other.obstacles[0].x,12);a.equal(new FrontGame({},undefined,{map:'livingroom-pixel'}).world.id,'livingroom');
 });
 test('normal recruitment creates a real two-star squad and keeps medic and lucky vehicle rules',()=>{
- const g=create();g.start();g.phase='choice';g.cash[0]=10000;a.equal(g.buy('rifle'),true);a.equal(g.twoStarCount('rifle'),1);const rifle=g.alive(0).find(u=>u.type==='rifle'),one=g.stats({...rifle,star:1});a.equal(g.stats(rifle).damage,one.damage*3);a.equal(g.stats(rifle).hp,one.hp*2.5);
+ const g=create();g.start();g.phase='choice';g.cash[0]=10000;a.equal(g.buy('rifle'),true);a.equal(g.twoStarCount('rifle'),1);const rifle=g.alive(0).find(u=>u.type==='rifle'),one=g.stats({...rifle,star:1});a.equal(g.stats(rifle).damage,one.damage*2.9);a.equal(g.stats(rifle).hp,one.hp*2.2);
  for(const type of ['medic','lucky']){g.tech[0][type]=1;for(let i=0;i<3;i++)a.equal(g.buy(type),true);}const medic=g.alive(0).find(u=>u.type==='medic');a.equal(g.stats(medic).heal,g.stats({...medic,star:1}).heal*2.5);const lucky=g.alive(0).find(u=>u.type==='lucky');g.updateLuckyUnit(lucky);a.equal(lucky.luckyChannels.length,3);
 });
 test('household obstacles have clear four-sided offscreen approaches and supply routes',()=>{

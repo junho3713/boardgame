@@ -38,7 +38,7 @@ test('mini rhino and hornet percentage strikes use thirty percent too, including
  g.units=[t];t.hp=1000;g.time=780;g.updateRoomMiniBosses();const hornet=minis(g)[0];hornet.bossAction={phase:'dive',started:g.time-.1,until:g.time,target:t,x:t.x,y:t.y,fromX:t.x,fromY:t.y};g.updateVenomDive(hornet,g.bossPatternRules(hornet));near(1000-t.hp,150);near(t.poisonDps,g.stats({...hornet,miniBoss:false}).damage*.3*config.patterns.venomDive.poisonPerSecond);
 });
 test('a mini keeps ordinary wave cadence and caps rather than imposing the main-boss reinforcement limit',()=>{
- const g=scene();g.time=780;const before=g.roomWavePlan(),cap=g.roomWaveCap();g.updateRoomMiniBosses();a.equal(minis(g).length,1);a.deepEqual(g.roomWavePlan(),before);a.equal(g.roomWaveCap(),cap);
+ const g=scene();g.time=540;const before=g.roomWavePlan(),cap=g.roomWaveCap();g.updateRoomMiniBosses();a.equal(minis(g).length,1);a.deepEqual(g.roomWavePlan(),before);a.equal(g.roomWaveCap(),cap);
 });
 
 test('jumping past a main warning keeps the live mini and other maps never spawn room minis',()=>{
@@ -53,7 +53,7 @@ test('new games do not spawn minis before three minutes and existing saved minis
 
 test('hornet previews once at thirteen minutes and the full fourteen-minute boss spawns beside a surviving preview',()=>{
  for(const killPreview of [false,true]){
-  const g=scene();g.roomCampaign.bossCursor=5;g.time=779.99;g.updateRoomBosses();a.equal(minis(g).length,0);g.time=780;g.updateRoomBosses();const mini=minis(g)[0];a.equal(mini.type,'hornet');if(killPreview)g.damage(mini,1e9,g.commander(0));else mini.hp*=.4;const hp=mini.hp;
+  const g=scene();Object.assign(g.roomCampaign,{bossCursor:5,destinyMiniSpawned:true});g.time=779.99;g.updateRoomBosses();a.equal(minis(g).length,0);g.time=780;g.updateRoomBosses();const mini=minis(g)[0];a.equal(mini.type,'hornet');if(killPreview)g.damage(mini,1e9,g.commander(0));else mini.hp*=.4;const hp=mini.hp;
   const saved=unpack(scene(),JSON.parse(JSON.stringify(pack(g))));saved.time=810;saved.updateRoomBosses();a.equal(saved.units.filter(u=>u.miniBoss&&u.type==='hornet').length,1);
   saved.time=840;saved.updateRoomBosses();const main=saved.units.filter(u=>u.boss&&!u.miniBoss&&u.hp>0);a.equal(main.length,1);a.equal(main[0].type,'hornet');a.equal(main[0].bossScheduleIndex,5);a.equal(saved.roomCampaign.bossCursor,6);near(main[0].hp,saved.stats(main[0]).hp);a.equal(saved.units.find(u=>u.id===mini.id).hp,hp);a.equal(minis(saved).length,killPreview?0:1);a.equal(saved.activeBoss(),main[0]);saved.updateRoomBosses();a.equal(saved.bossState.spawned,1);
   saved.time=900;saved.updateRoomBosses();a.equal(saved.bossState.spawned,1);a.equal(saved.units.filter(u=>u.miniBoss&&u.type==='hornet').length,1);
@@ -61,12 +61,12 @@ test('hornet previews once at thirteen minutes and the full fourteen-minute boss
 });
 
 test('a delayed hornet main boss waits for the previous boss and retries a blocked entry without skipping its schedule',()=>{
- const g=scene();g.time=720;g.roomCampaign.bossCursor=4;g.updateRoomBosses();const bike=g.units.find(u=>u.boss&&!u.miniBoss);a.equal(bike.type,'bikeRaider');g.time=840;g.updateRoomBosses();a.equal(g.roomCampaign.bossCursor,5);a.equal(g.units.filter(u=>u.type==='hornet').length,0);
+ const g=scene();g.time=720;Object.assign(g.roomCampaign,{bossCursor:4,destinyMiniSpawned:true});g.updateRoomBosses();const bike=g.units.find(u=>u.boss&&!u.miniBoss);a.equal(bike.type,'bikeRaider');g.time=840;g.updateRoomBosses();a.equal(g.roomCampaign.bossCursor,5);a.equal(g.units.filter(u=>u.type==='hornet').length,0);
  g.damage(bike,1e9,g.commander(0));g.time=855;g.updateRoomBosses();a.equal(g.roomCampaign.bossCursor,5);g.time=856;g.northernSpawn=()=>null;g.updateRoomBosses();a.equal(g.roomCampaign.bossCursor,5);g.northernSpawn=()=>({x:1500,y:6000});g.time=857;g.updateRoomBosses();a.equal(g.roomCampaign.bossCursor,6);a.ok(g.units.some(u=>u.type==='hornet'&&u.boss&&!u.miniBoss&&u.hp>0));
 });
 
 test('unbeaten minis survive sixteen minutes and the finale across solo and cooperative saves without giving false kill rewards',()=>{
- for(const coop of [false,true]){const g=scene(coop);g.time=780;g.updateRoomMiniBosses();const mini=minis(g)[0];mini.hp*=.35;const hp=mini.hp,id=mini.id;const copy=unpack(scene(coop),JSON.parse(JSON.stringify(pack(g))));const before={...copy.bossState},cash=copy.cash[0];
+ for(const coop of [false,true]){const g=scene(coop);g.time=780;g.roomCampaign.destinyMiniSpawned=true;g.updateRoomMiniBosses();const mini=minis(g)[0];mini.hp*=.35;const hp=mini.hp,id=mini.id;const copy=unpack(scene(coop),JSON.parse(JSON.stringify(pack(g))));const before={...copy.bossState},cash=copy.cash[0];
   for(const time of [832,840,900,960,1200,1260]){copy.time=time;copy.updateRoomMiniBosses();const u=copy.units.find(u=>u.id===id);a.equal(u.hp,hp);a.equal(u.miniBossWithdrawn,undefined);a.equal(minis(copy).length,1);}a.deepEqual(copy.bossState,before);a.equal(copy.cash[0],cash);
   const u=copy.units.find(u=>u.id===id);copy.damage(u,1e9,copy.commander(0));a.equal(u.hp,0);a.equal(minis(copy).length,0);a.equal(copy.bossState.rewards,before.rewards);a.equal(copy.bossState.killed,before.killed);a.ok(copy.cash[0]>cash);
  }

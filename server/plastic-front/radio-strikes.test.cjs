@@ -102,7 +102,7 @@ test('real fusion and the Destiny Star scale damage once and scale every blast r
  g.addUnit(0,'guntruck',920,5900);g.addUnit(0,'guntruck',940,5900);
  g.evolved.guntruck=true;
  const base=g.stats(radio);
- for(const [rank,damageScale,radiusScale] of [[1,1,1],[2,3.4,1.15],[3,10.5,1.30]]){
+ for(const [rank,damageScale,radiusScale] of [[1,1,1],[2,2.9,1.15],[3,8,1.30]]){
   if(rank===2)assert.equal(g.fuseUnit('guntruck'),radio);
   if(rank===3){
    for(let i=0;i<2;i++)g.addUnit(0,'guntruck',960+i*20,5900).star=2;
@@ -111,7 +111,7 @@ test('real fusion and the Destiny Star scale damage once and scale every blast r
   }
   const stats=g.stats(radio);
   close(stats.damage,base.damage*damageScale);
-  close(stats.rate,base.rate*(rank===3?.65:1));
+  close(stats.rate,base.rate/radiusScale);
   const turretRoll=fire(g,radio,enemy,[1,1],stats.damage),turret=g.radioTurrets.at(-1);
   assert.equal(turretRoll.strike,'turret');assert.equal(turret.rank,rank);
   close(turret.damage,base.damage*damageScale*.22);

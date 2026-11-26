@@ -1,6 +1,7 @@
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict');
 const {FrontGame}=require('./public/engine.js'),{pack,unpack}=require('./public/autoplay.js');
+require('./public/pirate-cannon-view.js');
 function field(){
  const g=new FrontGame({},undefined,{map:'livingroom-star'});g.start();
  g.obstacles=[];g.defenses=[];g.structures=[];g.buildings=[];g.pickups=[];g.units=[g.commander(0)];
@@ -12,13 +13,14 @@ function field(){
 }
 function tick(g,seconds){for(let i=0;i<Math.round(seconds/.025);i++)g.update(.025);}
 const near=(a,b)=>assert.ok(Math.abs(a-b)<1e-7,`${a} versus ${b}`);
-test('live cannon locks its aim for three seconds, then the shell reaches the fixed mark in .32 seconds',()=>{
+test('live cannon locks its aim for two seconds, then the shell reaches the fixed mark in .32 seconds',()=>{
  const {g,c,u}=field(),hp=c.hp;g.update(.025);const f=u.pirateFuse;
- assert.ok(f);near(f.fireAt-f.startedAt,3);near(f.x,c.x);near(f.y,c.y);assert.equal(f.radius,150);
+ assert.ok(f);near(f.fireAt-f.startedAt,2);near(f.x,c.x);near(f.y,c.y);assert.equal(f.radius,170);
  assert.ok(g.isStationary(u));assert.ok(g.bossHazards().some(h=>h.x===f.x&&h.landAt===f.fireAt+.32));
  const origX=u.x,origY=u.y;c.y+=225;
- tick(g,2.975);assert.equal(g.pirateShells.length,0);near(u.x,origX);near(u.y,origY);
+ tick(g,1.975);assert.equal(g.pirateShells.length,0);near(u.x,origX);near(u.y,origY);
  g.update(.025);assert.equal(u.pirateFuse,null);const shell=g.pirateShells[0];assert.ok(shell);near(shell.landAt-shell.startedAt,.32);near(shell.x,f.x);near(shell.y,f.y);
+ near(u.cooldown,5.75);
  tick(g,.3);assert.equal(g.pirateShells.length,1);assert.equal(c.hp,hp);
  g.update(.025);assert.equal(g.pirateShells.length,0);assert.equal(c.hp,hp);assert.equal(g.effects.filter(e=>e.kind==='pirateImpact').length,1);
 });
@@ -32,20 +34,26 @@ test('destroying the cannon or blinding the fuse cancels the warning and cannot 
   if(interrupt==='kill')g.damage(u,99999,c); // A repeated hit on a corpse cannot replay the reward.
   const notices=g.effects.filter(e=>e.kind==='pirateIntercept');
   assert.equal(notices.length,interrupt==='kill'?1:0);
-  if(notices.length)assert.deepEqual([notices[0].x,notices[0].y,notices[0].gunX,notices[0].gunY,notices[0].radius],[c.x,c.y,u.x,u.y,150]);
+  if(notices.length)assert.deepEqual([notices[0].x,notices[0].y,notices[0].gunX,notices[0].gunY,notices[0].radius],[c.x,c.y,u.x,u.y,170]);
   tick(g,1.6);assert.equal(g.pirateShells.length,0);assert.equal(u.pirateFiredAt,undefined);
-  assert.ok(!g.bossHazards().some(h=>h.radius===150),interrupt);
+  assert.ok(!g.bossHazards().some(h=>h.radius===170),interrupt);
  }
 });
 test('once launched the shell survives its gunner and damages ground allies inside the marked radius only once',()=>{
- const {g,c,u}=field();g.update(.025);tick(g,3);
+ const {g,c,u}=field();g.update(.025);tick(g,2);
  const shot=g.pirateShells[0],damage=shot.damage;assert.ok(damage>0);
- const center=g.addUnit(0,'machinegun',shot.x,shot.y),edge=g.addUnit(0,'machinegun',shot.x+149,shot.y),outside=g.addUnit(0,'rifle',shot.x+151,shot.y);
+ const center=g.addUnit(0,'machinegun',shot.x,shot.y),edge=g.addUnit(0,'machinegun',shot.x+169,shot.y),outside=g.addUnit(0,'rifle',shot.x+171,shot.y);
  const friendly=g.addUnit(1,'rifle',shot.x,shot.y),drone=g.addUnit(0,'drone',shot.x,shot.y);
+ center.hp=center.maxHp=400;edge.hp=edge.maxHp=520;
+ const cover={kind:'barricade',x:shot.x,y:shot.y,hp:500,maxHp:500,team:0,built:true,structure:true,buildUntil:0};
+ const turret={x:shot.x,y:shot.y,hp:320,maxHp:320,team:0,radioTurret:true,landAt:shot.landAt-1,until:shot.landAt+1};
+ g.buildings.push(cover);g.radioTurrets.push(turret);
  g.damage(u,99999,c);assert.ok(!g.effects.some(e=>e.kind==='pirateIntercept'));g.units=g.units.filter(t=>t!==u);g.time=shot.landAt;
  const before=[center,edge,outside,friendly,drone].map(t=>t.hp);
- g.updatePirateShells();near(before[0]-center.hp,damage*g.defenseFactor(center,u));
- near(before[1]-edge.hp,damage*(1-.45*149/150)*g.defenseFactor(edge,u));
+ g.updatePirateShells();near(before[0]-center.hp,(damage+.30*center.maxHp)*g.defenseFactor(center,u));
+ near(before[1]-edge.hp,(damage*(1-.45*169/170)+.30*edge.maxHp)*g.defenseFactor(edge,u));
+ near(500-cover.hp,damage*g.defenseFactor(cover,u));
+ near(320-turret.hp,(damage+.30*turret.maxHp)*g.defenseFactor(turret,u));
  assert.deepEqual([outside.hp,friendly.hp,drone.hp],before.slice(2));assert.equal(g.pirateShells.length,0);
  const after=center.hp;g.updatePirateShells();assert.equal(center.hp,after);
 });
@@ -54,7 +62,7 @@ test('a confused pirate still turns toward its allies, then starts a fresh fuse 
  other.cooldown=99;g.applyLuckyFlash(u,{source:c,evolved:true});assert.equal(u.pirateFuse,null);
  tick(g,1);assert.ok(g.luckyFlashConfused(u));assert.ok(Math.cos(u.aimFace)<0);
  assert.ok(!g.shots.some(s=>s.kind==='pirateCannon'));assert.equal(other.hp,other.maxHp);
- tick(g,1.1);assert.ok(u.pirateFuse);near(u.pirateFuse.fireAt-u.pirateFuse.startedAt,3);
+ tick(g,1.1);assert.ok(u.pirateFuse);near(u.pirateFuse.fireAt-u.pirateFuse.startedAt,2);
  assert.equal(g.pirateShells.length,0);
 });
 test('the cannon approaches instead of lighting its fuse from offscreen or behind cover',()=>{
@@ -62,14 +70,29 @@ test('the cannon approaches instead of lighting its fuse from offscreen or behin
  const start=u.x;g.update(.025);assert.ok(!u.pirateFuse);assert.ok(u.x>start);
  u.x=c.x-90;g.obstacles=[{x:c.x-50,y:c.y-30,w:12,h:60}];g.update(.025);assert.ok(!u.pirateFuse);
 });
-test('both a partially burned fuse and a launched projectile resume with their original fixed timestamps',()=>{
+test('a saved fuse and launched projectile resume with their original fixed timestamps and radius',()=>{
  const {g,u}=field();g.update(.025);tick(g,1);
+ u.pirateFuse.radius=150; // The circle already shown when an older operation was saved.
  const restore=game=>unpack(field().g,JSON.parse(JSON.stringify(pack(game))));
  const first=restore(g),gun=first.units.find(t=>t.id===u.id);
  assert.deepEqual(gun.pirateFuse,u.pirateFuse);first.time=gun.pirateFuse.fireAt;first.updatePirateCannon(gun,.025);
  const second=restore(first),shot=second.pirateShells[0],rebound=second.units.find(t=>t.id===u.id);
- assert.equal(shot.source,rebound);assert.equal(shot.landAt,first.pirateShells[0].landAt);second.phase='paused';second.update(.05);assert.equal(second.pirateShells.length,1);
+ assert.equal(shot.source,rebound);assert.equal(shot.radius,150);assert.equal(shot.landAt,first.pirateShells[0].landAt);second.phase='paused';second.update(.05);assert.equal(second.pirateShells.length,1);
  second.phase='playing';second.time=shot.landAt;second.updatePirateShells();assert.equal(second.pirateShells.length,0);
+});
+
+test('a visible cannon at the screen edge points toward the threat and hidden or interior cannons add no arrow',()=>{
+ const markers=[],angles=[];
+ const c={globalAlpha:1,save(){},restore(){},translate(x,y){markers.push([x,y]);},rotate(angle){angles.push(angle);},
+  beginPath(){},moveTo(){},lineTo(){},closePath(){},fill(){},stroke(){},fillRect(){}};
+ const {edgeWarnings}=globalThis.FrontPirateCannonView;
+ const left={type:'pirateCannon',x:16,y:153,hp:1},top={...left,x:300,y:24,pirateFuse:{fireAt:2}};
+ const middle={...left,x:300},unseen={...left,x:599},farIdle={...left,x:901};
+ const game={units:[left,middle,unseen,top,farIdle],phase:'playing',time:1,visible:u=>u!==unseen};
+ edgeWarnings(c,game,600,240,p=>p,true);
+ assert.equal(markers.length,2);near(markers[0][0],300);near(markers[0][1],57.6);
+ assert.deepEqual(markers[1],[31,120]);
+ near(angles[0],-Math.PI/2);near(angles[2],Math.PI);
 });
 
 test('an enemy-caused kill, a nonlethal hit and a status already interrupting the fuse grant no interception cue',()=>{

@@ -46,6 +46,7 @@ const config={version:116,duration:1200,enemyLuckyInterval:5,recoverySeconds:16,
  tanks:[780,930,1020],
  encirclement:{from:180,intervalScale:2.25,pressureFrom:300,pressureUntil:600,lateIntervalScale:2},
  miniBoss:{from:180,interval:60,until:960,hp:.3,damage:.3,spawnWindow:50},
+ destinyStarMini:{at:540,type:'rhinoBeetle'},
  bosses:[{at:240,type:'stagBeetle',name:'거대 사슴벌레',pattern:null},{at:360,type:'bayonetCaptain',name:'장난감 병정 보스',pattern:'soldierDash'},{at:480,type:'bladeGuard',name:'검병 대장',pattern:'wideSlash'},{at:600,type:'rhinoBeetle',name:'장수풍뎅이 보스',pattern:'rhinoCharge'},{at:720,type:'bikeRaider',name:'오토바이병 대장',pattern:'rapidBike'},{at:840,type:'hornet',name:'장수말벌',pattern:'venomDive'},{at:1200,type:'swordEmpress',name:'사검의 군주',pattern:'fourSwords'}],
  patterns:{soldierDash:{hpScale:1.75,every:2,duration:1,speed:2.2,damageMultiplier:3},wideSlash:{range:220,arc:1.9,windup:.7,damageMultiplier:2},rhinoCharge:{range:420,cooldown:8,windup:1,distance:360,speed:800,halfWidth:30,recovery:3,vulnerable:1.3,damageScale:.6,infantryHpDamage:.5},rapidBike:{cooldown:4.2},venomDive:{cooldown:8,rise:.25,warning:.6,descent:.1,recovery:2,height:145,lowHeight:24,damage:1.6,maxHpDamage:.5,poisonDuration:4,poisonRate:.25,poisonPerSecond:.12},rearBarrage:{cooldown:7,warning:1.5,radius:100,damage:1.35,bossDamageMultiplier:.85,range:650,shots:3,spacing:220}}
 };
@@ -425,13 +426,21 @@ const methods={
   if(s.miniScheduleVersion!==2){s.miniScheduleVersion=2;s.miniMinute=this.units.some(u=>u.miniBossMinute===minute)?minute:minute-1;}
   if(!Number.isInteger(s.miniMinute))s.miniMinute=minute-1;
   if(this.time<r.from||this.time>=r.until){s.miniMinute=minute;return;}
-  if(minute<=s.miniMinute)return;
-  const boss=config.bosses.find(b=>b.at>at);
+  const star=config.destinyStarMini,starMinute=star.at/r.interval;
+  if(this.starExperiment&&at>=star.at&&!s.destinyMiniSpawned){
+   s.destinyMiniSpawned=this.pickups.some(p=>p.destinyStar)||this.units.some(u=>u.hp>0&&u.miniBossMinute===starMinute&&u.type===star.type);
+  }
+  // A blocked preview retries after the current fight to keep the fusion reward reachable.
+  const starPending=this.starExperiment&&at>=star.at&&!s.destinyMiniSpawned;
+  if(!starPending&&minute<=s.miniMinute)return;
+  const slot=starPending?star.at:at;
+  const boss=config.bosses.find(b=>b.at>slot);
   // Preview only the minute immediately before each main boss, including the 12-to-15-minute gap.
-  if(!boss||at<boss.at-r.interval||this.time-at>r.spawnWindow||config.bosses.some(b=>b.at===at)||this.units.some(u=>u.boss&&!u.roadCaptain&&u.hp>0)||this.time<(s.recoveryUntil||0)){s.miniMinute=minute;return;}
-  const point=this.roomEntry(this.serial+1,55,minute%4);if(!point)return;
-  const u=this.addUnit(2,boss.type,point.x,point.y,true);Object.assign(u,{boss:true,miniBoss:true,midBossVersion:1,miniBossMinute:minute,bossName:'미드 보스 · '+boss.name,bossPattern:boss.pattern,assault:true,homeX:point.x,homeY:point.y});u.hp=u.maxHp=this.stats(u).hp;
-  s.miniMinute=minute;this.notify('toast',u.bossName+' 접근 · 체력·공격력 30%');
+  if(!boss||slot<boss.at-r.interval||!starPending&&this.time-slot>r.spawnWindow||config.bosses.some(b=>b.at===slot)||this.units.some(u=>u.boss&&!u.roadCaptain&&u.hp>0)||this.time<(s.recoveryUntil||0)){s.miniMinute=minute;return;}
+  const spawnMinute=slot/r.interval,point=this.roomEntry(this.serial+1,55,spawnMinute%4);if(!point)return;
+  const u=this.addUnit(2,boss.type,point.x,point.y,true);Object.assign(u,{boss:true,miniBoss:true,midBossVersion:1,miniBossMinute:spawnMinute,bossName:'미드 보스 · '+boss.name,bossPattern:boss.pattern,assault:true,homeX:point.x,homeY:point.y});u.hp=u.maxHp=this.stats(u).hp;
+  if(starPending)s.destinyMiniSpawned=true;
+  s.miniMinute=minute;this.notify('toast',u.bossName+' 접근 · '+(starPending?'처치 시 운명의 별':'체력·공격력 30%'));
  },
  updateRoomBosses(){
   this.upgradeRoomCampaign();this.updateRoomMiniBosses();const s=this.roomCampaign,b=config.bosses[s.bossCursor];if(!b)return;if(b.type==='swordEmpress'&&this.roomRushEntry()){this.updateRoomBossRush();return;}
@@ -528,7 +537,7 @@ const methods={
   const v=shell.enemyJackpot,spent=v.spent[target.id]||0,budget=Math.max(0,target.maxHp*.5-spent),damage=Math.max(0,Math.min(raw*this.defenseFactor(target),budget));if(!damage)return;
   const before=target.hp;this.damage(target,damage/this.defenseFactor(target),shell.source);v.spent[target.id]=spent+Math.max(0,before-target.hp);
  },
- bossHazards(){const result=[];for(const u of this.units){if(u.hp<=0)continue;if(u.bombFuse)result.push({x:u.x,y:u.y,radius:125,landAt:u.bombFuse.explodeAt});if(!u.boss&&!u.bossBarrage)continue;if(u.bossBarrage)for(const point of u.bossBarrage.targets||[u.bossBarrage])result.push({x:point.x,y:point.y,radius:config.patterns.rearBarrage.radius,landAt:u.bossBarrage.hitAt+.25});const a=u.bossAction;if(u.bossPattern==='venomDive'&&a&&a.phase!=='low')result.push({x:a.x,y:a.y,radius:55,landAt:a.until});if(u.bossPattern==='wideSlash'&&a)result.push({x:u.x+Math.cos(a.angle)*70,y:u.y+Math.sin(a.angle)*70,radius:85,landAt:a.hitAt});}return result;}
+ bossHazards(){const result=[];for(const u of this.units){if(u.hp<=0)continue;if(u.bombFuse)result.push({x:u.x,y:u.y,radius:root.FrontBombBugRules.radius,landAt:u.bombFuse.explodeAt});if(!u.boss&&!u.bossBarrage)continue;if(u.bossBarrage)for(const point of u.bossBarrage.targets||[u.bossBarrage])result.push({x:point.x,y:point.y,radius:config.patterns.rearBarrage.radius,landAt:u.bossBarrage.hitAt+.25});const a=u.bossAction;if(u.bossPattern==='venomDive'&&a&&a.phase!=='low')result.push({x:a.x,y:a.y,radius:55,landAt:a.until});if(u.bossPattern==='wideSlash'&&a)result.push({x:u.x+Math.cos(a.angle)*70,y:u.y+Math.sin(a.angle)*70,radius:85,landAt:a.hitAt});}return result;}
 };
 root.FrontRoomCampaign={config,methods};if(typeof module!=='undefined')module.exports={config,methods};
 })(typeof window!=='undefined'?window:globalThis);

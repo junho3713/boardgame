@@ -77,6 +77,7 @@ function seek(game,seconds,{heal=false}={}){
  game.radioNextNukeAt=0;
  game.trialBoss=null;game.currentOptions=[];game.pendingChoice=null;game.turnChoice=null;game.choiceKind='level';game.bossState.claimed=Math.max(0,game.bossState.claimed||0);game.bossState.rewards=game.bossState.claimed;
  const s=game.roomCampaign,index=room.bosses.findIndex(b=>b.at>=target),rush=room.bossRush.pairs.findIndex(b=>b.at>=target);
+ s.destinyMiniSpawned=target>=room.destinyStarMini.at+room.miniBoss.spawnWindow;
  Object.assign(s,{miniMinute:Math.ceil(target/room.miniBoss.interval)-1,bossCursor:index<0?room.bosses.length:index,rushCursor:rush<0?room.bossRush.pairs.length:rush,bossReadyAt:target,recoveryUntil:0,openingAntWave:false,antWaveCursor:0,waveSpawnDebt:0,insectNext:{},nextMageEscortAt:target,nextSpawnAt:target+.2,phaseAt:game.roomPhase().at,surgeWindow:null,tankScheduleVersion:170,tanksDone:room.tanks.map(at=>at<target),tankSpawned:room.tanks.filter(at=>at<target).length,nextTankAttemptAt:target});
  game.finalBattle={spawned:false,killed:false};game.bossState.warned=false;game.bossState.nextAt=game.roomNextBossAt();
  // The 7:30 warning / 8:00 artillery event is testable, but is not replayed after its crisis window.

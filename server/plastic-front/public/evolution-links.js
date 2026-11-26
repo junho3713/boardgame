@@ -86,10 +86,10 @@ function install({FrontGame:Game}){
  p.launchMortar=function(u,target,attack){const precise=this.hasEvolutionLink(u,'precision')&&this.linkMarked(target,u,'snipe');if(precise)this.linkCue(u,target,'precision');return mortar.call(this,u,target,precise?{...attack,linkPrecision:true}:attack);};
  p.evolutionMortar=function(u,target,attack,radius,index){twin.call(this,u,target,attack,radius,index);if(attack.linkPrecision&&this.hasEvolutionLink(u,'precision')){const shell=this.mortarShells.at(-1);shell.landAt=this.time+.65;shell.delay=.65;shell.link='precision';}};
  p.luckyMissileTarget=function(u,salvo,range){
-  if(this.hasEvolutionLink(u,'hunter')){const marked=this.units.filter(t=>this.linkMarked(t,u,'snipe')&&this.canTarget(u,t)&&dist(u,t)<=(range||480)&&this.visible(t)&&this.lineClear(u,t,0,{fireTeam:0})).sort((a,b)=>(salvo?.missileAssignments?.[a.id]||0)-(salvo?.missileAssignments?.[b.id]||0)||Number(b.boss)-Number(a.boss)||dist(u,a)-dist(u,b));if(marked.length)return{x:marked[0].x,y:marked[0].y,target:marked[0]};}
+  if(this.hasEvolutionLink(u,'hunter')){const reach=range??480*this.rankCombat(u).range,marked=this.units.filter(t=>this.linkMarked(t,u,'snipe')&&this.canTarget(u,t)&&dist(u,t)<=reach&&this.visible(t)&&this.lineClear(u,t,0,{fireTeam:0})).sort((a,b)=>(salvo?.missileAssignments?.[a.id]||0)-(salvo?.missileAssignments?.[b.id]||0)||Number(b.boss)-Number(a.boss)||dist(u,a)-dist(u,b));if(marked.length)return{x:marked[0].x,y:marked[0].y,target:marked[0]};}
   return missile.call(this,u,salvo,range);
  };
- p.bossKillerTarget=function(u){const normal=boss.call(this,u);if(!this.hasEvolutionLink(u,'hunter'))return normal;return this.evolutionEnemies(u).filter(t=>t.boss&&this.linkMarked(t,u,'snipe')&&dist(u,t)<=480&&this.visible(t)&&this.lineClear(u,t,0,{fireTeam:0})).sort((a,b)=>dist(u,a)-dist(u,b))[0]||normal;};
+ p.bossKillerTarget=function(u){const normal=boss.call(this,u);if(!this.hasEvolutionLink(u,'hunter'))return normal;const range=480*this.rankCombat(u).range;return this.evolutionEnemies(u).filter(t=>t.boss&&this.linkMarked(t,u,'snipe')&&dist(u,t)<=range&&this.visible(t)&&this.lineClear(u,t,0,{fireTeam:0})).sort((a,b)=>dist(u,a)-dist(u,b))[0]||normal;};
  p.shotgunReloadTime=function(u,s){
   return shotgunReloadTime.call(this,u,s)*(overheated(this,u,'crossfire')?.75:1);
  };
@@ -158,7 +158,7 @@ function install({FrontGame:Game}){
    else if(u.type==='rocket'&&this.hasEvolutionLink(u,'breach')&&this.linkMarked(t,u,'armor')&&this.time>=(ready.breach||0)){b.damage*=1.2;link='breach';}
    else if(u.type==='rocket'&&this.hasEvolutionLink(u,'suppress')&&this.linkMarked(t,u,'suppress')&&this.time>=(ready.suppress||0)){b.splash*=1.2;link='suppress';}
    else if(u.type==='rocket'&&this.hasEvolutionLink(u,'volatile')&&this.linkMarked(t,u,'volatile')&&this.time>=(ready.volatile||0)){
-    (this.evolutionLinkState.bursts??=[]).push({source:u,owner:owner(u),x:t.x,y:t.y,at:this.time+.2,damage:b.damage*.2,radius:65});link='volatile';
+    (this.evolutionLinkState.bursts??=[]).push({source:u,owner:owner(u),x:t.x,y:t.y,at:this.time+.2,damage:b.damage*.2,radius:65*(b.mine?.rangeScale??1)});link='volatile';
    }
    if(link){ready[link]=this.time+6;b.linkApplied=link;this.linkCue(u,t,link);}
   }

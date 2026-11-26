@@ -6,14 +6,30 @@ const {config}=require('./public/room-campaign.js');
 const near=(a,b)=>assert.ok(Math.abs(a-b)<1e-6,`${a} != ${b}`);
 function scene(map='livingroom-star',coop=false){const g=coop?new CoopGame():new FrontGame({},undefined,{map});g.start();g.units=g.units.filter(u=>u.team===0&&u.type==='leader');g.obstacles=[];g.structures=[];g.defenses=[];g.buildings=[];g.pickups=[];for(const c of g.units)Object.assign(c,{x:1500,y:6000,cooldown:1e6});g.random=()=>.99;return g;}
 
-test('two-star classes gain 2.5 times health and the specified damage without speed, rate or defense changes',()=>{
- for(const type of ROSTER){const g=scene();g.tech[0][type]=5;g.abilities.health=3;g.abilities.damage=2;g.evolved[type]=true;const u=g.addUnit(0,type,1500,6000),one=g.stats(u),lucky=type==='lucky'?g.luckyScale(u):null;u.star=2;const two=g.stats(u);near(two.damage,one.damage*(type==='guntruck'?3.4:3));near(two.hp,one.hp*2.5);for(const k of ['speed','rate','range','defense'])near(two[k],one[k]);if(type==='medic')near(two.heal,one.heal*2.5);if(type==='lucky')near(g.luckyScale(u),lucky);}
- const g=scene('livingroom-star3'),u=g.addUnit(0,'rifle',1500,6000),one=g.stats(u);u.star=3;near(g.stats(u).damage,one.damage*7.2);near(g.stats(u).hp,one.hp*7.8);
+test('all allied roster ranks use the same health and weapon scales, including the radio operator',()=>{
+ for(const type of ROSTER){
+  const g=scene();g.tech[0][type]=5;g.abilities.health=3;g.abilities.damage=2;g.evolved[type]=true;
+  const u=g.addUnit(0,type,1500,6000),one=g.stats(u),lucky=type==='lucky'?g.luckyScale(u):null;
+  for(const [rank,damage,hp,speed,heal] of [[2,2.9,2.2,1.15,2.5],[3,8,5.5,1.3,7.2]]){
+   u.star=rank;
+   const s=g.stats(u);
+   near(s.damage,one.damage*damage);near(s.hp,one.hp*hp);
+   near(s.rate,one.rate/(type==='medic'?1:speed));
+   near(s.range,one.range*speed);near(s.splash,one.splash*speed);
+   near(s.speed,one.speed);near(s.defense,one.defense);
+   if(type==='medic')near(s.heal,one.heal*heal);
+   if(type==='lucky')near(g.luckyScale(u)*3,lucky*damage);
+  }
+ }
+ const g=scene(),enemy=g.addUnit(2,'tank',1500,6000),one=g.stats(enemy);
+ enemy.star=3;assert.deepEqual(g.stats(enemy),one);
+ const regular=scene('livingroom'),unit=regular.addUnit(0,'rifle',1500,6000),ordinary=regular.stats(unit);
+ unit.star=3;assert.deepEqual(regular.stats(unit),ordinary);
 });
 
 test('old two-star saves immediately adopt the requested HP without healing, reviving or changing cooperative ownership',()=>{
  const g=scene('livingroom-star',true),ids=[];
- for(const owner of [0,1])g.withOwner(owner,()=>{g.tech[0].rifle=owner?5:2;const u=g.addUnit(0,'rifle',1500+owner*100,6000),one=g.stats(u).hp;u.star=2;u.maxHp=one*2.6;u.hp=u.maxHp*.37;ids.push({id:u.id,owner,hp:one*2.5});});
+ for(const owner of [0,1])g.withOwner(owner,()=>{g.tech[0].rifle=owner?5:2;const u=g.addUnit(0,'rifle',1500+owner*100,6000),one=g.stats(u).hp;u.star=owner?3:2;u.maxHp=one*(owner?7.8:2.5);u.hp=u.maxHp*.37;ids.push({id:u.id,owner,hp:one*(owner?5.5:2.2)});});
  const dead=g.withOwner(0,()=>g.addUnit(0,'rifle',1700,6000));dead.star=2;dead.hp=0;
  const copy=unpack(new CoopGame(),JSON.parse(JSON.stringify(pack(g))));
  for(const record of ids){const u=copy.units.find(v=>v.id===record.id);near(u.maxHp,record.hp);near(u.hp/u.maxHp,.37);assert.equal(u.coopOwner,record.owner);const hp=u.hp;copy.upgradeBalance();near(u.hp,hp);}

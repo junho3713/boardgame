@@ -2,7 +2,7 @@
 (function(root){'use strict';
 function install({FrontGame}){
  const p=FrontGame.prototype,reset=p.reset,stationary=p.isStationary,damage=p.damage,mortars=p.updateMortars,hazards=p.bossHazards;
- const windup=3,flight=.32,radius=150;
+ const windup=2,flight=.32,radius=170,healthDamage=.30;
  const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
  function targets(g,u){
   const bodies=[...g.alive(0),...g.buildings,g.bases[0]];
@@ -38,7 +38,7 @@ function install({FrontGame}){
    const fuse=u.pirateFuse;
    u.face=u.aimFace=fuse.angle;
    if(this.time+1e-8<fuse.fireAt)return;
-   (this.pirateShells??=[]).push({source:u,x:fuse.x,y:fuse.y,fromX:u.x,fromY:u.y,radius,angle:fuse.angle,
+   (this.pirateShells??=[]).push({source:u,x:fuse.x,y:fuse.y,fromX:u.x,fromY:u.y,radius:fuse.radius,angle:fuse.angle,
     team:u.team,startedAt:this.time,landAt:this.time+flight,damage:s.damage});
    u.pirateFuse=null;u.pirateFiredAt=this.time;u.cooldown=s.rate;u.recoil=.32;
    this.effects.push({kind:'pirateMuzzle',source:u,x:u.x,y:u.y,angle:fuse.angle,team:u.team,t:.36,max:.36});
@@ -65,9 +65,13 @@ function install({FrontGame}){
   const waiting=[];
   for(const shell of this.pirateShells||[]){
    if(this.time+1e-8<shell.landAt){waiting.push(shell);continue;}
-   for(const t of targets(this,shell.source)){
+   const victims=targets(this,shell.source).concat(this.radioTurretTargets());
+   for(const t of victims){
     const d=distance(t,shell);
-    if(d<=shell.radius)this.damage(t,shell.damage*(1-.45*d/shell.radius),shell.source);
+    if(d>shell.radius)continue;
+    const personnel=!t.base&&!t.built&&!t.structure;
+    const bonus=personnel?t.maxHp*healthDamage:0;
+    this.damage(t,shell.damage*(1-.45*d/shell.radius)+bonus,shell.source);
    }
    this.effects.push({kind:'pirateImpact',source:shell.source,x:shell.x,y:shell.y,radius:shell.radius,team:shell.team,t:.8,max:.8});
    this.notify('explosion',{x:shell.x,y:shell.y,team:shell.team,kind:'pirateCannon'});

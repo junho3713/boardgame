@@ -25,12 +25,13 @@ function install({FrontGame,TYPES}){
    (!u.roadCaptain||game.mission.stage>=u.roadStage)&&!game.bossInvulnerable(u);
  }
  p.castLuckyFlash=function(u){
-  const point=this.luckyCluster(u,rules.range,rules.radius)||this.luckyGlueTarget(u);
+  const factor=this.rankCombat(u).range,radius=rules.radius*factor;
+  const point=this.luckyCluster(u,rules.range*factor,radius)||this.luckyGlueTarget(u);
   if(!point)return null;
   const evolved=this.evolutionEnabled(u);
   const flight={
    x:point.x,y:point.y,fromX:u.x,fromY:u.y,startedAt:this.time,landAt:this.time+rules.flight,
-   source:u,rouletteChannel:u.activeLuckyChannel??0,radius:rules.radius,evolved
+   source:u,rouletteChannel:u.activeLuckyChannel??0,radius,evolved
   };
   (this.luckyFlashes??=[]).push(flight);
   if(u.x!==point.x||u.y!==point.y)u.face=Math.atan2(point.y-u.y,point.x-u.x);

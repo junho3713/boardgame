@@ -147,18 +147,19 @@ test('drone and Retona shorten their independent cycle timers while the linked p
  near(g.droneLaserPeriod(drone),6);
  near(g.luckyRouletteInterval(lucky),3.5);
  g.updateLuckyUnit(lucky);
- a.deepEqual(lucky.luckyChannels.map(slot=>slot.next),[3.5,3.5,3.5]);
+ const interval=3.5/1.15;
+ a.deepEqual(lucky.luckyChannels.map(slot=>slot.next),[interval,interval,interval]);
  mg.overheatUntil=2;
  near(g.droneLaserPeriod(drone),4.8);
- g.time=3.5;
+ g.time=interval;
  near(g.droneLaserPeriod(drone),6);
  g.updateLuckyUnit(lucky);
- a.deepEqual(lucky.luckyChannels.map(slot=>slot.roll.startedAt),[3.5,3.5,3.5]);
- a.deepEqual(lucky.luckyChannels.map(slot=>slot.next),[7,7,7]);
+ a.deepEqual(lucky.luckyChannels.map(slot=>slot.roll.startedAt),[interval,interval,interval]);
+ a.deepEqual(lucky.luckyChannels.map(slot=>slot.next),[interval*2,interval*2,interval*2]);
  drone.hp=0;
  g.updateLuckyUnit(lucky);
  near(g.luckyRouletteInterval(lucky),4);
- a.deepEqual(lucky.luckyChannels.map(slot=>slot.next),[7.5,7.5,7.5]);
+ for(const slot of lucky.luckyChannels)near(slot.next,interval+4/1.15);
 });
 test('actual medic healing braces an evolved gunner for two seconds but healing a healthy patient does not',()=>{
  const g=scene(),m=actor(g,'machinegun'),medic=actor(g,'medic'),t=enemy(g);m.hp=100;m.maxHp=1000;g.heal(m,50,medic);near(m.linkBracedUntil,2);let hp=m.hp;g.damage(m,100,t);near(hp-m.hp,88*g.defenseFactor(m,t));g.time=2;hp=m.hp;g.damage(m,10,t);near(hp-m.hp,10*g.defenseFactor(m,t));m.hp=m.maxHp;m.linkBracedUntil=0;a.equal(g.heal(m,50,medic),0);a.equal(m.linkBracedUntil,0);

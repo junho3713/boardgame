@@ -79,6 +79,39 @@ function air(c,game,visible=()=>true){
   c.translate(x,y);c.rotate(p*TAU*1.5+s.angle);c.strokeStyle='#98968a80';c.lineWidth=.7;c.beginPath();c.ellipse(0,0,r*.5,r*.92,0,-1.3,1.3);c.stroke();c.restore();
  }
 }
+function edgeWarnings(c,game,width,height,project,reducedMotion=false){
+ if(game.phase==='ready'||game.phase==='ended'||game.bossIntro?.remaining>0)return;
+ const shortSide=Math.min(width,height),edge=Math.min(78,shortSide*.16);
+ const halfWidth=width/2,halfHeight=height/2,overscan=Math.max(50,shortSide*.22);
+ const sideInset=Math.min(31,width*.23),topInset=Math.min(61,height*.24),bottomInset=Math.min(59,height*.24);
+ const cannons=(game.units||[]).filter(u=>u.type==='pirateCannon'&&u.hp>0&&!u.hidden&&game.visible(u));
+ cannons.sort((a,b)=>(a.pirateFuse?.fireAt??Infinity)-(b.pirateFuse?.fireAt??Infinity));
+ const markers=[];
+ for(const u of cannons){
+  const {x,y}=project({x:u.x,y:u.y-33});
+  if(x>edge&&x<width-edge&&y>edge&&y<height-edge)continue;
+  if(!u.pirateFuse&&(x<-overscan||x>width+overscan||y<-overscan||y>height+overscan))continue;
+  const dx=x-halfWidth,dy=y-halfHeight;
+  if(!dx&&!dy)continue;
+  const sx=dx?(halfWidth-sideInset)/Math.abs(dx):Infinity;
+  const sy=dy?(halfHeight-(dy<0?topInset:bottomInset))/Math.abs(dy):Infinity;
+  const step=Math.min(sx,sy),px=halfWidth+dx*step,py=halfHeight+dy*step;
+  if(markers.some(m=>Math.hypot(m.x-px,m.y-py)<39))continue;
+  markers.push({x:px,y:py});
+  const angle=Math.atan2(dy,dx),charging=!!u.pirateFuse;
+  const pulse=charging&&!reducedMotion?(1+Math.cos(game.time*TAU*2))/2:1;
+  c.save();c.translate(px,py);c.rotate(angle);
+  c.beginPath();c.moveTo(-14,-10);c.lineTo(5,-10);c.lineTo(17,0);c.lineTo(5,10);c.lineTo(-14,10);c.closePath();
+  c.fillStyle=charging?'#79241b':'#54221f';c.fill();
+  c.strokeStyle=charging?'#ff9a7f':'#f7695b';c.lineWidth=1.6;c.stroke();
+  c.globalAlpha*=.7+.3*pulse;
+  line(c,4,-5,10,0,'#ffb6a0',1.9);line(c,10,0,4,5,'#ffb6a0',1.9);
+  c.rotate(-angle);
+  const markX=-5*Math.cos(angle),markY=-5*Math.sin(angle);
+  c.fillStyle='#fff1d7';c.fillRect(markX-1,markY-4,2,5);c.fillRect(markX-1,markY+2.6,2,1.8);
+  c.restore();
+ }
+}
 function smoke(c,x,y,r,k,light){
  const g=c.createRadialGradient(x-r*.28,y-r*.32,0,x,y,r);
  g.addColorStop(0,light?'#c1b69c':'#a89e86');g.addColorStop(.6,light?'#948a79':'#776f60');g.addColorStop(1,'#625c4d00');
@@ -95,7 +128,7 @@ function muzzle(c,e,p){
  }
 }
 function impact(c,e,p){
- const r=e.radius||150,k=1-p,seed=(e.x+e.y)*.012,reach=Math.max(2,r*(1-Math.pow(1-p,3)));
+ const r=e.radius||170,k=1-p,seed=(e.x+e.y)*.012,reach=Math.max(2,r*(1-Math.pow(1-p,3)));
  c.translate(e.x,e.y);c.save();c.globalAlpha*=k*k;ring(c,0,0,reach,'#ffe4aa',2+3*k);ring(c,0,0,Math.max(1,reach-4),'#bd7553',2*k);c.restore();
  for(let i=0;i<9;i++){
   const a=seed+i*2.4,len=r*(.12+(i%3)*.075)*p,x=Math.cos(a)*len,y=Math.sin(a)*len*.75-((i%3)*2+9)*p;
@@ -111,6 +144,9 @@ function impact(c,e,p){
  }
 }
 function intercept(c,e,p){
+ if(p<.72){
+  c.save();impact(c,{x:e.gunX,y:e.gunY,radius:47},p/.72);c.restore();
+ }
  const fold=Math.min(1,p/.48);
  if(fold<1){
   c.save();c.globalAlpha*=1-fold;const radius=e.radius*(1-fold)**2;
@@ -126,6 +162,6 @@ function event(c,e){
  if(e.kind==='pirateMuzzle')muzzle(c,e,p);else if(e.kind==='pirateImpact')impact(c,e,p);else intercept(c,e,p);
  c.restore();return true;
 }
-root.FrontPirateCannonView={ground,air,event};
+root.FrontPirateCannonView={ground,air,event,edgeWarnings};
 })(typeof window==='undefined'?globalThis:window);
 

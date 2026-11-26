@@ -1,7 +1,7 @@
 /* Allied shotgun, radio support and patrol drone. All timers use simulation seconds. */
 (function(root){'use strict';
 function install({FrontGame,TYPES,multiplier}){
- const p=FrontGame.prototype,fire=p.fireUnitProjectiles,impact=p.impact,advance=p.advanceCommandShot,update=p.updateEvolutionCombat,reset=p.reset,stats=p.stats;
+ const p=FrontGame.prototype,fire=p.fireUnitProjectiles,impact=p.impact,advance=p.advanceCommandShot,update=p.updateEvolutionCombat,reset=p.reset;
  const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
  const heading=(a,b)=>Math.atan2(b.y-a.y,b.x-a.x);
  const effect=(g,kind,at,data,time)=>g.effects.push({kind,x:at.x,y:at.y,team:0,...data,t:time,max:time});
@@ -16,7 +16,7 @@ function install({FrontGame,TYPES,multiplier}){
  p.shotgunReloadTime=function(u,s=this.stats(u)){return 1.8*s.rate/TYPES.rifle.rate;};
  p.shotgunShotMultiplier=function(){return 1;};
  p.droneLaserDamage=function(u,t,amount){return amount;};
- p.droneLaserPeriod=function(){return 6;};
+ p.droneLaserPeriod=function(u){return 6/this.rankCombat(u).attackSpeed;};
  p.droneLaserTarget=function(u,range,target){return target;};
  p.diceFace=function(){
   return Math.min(6,1+Math.floor(this.random()*6));
@@ -83,6 +83,7 @@ function install({FrontGame,TYPES,multiplier}){
   for(let i=-2;i<=2;i++){
    const shot=forwardShot(g,u,u,angle+i*Math.PI/36,s.range,damage/5,attack.critical,'shotgunPellet',850);
    Object.assign(shot,{hot,finisher,muzzleAngle:angle,sequence:seq,shellDamage:damage,shotgunRange:s.range,exploding:finisher&&i===0});
+   if(shot.exploding)shot.blastRadius=82*g.rankCombat(u).range;
    bullets.push(shot);
   }
   effect(g,'rosterShotgun',u,{source:u,angle,hot,finisher},.38);u.shotgunRounds--;
@@ -107,12 +108,12 @@ function install({FrontGame,TYPES,multiplier}){
     push(this,t,b.commandAngle,b.finisher?20:9);
    }
   }
-  if(b.exploding){b.exploding=false;this.rosterBlast(u,b,82,b.shellDamage*.8,48,'shotgun');}
+  if(b.exploding){b.exploding=false;this.rosterBlast(u,b,b.blastRadius??82,b.shellDamage*.8,48,'shotgun');}
   return result;
  };
  p.advanceCommandShot=function(b,dt,candidates){
   advance.call(this,b,dt,candidates);
-  if(b.exploding&&b.life<=0){b.exploding=false;this.rosterBlast(b.source,b,82,b.shellDamage*.8,48,'shotgun');}
+  if(b.exploding&&b.life<=0){b.exploding=false;this.rosterBlast(b.source,b,b.blastRadius??82,b.shellDamage*.8,48,'shotgun');}
  };
 
  const RADIO = {
@@ -120,18 +121,12 @@ function install({FrontGame,TYPES,multiplier}){
   missile: {radius:88, multiplier:1.7, delay:1.16, knockback:44},
   nuke: {radius:225, multiplier:7, delay:2.4, knockback:0}
  };
- const radioRadius={1:1,2:1.15,3:1.30};
  const radioRank=(g,u)=>g.starExperiment?(u.star||1):1;
  const missileSpread=[0,-21,21,0,-38,38];
  const missileGuidance={lockBeforeImpact:.20,maxTravel:220,retargetRange:145};
  const nukeCooldown=12;
  const turretRules={flight:.48,lifetime:6.5,range:285,splash:18,interval:1/6.5,limit:4,
   hp:180,damage:.18,evolvedHp:320,evolvedDamage:.22,pierceDamage:.55,blastDamage:1.35,blastRadius:88};
- p.stats=function(u){
-  const result=stats.call(this,u);
-  if(u.team===0&&u.type==='guntruck'&&radioRank(this,u)===3)result.rate*=.65;
-  return result;
- };
  function doubleStrike(face,golden){
   if(face<=2)return 'turret';
   if(face<=4)return 'incendiary';
@@ -274,7 +269,7 @@ function install({FrontGame,TYPES,multiplier}){
     g.radioNextNukeAt=Math.max(g.time,readyAt-1);
    }else g.radioNextNukeAt=g.time+nukeCooldown;
   }
-  const radiusScale=radioRadius[rank];
+  const radiusScale=g.rankCombat(u).range;
   if(roll.strike==='turret'){
    const target=contacts.reduce((nearest,t)=>distance(u,t)<distance(u,nearest)?t:nearest);
    const turret=deployRadioTurret(g,u,target,rank,damage,radiusScale,golden);

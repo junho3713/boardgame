@@ -17,7 +17,7 @@ function install({FrontGame}){
  p.fireUnitProjectiles=function(u,target,attack,s=this.stats(u)){
   if(u.team!==0||u.type!=='rocket'||u.built)return fire.call(this,u,target,attack,s);
   const evolved=this.evolutionEnabled(u),owner=u.coopOwner||0;
-  const damageScale=evolved?4.6:3.2;
+  const damageScale=evolved?4.6:3.2,rangeScale=this.rankCombat(u).range;
   let mines=this.blockMines??=[];
   const own=mines.filter(m=>m.owner===owner&&!m.spent&&m.expiresAt>this.time);
   // Soldiers on the same footprint can try again after moving away from the first mine.
@@ -33,7 +33,8 @@ function install({FrontGame}){
   const {x,y}=u,landAt=this.time+.16;
   const mine={id:this.blockMineSerial=(this.blockMineSerial||0)+1,source:u,owner,
    x,y,fromX:x,fromY:y,toX:x,toY:y,startedAt:this.time,landAt,armAt:landAt+.34,expiresAt:landAt+life,
-   evolved,damage:attack.damage*damageScale,critical:!!attack.critical,radius:evolved?125:88,triggerRadius:evolved?23:18,chainAt:null};
+   evolved,damage:attack.damage*damageScale,critical:!!attack.critical,radius:(evolved?125:88)*rangeScale,
+   triggerRadius:evolved?23:18,rangeScale,chainAt:null};
   mines.push(mine);
   u.minePlantedAt=this.time;
   cue(this,'blockMinePlant',mine,{evolved},.32);
@@ -88,7 +89,7 @@ function install({FrontGame}){
    const neighbors=mines.filter(next=>{
     if(next.spent||next.owner!==m.owner||next.chainAt!==null||now>=next.expiresAt)return false;
     const end={x:next.toX,y:next.toY};
-    return next.armAt<=now+linkDelay&&dist(m,end)<=linkRange&&this.lineClear(m,end,0,{fireTeam:0});
+    return next.armAt<=now+linkDelay&&dist(m,end)<=linkRange*(m.rangeScale??1)&&this.lineClear(m,end,0,{fireTeam:0});
    }).sort((a,b)=>Math.hypot(a.toX-m.x,a.toY-m.y)-Math.hypot(b.toX-m.x,b.toY-m.y));
    for(const [i,next] of neighbors.entries()){
     next.chainAt=now+linkDelay+i*.08;

@@ -8,9 +8,15 @@ const BALANCE_VERSION=71;
 const PIRATE_REINFORCEMENT={from:360,interval:55,roomFrom:150,roomUntil:720,roomInterval:30,cap:2};
 const OCTOPUS_REINFORCEMENT={from:270,interval:65};
 const UNIT_TYPE_CAP=8;
+const STAR_COMBAT=[
+ {damage:1,hp:1,attackSpeed:1,range:1,heal:1},
+ {damage:2.9,hp:2.2,attackSpeed:1.15,range:1.15,heal:2.5},
+ {damage:8,hp:5.5,attackSpeed:1.3,range:1.3,heal:7.2}
+];
 const COMMANDER_REVIVAL={delay:5,protection:3};
 const GUARDIANS={range:460,mageHp:560,mageRate:6,mageDamage:18,windup:.45,radius:145,root:2,laserHp:1500,laserDamage:40,laserTick:.2,respawnDelay:60,shieldNotice:.8,shieldRaise:.18,shieldHold:.35,lessonRange:650,lessonBannerTime:5,laserWindup:0,laserRate:0};
-const INSECTS={bomb:{trigger:65,radius:125,windup:.9},spray:{windup:.3,flight:.4,radius:34}};
+const INSECTS={bomb:{trigger:65,radius:140,windup:.9,maxHpDamage:.25},spray:{windup:.3,flight:.4,radius:34}};
+root.FrontBombBugRules=INSECTS.bomb;
 const BUTTERFLY={range:330,arc:80*Math.PI/180,windup:.65,flight:.8,reduction:.5,duration:6};
 const MEDIC_CLEANSE={cooldown:10,targets:5};
 const MEDIC_HEALING={base:10,interval:1,perLevel:.15,evolvedMultiplier:1.4,window:1,efficiencies:[1,.6,.4]};
@@ -94,13 +100,13 @@ const TYPES={swordEmpress:{name:'사검의 군주',hp:140800,damage:0,rate:100,r
  sniper:{name:'저격병',icon:'⌖',hp:100,damage:100,rate:2.35,range:560,speed:137,r:11,cost:110,role:'사거리 안에서 최대 체력이 가장 높은 적 자동 조준 · 경장갑 ×1 / 장갑 ×0.5'},
  guntruck:{name:'전투트럭',icon:'▱',hp:280,damage:12,rate:.22,range:265,speed:150,r:22,cost:150,role:'기동 연사 · 경장갑 ×1 / 장갑 ×0.8'},
  tank:{name:'전차',icon:'▰',hp:600,damage:100,rate:2.3,range:310,speed:95,r:26,cost:260,splash:60,role:'장갑 ×1 · 경장갑 ×0.5 · 범위 포격'},
- pirateCannon:{name:'해적 포탄병',icon:'✹',hp:260,damage:88,rate:6.5,range:425,speed:87,r:24,cost:0,role:'앵무새 점화 3초 · 바퀴 대포 정지 중 요격 · 지연 광역 포격'},
+ pirateCannon:{name:'해적 포탄병',icon:'✹',hp:260,damage:88,rate:5.75,range:425,speed:87,r:24,cost:0,role:'앵무새 점화 2초 · 반경 170 포격 · 피격 병력 최대 체력의 30% 추가 피해'},
  bubbleOctopus:{name:'버블 문어',icon:'◉',hp:220,damage:9,rate:4.5,range:330,speed:82,r:17,cost:0,rewardGold:6,role:'후방 지원 · 주변 적에게 비눗방울 실드 · 고압 거품탄으로 넉백'},
  artillery:{name:'적 포병',icon:'⊕',hp:520,damage:0,rate:99,range:0,speed:0,r:27,cost:0,role:'포격을 지휘하는 장갑 목표'},
  medic:{name:'의무병',icon:'✚',hp:110,damage:0,rate:MEDIC_HEALING.interval,range:280,speed:145,r:11,cost:70,role:'부상 대장 우선 · 기본 10 회복 · 1초 간격 · 중첩 치료 100%/60%/40%'},
  bayonetCaptain:{name:'장난감 병정 대장',icon:'♛',hp:640,damage:32,rate:1.6,range:64,speed:90,r:16,cost:0,windup:.38,stab:true,role:'적 전용 경장갑 · 강화 총검병 · 일반 정예 5분 / 대장 보스 2분부터'},
  bayonet:{name:'너트크래커 총검병',icon:'⚔',hp:160,damage:18,rate:1.6,range:58,speed:96,r:14,cost:0,windup:.38,stab:true,role:'적 전용 경장갑 · 총검 준비 후 찌르기 · 3분부터 웨이브 합류'},
- bombBug:{name:'폭탄개미',icon:'◉',hp:260,damage:95,rate:99,range:65,speed:42,r:18,cost:0,role:'느린 자폭개미를 각색한 토이 적 · 접근 후 0.9초 예고 / 반경 125 · 처치해도 그 자리에서 폭발하여 양쪽 병력에 피해 · 일반 적 개미에는 폭발 피해 2배'},
+ bombBug:{name:'폭탄개미',icon:'◉',hp:260,damage:95,rate:99,range:65,speed:48,r:18,cost:0,role:'접근 후 0.9초 예고 · 반경 140 자폭 · 아군은 고정 피해 + 최대 체력 25% · 처치 시 제자리 폭발 · 일반 적 개미에는 피해 2배'},
  acidBeetle:{name:'투석 딱정벌레',icon:'●',hp:220,damage:28,rate:2.3,range:210,speed:66,r:15,cost:0,role:'앞발로 나무 구슬 투척 · 사거리 210 · 0.3초 준비 + 0.4초 비행 · 표시된 착탄 위치에서 벗어나 회피'},
  ant:{name:'개미',icon:'•',hp:110,damage:12,rate:1.15,range:25,speed:91.2,r:10,cost:0,role:'접근하면 추격하는 근접 몬스터'},
  soldierAnt:{name:'병정개미',icon:'◆',hp:260,damage:20,rate:1.05,range:28,speed:102,r:13,cost:0,role:'1분 이후 출현하는 강화 근접 벌레'},
@@ -487,6 +493,10 @@ class FrontGame{
  commander(team){return this.units.find(u=>u.team===team&&u.type==='leader')||this.bases[team];}
  flameLevel(){return 1+(['machinegun','rocket'].reduce((n,t)=>n+Math.max(0,(this.tech[0][t]||1)-1),0))*.5;}
  commanderLevel(u){if(u?.team!==0||u.type!=='leader')return 1;return this.isFlameCommander(u)?this.flameLevel():1+ROSTER.reduce((n,t)=>n+Math.max(0,(this.tech[0][t]||1)-1),0)*.3;}
+ rankCombat(u){
+  const rank=this.starExperiment&&u?.team===0&&ROSTER.includes(u.type)?u.star:1;
+  return STAR_COMBAT[rank===3?2:rank===2?1:0];
+ }
  refreshCommanderHealth(){const c=this.commander(0);if(c?.type!=='leader')return;const hp=this.stats(c).hp;if(c.hp>0)c.hp=clamp(c.hp+hp-c.maxHp,0,hp);c.maxHp=hp;}
  refreshFlameHealth(){this.refreshCommanderHealth();}
  refreshSquadHealth(){for(const u of this.alive(0)){const hp=this.stats(u).hp;u.hp=clamp(u.hp+hp-u.maxHp,0,hp);u.maxHp=hp;}}
@@ -1185,7 +1195,14 @@ class FrontGame{
    const blast=this.bombBlastQueue[i],radius=INSECTS.bomb.radius;
    this.effects.push({kind:'explosion',x:blast.x,y:blast.y,radius,t:.7,max:.7,team:2,visualKind:'bombBug'});
    this.notify('explosion',{x:blast.x,y:blast.y,kind:'rocket',team:2});
-   for(const target of [...this.units,...this.radioTurretTargets()]){if(target===blast.unit||target.hp<=0||blast.source.flashRedirect&&target.team===0||dist(target,blast)>radius)continue;const ant=target.team!==0&&target.type==='ant'&&!target.boss&&!target.roadCaptain&&!target.finalBoss;const scale=target.team===0&&blast.unit.openingBombBug?ROOM_CAMPAIGN.config.insects.opening.allyDamageScale:ant?2:1;this.damage(target,blast.damage*scale,target.team===0?{...blast.source,team:2,coopOwner:undefined}:blast.source);}
+   for(const target of [...this.units,...this.radioTurretTargets()]){
+    const ally=target.team===0;
+    if(target===blast.unit||target.hp<=0||blast.source.flashRedirect&&ally||dist(target,blast)>radius)continue;
+    const ordinaryAnt=!ally&&target.type==='ant'&&!target.boss&&!target.roadCaptain&&!target.finalBoss;
+    const flatScale=ally&&blast.unit.openingBombBug?ROOM_CAMPAIGN.config.insects.opening.allyDamageScale:ordinaryAnt?2:1;
+    const hpDamage=ally?Math.max(0,target.maxHp||0)*INSECTS.bomb.maxHpDamage:0;
+    this.damage(target,blast.damage*flatScale+hpDamage,ally?{...blast.source,team:2,coopOwner:undefined}:blast.source);
+   }
   }}finally{this.bombBlastQueue=[];this.processingBombBlasts=false;}
  }
  updateAcidBeetle(u,dt){
@@ -1243,7 +1260,7 @@ class FrontGame{
  }
  activeDefenses(){return this.defenses.filter(p=>p.hp>0&&this.mission.stage>=p.activeStage);}
  launchMissile(source,target,attack={}){
-  const spec=source.defenseKind==='missileTower'?ENEMY_MISSILE:this.buildingStats('missileBase',source.team),flightTime=source.type==='lucky'&&source.team===0?clamp(dist(source,target)/850,.35,.6):spec.flightTime;source.recoil=.3;this.mortarShells.push({kind:'missile',damageType:'rocket',x:target.x,y:target.y,fromX:source.x-(source.type==='lucky'?Math.sin(source.face)*(attack.side||1)*10:0),fromY:source.y+(source.type==='lucky'?Math.cos(source.face)*(attack.side||1)*8-24:0),radius:spec.splash,landAt:this.time+flightTime,delay:flightTime,source,team:source.team,damage:attack.damage??spec.damage,luckyLane:source.type==='lucky'?(attack.lane||0):0,...(source.type==='lucky'?{luckyRulesVersion:130}:{}),critical:false});this.effects.push({kind:'muzzle',x:source.x,y:source.y,t:.18,max:.18,team:source.team,weapon:'rocket',angle:source.face,origin:true});this.notify('fire',{...source,type:'rocket'});
+  const spec=source.defenseKind==='missileTower'?ENEMY_MISSILE:this.buildingStats('missileBase',source.team),flightTime=source.type==='lucky'&&source.team===0?clamp(dist(source,target)/850,.35,.6):spec.flightTime;source.recoil=.3;this.mortarShells.push({kind:'missile',damageType:'rocket',x:target.x,y:target.y,fromX:source.x-(source.type==='lucky'?Math.sin(source.face)*(attack.side||1)*10:0),fromY:source.y+(source.type==='lucky'?Math.cos(source.face)*(attack.side||1)*8-24:0),radius:spec.splash*this.rankCombat(source).range,landAt:this.time+flightTime,delay:flightTime,source,team:source.team,damage:attack.damage??spec.damage,luckyLane:source.type==='lucky'?(attack.lane||0):0,...(source.type==='lucky'?{luckyRulesVersion:130}:{}),critical:false});this.effects.push({kind:'muzzle',x:source.x,y:source.y,t:.18,max:.18,team:source.team,weapon:'rocket',angle:source.face,origin:true});this.notify('fire',{...source,type:'rocket'});
  }
  launchMortar(source,target,attack){
   const s=source.structure?{splash:source.built?70:60}:this.stats(source);source.recoil=.25;this.effects.push({kind:'muzzle',x:source.x,y:source.y,t:.14,max:.14,team:source.team,weapon:'mortar',angle:Math.atan2(target.y-source.y,target.x-source.x),origin:true});
@@ -1568,7 +1585,7 @@ class FrontGame{
  luckyOutcome(value=this.random(),odds=this.luckyOdds()){let total=0;for(const[k,p]of Object.entries(odds)){total+=p;if(value<total)return k;}return'blank';}
  luckyEnemy(source,range=LUCKY.range){return this.selectPriorityTarget(source,this.combatCandidates(),this.attackingEnemies(),{...this.stats(source),range,minRange:0});}
  updateLuckyInterval(u){
-  const interval=this.luckyRouletteInterval?.(u)??LUCKY.interval;
+  const interval=(this.luckyRouletteInterval?.(u)??LUCKY.interval)/this.rankCombat(u).attackSpeed;
   if(u.luckyInterval!==interval){
    const previous=u.luckyInterval||3;
    const adjust=next=>Number.isFinite(next)?this.time+clamp((next-this.time)*interval/previous,0,interval):this.time+interval;
@@ -1600,7 +1617,7 @@ class FrontGame{
    const distance=dist(source,t);if(count>bestCount||count===bestCount&&distance<bestDistance){best=t;bestCount=count;bestDistance=distance;}}
   return {x:best.x,y:best.y,count:bestCount,target:best};
  }
- luckyMissileTarget(u,salvo=null,range=LUCKY.missileRange){
+ luckyMissileTarget(u,salvo=null,range=LUCKY.missileRange*this.rankCombat(u).range){
   const candidates=this.units.filter(t=>(u.team===0?t.team!==0:t.team===0)&&t.hp>0&&this.canTarget(u,t)&&dist(u,t)<=range&&this.visible(t)&&this.lineClear(u,t,0,{fireTeam:u.team}));
   let best=null,assigned=Infinity,density=-1,nearest=Infinity;
   // Spread each volley across live targets before revisiting one. Bosses use the same rule.
@@ -1610,19 +1627,20 @@ class FrontGame{
  }
  recordLuckyMissile(salvo,target){const used=salvo.missileAssignments??={};used[target.id]=(used[target.id]||0)+1;}
  luckyGlueTarget(u){
-  const history=this.luckyGlueHistory=this.luckyGlueHistory.filter(z=>this.time-z.at<12).slice(-24),best=this.luckyCluster(u,LUCKY.range,LUCKY.glueRadius);
+  const scale=this.rankCombat(u).range,range=LUCKY.range*scale,radius=LUCKY.glueRadius*scale;
+  const history=this.luckyGlueHistory=this.luckyGlueHistory.filter(z=>this.time-z.at<12).slice(-24),best=this.luckyCluster(u,range,radius);
   if(!best){const facing=u.moveFace??u.face;let chosen=null,score=-Infinity;
    for(const distance of [150,230,300])for(const offset of [0,-.45,.45,-.9,.9]){const angle=facing+offset,p={x:u.x+Math.cos(angle)*distance,y:u.y+Math.sin(angle)*distance};if(!this.freePosition(p.x,p.y,8)||!this.lineClear(u,p,0,{fireTeam:u.team}))continue;const separation=history.length?Math.min(...history.map(z=>dist(p,z))):200,value=Math.min(200,separation)-Math.abs(offset)*12-Math.abs(distance-180)*.06;if(value>score){score=value;chosen=p;}}
    return chosen||this.resolvePosition({x:u.x+Math.cos(facing)*110,y:u.y+Math.sin(facing)*110},8);
   }
   if(!history.length)return best;
-  const enemies=this.units.filter(t=>t.team!==u.team&&t.hp>0&&dist(u,t)<=LUCKY.range+LUCKY.glueRadius&&this.visible(t)),points=enemies.filter(t=>dist(u,t)<=LUCKY.range).map(t=>({x:t.x,y:t.y}));
-  for(let i=0;i<8;i++){const a=i*Math.PI/4,p={x:best.x+Math.cos(a)*LUCKY.glueRadius*.8,y:best.y+Math.sin(a)*LUCKY.glueRadius*.8};if(dist(u,p)<=LUCKY.range&&this.freePosition(p.x,p.y,4))points.push(p);}
-  let chosen=best,score=-Infinity,distance=Infinity;for(const p of points){const count=enemies.filter(t=>dist(t,p)<=LUCKY.glueRadius).length;if(!count||!this.lineClear(u,p,0,{fireTeam:u.team}))continue;let overlap=0;for(const z of history)overlap=Math.max(overlap,Math.max(0,1-dist(p,z)/(LUCKY.glueRadius*1.8))*(1-(this.time-z.at)/12));const value=count*(1-.6*overlap),d=dist(u,p);if(value>score+1e-8||Math.abs(value-score)<1e-8&&d<distance){chosen={x:p.x,y:p.y,count};score=value;distance=d;}}
+  const enemies=this.units.filter(t=>t.team!==u.team&&t.hp>0&&dist(u,t)<=range+radius&&this.visible(t)),points=enemies.filter(t=>dist(u,t)<=range).map(t=>({x:t.x,y:t.y}));
+  for(let i=0;i<8;i++){const a=i*Math.PI/4,p={x:best.x+Math.cos(a)*radius*.8,y:best.y+Math.sin(a)*radius*.8};if(dist(u,p)<=range&&this.freePosition(p.x,p.y,4))points.push(p);}
+  let chosen=best,score=-Infinity,distance=Infinity;for(const p of points){const count=enemies.filter(t=>dist(t,p)<=radius).length;if(!count||!this.lineClear(u,p,0,{fireTeam:u.team}))continue;let overlap=0;for(const z of history)overlap=Math.max(overlap,Math.max(0,1-dist(p,z)/(radius*1.8))*(1-(this.time-z.at)/12));const value=count*(1-.6*overlap),d=dist(u,p);if(value>score+1e-8||Math.abs(value-score)<1e-8&&d<distance){chosen={x:p.x,y:p.y,count};score=value;distance=d;}}
   return chosen;
  }
- luckySprayTarget(u,current=null){
-  const half=Math.PI/5,items=this.units.filter(t=>t.team!==u.team&&t.hp>0&&(MELEE.has(t.type)&&!TYPES[t.type]?.stab||t.type==='butterfly')&&dist(u,t)<=LUCKY.sprayRange+(TYPES[t.type]?.r||0)&&this.visible(t)&&this.lineClear(u,t,0,{fireTeam:u.team})).map(t=>({t,a:Math.atan2(t.y-u.y,t.x-u.x)})).sort((a,b)=>a.a-b.a);
+ luckySprayTarget(u,current=null,range=LUCKY.sprayRange*this.rankCombat(u).range){
+  const half=Math.PI/5,items=this.units.filter(t=>t.team!==u.team&&t.hp>0&&(MELEE.has(t.type)&&!TYPES[t.type]?.stab||t.type==='butterfly')&&dist(u,t)<=range+(TYPES[t.type]?.r||0)&&this.visible(t)&&this.lineClear(u,t,0,{fireTeam:u.team})).map(t=>({t,a:Math.atan2(t.y-u.y,t.x-u.x)})).sort((a,b)=>a.a-b.a);
   if(!items.length)return null;const n=items.length,list=items.concat(items.map(p=>({...p,a:p.a+Math.PI*2})));let end=0,best=null,score=-Infinity;
   for(let start=0;start<n;start++){end=Math.max(end,start);while(end<start+n&&list[end].a-list[start].a<=half*2+1e-8)end++;const mid=(list[start].a+list[end-1].a)/2,turn=Math.abs(Math.atan2(Math.sin(mid-u.face),Math.cos(mid-u.face))),keep=current&&Math.abs(Math.atan2(Math.sin(Math.atan2(current.y-u.y,current.x-u.x)-mid),Math.cos(Math.atan2(current.y-u.y,current.x-u.x)-mid)))<=half,value=end-start+(keep?.2:0)-turn*.005;if(value>score){score=value;best={start,end,mid};}}
   let anchor=list[best.start];for(let i=best.start+1;i<best.end;i++)if(Math.abs(list[i].a-best.mid)<Math.abs(anchor.a-best.mid))anchor=list[i];return{target:anchor.t,offset:best.mid-anchor.a,count:best.end-best.start};
@@ -1647,27 +1665,29 @@ class FrontGame{
    this.effects.push({kind:'luckyJackpot',x:u.x,y:u.y,t:1,max:1,team:0});this.notify('fire',{...u,luckySound:'jackpot'});this.notify('toast',waiting?`777! 미사일 ${LUCKY.missiles}발 저장 · 적 접근 시 자동 발사`:'777! 럭키 레토나 · 미사일 난사');return;
   }
   if(kind==='glue'){
+   const radius=LUCKY.glueRadius*this.rankCombat(u).range;
    const target=this.luckyGlueTarget(u);if(!target)return;this.luckyGlueHistory.push({x:target.x,y:target.y,at:this.time,ownerId:u.id});
    u.face=Math.atan2(target.y-u.y,target.x-u.x);
-   this.luckyGlues.push({x:target.x,y:target.y,fromX:u.x,fromY:u.y,source:u,team:0,radius:LUCKY.glueRadius,landAt:this.time+LUCKY.glueFlight,expires:this.time+LUCKY.glueFlight+LUCKY.glueLife,rulesVersion:78,hitIds:[]});
-   this.effects.push({kind:'luckyGlueThrow',x:u.x,y:u.y,tx:target.x,ty:target.y,radius:LUCKY.glueRadius,t:LUCKY.glueFlight,max:LUCKY.glueFlight,team:0});return;
+   this.luckyGlues.push({x:target.x,y:target.y,fromX:u.x,fromY:u.y,source:u,team:0,radius,landAt:this.time+LUCKY.glueFlight,expires:this.time+LUCKY.glueFlight+LUCKY.glueLife,rulesVersion:78,hitIds:[]});
+   this.effects.push({kind:'luckyGlueThrow',x:u.x,y:u.y,tx:target.x,ty:target.y,radius,t:LUCKY.glueFlight,max:LUCKY.glueFlight,team:0});return;
   }
   if(kind==='mine')return this.castLuckyFlash(u);
   if(kind==='spray'){
-   const aim=this.luckySprayTarget(u);
+   const range=LUCKY.sprayRange*this.rankCombat(u).range,aim=this.luckySprayTarget(u,null,range);
    if(aim)u.face=Math.atan2(aim.target.y-u.y,aim.target.x-u.x)+aim.offset;
    const channel=u.activeLuckyChannel??0,previous=this.luckySprays.find(s=>s.source===u&&(s.rouletteChannel||0)===channel);
-   if(previous){previous.expires=this.time+LUCKY.sprayDuration;previous.damage=LUCKY.sprayDamage*scale;previous.nextAimAt=this.time;return;}
-   this.luckySprays.push({x:u.x,y:u.y,angle:u.face,target:aim?.target||null,aimOffset:aim?.offset||0,emitting:true,source:u,rouletteChannel:channel,team:0,damage:LUCKY.sprayDamage*scale,nextAt:this.time,nextAimAt:this.time,startedAt:this.time,expires:this.time+LUCKY.sprayDuration,rulesVersion:99});
+   if(previous){previous.expires=this.time+LUCKY.sprayDuration;previous.damage=LUCKY.sprayDamage*scale;previous.range=range;previous.nextAimAt=this.time;return;}
+   this.luckySprays.push({x:u.x,y:u.y,angle:u.face,target:aim?.target||null,aimOffset:aim?.offset||0,emitting:true,source:u,rouletteChannel:channel,team:0,damage:LUCKY.sprayDamage*scale,range,nextAt:this.time,nextAimAt:this.time,startedAt:this.time,expires:this.time+LUCKY.sprayDuration,rulesVersion:99});
   }
  }
  updateLuckyObjects(dt){
   const glues=[];for(const z of this.luckyGlues){if(this.time>=z.expires)continue;if(this.time+1e-8>=z.landAt){if(!z.landed){z.landed=true;this.effects.push({kind:'luckyGlue',x:z.x,y:z.y,radius:z.radius,t:.35,max:.35,team:0});}for(const t of this.units){if(z.team!==0&&t.team!==0||t.team===z.team||t.hp<=0||this.commanderReviveProtected(t)||z.hitIds.includes(t.id)||(t.x-z.x)**2+(t.y-z.y)**2>z.radius**2||!this.lineClear(z,t,0,{fireTeam:z.team}))continue;t.luckySlowUntil=Math.max(t.luckySlowUntil||0,this.time+LUCKY.slowDuration);z.hitIds.push(t.id);}}glues.push(z);}this.luckyGlues=glues;
   const mines=[];for(const m of this.luckyMines){if(this.time>=m.expires)continue;const trigger=this.time>=m.armAt&&this.units.some(t=>(m.team===0||t.team===0)&&t.team!==m.team&&t.hp>0&&!this.isFlying(t)&&(t.x-m.x)**2+(t.y-m.y)**2<(30+(TYPES[t.type]?.r||0))**2);if(!trigger){mines.push(m);continue;}for(const t of this.units){if(m.team!==0&&t.team!==0||t.team===m.team||t.hp<=0)continue;const d=dist(t,m);if(d<=LUCKY.mineRadius)this.damage(t,m.damage*multiplier('rocket',combatKind(t))*(1-.45*d/LUCKY.mineRadius),m.source);}this.effects.push({kind:'explosion',x:m.x,y:m.y,radius:LUCKY.mineRadius,t:.65,max:.65,team:0});this.notify('explosion',{x:m.x,y:m.y,kind:'rocket',team:0});}this.luckyMines=mines;
   const sprays=[];for(const s of this.luckySprays){if(s.source.hp<=0||this.time>=s.expires)continue;s.x=s.source.x;s.y=s.source.y;
-   if(this.time>=(s.nextAimAt||0)||!s.target||s.target.hp<=0||dist(s,s.target)>LUCKY.sprayRange+(TYPES[s.target.type]?.r||0)){const aim=this.luckySprayTarget(s.source,s.target);s.target=aim?.target||null;s.aimOffset=aim?.offset||0;s.nextAimAt=this.time+.15;}
-   s.emitting=true;if(s.target){s.aimX=s.target.x+clamp(s.target.navVX||0,-200,200)*.08;s.aimY=s.target.y+clamp(s.target.navVY||0,-200,200)*.08;s.aimHeight=(TYPES[s.target.type]?.flightHeight||0)+9;s.angle=Math.atan2(s.aimY-s.y,s.aimX-s.x)+(s.aimOffset||0);s.source.face=s.source.aimFace=s.angle;}else{s.aimX=s.x+Math.cos(s.angle)*LUCKY.sprayRange;s.aimY=s.y+Math.sin(s.angle)*LUCKY.sprayRange;s.aimHeight=9;}
-   while(s.nextAt<=this.time+1e-8&&s.nextAt<s.expires-1e-8){s.nextAt+=.25;if(!s.emitting)continue;for(const t of this.units){if(t.team===s.team||t.hp<=0||!(MELEE.has(t.type)&&!TYPES[t.type]?.stab||t.type==='butterfly'))continue;const d=dist(t,s),r=TYPES[t.type]?.r||0;if(d>LUCKY.sprayRange+r)continue;const angle=Math.atan2(t.y-s.y,t.x-s.x),delta=Math.abs(Math.atan2(Math.sin(angle-s.angle),Math.cos(angle-s.angle)));if(delta>Math.PI/5+Math.asin(Math.min(1,r/Math.max(1,d)))||!this.lineClear(s,t,0,{fireTeam:s.team}))continue;this.damage(t,s.damage*.25,s.source);}}
+   const range=s.range??LUCKY.sprayRange;
+   if(this.time>=(s.nextAimAt||0)||!s.target||s.target.hp<=0||dist(s,s.target)>range+(TYPES[s.target.type]?.r||0)){const aim=this.luckySprayTarget(s.source,s.target,range);s.target=aim?.target||null;s.aimOffset=aim?.offset||0;s.nextAimAt=this.time+.15;}
+   s.emitting=true;if(s.target){s.aimX=s.target.x+clamp(s.target.navVX||0,-200,200)*.08;s.aimY=s.target.y+clamp(s.target.navVY||0,-200,200)*.08;s.aimHeight=(TYPES[s.target.type]?.flightHeight||0)+9;s.angle=Math.atan2(s.aimY-s.y,s.aimX-s.x)+(s.aimOffset||0);s.source.face=s.source.aimFace=s.angle;}else{s.aimX=s.x+Math.cos(s.angle)*range;s.aimY=s.y+Math.sin(s.angle)*range;s.aimHeight=9;}
+   while(s.nextAt<=this.time+1e-8&&s.nextAt<s.expires-1e-8){s.nextAt+=.25;if(!s.emitting)continue;for(const t of this.units){if(t.team===s.team||t.hp<=0||!(MELEE.has(t.type)&&!TYPES[t.type]?.stab||t.type==='butterfly'))continue;const d=dist(t,s),r=TYPES[t.type]?.r||0;if(d>range+r)continue;const angle=Math.atan2(t.y-s.y,t.x-s.x),delta=Math.abs(Math.atan2(Math.sin(angle-s.angle),Math.cos(angle-s.angle)));if(delta>Math.PI/5+Math.asin(Math.min(1,r/Math.max(1,d)))||!this.lineClear(s,t,0,{fireTeam:s.team}))continue;this.damage(t,s.damage*.25,s.source);}}
    sprays.push(s);}this.luckySprays=sprays;
   const salvos=[],firing=new Set();for(const v of this.luckySalvos){if(v.source.hp<=0)continue;
    const firingKey=this.starExperiment&&v.source.star>=2?v.source.id+':'+(v.rouletteChannel||0):v.source.id;if(firing.has(firingKey)){salvos.push(v);continue;}firing.add(firingKey);

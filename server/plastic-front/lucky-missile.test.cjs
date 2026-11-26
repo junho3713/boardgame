@@ -4,9 +4,9 @@ const {FrontGame,LUCKY,multiplier}=require('./public/engine.js');
 const {CoopGame}=require('./public/coop-engine.js');
 function scene(coop=false){const g=coop?new CoopGame():new FrontGame();g.start();for(const k of ['units','structures','defenses','buildings','bases','obstacles'])g[k]=[];return g;}
 function hits(g,source,damage=700){
- const result=[];g.damage=(u,amount)=>{const d=g.defenseFactor(u,source),pierced=source.team===0&&source.type==='lucky'?1/(1+(1/d-1)*.65):d;result.push({u,amount:amount*d/pierced});};g.launchMissile(source,{x:1000,y:1000},{damage});
+ const result=[];g.damage=(u,amount)=>{const d=g.defenseFactor(u,source),pierced=source.team===0&&source.type==='lucky'?1/(1+(1/d-1)*.65):d;result.push({u,amount:amount*d/pierced});};g.launchMissile(source,{x:0,y:1000},{damage});
  const shell=g.mortarShells.at(-1),r=shell.radius;
- g.units=[];for(const type of ['rifle','tank'])for(const fraction of [0,.5,1,1.01])g.units.push({id:g.units.length+1,type,team:source.team===0?2:0,x:1000+r*fraction,y:1000,hp:1e6,maxHp:1e6,fraction});
+ g.units=[];for(const type of ['rifle','tank'])for(const fraction of [0,.5,1,1.01])g.units.push({id:g.units.length+1,type,team:source.team===0?2:0,x:r*fraction,y:1000,hp:1e6,maxHp:1e6,fraction});
  g.time=shell.landAt;g.updateMortars();a.equal(result.length,6);return result;
 }
 test('allied 777 retains 75% light damage and 75% radial edge damage in solo and both co-op squads',()=>{
@@ -19,7 +19,8 @@ test('777 upgrades and seven-shot reserve survive the buff without a duplicate s
  const g=scene(true);g.withOwner(1,()=>{g.tech[0].lucky=5;g.abilities.damage=3;});
  const u=g.withOwner(1,()=>g.addUnit(0,'lucky',1000,1000));u.star=2;
  g.withOwner(1,()=>g.castLucky(u,'missiles'));const v=g.luckySalvos[0];a.equal(v.remaining,7);a.equal(v.total,7);a.equal(v.waiting,true);
- const expected=g.withOwner(1,()=>700*g.luckyScale(u));a.equal(v.damage,expected);
+ const expected=g.withOwner(1,()=>700*g.luckyScale({...u,star:1})*2.9/3);
+ a.ok(Math.abs(v.damage-expected)<1e-8);
  for(const {u:target,amount}of hits(g,u,v.damage)){a.ok(Math.abs(amount-expected*(target.type==='tank'?1:.75)*(1-.25*target.fraction))<1e-8);}
 });
 test('enemy 777, ordinary missile towers and generic rocket matchups retain their original penalties',()=>{

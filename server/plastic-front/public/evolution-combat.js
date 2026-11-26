@@ -12,7 +12,7 @@ function install(api){
  p.evolutionEnemies=function(u){return this.combatCandidates().filter((t,i,a)=>a.indexOf(t)===i&&t.hp>0&&!t.hidden&&this.canTarget(u,t));};
  p.stats=function(u){const s=stats.call(this,u);if(u.type==='machinegun'&&this.evolutionEnabled(u)){const active=this.time<(u.overheatUntil||0),heat=active?1:Math.min(1,(u.evolutionHeat||0)/3);s.rate/=1+.35*heat;}return s;};
  p.evolutionMuzzle=function(u,target,style){this.effects.push({kind:'evoMuzzle',x:u.x,y:u.y,angle:Math.atan2(target.y-u.y,target.x-u.x),style,t:.22,max:.22,team:0});};
- p.evolutionBullet=function(u,target,attack,s,style){const result=shot.call(this,u,target,attack,s);for(const b of result){b.evoStyle=style;b.evoOrigin={x:u.x,y:u.y};b.evoRange=s.range;}this.evolutionMuzzle(u,target,style);return result;};
+ p.evolutionBullet=function(u,target,attack,s,style){const result=shot.call(this,u,target,attack,s);for(const b of result){b.evoStyle=style;b.evoOrigin={x:u.x,y:u.y};b.evoRange=s.range;if(style==='siege'||style==='cluster')b.evoRangeScale=this.rankCombat(u).range;}this.evolutionMuzzle(u,target,style);return result;};
  p.fireUnitProjectiles=function(u,target,attack,s=this.stats(u)){
   if(!this.evolutionEnabled(u))return shot.call(this,u,target,attack,s);
   if(u.type==='rifle'){
@@ -76,12 +76,12 @@ function install(api){
     const damage=(b.evoBaseDamage??b.damage)*[1,.7,.5,.35][index],n=shot.call(this,b.source,next,{damage,critical:b.critical},{splash:0})[0];Object.assign(n,{x:center.x,y:center.y,speed:1200,evoStyle:'ricochet',evoIndex:index,evoVisited:visited,evoBaseDamage:b.evoBaseDamage??b.damage,evoOrigin:center});
    }}
   }else if(b.evoStyle==='cluster'||b.evoStyle==='siege'){
-   const siege=b.evoStyle==='siege',points=siege?[{x:center.x+Math.cos(angle)*95,y:center.y+Math.sin(angle)*95,at:this.time+.15,factor:.6},{x:center.x+Math.cos(angle)*190,y:center.y+Math.sin(angle)*190,at:this.time+.3,factor:.4}]:Array.from({length:5},(_,i)=>({x:center.x+Math.cos(angle+i*Math.PI*2/5)*70,y:center.y+Math.sin(angle+i*Math.PI*2/5)*70,at:this.time+.16+i*.045,factor:.22}));
-   (this.evolutionBlasts??=[]).push({source:b.source,points,index:0,damage:b.damage,radius:siege?70:38,style:b.evoStyle,...(siege?{hitIds:initialHits}:{})});
+   const siege=b.evoStyle==='siege',scale=b.evoRangeScale??1,points=siege?[{x:center.x+Math.cos(angle)*95*scale,y:center.y+Math.sin(angle)*95*scale,at:this.time+.15,factor:.6},{x:center.x+Math.cos(angle)*190*scale,y:center.y+Math.sin(angle)*190*scale,at:this.time+.3,factor:.4}]:Array.from({length:5},(_,i)=>({x:center.x+Math.cos(angle+i*Math.PI*2/5)*70*scale,y:center.y+Math.sin(angle+i*Math.PI*2/5)*70*scale,at:this.time+.16+i*.045,factor:.22}));
+   (this.evolutionBlasts??=[]).push({source:b.source,points,index:0,damage:b.damage,radius:(siege?70:38)*scale,style:b.evoStyle,...(siege?{hitIds:initialHits}:{})});
    this.effects.push({kind:'evoBlast',...center,radius:b.splash,style:b.evoStyle,index:0,t:.7,max:.7,team:0});
   }
  };
- p.bossKillerTarget=function(u){return this.evolutionEnemies(u).filter(t=>t.boss&&distance(u,t)<=LUCKY.missileRange&&this.visible(t)&&this.lineClear(u,t,0,{fireTeam:0})).sort((a,b)=>distance(u,a)-distance(u,b))[0]||null;};
+ p.bossKillerTarget=function(u){const range=LUCKY.missileRange*this.rankCombat(u).range;return this.evolutionEnemies(u).filter(t=>t.boss&&distance(u,t)<=range&&this.visible(t)&&this.lineClear(u,t,0,{fireTeam:0})).sort((a,b)=>distance(u,a)-distance(u,b))[0]||null;};
  p.evolutionLuckyOdds=function(u,base){
   if(!u||!this.evolutionEnabled(u)||!this.bossKillerTarget(u))return base;
   const chance=Math.min(.08,base.blank);return {...base,blank:base.blank-chance,bossKiller:chance};

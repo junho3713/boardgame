@@ -9,16 +9,27 @@ function scene(coop=false){
  return g;
 }
 function bug(g,type='bombBug',x=1500,y=7000){const u=g.addUnit(2,type,x,y,true);u.assault=true;u.cooldown=0;return u;}
-test('bomb bugs walk slowly, stop to show a 0.9 second fuse and can be escaped',()=>{
- const g=scene(),c=g.commander(0),u=bug(g);a.ok(TYPES.bombBug.speed<TYPES.ant.speed*.5);c.x=u.x+50;
- g.updateBombBug(u,.05);a.equal(u.bombFuse.explodeAt,180.9);a.ok(g.bossHazards().some(h=>h.radius===125));
+test('bomb bugs approach at 48px/s, stop for a 0.9 second fuse and can be escaped',()=>{
+ const g=scene(),c=g.commander(0),u=bug(g);a.equal(TYPES.bombBug.speed,48);c.x=u.x+50;
+ g.updateBombBug(u,.05);a.equal(u.bombFuse.explodeAt,180.9);a.ok(g.bossHazards().some(h=>h.radius===140));
  const hp=c.hp;c.x+=400;g.time=180.89;g.updateBombBug(u,.05);a.ok(u.hp>0);g.time=180.9;g.updateBombBug(u,.05);a.equal(u.hp,0);a.equal(c.hp,hp);
 });
 test('killing a bomb immediately hits both hostile teams and nearby allies once',()=>{
- const g=scene(),c=g.commander(0),u=bug(g),enemy=bug(g,'ant',u.x+30),red=g.addUnit(1,'rifle',u.x-30,u.y,true),ally=g.addUnit(0,'rifle',u.x,u.y+90),far=bug(g,'ant',u.x+126);
+ const g=scene(),c=g.commander(0),u=bug(g),enemy=bug(g,'ant',u.x+30),red=g.addUnit(1,'rifle',u.x-30,u.y,true),ally=g.addUnit(0,'rifle',u.x,u.y+139),far=bug(g,'ant',u.x+141);
  for(const v of [enemy,red,ally,far])v.hp=v.maxHp=10000;const hp=enemy.hp;
  g.damage(u,1e6,c);a.ok(enemy.hp<hp&&red.hp<hp&&ally.hp<hp);a.equal(far.hp,hp);a.equal(g.effects.filter(e=>e.visualKind==='bombBug').length,1);
  const after=enemy.hp;g.damage(u,1e6,c);g.detonateBombBug(u,c);a.equal(enemy.hp,after);
+});
+test('bombs add one quarter of a friendly victim’s max HP and keep the ant-only multiplier',()=>{
+ const g=scene(),b=bug(g),ally=g.addUnit(0,'rifle',b.x-120,b.y),ant=bug(g,'ant',b.x+25);
+ for(const u of [ally,ant])u.hp=u.maxHp=2000;
+ const flat=g.stats(b).damage;
+ g.defenseFactor=()=>1;
+ g.detonateBombBug(b);
+ a.equal(ally.hp,2000-flat-500);a.equal(ant.hp,2000-2*flat);
+ const early=bug(g);early.openingBombBug=true;ally.hp=2000;ant.hp=2000;
+ g.detonateBombBug(early);
+ a.ok(Math.abs(ally.hp-(2000-g.stats(early).damage*.2-500))<1e-8);
 });
 test('a dense chain uses one explosion per bug and credits the initiating player',()=>{
  const g=scene(),c=g.commander(0),bugs=Array.from({length:30},(_,i)=>bug(g,'bombBug',1500+i*3));for(const u of bugs)u.hp=1;
@@ -27,7 +38,7 @@ test('a dense chain uses one explosion per bug and credits the initiating player
 test('bomb damage respects armor, commander protection and both cooperative choice shields',()=>{
  const g=scene(true),u=bug(g),leaders=g.units.filter(u=>u.type==='leader');for(const c of leaders){c.x=u.x+20;c.hp=c.maxHp=10000;g.coopInvulnerable[c.coopOwner]=g.time+5;}
  g.detonateBombBug(u);a.ok(leaders.every(c=>c.hp===10000));
- const h=scene(),b=bug(h),tank=h.addUnit(0,'tank',b.x+20,b.y),rifle=h.addUnit(0,'rifle',b.x-20,b.y);tank.hp=rifle.hp=10000;h.detonateBombBug(b);a.ok(10000-tank.hp<10000-rifle.hp);
+ const h=scene(),b=bug(h),tank=h.addUnit(0,'tank',b.x+20,b.y),rifle=h.addUnit(0,'rifle',b.x-20,b.y);tank.hp=tank.maxHp=rifle.hp=rifle.maxHp=10000;h.detonateBombBug(b);a.ok(10000-tank.hp<10000-rifle.hp);
  const c=h.commander(0),b2=bug(h);c.x=b2.x;c.reviveProtectionUntil=h.time+3;const hp=c.hp;h.detonateBombBug(b2);a.equal(c.hp,hp);
 });
 test('a blue player owns chain rewards while green and blue casualty counters stay separate',()=>{

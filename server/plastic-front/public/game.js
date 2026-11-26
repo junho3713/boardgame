@@ -327,11 +327,15 @@ function renderFusion(){
  $('fusionTitle').textContent=destiny?'병과 합성과 운명의 별':'병과 합성';
  const rules=[
   '같은 병과 1성 3기가 모이면 2성 1기로 자동 합성됩니다.',
-  '일반 2성 공격력 ×3 · 체력과 치료량 ×2.5 · 럭키 레토나 룰렛 3개',
-  '통신병은 성급마다 주사위 한 쌍 · 2성 화력 ×3.4, 폭발 반경 ×1.15',
+  '2성 공격력 ×2.9 · 체력 ×2.2 · 공격속도와 공격 범위 +15%',
+  '의무병의 치료량은 2성 ×2.5, 3성 ×7.2입니다.',
   '2성이 전사하면 같은 병과 1성 1기가 최대 체력으로 복귀합니다.'
  ];
- if(destiny)rules.push('12분 이후 첫 정식 보스를 처치한 뒤 운명의 별을 주우세요. 같은 병과 2성 3기가 모인 병과마다 3성 1기로 합성됩니다.','일반 3성 공격력과 치료량 ×7.2 · 체력 ×7.8 · 병과별 최대 1기','3성 통신병 화력 ×10.5 · 폭발 반경 ×1.30');
+ if(destiny)rules.push(
+  game.isRoomCampaign()?'9분 장수풍뎅이 미드 보스를 처치하면 운명의 별이 떨어집니다.':'12분 이후 첫 정식 보스를 처치하면 운명의 별이 떨어집니다.',
+  '별을 주우면 같은 병과 2성 3기가 3성 1기로 합성됩니다.',
+  '3성 공격력 ×8 · 체력 ×5.5 · 공격속도와 공격 범위 +30% · 병과별 최대 1기'
+ );
  $('fusionRules').innerHTML=rules.join('<br>');
  $('fusionGrid').innerHTML=roster.map(type=>{
   const status=game.threeStarCount(type)?'3성 완성':game.twoStarCount(type)>=3?(destiny?'운명의 별로 3성 합성 가능':'2성 최대 편성'):'같은 병과 1성 3기 → 2성';
@@ -807,9 +811,9 @@ function drawUnitRaw(u,mine=true){
  if(!u.rareSupplyGuard&&u.type==='bruteBeetle')text(ctx,'거대 갑충',u.x,u.y-67,11,'#f0d597');
  if(!u.rareSupplyGuard&&(u.type==='stagBeetle'||u.type==='rhinoBeetle'))text(ctx,(u.boss?(u.miniBoss?'MID / ':'BOSS / ')+u.bossName.replace(/^(중간 보스|미드 보스) · /,''):types[u.type].name)+' · 장갑',u.x,u.y-(u.type==='rhinoBeetle'?91:78)*(u.boss?1.35:1),u.boss?13:11,'#f0d597');
  if(u.team!==0&&!u.rareSupplyGuard&&types[u.type].flying&&(u.boss||game.units.find(v=>v.type===u.type&&!v.boss&&v.hp>0&&game.visible(v))===u))text(ctx,(u.boss?(u.miniBoss?'MID / ':'BOSS / ')+u.bossName.replace(/^(중간 보스|미드 보스) · /,''):types[u.type].name)+(u.type==='hornet'?' · 중장갑':' · 경장갑'),u.x,u.y-((u.visualFlightHeight??types[u.type].flightHeight)+49)*(u.boss?1.35:1),u.boss?13:10,u.boss?'#ffc079':'#f2d694');
- if(u.star>=2||u.boss||u.rareSupplyGuard||u.bubbleShield?.hp>0||u.hp<u.maxHp||u.type==='leader'||u.type==='artillery'||u.type==='bayonetCaptain'){
-  const vehicle=(u.team!==0||u.type!=='guntruck')&&['tank','crimsonAce','guntruck','artillery','lucky','pirateCannon'].includes(u.type),human=roster.includes(u.type)&&!vehicle||u.type==='leader'||types[u.type].stab,w=u.boss?84:vehicle?48:30;
-  const rise=(u.type==='medic'&&u.team===0&&u.appearance==='rina'?78+(u.star>=2?8:0):types[u.type].flying?(u.visualFlightHeight??types[u.type].flightHeight)+42:u.type==='crimsonAce'?140:u.type==='rhinoBeetle'?88:u.type==='stagBeetle'?76:u.type==='pirateCannon'?94:u.type==='bubbleOctopus'?52:vehicle?79:u.type==='bayonetCaptain'?90:types[u.type].stab?75:human?66:u.type==='bruteBeetle'?58:35)*(u.boss?1.35:1)-(u.star>=2?(vehicle?10:8):0),y=u.y-rise;
+ if(u.star>=2||u.boss||u.rareSupplyGuard||u.bubbleShield?.hp>0||u.hp<u.maxHp||u.type==='leader'||u.type==='artillery'||u.type==='bayonetCaptain'||u.type==='bombBug'){
+  const vehicle=(u.team!==0||u.type!=='guntruck')&&['tank','crimsonAce','guntruck','artillery','lucky','pirateCannon'].includes(u.type),human=roster.includes(u.type)&&!vehicle||u.type==='leader'||types[u.type].stab,w=u.boss?84:vehicle?48:u.type==='bombBug'?36:30;
+  const rise=(u.type==='medic'&&u.team===0&&u.appearance==='rina'?78+(u.star>=2?8:0):types[u.type].flying?(u.visualFlightHeight??types[u.type].flightHeight)+42:u.type==='crimsonAce'?140:u.type==='rhinoBeetle'?88:u.type==='stagBeetle'?76:u.type==='pirateCannon'?94:u.type==='bubbleOctopus'?52:u.type==='bombBug'?57:vehicle?79:u.type==='bayonetCaptain'?90:types[u.type].stab?75:human?66:u.type==='bruteBeetle'?58:35)*(u.boss?1.35:1)-(u.star>=2?(vehicle?10:8):0),y=u.y-rise;
   const left=u.x-w/2,bar=window.FrontBubbleOctopusView.healthBarLayout(u.hp,u.maxHp,u.bubbleShield?.hp);
   const fill=window.FrontBubbleOctopusView.healthPaint(ctx,bar,left,w,u.boss?'#e6af57':t?'#e0a184':'#dceca2');
   rr(ctx,left-1,y-1,w*bar.track+2,6,2,'#172a20aa');rr(ctx,left,y,w*bar.track,4,2,'#293d2d88');rr(ctx,left,y,w*bar.filled,4,2,fill);
@@ -995,6 +999,7 @@ function draw(dt){
  for(const u of game.units.filter(u=>window.FrontHitFeedback.airborne(u,game.time)).sort((a,b)=>a.y-b.y||a.id-b.id))drawUnit(u,true);
  battleFx.drawHealingStatuses(ctx,game,fxVisible);battleFx.drawParticles(ctx,fxVisible);window.FrontRosterArt?.results(ctx,game,fxVisible);battleFx.drawStunStatuses(ctx,game,u=>game.visible(u));swordView.health(ctx,game);if(game.isRoomCampaign())window.FrontPortal.health(ctx,game.bases[1]);drawFog();ctx.setTransform(DPR,0,0,DPR,0,0);
  window.FrontHitFeedback.screenFlash(ctx,game);
+ window.FrontPirateCannonView?.edgeWarnings?.(ctx,game,W,H,point,reduceMotion.matches);
  swordView.hud(ctx,game,W);
  if(game.time<game.scoutUntil){ctx.strokeStyle='#f0db98';ctx.lineWidth=2;ctx.strokeRect(4,4,W-8,H-8);}
  if(game.bossIntro?.remaining>0){rr(ctx,W/2-156,24,312,64,10,'#211a2ee8','#b795d5');text(ctx,'최종 보스 등장',W/2,48,13,'#d8bde9');text(ctx,game.bossIntro.name,W/2,73,20,'#fff0d3');}

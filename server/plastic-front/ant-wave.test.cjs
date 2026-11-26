@@ -21,7 +21,7 @@ test('the opening packet reaches solo and cooperative combat once and survives a
   a.equal(bombs.length,1,'one opening encounter per battlefield');const bomb=bombs[0];
   a.equal(bomb.type,'bombBug');a.ok(bomb.maxHp>55&&bomb.maxHp<65);
   const ants=g.units.filter(u=>u.roomBombLeaderId===bomb.id);
-  a.equal(ants.length,2);a.ok(ants.every(ant=>ant.type==='ant'&&Math.hypot(ant.x-bomb.x,ant.y-bomb.y)<125));
+  a.equal(ants.length,2);a.ok(ants.every(ant=>ant.type==='ant'&&Math.hypot(ant.x-bomb.x,ant.y-bomb.y)<140));
   a.equal(g.roomCanSpawn('bombBug'),false);
   const debt=g.roomCampaign.waveSpawnDebt;a.ok(debt>0,'borrowed slots count toward the following wave');
 
@@ -29,7 +29,7 @@ test('the opening packet reaches solo and cooperative combat once and survives a
   const savedBomb=restored.units.find(u=>u.id===bomb.id);
   a.ok(savedBomb.openingBombBug);a.equal(restored.roomCampaign.waveSpawnDebt,debt);
   const ally=restored.addUnit(0,'rifle',savedBomb.x+15,savedBomb.y,true);
-  const oldHP=ally.hp,expected=restored.stats(savedBomb).damage*.2*restored.defenseFactor(ally,{type:'bombBug',team:2});
+  const oldHP=ally.hp,expected=(restored.stats(savedBomb).damage*.2+ally.maxHp*.25)*restored.defenseFactor(ally,{type:'bombBug',team:2});
   restored.damage(savedBomb,1e6,restored.commander(0));
   a.ok(Math.abs(oldHP-ally.hp-expected)<1e-6);a.ok(ally.hp>0);
   a.ok(ants.every(({id})=>restored.units.find(u=>u.id===id).hp===0));
@@ -145,12 +145,12 @@ test('auto mortars keep safe minimum range and bomb priorities during manual aim
 });
 test('an early, middle or late bomb kill clears nearby ordinary ants and credits the player once',()=>{
  for(const time of [180,480,720,1140,1200]){const g=scene(time),c=g.commander(0),bomb=g.addUnit(2,'bombBug',1800,6000,true);bomb.roomWave=true;const ants=Array.from({length:4},(_,i)=>{const u=g.addUnit(2,'ant',1800+Math.cos(i*Math.PI/2)*70,6000+Math.sin(i*Math.PI/2)*70,true);u.roomWave=true;return u;});
-  const outside=g.addUnit(2,'ant',1926,6000,true),hp=outside.hp,kills=g.kills;g.damage(bomb,1e6,c);a.ok(ants.every(u=>u.hp===0),String(time));a.equal(outside.hp,hp);a.equal(g.kills-kills,5);g.detonateBombBug(bomb,c);a.equal(g.kills-kills,5);
+  const outside=g.addUnit(2,'ant',1941,6000,true),hp=outside.hp,kills=g.kills;g.damage(bomb,1e6,c);a.ok(ants.every(u=>u.hp===0),String(time));a.equal(outside.hp,hp);a.equal(g.kills-kills,5);g.detonateBombBug(bomb,c);a.equal(g.kills-kills,5);
  }
 });
-test('the ant blast bonus leaves allied damage, armor and boss damage unchanged',()=>{
+test('wave bombs apply percentage damage to allies and only ordinary ants take the enemy splash bonus',()=>{
  const g=scene(),c=g.commander(0),bomb=g.addUnit(2,'bombBug',1800,6000,true),ally=g.addUnit(0,'rifle',1800,6060),boss=g.addUnit(2,'ant',1800,5940,true);boss.boss=true;ally.hp=ally.maxHp=boss.hp=boss.maxHp=1e6;
- const raw=g.stats(bomb).damage,allyHit=raw*g.defenseFactor(ally,{type:'bombBug',team:2}),bossHit=raw*g.defenseFactor(boss,{type:'bombBug',team:0});g.damage(bomb,1e6,c);a.ok(Math.abs(1e6-ally.hp-allyHit)<1e-7);a.ok(Math.abs(1e6-boss.hp-bossHit)<1e-7);
+ const raw=g.stats(bomb).damage,allyHit=(raw+ally.maxHp*.25)*g.defenseFactor(ally,{type:'bombBug',team:2}),bossHit=raw*g.defenseFactor(boss,{type:'bombBug',team:0});g.damage(bomb,1e6,c);a.ok(Math.abs(1e6-ally.hp-allyHit)<1e-7);a.ok(Math.abs(1e6-boss.hp-bossHit)<1e-7);
 });
 test('cooperative saves keep ant escorts, cooldown and player-owned chain rewards',()=>{
  const g=scene(300,true),group=g.spawnRoomAntGroup(null,5),copy=unpack(new CoopGame(),JSON.parse(JSON.stringify(pack(g))));copy.visible=copy.lineClear=()=>true;
