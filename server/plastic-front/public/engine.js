@@ -1484,9 +1484,10 @@ class FrontGame{
   else if(this.input.x||this.input.y)angle=Math.atan2(this.input.y,this.input.x);
   const delta=Math.atan2(Math.sin(angle-this.formationFacing),Math.cos(angle-this.formationFacing));this.formationFacing+=clamp(delta,-dt*2.5,dt*2.5);
  }
- rearCombat(u){return u.team===0&&(u.type==='sniper'||u.type==='medic')&&this.formationEnemy?.hp>0&&this.visible(this.formationEnemy)&&dist(this.commander(0),this.formationEnemy)<520;}
+ rearSupport(u){return u.team===0&&(u.type==='medic'||u.type==='guntruck');}
+ rearCombat(u){return (this.rearSupport(u)||u.team===0&&u.type==='sniper')&&this.formationEnemy?.hp>0&&this.visible(this.formationEnemy)&&dist(this.commander(0),this.formationEnemy)<520;}
  squadMoveAnchor(u){const c=this.commander(0);return u.type!=='leader'&&this.moveOrder&&dist(c,this.moveOrder)>140&&this.units.some(e=>e.team!==0&&e.hp>0&&this.visible(e)&&(dist(e,c)<650||dist(e,u)<400))?c:this.moveOrder;}
- regroupRisk(u,p,threats){return threats.reduce((sum,e)=>{const range=TYPES[e.type]?.range||e.range||30,radius=range<100?range+this.collisionRadius(u)+(TYPES[e.type]?.r||15)+28:((u.type==='sniper'||u.type==='medic'||u.type==='repairBot'||u.hp<u.maxHp*.35)?range+35:Math.min(190,range*.7));return sum+Math.max(0,1-dist(p,e)/radius)**2*12;},0);}
+ regroupRisk(u,p,threats){return threats.reduce((sum,e)=>{const range=TYPES[e.type]?.range||e.range||30,radius=range<100?range+this.collisionRadius(u)+(TYPES[e.type]?.r||15)+28:((u.type==='sniper'||this.rearSupport(u)||u.type==='repairBot'||u.hp<u.maxHp*.35)?range+35:Math.min(190,range*.7));return sum+Math.max(0,1-dist(p,e)/radius)**2*12;},0);}
  regroupPath(u,goal,threats){
   // Enemy danger is a soft cost: a surrounded unit must still choose the least
   // dangerous exit. Static walls remain impassable, and the start is exact.
@@ -1526,7 +1527,7 @@ class FrontGame{
   const threats=this.units.filter(e=>e.team!==0&&e.hp>0&&this.visible(e)&&dist(u,e)<240),length=dist(u,goal);if(!threats.length||length<8)return goal;
   const blocked=p=>threats.some(e=>{const dx=p.x-u.x,dy=p.y-u.y,t=clamp(((e.x-u.x)*dx+(e.y-u.y)*dy)/Math.max(1,dx*dx+dy*dy),0,1),near={x:u.x+dx*t,y:u.y+dy*t};return dist(e,near)<Math.min((TYPES[e.type]?.r||15)+52,dist(e,u))-3;});
   if(!blocked(goal))return goal;
-  const a=Math.atan2(goal.y-u.y,goal.x-u.x),c=this.commander(0),r=this.collisionRadius(u),limit=Math.max(u.type==='medic'?210:250,dist(c,u)+8),step=Math.min(75,length),candidates=[];
+  const a=Math.atan2(goal.y-u.y,goal.x-u.x),c=this.commander(0),r=this.collisionRadius(u),limit=Math.max(this.rearSupport(u)?210:250,dist(c,u)+8),step=Math.min(75,length),candidates=[];
   for(const offset of [Math.PI/3,-Math.PI/3,Math.PI/2,-Math.PI/2,Math.PI*2/3,-Math.PI*2/3,Math.PI]){
    const p={x:u.x+Math.cos(a+offset)*step,y:u.y+Math.sin(a+offset)*step};if(dist(c,p)>limit||!this.freePosition(p.x,p.y,r)||u.team===0&&p.y<this.frontline()||!this.lineClear(u,p,r)||blocked(p))continue;
    const danger=threats.reduce((v,e)=>v+Math.max(0,(TYPES[e.type]?.r||15)+80-dist(e,p))**2,0);candidates.push({p,score:dist(p,goal)+danger*.3});
@@ -1534,15 +1535,18 @@ class FrontGame{
   return candidates.sort((a,b)=>a.score-b.score)[0]?.p||{x:u.x,y:u.y};
  }
  formationPoint(u,anchor,facing=u.team===0?this.formationFacing:this.commander(u.team).face||Math.PI/2){
-  const siege=this.guardianSiege;if(u.team===0&&u.type!=='leader'&&siege?.hp>0&&dist(this.commander(0),siege)<950){const c=this.commander(0),a=Math.atan2(c.y-siege.y,c.x-siege.x),peers=this.alive(0).filter(v=>v.type===u.type),i=peers.indexOf(u),radius=u.type==='sniper'?this.stats(u).range-40:u.type==='mortar'?this.stats(u).range-50:(siege.defenseKind?this.defenseStats(siege).range:this.stats(siege).range)+130+(u.id%2)*30,angle=a+(i-(peers.length-1)/2)*.09;return{x:siege.x+Math.cos(angle)*radius,y:siege.y+Math.sin(angle)*radius};}
+  const rearRadio=u.team===0&&u.type==='guntruck',siege=this.guardianSiege;
+  if(u.team===0&&u.type!=='leader'&&!rearRadio&&siege?.hp>0&&dist(this.commander(0),siege)<950){const c=this.commander(0),a=Math.atan2(c.y-siege.y,c.x-siege.x),peers=this.alive(0).filter(v=>v.type===u.type),i=peers.indexOf(u),radius=u.type==='sniper'?this.stats(u).range-40:u.type==='mortar'?this.stats(u).range-50:(siege.defenseKind?this.defenseStats(siege).range:this.stats(siege).range)+130+(u.id%2)*30,angle=a+(i-(peers.length-1)/2)*.09;return{x:siege.x+Math.cos(angle)*radius,y:siege.y+Math.sin(angle)*radius};}
 
   if(u.type==='leader')return{x:anchor.x,y:anchor.y};
-  const rearCombat=this.rearCombat(u),commander=this.commander(u.team),flameFront=u.team===0&&this.isFrontCommander(commander);
+  const rearCombat=this.rearCombat(u),holdRear=rearCombat||rearRadio,commander=this.commander(u.team),flameFront=u.team===0&&this.isFrontCommander(commander);
+  if(rearRadio)anchor=commander;
   if(flameFront){anchor=commander;if(this.formationEnemy?.hp>0&&this.visible(this.formationEnemy))facing=Math.atan2(this.formationEnemy.y-commander.y,this.formationEnemy.x-commander.x);}
   if(rearCombat){anchor=commander;facing=Math.atan2(this.formationEnemy.y-commander.y,this.formationEnemy.x-commander.x);}
-  const projection=p=>(p.x-commander.x)*Math.cos(facing)+(p.y-commander.y)*Math.sin(facing),behind=p=>(!flameFront||projection(p)<=12)&&(!rearCombat||projection(p)<=-24);
-  const group=this.units.filter(a=>a.team===u.team&&a.hp>0&&!a.patrol&&a.type!=='leader'&&(!this.coop||u.team!==0||a.coopOwner===u.coopOwner)).sort((a,b)=>a.id-b.id),hasArmor=group.some(a=>a.type==='tank'||a.type==='guntruck');
-  const bands=[{types:['tank','guntruck'],depth:120,spacing:72,row:65,cols:4},{types:['rifle'],depth:hasArmor?55:100,spacing:39,row:45,cols:6},{types:['machinegun','commando','titan'],depth:hasArmor?25:50,spacing:44,row:46,cols:5},{types:['rocket'],depth:10,spacing:42,row:48,cols:5},{types:['lucky'],depth:10,spacing:64,row:65,cols:4},{types:['sniper','spectre'],depth:-78,spacing:42,row:46,cols:5},{types:['mortar'],depth:-102,spacing:46,row:48,cols:5},{types:['medic'],depth:u.team===0?-108:-124,spacing:u.team===0?40:42,row:u.team===0?36:46,cols:u.team===0?6:5}],slots=[];
+  const projection=p=>(p.x-commander.x)*Math.cos(facing)+(p.y-commander.y)*Math.sin(facing),behind=p=>(!flameFront||projection(p)<=12)&&(!holdRear||projection(p)<=-24);
+  const group=this.units.filter(a=>a.team===u.team&&a.hp>0&&!a.patrol&&a.type!=='leader'&&(!this.coop||u.team!==0||a.coopOwner===u.coopOwner)).sort((a,b)=>a.id-b.id);
+  const armor=u.team===0?['tank']:['tank','guntruck'],hasArmor=group.some(a=>armor.includes(a.type));
+  const bands=[{types:armor,depth:120,spacing:72,row:65,cols:4},{types:['rifle'],depth:hasArmor?55:100,spacing:39,row:45,cols:6},{types:['machinegun','commando','titan'],depth:hasArmor?25:50,spacing:44,row:46,cols:5},{types:['rocket'],depth:10,spacing:42,row:48,cols:5},{types:['lucky'],depth:10,spacing:64,row:65,cols:4},{types:['sniper','spectre'],depth:-78,spacing:42,row:46,cols:5},{types:['mortar'],depth:-102,spacing:46,row:48,cols:5},{types:u.team===0?['medic','guntruck']:['medic'],depth:u.team===0?-108:-124,spacing:u.team===0?40:42,row:u.team===0?36:46,cols:u.team===0?6:5}],slots=[];
   let cursor=flameFront?0:120;
   for(const band of bands){
    const members=group.filter(a=>band.types.includes(a.type));if(!members.length)continue;const depth=band.types[0]==='medic'&&u.team===0?Math.max(-136,Math.min(cursor,band.depth)):Math.min(cursor,band.depth),rows=Math.ceil(members.length/band.cols);
@@ -1554,10 +1558,10 @@ class FrontGame{
   // several soldiers aim at exactly the same point against a boundary.
   const low=u.team===0?this.frontline()+35:70,xs=[anchor.x,...slots.map(p=>p.x)],ys=[anchor.y,...slots.map(p=>p.y)],shiftX=Math.max(0,55-Math.min(...xs))+Math.min(0,this.bounds().width-55-Math.max(...xs)),shiftY=Math.max(0,low-Math.min(...ys))+Math.min(0,this.bounds().height-100-Math.max(...ys));
   const leader=this.commander(u.team),placed=[{x:anchor.x,y:anchor.y,radius:leader?.type?this.collisionRadius(leader):20}];let result={x:anchor.x,y:anchor.y};
-  for(const slot of slots){const r=this.collisionRadius(slot.unit),raw={x:slot.x+shiftX,y:slot.y+shiftY},valid=p=>p.x>=55&&p.x<=this.bounds().width-55&&p.y>=low&&p.y<=this.bounds().height-100&&(slot.unit.type!=='medic'||slot.unit.team!==0||dist(p,anchor)<=210)&&(!flameFront||projection(p)<=12)&&(!rearCombat||slot.unit!==u||behind(p))&&this.freePosition(p.x,p.y,r)&&placed.every(q=>dist(p,q)>=(r+q.radius)*1.04);
+  for(const slot of slots){const r=this.collisionRadius(slot.unit),raw={x:slot.x+shiftX,y:slot.y+shiftY},valid=p=>p.x>=55&&p.x<=this.bounds().width-55&&p.y>=low&&p.y<=this.bounds().height-100&&(!this.rearSupport(slot.unit)||dist(p,anchor)<=210)&&(!flameFront||projection(p)<=12)&&(!holdRear||slot.unit!==u||behind(p))&&this.freePosition(p.x,p.y,r)&&placed.every(q=>dist(p,q)>=(r+q.radius)*1.04);
    let point=raw;if(!valid(point)){
     let found=null;for(let ring=1;ring<=12&&!found;ring++)for(let i=0;i<16;i++){const a=i*Math.PI/8,p={x:raw.x+Math.cos(a)*ring*24,y:raw.y+Math.sin(a)*ring*24};if(valid(p)){found=p;break;}}
-    point=found||((flameFront||rearCombat&&slot.unit===u)&&behind(u)&&this.freePosition(u.x,u.y,r)?{x:u.x,y:u.y}:this.resolvePosition({...raw},r));
+    point=found||((flameFront||holdRear&&slot.unit===u)&&behind(u)&&this.freePosition(u.x,u.y,r)?{x:u.x,y:u.y}:this.resolvePosition({...raw},r));
    }
    placed.push({...point,radius:r});if(slot.unit===u){result=point;break;}
   }
@@ -1578,13 +1582,13 @@ class FrontGame{
   const d=dist(u,target),r=s.range*.8,point={x:target.x+(u.x-target.x)*r/d,y:target.y+(u.y-target.y)*r/d};
   return dist(point,c)<=260&&this.freePosition(point.x,point.y,this.collisionRadius(u))?point:goal;
  }
- medicFollowSpeed(u,goal,speed){
-  if(u.team!==0||u.type!=='medic'||dist(u,goal)<=90)return speed;
-  // Regroup promptly after a detour or a direction change; do not speed up a medic already in its rear slot.
+ rearSupportFollowSpeed(u,goal,speed){
+  if(!this.rearSupport(u)||dist(u,goal)<=90)return speed;
+  // Regroup promptly after a detour or a direction change.
   return dist(u,this.commander(0))>200?Math.max(speed,this.stats(u).speed*1.45):speed;
  }
  squadFollowSpeed(u,goal,speed){
-  speed=this.medicFollowSpeed(u,goal,speed);
+  speed=this.rearSupportFollowSpeed(u,goal,speed);
   if(u.team!==0||u.type!=='tank')return speed;
   const c=this.commander(0),error=dist(u,goal);
   if(!c||c.hp<=0||error<=40){u.tankCatchup=false;return speed;}

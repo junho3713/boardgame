@@ -122,9 +122,12 @@
    const leader=this.commander(0),bounds=this.bounds(),landings=[];
    for(const unit of units){
     const angle=this.random()*Math.PI*2,offset=this.random(),r=this.collisionRadius({...unit,team:0});
+    const radio=unit.type==='guntruck';
     let point;
-    for(let i=0;i<32;i++){
-     const direction=angle+i*2.3999632297,dist=60+40*((offset+i*.381966)%1);
+    for(let i=0;i<(radio?64:32);i++){
+     let direction=angle+i*2.3999632297;
+     if(radio&&i<32&&Math.cos(direction-this.formationFacing)>0)direction+=Math.PI;
+     const dist=60+40*((offset+i*.381966)%1);
      const x=leader.x+Math.cos(direction)*dist,y=leader.y+Math.sin(direction)*dist;
      if(x<45||y<70||x>bounds.width-45||y>bounds.height-70||!this.freePosition(x,y,r)||
         [...this.dropPods,...landings].some(q=>Math.hypot(x-q.x,y-q.y)<24))continue;
