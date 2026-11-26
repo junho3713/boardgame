@@ -9,7 +9,9 @@ function install({FrontGame,TYPES,multiplier}){
  const foes=(g,u)=>g.combatCandidates().filter(t=>t.team!==u.team&&t.hp>0&&!t.hidden&&!(t.base&&g.baseShielded())&&g.canTarget(u,t));
 
  p.reset=function(...args){
-  const result=reset.apply(this,args);this.radioStrikes=[];this.radioFireZones=[];this.radioTurrets=[];this.radioNextWhiteoutAt=0;this.rosterLasers=[];return result;
+  const result=reset.apply(this,args);this.radioStrikes=[];this.radioFireZones=[];this.radioTurrets=[];this.radioNextWhiteoutAt=0;this.rosterLasers=[];
+  this.radioNextNukeAt=0;
+  return result;
  };
  p.shotgunReloadTime=function(u,s=this.stats(u)){return 1.8*s.rate/TYPES.rifle.rate;};
  p.shotgunShotMultiplier=function(){return 1;};
@@ -122,7 +124,9 @@ function install({FrontGame,TYPES,multiplier}){
  const radioRank=(g,u)=>g.starExperiment?(u.star||1):1;
  const missileSpread=[0,-21,21,0,-38,38];
  const missileGuidance={lockBeforeImpact:.20,maxTravel:220,retargetRange:145};
- const turretRules={flight:.48,lifetime:6.5,range:285,splash:18,damage:.24,interval:1/6.5,limit:4,overclock:3,speedBoost:1.6};
+ const nukeCooldown=12;
+ const turretRules={flight:.48,lifetime:6.5,range:285,splash:18,interval:1/6.5,limit:4,
+  hp:180,damage:.18,evolvedHp:320,evolvedDamage:.22,pierceDamage:.55,blastDamage:1.35,blastRadius:88};
  p.stats=function(u){
   const result=stats.call(this,u);
   if(u.team===0&&u.type==='guntruck'&&radioRank(this,u)===3)result.rate*=.65;
@@ -175,13 +179,20 @@ function install({FrontGame,TYPES,multiplier}){
   }
   return best||g.commandFirePoint(origin,aim.range,aim.angle);
  }
- function rollRadio(g,u,golden){
+ function rollRadio(g,u,golden,rank){
   if(g.time<(g.linkState(u.coopOwner||0).radioHotlineUntil??0)){
    return {dice:[6,6],success:true,strike:'missile',missileCount:6};
   }
-  const a=g.diceFace(u,golden,0);
-  let b=u.radioMisses>=5?a:g.diceFace(u,golden,0);
-  // Every rank uses the same 25% evolved chance and five-miss guarantee.
+  const forced=u.radioMisses>=5,a=g.diceFace(u,golden,0);
+  let b=forced?a:g.diceFace(u,golden,0);
+  // The two auxiliary pairs are only used for a natural triple jackpot.
+  if(rank>=2&&!forced&&a===b){
+   const second=[g.diceFace(u,golden,1),g.diceFace(u,golden,1)];
+   const third=[g.diceFace(u,golden,2),g.diceFace(u,golden,2)];
+   if(second[0]===second[1]&&third[0]===third[1])
+    return {dice:[a,b],success:true,strike:'nuke',jackpotPairs:[second,third]};
+  }
+  // Every rank uses the same 25% evolved chance and five-miss guarantee on its primary pair.
   if(golden&&a!==b&&g.random()<.10)b=a;
   const success=a===b;
   return {dice:[a,b],success,strike:success?doubleStrike(a,golden):null};
@@ -204,17 +215,41 @@ function install({FrontGame,TYPES,multiplier}){
    if(strike==='nuke')g.notify('radioWarning',{team:0,id:u.id,x,y});
   }
  }
- function deployRadioTurret(g,u,target,rank,damage,radiusScale){
-  const owner=u.coopOwner||0,turrets=g.radioTurrets??=[];
-  const own=turrets.filter(t=>t.owner===owner&&t.until>g.time);
-  if(own.length>=turretRules.limit){
-   const turret=own.reduce((first,t)=>t.until<first.until?t:first);
-   const restart=Math.max(g.time,turret.landAt);
-   turret.until=restart+turretRules.lifetime;
-   turret.overclockUntil=restart+turretRules.overclock;
-   turret.nextShot=Math.min(turret.nextShot,restart+turretRules.interval/turretRules.speedBoost);
-   return turret;
+ function turretLoadout(golden,damage){
+  const hp=golden?turretRules.evolvedHp:turretRules.hp;
+  return {radioTurret:true,team:0,r:22,golden,mountRank:golden?2:1,hp,maxHp:hp,
+   damage:damage*(golden?turretRules.evolvedDamage:turretRules.damage),
+   blastDamage:golden?damage*turretRules.blastDamage:0};
+ }
+ p.migrateRadioTurrets=function(){
+  this.radioTurrets=this.radioTurrets.filter(t=>t.source&&t.until>this.time&&(!t.radioTurret||t.hp>0));
+  for(const t of this.radioTurrets){
+   if(t.radioTurret)continue;
+   Object.assign(t,turretLoadout(this.evolutionEnabled(t.source),t.damage/.24),
+    {id:++this.serial,coopOwner:t.owner});
+   delete t.overclockUntil;
   }
+  this.radioTurrets=this.radioTurrets.slice(-turretRules.limit);
+ };
+ p.retireRadioTurret=function(t){
+  if(t.retired)return;
+  t.retired=true;t.hp=0;t.until=this.time;
+  if(this.time<t.landAt)return;
+  const radius=t.blastDamage>0?turretRules.blastRadius*t.scale:0;
+  const time=radius>0?.64:.43;
+  effect(this,'radioTurretEnd',t,{scale:t.scale,radius,at:this.time,visualUntil:this.time+time},time);
+  if(!radius)return;
+  for(const enemy of foes(this,t.source)){
+   if(distance(t,enemy)>radius||!this.lineClear(t,enemy,0,{fireTeam:t.team}))continue;
+   this.damage(enemy,t.blastDamage*(1-.4*distance(t,enemy)/radius),t.source);
+  }
+  this.notify('explosion',{x:t.x,y:t.y,team:t.team,kind:'rocket'});
+ };
+ function deployRadioTurret(g,u,target,rank,damage,radiusScale,golden){
+  const owner=u.coopOwner||0;
+  for(const t of g.radioTurrets)if(t.hp<=0||t.until<=g.time)g.retireRadioTurret(t);
+  const turrets=g.radioTurrets=g.radioTurrets.filter(t=>!t.retired);
+  if(turrets.length>=turretRules.limit)g.retireRadioTurret(turrets.shift());
   const angle=heading(u,target),obstacles=g.solidObstacles();
   let point;
   for(const offset of [0,.78,-.78,1.56,-1.56,Math.PI]){
@@ -224,17 +259,25 @@ function install({FrontGame,TYPES,multiplier}){
   }
   g.resolvePosition(point,26);
   const landAt=g.time+turretRules.flight;
-  const turret={...point,source:u,owner,rank,scale:radiusScale,range:turretRules.range*radiusScale,splash:turretRules.splash*radiusScale,
-   damage:damage*turretRules.damage,angle:heading(point,target),startedAt:g.time,landAt,until:landAt+turretRules.lifetime,
-   nextShot:landAt,overclockUntil:0,landed:false,barrel:0};
+  const turret={...point,...turretLoadout(golden,damage),id:++g.serial,source:u,owner,coopOwner:u.coopOwner,rank,
+   scale:radiusScale,range:turretRules.range*radiusScale,splash:turretRules.splash*radiusScale,
+   angle:heading(point,target),startedAt:g.time,landAt,until:landAt+turretRules.lifetime,
+   nextShot:landAt,landed:false,barrel:0};
   turrets.push(turret);
   return turret;
  }
- function launchRadio(g,u,aim,contacts,roll,damage,golden,rank){
+ function launchRadio(g,u,aim,contacts,roll,damage,golden,rank,jackpot=false){
+  if(roll.strike==='nuke'){
+   const readyAt=g.radioNextNukeAt??0;
+   if(!jackpot&&g.time+1e-8<readyAt){
+    roll.strike='missile';roll.missileCount=6;
+    g.radioNextNukeAt=Math.max(g.time,readyAt-1);
+   }else g.radioNextNukeAt=g.time+nukeCooldown;
+  }
   const radiusScale=radioRadius[rank];
   if(roll.strike==='turret'){
    const target=contacts.reduce((nearest,t)=>distance(u,t)<distance(u,nearest)?t:nearest);
-   const turret=deployRadioTurret(g,u,target,rank,damage,radiusScale);
+   const turret=deployRadioTurret(g,u,target,rank,damage,radiusScale,golden);
    roll.tx=turret.x;roll.ty=turret.y;
    return;
   }
@@ -244,21 +287,24 @@ function install({FrontGame,TYPES,multiplier}){
   queueRadioStrike(g,u,aim,roll,point,{golden,damage,radiusScale});
  }
  p.launchRadioHotline=function(u,damage){
-  const launch=()=>launchRadio(this,u,{},this.radioContacts(u),{strike:'nuke',dice:[6,6]},damage,true,radioRank(this,u));
+  const roll={strike:'nuke',dice:[6,6]};
+  const launch=()=>launchRadio(this,u,{},this.radioContacts(u),roll,damage,true,radioRank(this,u));
   if(this.coop)this.withOwner(u.coopOwner,launch);else launch();
+  return roll.strike;
  };
  function callRadio(g,u,aim,attack){
   const contacts=g.radioContacts(u);
   if(!contacts.length)return [];
   const golden=g.evolutionEnabled(u),rank=radioRank(g,u);
-  const roll=rollRadio(g,u,golden);
+  const {jackpotPairs,...roll}=rollRadio(g,u,golden,rank);
   u.radioRollAt=g.time;
   if(roll.success)u.radioDoubleAt=g.time;
   u.radioMisses=roll.success?0:(u.radioMisses||0)+1;
   g.notify('fire',u);
-  if(roll.success)launchRadio(g,u,aim,contacts,roll,attack.damage,golden,rank);
+  if(roll.success)launchRadio(g,u,aim,contacts,roll,attack.damage,golden,rank,!!jackpotPairs);
   const [a,b]=roll.dice;
-  effect(g,'radioRoll',u,{source:u,a,b,golden,rank,rolls:[roll],strike:roll.strike,tx:roll.tx,ty:roll.ty},.85);
+  const rolls=jackpotPairs?[roll,...jackpotPairs.map(dice=>({dice,success:true,strike:'nuke'}))]:[roll];
+  effect(g,'radioRoll',u,{source:u,a,b,golden,rank,rolls,jackpot:!!jackpotPairs,strike:roll.strike,tx:roll.tx,ty:roll.ty},.85);
   return [];
  }
  function inRadius(g,area,t){return distance(t,area)<=area.radius+Math.max(0,g.collisionRadius(t)-5);}
@@ -323,8 +369,8 @@ function install({FrontGame,TYPES,multiplier}){
   const now=g.time;
   g.radioTurrets=g.radioTurrets.filter(turret=>{
    const {source,scale}=turret;
-   if(now>=turret.until){
-    if(turret.landed)effect(g,'radioTurretEnd',turret,{scale,at:now,visualUntil:now+.43},.43);
+   if(turret.hp<=0||now>=turret.until){
+    g.retireRadioTurret(turret);
     return false;
    }
    if(now<turret.landAt)return true;
@@ -340,22 +386,36 @@ function install({FrontGame,TYPES,multiplier}){
     if(d<=nearest&&g.lineClear(turret,enemy,0,{fireTeam:0})){target=enemy;nearest=d;}
    }
    if(!target){turret.nextShot=now;return true;}
-   const boosted=now<turret.overclockUntil,step=turretRules.interval/(boosted?turretRules.speedBoost:1);
+   const step=turretRules.interval;
    turret.nextShot+=step;
    if(turret.nextShot<=now)turret.nextShot=now+step;
    turret.prevAngle=turret.angle;
    turret.angle=heading(turret,target);
    turret.turnedAt=now;
-   const barrel=turret.barrel++%turret.rank;
-   effect(g,'radioTurretShot',turret,{scale,rank:turret.rank,barrel,angle:turret.angle,tx:target.x,ty:target.y,
-    boosted,at:now,visualUntil:now+.14},.14);
+   const barrel=turret.barrel++%turret.mountRank;
+   const pierced=turret.golden?turretPierce(g,turret,target,contacts):null;
+   const tip=pierced||target;
+   effect(g,'radioTurretShot',turret,{scale,rank:turret.mountRank,barrel,angle:turret.angle,tx:tip.x,ty:tip.y,
+    pierced:!!pierced,at:now,visualUntil:now+.14},.14);
    const hit=()=>{
     g.damage(target,turret.damage,source);
-    for(const enemy of contacts)if(enemy!==target&&distance(enemy,target)<=turret.splash&&g.lineClear(target,enemy,0,{fireTeam:0}))g.damage(enemy,turret.damage*.3,source);
+    if(pierced)g.damage(pierced,turret.damage*turretRules.pierceDamage,source);
+    for(const enemy of contacts)if(enemy!==target&&enemy!==pierced&&distance(enemy,target)<=turret.splash&&g.lineClear(target,enemy,0,{fireTeam:0}))g.damage(enemy,turret.damage*.3,source);
    };
    if(g.coop)g.withOwner(turret.owner,hit);else hit();
-   return true;
+   return !turret.retired;
   });
+ }
+ function turretPierce(g,turret,target,contacts){
+  const dx=Math.cos(turret.angle),dy=Math.sin(turret.angle),entry=distance(turret,target);
+  let nearest=null,limit=turret.range;
+  for(const enemy of contacts){
+   if(enemy===target)continue;
+   const x=enemy.x-turret.x,y=enemy.y-turret.y,along=x*dx+y*dy;
+   if(along<=entry||along>limit||Math.abs(x*dy-y*dx)>g.collisionRadius(enemy)||!g.lineClear(turret,enemy,0,{fireTeam:0}))continue;
+   nearest=enemy;limit=along;
+  }
+  return nearest;
  }
 
  function droneFire(g,u,t,attack,s){

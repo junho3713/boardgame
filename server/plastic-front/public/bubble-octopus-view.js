@@ -3,6 +3,7 @@
 'use strict';
 const TAU=Math.PI*2, cell=128, size=76;
 const clamp=n=>Math.min(1,Math.max(0,n));
+const maxHealthBarTrack=1+(root.FrontBubbleOctopusRules?.shieldFraction||0);
 const atlas=typeof Image==='function'?new Image():null;
 if(atlas){atlas.decoding='async';atlas.src='assets/models/bubble-octopus-v2.webp';}
 function oval(c,x,y,rx,ry,color){
@@ -108,5 +109,5 @@ function event(c,e){
  }
  c.restore();return true;
 }
-root.FrontBubbleOctopusView={model,healthBarLayout,healthPaint,shieldCast,air,event};
+root.FrontBubbleOctopusView={model,healthBarLayout,healthPaint,maxHealthBarTrack,shieldCast,air,event};
 })(typeof window==='undefined'?globalThis:window);

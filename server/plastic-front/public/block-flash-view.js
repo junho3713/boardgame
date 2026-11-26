@@ -1,4 +1,4 @@
-/* Battlefield presentation for snap-block mines and the Retona flash-grenade reel. */
+/* Battlefield presentation for round mines and the Retona flash-grenade reel. */
 (function(root){'use strict';
 const TAU=Math.PI*2,clamp=n=>Math.max(0,Math.min(1,n)),asset='assets/effects/block-flash-toys-v212.webp';
 const atlas=typeof root.Image==='function'?new root.Image():null;
@@ -16,78 +16,56 @@ function glow(c,x,y,r,center,color){
  const grad=c.createRadialGradient(x,y,0,x,y,r);grad.addColorStop(0,center);grad.addColorStop(.4,color);grad.addColorStop(1,'#ffffff00');
  ellipse(c,x,y,r,r,grad);
 }
-const brickPaint=[
- {side:[75,119,48],top:['#c0d77a','#7da84c'],stud:['#586d34','#bed27b','#99b854'],band:'#465e35'},
- {side:[104,135,59],top:['#dfe892','#94b754'],stud:['#697b37','#e2e796','#afc365'],band:'#946d28'}
-];
-const brickFrames=new Map(),brickDirections=16,brickTilt=.32;
-function brickView(angle){
- const index=((Math.round(angle/TAU*brickDirections)%brickDirections)+brickDirections)%brickDirections;
- const a=index*TAU/brickDirections+brickTilt,cs=Math.cos(a),sn=Math.sin(a);
- return {index,cs,sn,project:(x,y,z)=>[x*cs-y*sn,(x*sn+y*cs)*.56-z*.86]};
-}
-function brickFace(c,points,color){
- c.fillStyle=color;c.beginPath();
- points.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));
- c.closePath();c.fill();
-}
-function brickShade(rgb,light){return 'rgb('+rgb.map(v=>Math.round(v*light)).join(',')+')';}
-function brickRim(w,d,bevel){
- return [[-w+bevel,-d],[w-bevel,-d],[w,-d+bevel],[w,d-bevel],
-         [w-bevel,d],[-w+bevel,d],[-w,d-bevel],[-w,-d+bevel]];
-}
-function paintBrick(c,view,grade){
- const {cs,sn,project}=view,p=brickPaint[grade];
- const rings=[
-  {rim:brickRim(16.1,9.75,2.6),z:.25},
-  {rim:brickRim(17.25,10.8,2.95),z:1.4},
-  {rim:brickRim(17.25,10.8,2.95),z:10.35},
-  {rim:brickRim(16.2,9.68,2.6),z:11.7}
- ];
- const points=rings.map(({rim,z})=>rim.map(([x,y])=>project(x,y,z)));
- for(let i=0;i<8;i++){
-  const j=(i+1)%8,[x,y]=rings[1].rim[i],[nx,ny]=rings[1].rim[j];
-  const dx=nx-x,dy=ny-y,d=Math.hypot(dx,dy);
-  const normalX=(dy*cs+dx*sn)/d,normalY=(dy*sn-dx*cs)/d;
-  if(normalY<=0)continue;
-  for(let z=0;z<3;z++){
-   const lo=points[z],hi=points[z+1];
-   const tint=z===0?.58:z===1?.76-normalX*.21:1.12-normalX*.18;
-   brickFace(c,[lo[i],lo[j],hi[j],hi[i]],brickShade(p.side,tint));
-  }
-  const seamY=rings[1].z+.95;
-  if(grade){
-   brickFace(c,[project(x,y,seamY),project(nx,ny,seamY),project(nx,ny,seamY+1.05),project(x,y,seamY+1.05)],p.band);
-  }
+const mineSprites=[];
+function mineBody(c,evolved){
+ const radius=evolved?16.6:13.4,height=evolved?5.6:4.2,depth=radius*.54;
+ const side=c.createLinearGradient(-radius,0,radius,0);
+ side.addColorStop(0,'#343b2a');side.addColorStop(.34,'#5d6846');
+ side.addColorStop(.73,'#353c29');side.addColorStop(1,'#252b22');
+ ellipse(c,0,0,radius,depth,'#1d231b');
+ c.fillStyle=side;c.fillRect(-radius,-height,radius*2,height);
+ ellipse(c,0,-.7,radius,depth,side);
+ ellipse(c,0,-height,radius,depth,'#222922');
+ ellipse(c,0,-height-.45,radius-.6,depth-.35,evolved?'#8a7951':'#5e6a49');
+ const top=c.createLinearGradient(-9,-10,11,2);
+ top.addColorStop(0,evolved?'#859064':'#778258');top.addColorStop(.42,'#576142');top.addColorStop(1,'#303929');
+ ellipse(c,0,-height-.9,radius-1.6,depth-1,top);
+ const inset=radius*.68;
+ ellipse(c,0,-height-1.2,inset,inset*.54,'#273124');
+ ellipse(c,0,-height-1.52,inset-.55,inset*.54-.35,'#4a5338');
+ c.strokeStyle='#aeba7a8e';c.lineWidth=.55;c.beginPath();
+ c.ellipse(0,-height-.9,radius-1.82,depth-1.08,0,Math.PI*1.04,Math.PI*1.74);c.stroke();
+ for(let i=0;i<6;i++){
+  const angle=i*TAU/6+.25,dx=Math.cos(angle),dy=Math.sin(angle),r=radius*.8;
+  stroke(c,dx*(r-1),-height-.8+dy*(r-1)*.54,dx*(r+1),-height-.8+dy*(r+1)*.54,'#233023',.78);
  }
- const top=c.createLinearGradient(-14,-19,14,-4);
- top.addColorStop(0,p.top[0]);top.addColorStop(1,p.top[1]);brickFace(c,points[3],top);
- const pegs=[[-8,-4.55],[8,-4.55],[-8,4.55],[8,4.55]].map(([x,y])=>project(x,y,11.7)).sort((a,b)=>a[1]-b[1]);
- for(const [x,y] of pegs){
-  ellipse(c,x+.55,y+.65,4.25,2.55,'#25350d61');
-  const barrel=c.createLinearGradient(x-4,y,x+4,y);
-  barrel.addColorStop(0,p.stud[2]);barrel.addColorStop(.5,p.stud[2]);barrel.addColorStop(1,p.stud[0]);
-  ellipse(c,x,y+.1,4,2.27,barrel);c.fillStyle=barrel;c.fillRect(x-4,y-3.18,8,3.28);
-  ellipse(c,x,y-3.3,4,2.28,p.stud[0]);
-  ellipse(c,x-.13,y-3.56,3.67,2.01,p.stud[1]);
-  ellipse(c,x-.92,y-4.31,1.84,.44,'#f4f4c785');
- }
+ ellipse(c,0,-height-2,4.35,2.44,'#252d21');
+ ellipse(c,0,-height-2.38,3.25,1.85,'#69744f');
+ ellipse(c,0,-height-2.53,2.12,1.36,'#642b27');
 }
-function brick(c,angle,grade){
- const view=brickView(angle),key=view.index+grade*brickDirections;
- let canvas=brickFrames.get(key);
- if(!canvas&&root.document?.createElement){
-  const tile=root.document.createElement('canvas');tile.width=88;tile.height=76;
+function mine(c,x,y,evolved,bright=0,scale=1){
+ c.save();c.translate(x,y);c.scale(scale,scale);
+ const key=Number(evolved);
+ let sprite=mineSprites[key];
+ if(!sprite&&root.document?.createElement){
+  const tile=root.document.createElement('canvas');tile.width=160;tile.height=120;
   const ctx=tile.getContext('2d');
-  if(ctx){ctx.translate(44,50);ctx.scale(2,2);paintBrick(ctx,view,grade);brickFrames.set(key,tile);canvas=tile;}
+  if(ctx){ctx.translate(80,68);ctx.scale(3,3);mineBody(ctx,evolved);mineSprites[key]=sprite=tile;}
  }
- if(canvas)c.drawImage(canvas,-22,-25,44,38);else paintBrick(c,view,grade);
+ if(sprite)c.drawImage(sprite,-80/3,-68/3,160/3,40);else mineBody(c,evolved);
+ if(bright>0){
+  const ledY=evolved?-8.13:-6.73;
+  c.globalAlpha*=bright;
+  glow(c,0,ledY,evolved?7.6:6,'#ff634a','#ff402a76');
+  ellipse(c,0,ledY,2.05,1.25,'#ff5137');
+  ellipse(c,-.43,ledY-.31,.91,.55,'#fff3c3');
+ }
+ c.restore();
 }
 function miniature(c,x,y,angle,row,size=1,tilt=0){
  const index=((Math.round(angle/TAU*8)%8)+8)%8,cell=96;
  c.save();c.translate(x,y);c.rotate(tilt);c.scale(size,size);
- if(row<2)brick(c,angle,row);
- else if(atlas?.complete&&atlas.naturalWidth){
+ if(atlas?.complete&&atlas.naturalWidth){
   c.drawImage(atlas,index*cell,row*cell,cell,cell,-24,-33.6,48,48);
  }else{
   c.fillStyle='#c2c8a9';c.strokeStyle='#3e513c';c.lineWidth=1.5;c.beginPath();c.roundRect(-5,-15,10,15,3);c.fill();c.stroke();
@@ -101,31 +79,22 @@ function ring(c,x,y,r,color,width,flat=1){
 function grounded(c,game,visible=()=>true){
  for(const m of game.blockMines||[]){
   if(game.time<m.landAt||!visible(m))continue;
-  const age=game.time-m.landAt,ready=game.time>=m.armAt,linked=Number.isFinite(m.chainAt),arming=clamp(age/Math.max(.04,m.armAt-m.landAt));
-  const bounce=age<.18?Math.sin(age/.18*Math.PI)*3:0;
-  ellipse(c,m.x+1.5,m.y+3.4,17.4,6.9,'#26302162');
-  ellipse(c,m.x,m.y+2.1,13.5,4.8,'#1d2b2652');
-  const angle=m.angle||0;
-  miniature(c,m.x,m.y-bounce,angle,Number(!!m.evolved));
-  const view=brickView(angle),frontOnX=Math.abs(view.sn)>Math.abs(view.cs);
-  const [lx,ly]=view.project(frontOnX?Math.sign(view.sn)*17.35:0,frontOnX?0:Math.sign(view.cs)*10.85,5.3);
-  const x=m.x+lx,y=m.y+ly-bounce;
-  const phase=linked?Math.max(0,m.chainAt-game.time)%.24:(age+(m.index||0)*.14)%1.06;
-  const lit=phase<(linked?.13:.23),lamp=linked?'#ff8757':m.evolved?'#ffdc75':'#ffb95f';
-  ellipse(c,x,y,2.75,1.52,'#222c20');
-  if(ready&&lit){
-   glow(c,x,y,5,lamp,linked?'#ff843f88':'#ffad556f');
-   ellipse(c,x,y,1.9,1,lamp);
-   ellipse(c,x-.25,y-.21,.75,.39,'#fff4d0');
-  }else if(ready||arming>.3)ellipse(c,x,y,1.55,.78,'#8a6039');
+  const age=game.time-m.landAt,ready=game.time>=m.armAt,linked=Number.isFinite(m.chainAt);
+  const radius=m.evolved?16.6:13.4,phase=linked?Math.max(0,m.chainAt-game.time)%.18:age%1.16;
+  const blink=ready?(phase<(linked?.105:.16)?1:.12):.18+.56*Math.max(0,Math.sin(age*32));
+  ellipse(c,m.x+1.6,m.y+2.2,radius+1.8,radius*.42,'#25291c58');
+  ellipse(c,m.x,m.y+1.4,radius*.88,radius*.33,'#1d2b2646');
+  const squash=age<.1?.065*Math.sin(age/.1*Math.PI):0;
+  mine(c,m.x,m.y,m.evolved,blink,1+squash);
  }
 }
 function air(c,game,visible=()=>true){
  for(const m of game.blockMines||[]){
   if(game.time>=m.landAt||!visible(m))continue;
-  const p=clamp((game.time-m.startedAt)/Math.max(.01,m.landAt-m.startedAt)),lift=Math.sin(p*Math.PI)*(36+(m.index||0)*4)+(1-p)*22;
-  ellipse(c,m.x+1,m.y+2,6+4*p,2+2*p,'#26372643');
-  miniature(c,m.x,m.y-lift,(m.angle||0)+p*TAU,Number(!!m.evolved),1,Math.sin(p*TAU)*.35);
+  const progress=clamp((game.time-m.startedAt)/Math.max(.01,m.landAt-m.startedAt));
+  const lift=23*(1-progress*progress);
+  ellipse(c,m.x+1,m.y+2,7+6*progress,2+3*progress,'#26372643');
+  mine(c,m.x,m.y-lift,m.evolved,.2);
  }
  for(const g of game.luckyFlashes||[]){
   const p=clamp((game.time-g.startedAt)/Math.max(.01,g.landAt-g.startedAt)),x=g.fromX+(g.x-g.fromX)*p,y=g.fromY+(g.y-g.fromY)*p;
@@ -141,6 +110,17 @@ function chain(c,e,k,p){
  stroke(c,e.x,e.y-3,e.tx,e.ty-3,'#cbb66370',1.5);
  c.globalCompositeOperation='lighter';stroke(c,e.x+dx*back,e.y+dy*back-3,x,y-3,'#ffac4390',5);
  stroke(c,e.x+dx*back,e.y+dy*back-3,x,y-3,'#ffeaa1',1.6);glow(c,x,y-3,7,'#ffebb8','#e2ad5c80');
+}
+function plant(c,e,k,p){
+ const progress=clamp((p-.40)/.60);
+ if(!progress)return;
+ c.translate(e.x,e.y);
+ const size=e.evolved?22:17,reach=size+progress*12;
+ c.globalAlpha*=1-progress;
+ for(let i=0;i<6;i++){
+  const angle=(i+.24)*TAU/6,dx=Math.cos(angle),dy=Math.sin(angle),dust=2+progress*1.6;
+  ellipse(c,dx*reach,dy*reach*.48-progress*3,dust,dust*.47,i%2?'#a88454':'#d6ac71');
+ }
 }
 function blast(c,e,k,p){
  const radius=e.radius||65,r=radius*(1-(1-p)*(1-p)),seed=e.x*.014+e.y*.023;
@@ -166,9 +146,9 @@ function flash(c,e,k,p){
  ellipse(c,0,0,2+5*k,2+5*k,'#fffdeb');
 }
 function event(c,e){
- if(!['blockMineBlast','blockMineChain','luckyFlashBurst'].includes(e.kind))return false;
+ if(!['blockMinePlant','blockMineBlast','blockMineChain','luckyFlashBurst'].includes(e.kind))return false;
  const k=clamp(e.t/e.max),p=1-k;c.save();c.globalAlpha*=k;
- if(e.kind==='blockMineChain')chain(c,e,k,p);else if(e.kind==='blockMineBlast')blast(c,e,k,p);else flash(c,e,k,p);
+ if(e.kind==='blockMinePlant')plant(c,e,k,p);else if(e.kind==='blockMineChain')chain(c,e,k,p);else if(e.kind==='blockMineBlast')blast(c,e,k,p);else flash(c,e,k,p);
  c.restore();return true;
 }
 function enemyStatuses(c,game,visible=()=>true){
@@ -196,6 +176,6 @@ function reel(c){
  stroke(c,-2,-10,3,-10,'#586651',2);stroke(c,3,-10,6,-7,'#586651',1.7);c.restore();
  c.save();c.translate(23,7);for(let i=0;i<4;i++){c.rotate(Math.PI/2);stroke(c,1.9,0,5.5,0,'#795b25',1.8);stroke(c,2.2,0,5,0,'#f6cf69',.9);}ellipse(c,0,0,2.15,2.15,'#fff4c1');c.restore();
 }
-root.FrontBlockFlashView={grounded,air,event,enemyStatuses,reel};
+root.FrontBlockFlashView={mine,grounded,air,event,enemyStatuses,reel};
 })(typeof window==='undefined'?globalThis:window);
 

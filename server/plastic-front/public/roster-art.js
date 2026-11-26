@@ -86,14 +86,11 @@ function infantry(c,u,time,evolved,dice){
  const brim=project(1.4,0,44);ellipse(c,...brim,11.1,2.1,dice?'#4b6444':'#4a6644');
  const ridge=project(-2,-1,49);ellipse(c,ridge[0]-2.5,ridge[1]-1.6,4.5,.8,dice?'#acd6c7':'#bed1a0',-.16);
  const mark=project(6,3,47);ellipse(c,...mark,1.6,1.8,dice?'#f7e4b8':shell);
- const front=project(12,-3,28),rear=project(4,6,27);
+ const plantAge=time-u.minePlantedAt,planting=engineer&&plantAge>=0&&plantAge<.26;
+ const front=planting?project(6,-4,15):project(12,-3,28),rear=planting?project(4,5,15):project(4,6,27);
  for(const [side,hand] of [[-1,front],[1,rear]]){const shoulder=project(-1,side*8,31);rod(c,shoulder,hand,5.4,suit);ball(c,...hand,3.2,3,'#d0c393','#a7a16d','#56694c');}
  if(engineer){
-  const [x,y]=front,top=evolved?'#e8cf74':'#a8c782';
-  polygon(c,[[x-8,y-4],[x,y],[x,y+5],[x-8,y+1]],'#3e6141');
-  polygon(c,[[x,y],[x+8,y-4],[x+8,y+1],[x,y+5]],evolved?'#9c783a':'#62834f');
-  polygon(c,[[x-8,y-4],[x,y-8],[x+8,y-4],[x,y]],top);
-  for(const [dx,dy] of [[-3.5,-4],[0,-5.7],[0,-2.3],[3.5,-4]])ellipse(c,x+dx,y+dy-.6,1.55,.85,top);
+  if(!planting)root.FrontBlockFlashView?.mine(c,front[0]-2,front[1]+1,evolved,.55,.56);
  }else if(dice){
   const [x,y]=front;
   c.strokeStyle='#364736';c.lineWidth=1.4;c.beginPath();c.moveTo(pack[0],pack[1]+6);

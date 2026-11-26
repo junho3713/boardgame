@@ -112,7 +112,7 @@ const TYPES={swordEmpress:{name:'사검의 군주',hp:140800,damage:0,rate:100,r
 const ENEMY_REPLACED_TYPES={rifle:TYPES.rifle,guntruck:TYPES.guntruck,rocket:TYPES.rocket};
 TYPES.rifle={...TYPES.rifle,name:'산탄총병',enemyName:TYPES.rifle.name,icon:'✦',hp:160,damage:22,rate:1,range:210,cost:60,role:'근거리 산탄 피해 최대 +65% · 5갈래 · 4발 후 재장전'};
 TYPES.guntruck={...TYPES.guntruck,name:'통신병',enemyName:TYPES.guntruck.name,icon:'⚄',hp:200,damage:38,rate:2.4,range:620,speed:133,r:13,role:'주사위 한 쌍 · 1–2 더블 기관포탑 / 3–4 소이탄 / 5–6 미사일 · 진화 6-6 전술 핵 · 2성 화력 ×3.4·범위 ×1.15 / 3성 화력 ×10.5·범위 ×1.30'};
-TYPES.rocket={...TYPES.rocket,name:'지뢰 설치병',enemyName:TYPES.rocket.name,role:'공격마다 블록 지뢰 1개 투척 · 지상 적이 밟으면 강한 광역 폭발'};
+TYPES.rocket={...TYPES.rocket,name:'지뢰 설치병',enemyName:TYPES.rocket.name,rate:5,role:'발밑에 원형 지뢰 1개 매설 · 기본 5초 간격 · 지상 적이 밟으면 반경 88 폭발'};
 TYPES.drone={name:'미니 RC 드론',icon:'✜',hp:130,damage:9,rate:.20,range:330,speed:175,r:12,cost:125,flying:true,flightHeight:54,role:'부대 상공을 선회하며 가장 가까운 적에게 자동 연사'};
 const ROSTER=['rifle','machinegun','sniper','guntruck','rocket','mortar','tank','medic','lucky','drone'];
 const MELEE=new Set(['bladeGuard','bayonetCaptain','bayonet','honeybee','hornet','ant','soldierAnt','beetle','bruteBeetle','stagBeetle','rhinoBeetle']);
@@ -145,10 +145,10 @@ const PERMANENT={
 const ABILITIES={...Object.fromEntries(Object.entries(PERMANENT).filter(([k])=>k!=='gold'&&!k.startsWith('turret')).map(([k,b])=>[k,{...b,max:5,gain:{damage:10,speed:6,haste:8,critChance:4,critDamage:15,capacity:2,defense:5}[k]}])),magnet:{name:'자석',icon:'🧲',gain:24,unit:'',max:5,detail:'대장이 경험치 결정을 끌어오는 범위 증가'},health:{name:'체력',icon:'♥',gain:10,unit:'%',max:5,detail:'대장과 모든 분대원의 최대 체력 · 단계당 +10%'},xpGain:{name:'경험치 획득량',icon:'✧',gain:5,unit:'%',max:5,detail:'작전 중 획득하는 경험치 · 단계당 +5%'}};
 const EVOLUTIONS={
  tank:{name:'공성 전차',ability:'damage',detail:'공격력 +35% · 폭발 범위 +35 · 사거리 +35 · 최대 체력 +20%'},
- guntruck:{name:'전략 폭격 통신관',ability:'haste',detail:'1·2 더블 기관포탑 · 3·4 더블 강화 소이탄 · 5-5 미사일 4발 · 6-6 즉시 전술 핵 발사'},
+ guntruck:{name:'전략 폭격 통신관',ability:'haste',detail:'1·2 더블 기관포탑 · 3·4 더블 강화 소이탄 · 5-5 미사일 4발 · 6-6 전술 핵 (공용 12초, 대기 중 강화 미사일 6발)'},
  rifle:{name:'드래곤 브레스 산탄병',ability:'health',detail:'화염 산탄 · 지속 화상 · 마지막 4번째 탄의 폭발 범위와 넉백 강화'},
  sniper:{name:'정예 저격병',ability:'critChance',detail:'치명타 확률 +25%p · 치명타 피해 +50%p · 사거리 +65'},
- rocket:{name:'연쇄 폭파병',ability:'critDamage',detail:'강화 블록 지뢰 · 더 큰 폭발 · 주변 지뢰 도미노 연쇄 폭파'},
+ rocket:{name:'연쇄 폭파병',ability:'critDamage',detail:'대형 고폭 지뢰 · 폭발 반경 125 · 148 안의 같은 분대 지뢰와 연쇄 폭발'},
  machinegun:{name:'보급 기관총병',ability:'magnet',detail:'사격 속도 +33% · 공격력 +20% · 최대 체력 +20%'},
  mortar:{name:'중박격포 분대',ability:'capacity',detail:'공격력 +35% · 폭발 범위 +30 · 사거리 +70 · 낙탄 시간 2초 유지'},
  lucky:{name:'슈퍼 럭키 레토나',ability:'speed',detail:'꽝 40→30% · 스프레이 10→17% · 777 미사일 2→5% · 끈끈이 폭탄/혼란 섬광탄 확률 유지 · 섬광에 맞은 적은 서로 공격'},
@@ -617,15 +617,17 @@ class FrontGame{
  attackRoll(u,random=()=>this.random()){const s=this.stats(u),critical=s.critChance>0&&random()<s.critChance;return {damage:s.damage*(critical?s.critDamage:1),critical};}
  canTarget(attacker,target){
   if(target===this.bases[0]&&this.hasInvulnerableHQ())return false;
+  if(target.radioTurret&&(this.time<target.landAt||this.time>=target.until))return false;
   if(this.bossInvulnerable(target))return false;
   if(target.hp<=0||attacker.team===target.team||target.fixedGuard&&this.mission.stage<(target.activeStage||2)||target.roadCaptain&&this.mission.stage<target.roadStage)return false;
   if(attacker.roadCaptain&&dist(target,{x:attacker.homeX,y:attacker.homeY})>750)return false;
   if(this.mode==='pve'&&attacker.team!==0&&target.team!==0)return false;
   return true;
  }
- combatCandidates(){return [...this.units,...(this.mode==='pve'&&this.mission.stage>=2?[...this.activeDefenses(),...this.structures.filter(p=>p.hp>0)]:[]),...(this.mode!=='crisis'&&(this.mode!=='pve'||this.mission.stage>=3)?[this.bases[1]]:[])];}
+ radioTurretTargets(){return (this.radioTurrets||[]).filter(t=>t.hp>0&&this.time>=t.landAt&&this.time<t.until);}
+ combatCandidates(){return [...this.units,...this.radioTurretTargets(),...(this.mode==='pve'&&this.mission.stage>=2?[...this.activeDefenses(),...this.structures.filter(p=>p.hp>0)]:[]),...(this.mode!=='crisis'&&(this.mode!=='pve'||this.mission.stage>=3)?[this.bases[1]]:[])];}
  attackingEnemies(){
-  const threats=new Set(),allies=[...this.alive(0),...this.buildings.filter(b=>b.hp>0),this.bases[0]].filter(u=>u.hp>0);
+  const threats=new Set(),allies=[...this.alive(0),...this.radioTurretTargets(),...this.buildings.filter(b=>b.hp>0),this.bases[0]].filter(u=>u.hp>0);
   for(const p of this.shots)if(p.team!==0&&p.target?.team===0&&p.target.hp>0&&p.life>0)threats.add(p.source);
   for(const p of [...this.mortarShells,...this.barrages])if(p.source&&p.source.team!==0&&p.landAt>this.time)threats.add(p.source);
   for(const e of [...this.units,...this.activeDefenses(),...this.structures.filter(p=>this.mission.stage>=(p.activeStage||2)),this.bases[1]]){
@@ -952,7 +954,7 @@ class FrontGame{
   u.navVX=(u.x-oldX)/dt;u.navVY=(u.y-oldY)/dt;
  }
 
- isStationary(u){return !!TYPES[u.type]?.stationary&&!u.mobileMage;}
+ isStationary(u){return !!u.radioTurret||!!TYPES[u.type]?.stationary&&!u.mobileMage;}
  move(u,dx,dy,dt,speed){
   if(this.time<(u.rootedUntil||0)||this.time<(u.toyStunUntil||0)||this.time<(u.toyKnockback?.recoverUntil||0)||this.isStationary(u))return;
   if(this.time<(u.slowUntil||0))speed*=1-clamp(u.slowAmount||.3,0,.9);
@@ -978,6 +980,7 @@ class FrontGame{
  }
  damage(target,amount,source){
   if(target===this.bases[0]&&this.hasInvulnerableHQ())return;
+  if(target.radioTurret&&(this.time<target.landAt||this.time>=target.until))return;
   if(target.roadCaptain&&this.mission.stage<target.roadStage)return;
   if(this.mode==='crisis'&&target.base&&target.team===1)return;
   if(this.mode==='pve'&&target.team===1){
@@ -1003,6 +1006,7 @@ class FrontGame{
   }
   target.flash=.13;
   if(dealt>0&&this.time>=(target.nextHitEffectAt||0)){target.nextHitEffectAt=this.time+.065;this.effects.push({kind:'hit',x:target.x,y:target.y-(target.visualFlightHeight??TYPES[target.type]?.flightHeight??0),at:this.time,angle,power,damage:dealt,lift:target.team===2?8:24,t:.16,max:.16,team:target.team,armor:ARMORED.has(combatKind(target))||['commando','titan'].includes(target.type)});}
+  if(target.radioTurret&&target.hp<=0){this.retireRadioTurret(target);return;}
   if(target.hp<=0&&this.isSupportEntity?.(target)){this.disableSupportEntity(target);return;}
   if(target.hp<=0){
    if(target.type==='bubbleOctopus')this.releaseOctopusShields(target);
@@ -1061,7 +1065,8 @@ class FrontGame{
   const roomGuard=this.isRoomCampaign()&&u.roomGarrison,hqDefense=roomGuard&&u.guardianId?.startsWith('room-garrison-final-')&&this.time<(this.roomHQAlarm?.until||0);
   const radius=roomGuard?ROOM_CAMPAIGN.config.fortifications.engage:u.assault?650:265,protect=u.team!==0?this.buildings.filter(b=>b.hp>0&&this.targetDistance(u,b)<radius):[];
   const troops=hqDefense?this.alive(0).filter(a=>dist(a,this.bases[1])<1250):u.assault?this.alive(0):this.units.filter(a=>dist(u,a)<radius);
-  const candidates=[...troops,...protect,...((TYPES[u.type]?.stab||this.isDesktopDefense())&&u.team!==0&&dist(u,this.bases[0])<radius?[this.bases[0]]:[])].filter(a=>this.canTarget(u,a));
+  const nearbyTurrets=u.team===0?[]:this.radioTurretTargets().filter(t=>dist(u,t)<=160);
+  const candidates=[...troops,...protect,...nearbyTurrets,...((TYPES[u.type]?.stab||this.isDesktopDefense())&&u.team!==0&&dist(u,this.bases[0])<radius?[this.bases[0]]:[])].filter(a=>this.canTarget(u,a));
   // At the central outpost, a defending squad can intercept enemies before they commit to the HQ.
   const intercept=this.starDefense()&&this.isDesktopDefense()&&u.team!==0?candidates.filter(a=>!a.base&&!a.structure&&a.team===0&&dist(u,a)<400):[];
   const target=this.supportDecoyTarget?.(u)||(intercept.length?intercept:candidates).sort((a,b)=>this.targetDistance(u,a)-this.targetDistance(u,b))[0];
@@ -1082,7 +1087,7 @@ class FrontGame{
   const hit=(u,falloff=1)=>this.damage(u,p.damage*multiplier(type,combatKind(u))*falloff,p.source);
   hit(p.target);if(p.critical)this.effects.push({kind:'critical',x:center.x,y:center.y-25,t:.7,max:.7,team:p.team});
   if(p.splash){
-   for(const u of [...this.units,...this.structures,...this.defenses,...this.buildings,...this.bases]){
+   for(const u of [...this.units,...this.radioTurretTargets(),...this.structures,...this.defenses,...this.buildings,...this.bases]){
     if(u===p.target||u.hp<=0||u.team===p.team)continue;
     const d=dist(center,u);if(d<p.splash)hit(u,.65*(1-d/p.splash));
    }
@@ -1180,7 +1185,7 @@ class FrontGame{
    const blast=this.bombBlastQueue[i],radius=INSECTS.bomb.radius;
    this.effects.push({kind:'explosion',x:blast.x,y:blast.y,radius,t:.7,max:.7,team:2,visualKind:'bombBug'});
    this.notify('explosion',{x:blast.x,y:blast.y,kind:'rocket',team:2});
-   for(const target of [...this.units]){if(target===blast.unit||target.hp<=0||blast.source.flashRedirect&&target.team===0||dist(target,blast)>radius)continue;const ant=target.team!==0&&target.type==='ant'&&!target.boss&&!target.roadCaptain&&!target.finalBoss;const scale=target.team===0&&blast.unit.openingBombBug?ROOM_CAMPAIGN.config.insects.opening.allyDamageScale:ant?2:1;this.damage(target,blast.damage*scale,target.team===0?{...blast.source,team:2,coopOwner:undefined}:blast.source);}
+   for(const target of [...this.units,...this.radioTurretTargets()]){if(target===blast.unit||target.hp<=0||blast.source.flashRedirect&&target.team===0||dist(target,blast)>radius)continue;const ant=target.team!==0&&target.type==='ant'&&!target.boss&&!target.roadCaptain&&!target.finalBoss;const scale=target.team===0&&blast.unit.openingBombBug?ROOM_CAMPAIGN.config.insects.opening.allyDamageScale:ant?2:1;this.damage(target,blast.damage*scale,target.team===0?{...blast.source,team:2,coopOwner:undefined}:blast.source);}
   }}finally{this.bombBlastQueue=[];this.processingBombBlasts=false;}
  }
  updateAcidBeetle(u,dt){
@@ -1326,7 +1331,7 @@ class FrontGame{
   for(const p of landed){
    const linkScale=this.mortarFireZoneScale?.(p)??1;
    p.radius*=linkScale;
-   const targets=[...this.units,...this.structures,...this.defenses,...this.buildings,...this.bases].filter(u=>u.hp>0&&u.team!==p.team&&(this.mode!=='pve'||p.team===0||u.team===0)&&dist(u,p)<=p.radius);
+   const targets=[...this.units,...this.radioTurretTargets(),...this.structures,...this.defenses,...this.buildings,...this.bases].filter(u=>u.hp>0&&u.team!==p.team&&(this.mode!=='pve'||p.team===0||u.team===0)&&dist(u,p)<=p.radius);
    for(const u of targets){
     const d=dist(u,p);
     const kind=combatKind(u);
@@ -1348,7 +1353,7 @@ class FrontGame{
    if(p.fencePost)continue;
    if(p.defenseKind==='laserTower'){this.updateLaser(p,dt);continue;}
    p.cooldown-=dt;if(p.cooldown>0)continue;
-   const spec=this.defenseStats(p),missile=p.defenseKind==='missileTower',candidates=missile?[...this.alive(0),...this.buildings.filter(b=>b.hp>0&&b.buildUntil<=this.time)]:this.alive(0);
+   const spec=this.defenseStats(p),missile=p.defenseKind==='missileTower',candidates=[...this.alive(0),...this.radioTurretTargets(),...(missile?this.buildings.filter(b=>b.hp>0&&b.buildUntil<=this.time):[])];
    const target=candidates.filter(u=>this.canTarget(p,u)&&dist(u,p)<spec.range).sort((a,b)=>dist(a,p)-dist(b,p))[0];if(!target)continue;
    p.cooldown=spec.rate;p.face=Math.atan2(target.y-p.y,target.x-p.x);
    if(missile)this.launchMissile(p,target,{damage:spec.damage});
@@ -1909,7 +1914,7 @@ class FrontGame{
    u.face=u.moveFace=u.aimFace=a.angle;
    if(a.phase==='windup'){if(this.time+1e-8<a.chargeAt)return;a.phase='charge';this.notify('fire',u);}
    let remaining=Math.min(a.remaining,rules.speed*dt*(this.time<(u.luckySlowUntil||0)?1-LUCKY.groundSlow:1));
-   const victims=[...this.units,...this.buildings.filter(b=>b.hp>0),this.bases[0]],r=this.collisionRadius(u);
+   const victims=[...this.units,...this.radioTurretTargets(),...this.buildings.filter(b=>b.hp>0),this.bases[0]],r=this.collisionRadius(u);
    while(remaining>1e-6&&this.phase==='playing'){
     const step=Math.min(8,remaining),from={x:u.x,y:u.y},next={x:u.x+Math.cos(a.angle)*step,y:u.y+Math.sin(a.angle)*step};
     const blocked=next.x<45||next.x>this.bounds().width-45||next.y<70||next.y>this.bounds().height-70||!this.lineClear(from,next,r);
@@ -1969,6 +1974,7 @@ class FrontGame{
  update(dt){return BATTLE_SYSTEMS.update(this,dt);}
  updateBattleUnits(dt,enemy){
   const combatThreats=this.attackingEnemies(),combatCandidates=this.combatCandidates(),commandEngaged=new Map(),commandPoints=new Map();
+  const hostileTargets=[...this.units,...this.radioTurretTargets(),...this.buildings.filter(b=>b.hp>0)];
   for(const u of this.units){
    this.coopSelectOwner?.(u.team===0?u.coopOwner:0);
    const player=this.commander(0);
@@ -2010,10 +2016,10 @@ class FrontGame{
      if(!commandEngaged.has(player))commandEngaged.set(player,this.commandEnemyInView(player,combatCandidates));
      if(u.type==='rocket'||commandEngaged.get(player))target=this.commandFirePoint(u,s.range,manualAngle);
     }else if(u.team===0&&u.type==='drone')target=this.droneTarget(u,s.range);
-    else if(u.team===0)target=this.selectCombatTarget(u,combatCandidates,combatThreats,s);else for(const a of [...this.units,...this.buildings.filter(b=>b.hp>0)]){if(!this.canTarget(u,a))continue;const d=this.targetDistance(u,a),score=d/Math.max(.25,multiplier(u.type,combatKind(a)));if(d<s.range&&d>=(s.minRange||0)&&score<nearest){target=a;nearest=score;}}
+    else if(u.team===0)target=this.selectCombatTarget(u,combatCandidates,combatThreats,s);else for(const a of hostileTargets){if(!this.canTarget(u,a))continue;const d=this.targetDistance(u,a),score=d/Math.max(.25,multiplier(u.type,combatKind(a)))+(a.radioTurret?18:0);if(d<s.range&&d>=(s.minRange||0)&&score<nearest){target=a;nearest=score;}}
     // A tank can finish tracking a target that just crossed the edge of its firing range.
     if(u.team!==0&&u.type==='tank'){
-     const locked=[...this.units,...this.buildings].find(a=>a.id===u.tankAimTargetId);
+     const locked=hostileTargets.find(a=>a.id===u.tankAimTargetId);
      if(locked&&this.canTarget(u,locked)){
       const distance=this.targetDistance(u,locked);
       if(distance<=s.range+ENEMY_TANK_AIM_MARGIN&&distance>=(s.minRange||0)){target=locked;tankLocked=true;}

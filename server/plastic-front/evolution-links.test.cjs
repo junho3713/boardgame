@@ -7,9 +7,10 @@ function enemy(g,type='ant',x=1200){const t=g.addUnit(2,type,x,6000);t.hp=t.maxH
 const near=(x,y)=>a.ok(Math.abs(x-y)<1e-6,x+' != '+y);
 function contactMine(g,u,target){
  const mine=g.fireUnitProjectiles(u,target,{damage:100},g.stats(u))[0];g.time=mine.armAt;
+ const position={x:target.x,y:target.y};Object.assign(target,{x:mine.x,y:mine.y});
  const prior=g.impact;let payload;
  g.impact=function(b){if(b.mine===mine)payload=b;return prior.call(this,b);};
- try{for(let i=0;i<25&&!payload;i++){g.updateBlockMines();if(!payload)g.time+=.05;}}finally{g.impact=prior;}
+ try{g.updateBlockMines();}finally{g.impact=prior;Object.assign(target,position);}
  a.ok(payload);return {mine,payload};
 }
 

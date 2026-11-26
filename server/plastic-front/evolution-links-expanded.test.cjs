@@ -10,7 +10,7 @@ const near=(x,y)=>a.ok(Math.abs(x-y)<1e-6,x+' != '+y);
 function mineImpact(g,u,t){
  const m=g.fireUnitProjectiles(u,t,{damage:100},g.stats(u))[0];
  const b={source:u,target:t,mine:{...m,x:t.x,y:t.y},team:0,kind:'blockMineImpact',damage:m.damage,splash:m.radius};
- g.impact(b);return b;
+ g.impact(b);g.blockMines=g.blockMines.filter(mine=>mine!==m);return b;
 }
 
 test('seventeen distinct links include the three radio partnerships',()=>{
@@ -86,11 +86,18 @@ test('a Lucky jackpot calls one nuke from the strongest evolved radio and forces
  a.equal(g.effects.findLast(e=>e.kind==='radioRoll').strike,'turret');
  g.time=5;g.diceFace=()=>6;
  g.fireUnitProjectiles(d,t,{damage:100});
- a.equal(g.radioStrikes.at(-1).strike,'nuke');
+ a.equal(g.radioStrikes.at(-1).strike,'missile');
+ a.equal(g.radioNextNukeAt,11);
  g.castLucky(l,'bossKiller');
  a.equal(g.shots.at(-1).kind,'bossKiller');
  a.equal(g.linkState().radioHotlineUntil,10);
- a.equal(g.radioStrikes.filter(s=>s.strike==='nuke').length,3);
+ a.equal(g.radioStrikes.filter(s=>s.strike==='nuke').length,1);
+ a.equal(g.radioStrikes.filter(s=>s.strike==='missile').length,18);
+ a.equal(g.radioNextNukeAt,10);
+ g.time=10;
+ g.fireUnitProjectiles(d,t,{damage:100});
+ a.equal(g.radioStrikes.at(-1).strike,'nuke');
+ a.equal(g.radioNextNukeAt,22);
 });
 test('an unevolved signalman can use the hotline missile rolls without its opening nuke',()=>{
  const g=scene(),l=actor(g,'lucky'),radio=g.addUnit(0,'guntruck',1000,6000),target=enemy(g);

@@ -31,7 +31,7 @@
 }
 .pixel-promotion .pixel-emblem {
   display:inline-block;width:80px;height:80px;flex:none;
-  background-image:url('assets/pixel-room/promotion-v1.png');background-size:3300% 100%;
+  background-image:url('assets/pixel-room/promotion-v1.png?v=round-mine1');background-size:3300% 100%;
   image-rendering:pixelated;vertical-align:middle;
 }
 .pixel-promotion .card-num {color:#425b44;background:#dce4c8;border:0}

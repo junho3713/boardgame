@@ -52,7 +52,7 @@ test('rolling dice only show pips for the settled outcome, including misses that
   }
  }
 });
-test('each rank displays a single pair and the dice still pop on success',()=>{
+test('ordinary results at each rank display a single pair and the dice still pop on success',()=>{
  const r=renderer();r.game.reducedMotion=false;
  for(const rank of [1,2,3]){
   const e={rank,rolls:[{dice:[4,4],success:true,strike:'missile'}]};
@@ -71,6 +71,13 @@ test('nuclear and hotline sixes have distinct labels over the same two dice',()=
   assert.deepEqual(r.labels,[label]);
   assert.ok(r.scales.every(scale=>scale<=1.09));
  }
+});
+test('a triple jackpot displays all six settled dice and the nuclear label',()=>{
+ const r=renderer();
+ const e={rank:2,jackpot:true,rolls:[[2,2],[4,4],[5,5]].map(dice=>({dice,success:true,strike:'nuke'}))};
+ assert.deepEqual(r.dice(e,.1),[0,0,0,0,0,0]);
+ assert.deepEqual(r.dice(e,.24),[2,2,4,4,5,5]);
+ assert.deepEqual(r.labels,['트리플 잭팟 · 전술 핵']);
 });
 const flames=layers=>layers.filter(({gradient})=>gradient.stops[0][1]==='#FFF3B0');
 test('the fire zone draws a soft floor and fourteen flames, then fades and settles in the final second',()=>{

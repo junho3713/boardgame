@@ -2,11 +2,12 @@
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const {FrontGame}=require('./public/engine.js');
+const {CoopGame}=require('./public/coop-engine.js');
 require('./public/two-star.js');
 const {pack,unpack}=require('./public/autoplay.js');
 
-function field(){
- const g=new FrontGame({},undefined,{map:'livingroom-star'});
+function field(coop=false){
+ const g=coop?new CoopGame():new FrontGame({},undefined,{map:'livingroom-star'});
  g.start();g.mission.stage=3;
  g.units=g.units.filter(u=>u.team===0&&u.type==='leader');
  g.obstacles=[];g.structures=[];g.defenses=[];g.buildings=[];g.effects=[];
@@ -18,8 +19,9 @@ function field(){
  return {g,radio,enemy};
 }
 function fire(g,radio,target,faces,damage=100){
- let calls=0;
- g.random=()=>calls<faces.length?(faces[calls++]-.5)/6:.62;
+ let calls=0,auxiliary=0;
+ g.diceFace=()=>calls<faces.length?faces[calls++]:2+auxiliary++%2;
+ g.random=()=>.62;
  g.fireUnitProjectiles(radio,target,{damage,critical:false});
  assert.equal(calls,faces.length);
  return g.effects.findLast(e=>e.kind==='radioRoll');
@@ -49,7 +51,7 @@ test('normal and evolved one-star signals preserve their six separate outcomes',
  }
 });
 
-test('all ranks have one pair and a forced double on the sixth attempt',()=>{
+test('all ranks force a single primary double on the sixth attempt',()=>{
  for(const rank of [1,2,3]){
   const {g,radio,enemy}=field();radio.star=rank;
   for(let n=0;n<5;n++)assert.equal(fire(g,radio,enemy,[1,2]).strike,null);
@@ -112,10 +114,11 @@ test('real fusion and the Destiny Star scale damage once and scale every blast r
   close(stats.rate,base.rate*(rank===3?.65:1));
   const turretRoll=fire(g,radio,enemy,[1,1],stats.damage),turret=g.radioTurrets.at(-1);
   assert.equal(turretRoll.strike,'turret');assert.equal(turret.rank,rank);
-  close(turret.damage,base.damage*damageScale*.24);
+  close(turret.damage,base.damage*damageScale*.22);
   close(turret.range,285*radiusScale);close(turret.splash,18*radiusScale);close(turret.scale,radiusScale);
   for(const [face,strike,count,radius,delay] of [[3,'incendiary',1,96,.65],[5,'missile',4,88,1.16],[6,'nuke',1,225,2.4]]){
    g.radioStrikes=[];
+   g.radioNextNukeAt=0;
    const roll=fire(g,radio,enemy,[face,face],stats.damage);
    assert.equal(roll.rank,rank);assert.equal(roll.strike,strike);
    assert.deepEqual(roll.rolls.map(pair=>pair.dice),[[face,face]]);
@@ -146,38 +149,175 @@ test('airdrop guns are independent of units, fire at 6.5 rounds per second and e
  fire(g,radio,enemy,[2,2]);
  const [turret]=g.radioTurrets;
  assert.deepEqual(g.units,units);assert.deepEqual(g.solidObstacles(),solids);
+ assert.equal(turret.hp,180);
+ assert.equal(turret.mountRank,1);
  close(turret.until-turret.landAt,6.5);
  g.time=turret.landAt-.01;g.updateEvolutionCombat();assert.equal(enemy.hp,enemy.maxHp);
  for(let i=0;i<650;i++){g.time=turret.landAt+i/100;g.updateEvolutionCombat();}
  const shots=g.effects.filter(e=>e.kind==='radioTurretShot');
  assert.equal(shots.length,43);
- assert.ok(shots.every(s=>s.tx===enemy.x&&s.ty===enemy.y&&!s.boosted));
- close(enemy.maxHp-enemy.hp,43*24*g.defenseFactor(enemy,radio));
+ assert.ok(shots.every(s=>s.tx===enemy.x&&s.ty===enemy.y&&!s.pierced));
+ close(enemy.maxHp-enemy.hp,43*18*g.defenseFactor(enemy,radio));
  g.time=turret.until;g.updateEvolutionCombat();assert.deepEqual(g.radioTurrets,[]);
  assert.equal(g.effects.filter(e=>e.kind==='radioTurretEnd').length,1);
 });
 
-test('a fifth airdrop refreshes the shortest-lived gun, overclocks for three seconds and survives restore',()=>{
- const {g,radio,enemy}=field(),partner=g.addUnit(0,'guntruck',1000,5900);
- for(let i=0;i<4;i++){g.time=i*.25;fire(g,i%2?partner:radio,enemy,[1,1]);}
+test('the fifth cooperative drop replaces and detonates the oldest gun at the global four-gun limit',()=>{
+ const {g,radio,enemy}=field(true);
+ const partner=g.withOwner(1,()=>g.addUnit(0,'guntruck',1000,5900));
+ g.evolved.guntruck=true;
+ for(let i=0;i<4;i++){
+  g.time=i*.25;
+  g.withOwner(i%2,()=>fire(g,i%2?partner:radio,enemy,[1,1]));
+ }
  const [first,second]=g.radioTurrets,oldSecond=second.until;
  g.time=2;g.updateEvolutionCombat();
- fire(g,partner,enemy,[2,2]);
- assert.equal(g.radioTurrets.length,4);close(first.until,8.5);close(first.overclockUntil,5);
- close(second.until,oldSecond);assert.equal(second.overclockUntil,0);
- g.time=first.nextShot;g.updateEvolutionCombat();
- const next=first.nextShot;close(next-g.time,1/(6.5*1.6));
- const copy=unpack(new FrontGame(),JSON.parse(JSON.stringify(pack(g))));
- assert.equal(copy.radioTurrets[0].source,copy.units.find(u=>u.id===radio.id));
- close(copy.radioTurrets[0].nextShot,next);close(copy.radioTurrets[0].overclockUntil,5);
+ const hp=enemy.hp;
+ g.withOwner(1,()=>fire(g,partner,enemy,[2,2]));
+ assert.equal(g.radioTurrets.length,4);assert.equal(first.hp,0);assert.ok(!g.radioTurrets.includes(first));
+ assert.ok(enemy.hp<hp);assert.equal(g.effects.filter(e=>e.kind==='radioTurretEnd'&&e.radius>0).length,1);
+ assert.equal(g.radioTurrets[0],second);close(second.until,oldSecond);
+ assert.equal(g.radioTurrets.at(-1).source,partner);
 });
 
-test('evolved sixes always cause damage, but only one nuke per 3.5 seconds can cause screen whiteout',()=>{
+test('a drop reuses a same-tick destroyed or overdue slot without removing a live gun',()=>{
+ for(const end of ['damage','expiry']){
+  const {g,radio,enemy}=field();
+  for(let i=0;i<4;i++){
+   g.time=i*.25;fire(g,radio,enemy,[1,1]);
+  }
+  const prior=[...g.radioTurrets];
+  const stale=end==='damage'?prior.at(-1):prior[0];
+  if(end==='damage'){
+   g.time=stale.landAt;g.damage(stale,1000,enemy);
+  }else g.time=stale.until;
+  assert.equal(g.radioTurrets.length,4);
+  fire(g,radio,enemy,[2,2]);
+  assert.equal(g.radioTurrets.length,4);
+  assert.deepEqual(g.radioTurrets.slice(0,3),prior.filter(t=>t!==stale));
+  assert.equal(g.effects.filter(e=>e.kind==='radioTurretEnd').length,1);
+  assert.ok(g.radioTurrets.every(t=>t.hp>0&&t.until>g.time));
+ }
+});
+
+test('enemy AI attacks a landed gun and gun destruction never counts as a troop loss',()=>{
+ const {g,radio,enemy}=field();
+ fire(g,radio,enemy,[1,1]);
+ const [turret]=g.radioTurrets;
+ assert.equal(g.canTarget(enemy,turret),false);
+ assert.ok(!g.combatCandidates().includes(turret));
+ g.time=turret.landAt;
+ Object.assign(enemy,{x:turret.x+12,y:turret.y,cooldown:0});
+ assert.ok(g.combatCandidates().includes(turret));
+ const loss=g.losses[0];
+ g.updateBattleUnits(.05,g.commander(1));
+ assert.ok(turret.hp<180);
+ g.damage(turret,1000,enemy);
+ g.updateEvolutionCombat();
+ assert.deepEqual(g.radioTurrets,[]);
+ assert.equal(g.losses[0],loss);
+ assert.equal(g.effects.filter(e=>e.kind==='radioTurretEnd'&&!e.radius).length,1);
+});
+
+test('the evolved twin gun pierces along one line, persists HP and allied projectile identity, then blasts on death or expiry',()=>{
+ for(const end of ['damage','expiry']){
+  const {g,radio,enemy}=field();
+  g.evolved.guntruck=true;
+  fire(g,radio,enemy,[2,2]);
+  const [turret]=g.radioTurrets;
+  assert.equal(turret.hp,320);assert.equal(turret.mountRank,2);
+  const far=g.addUnit(2,'ant',turret.x+120,turret.y);
+  const side=g.addUnit(2,'ant',turret.x+125,turret.y+35);
+  Object.assign(enemy,{x:turret.x+57,y:turret.y});
+  g.time=turret.landAt;g.updateEvolutionCombat();
+  close(enemy.maxHp-enemy.hp,22*g.defenseFactor(enemy,radio));
+  close(far.maxHp-far.hp,22*.55*g.defenseFactor(far,radio));
+  assert.equal(side.hp,side.maxHp);
+  g.damage(turret,40,enemy);
+  g.shots.push({target:turret,source:enemy,team:2});
+  const copy=unpack(new FrontGame(),JSON.parse(JSON.stringify(pack(g))));
+  copy.lineClear=()=>true;
+  const restored=copy.radioTurrets[0],restoredEnemy=copy.units.find(u=>u.id===enemy.id);
+  assert.equal(copy.shots[0].target,restored);
+  assert.equal(restored.source,copy.units.find(u=>u.id===radio.id));
+  assert.equal(restored.hp,280);
+  const hp=restoredEnemy.hp;
+  if(end==='damage')copy.damage(restored,1000,restoredEnemy);
+  else copy.time=restored.until;
+  copy.updateEvolutionCombat();
+  assert.deepEqual(copy.radioTurrets,[]);
+  assert.equal(copy.effects.filter(e=>e.kind==='radioTurretEnd'&&e.radius===88).length,1);
+  close(hp-restoredEnemy.hp,135*(1-.4*57/88)*copy.defenseFactor(restoredEnemy,restored.source));
+ }
+});
+
+test('evolved sixes share the twelve-second launch cooldown and the fallback shaves off one second',()=>{
  const {g,radio,enemy}=field(),partner=g.addUnit(0,'guntruck',940,5900);
  g.evolved.guntruck=true;
- for(const [time,caller] of [[0,radio],[.2,partner],[3.5,radio]]){
+ assert.equal(fire(g,radio,enemy,[6,6]).strike,'nuke');
+ assert.equal(g.radioNextNukeAt,12);
+ g.time=3;
+ const aim=g.commandFirePoint(g.commander(0),550,Math.PI);
+ const fallback=fire(g,partner,aim,[6,6]);
+ assert.equal(fallback.strike,'missile');assert.equal(fallback.rolls[0].missileCount,6);
+ assert.equal(g.radioNextNukeAt,11);
+ const missiles=g.radioStrikes.filter(s=>s.strike==='missile');
+ assert.equal(missiles.length,6);assert.ok(missiles.every(s=>s.source===partner&&!s.guidance&&s.damage===100));
+ assert.equal(fallback.tx,aim.x);
+
+ const state=pack(g),saved=unpack(new FrontGame(),state);
+ assert.equal(saved.radioNextNukeAt,11);
+ delete state.fields.radioNextNukeAt;
+ assert.equal(unpack(saved,state).radioNextNukeAt,0);
+
+ g.time=10.5;
+ assert.equal(fire(g,partner,enemy,[6,6]).strike,'missile');
+ assert.equal(g.radioNextNukeAt,10.5);
+ assert.equal(fire(g,radio,enemy,[6,6]).strike,'nuke');
+ assert.equal(g.radioNextNukeAt,22.5);
+});
+
+test('the cooldown is shared by both commanders in cooperative play',()=>{
+ const {g,radio,enemy}=field(true);
+ g.evolved.guntruck=true;
+ const partner=g.withOwner(1,()=>{g.evolved.guntruck=true;return g.addUnit(0,'guntruck',940,5900);});
+ assert.equal(fire(g,radio,enemy,[6,6]).strike,'nuke');
+ const fallback=g.withOwner(1,()=>fire(g,partner,enemy,[6,6]));
+ assert.equal(fallback.strike,'missile');
+ assert.equal(g.radioNextNukeAt,11);
+});
+
+test('pity, evolution correction, the hotline and a non-double auxiliary pair cannot manufacture a triple jackpot',()=>{
+ const {g,radio,enemy}=field();
+ radio.star=2;g.evolved.guntruck=true;g.radioNextNukeAt=12;
+ const ordinary=fire(g,radio,enemy,[6,6,2,2,3,4]);
+ assert.equal(ordinary.strike,'missile');assert.equal(ordinary.jackpot,false);assert.equal(ordinary.rolls.length,1);
+ radio.radioMisses=5;
+ assert.equal(fire(g,radio,enemy,[6]).jackpot,false);
+ let correctedRolls=0;
+ g.diceFace=(_unit,_evolved,set)=>{assert.equal(set,0);return correctedRolls++===0?6:2;};
+ g.random=()=>0;
+ g.fireUnitProjectiles(radio,enemy,{damage:100});
+ const corrected=g.effects.findLast(e=>e.kind==='radioRoll');
+ assert.deepEqual(corrected.rolls[0].dice,[6,6]);assert.equal(corrected.jackpot,false);
+ g.linkState().radioHotlineUntil=5;
+ g.diceFace=()=>assert.fail('the hotline does not roll dice');
+ g.fireUnitProjectiles(radio,enemy,{damage:100});
+ const hotline=g.effects.findLast(e=>e.kind==='radioRoll');
+ assert.equal(hotline.strike,'missile');assert.equal(hotline.jackpot,false);
+});
+
+test('natural triple doubles bypass the launch cooldown while whiteout stays rate limited',()=>{
+ const {g,radio,enemy}=field(),partner=g.addUnit(0,'guntruck',940,5900);
+ radio.star=2;partner.star=3;
+ g.evolved.guntruck=true;
+ for(const [time,caller,dice] of [[0,radio,[6,6]],[.2,partner,[1,1,2,2,4,4]],[3.5,radio,[5,5,6,6,3,3]]]){
   g.time=time;
-  assert.equal(fire(g,caller,enemy,[6,6]).strike,'nuke');
+  const roll=fire(g,caller,enemy,dice);
+  assert.equal(roll.strike,'nuke');
+  assert.equal(roll.jackpot,dice.length===6);
+  assert.deepEqual(roll.rolls.flatMap(pair=>pair.dice),dice);
+  assert.equal(g.radioNextNukeAt,time+12);
  }
  assert.equal(g.radioStrikes.length,3);
  const landings=g.radioStrikes.map(s=>s.landAt);

@@ -385,10 +385,10 @@ function updateUI(){syncBattleMusic();if(game.phase!=='ready')unitModels.prefetc
   const capacity=bosses.reduce((sum,u)=>sum+u.maxHp,0)||1;
   const hp=bosses.reduce((sum,u)=>sum+u.hp,0);
   const shield=bosses.reduce((sum,u)=>sum+(u.bubbleShield?.hp||0),0);
-  const bar=window.FrontBubbleOctopusView.healthBarLayout(hp,capacity,shield);
+  const {healthBarLayout,maxHealthBarTrack}=window.FrontBubbleOctopusView;
+  const bar=healthBarLayout(hp,capacity,shield);
   const percent=100*bar.health;
-  // Reserve room in the panel for a full 28% shield without moving the health endpoint.
-  $('bossHealthBar').style.width=Math.min(100,100*bar.track/1.28)+'%';
+  $('bossHealthBar').style.width=Math.min(100,100*bar.track/maxHealthBarTrack)+'%';
   $('bossHealthFill').style.width=100*bar.health/bar.track+'%';
   $('bossShieldFill').style.width=100*bar.shield/bar.track+'%';
   $('bossHealthBar').setAttribute('aria-valuenow',String(Math.round(percent)));

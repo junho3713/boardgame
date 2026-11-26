@@ -3,7 +3,7 @@
 'use strict';
 
 const rules=Object.freeze({
- shieldPeriod:7, shieldRadius:180, shieldLimit:6, shieldFraction:.28,
+ shieldPeriod:7, shieldRadius:180, shieldLimit:6, shieldFraction:.35,
  foamPeriod:4.5, windup:.4, speed:240, travel:445, shotRadius:11, splashRadius:69, push:106,
  near:220, far:300, station:264, guardLeash:240
 });
@@ -23,7 +23,7 @@ function pop(game,u){
 }
 function castShield(game,u){
  const targets=game.units.filter(t=>t!==u&&activeEnemy(game,t)&&distance(u,t)<=rules.shieldRadius&&
-  (!t.bubbleShield||t.bubbleShield.sourceId===u.id&&t.bubbleShield.hp<t.bubbleShield.maxHp));
+  (!t.bubbleShield||t.bubbleShield.sourceId===u.id&&t.bubbleShield.hp<t.maxHp*rules.shieldFraction));
  targets.sort((a,b)=>Number(!!special(b))-Number(!!special(a))||distance(u,a)-distance(u,b)||a.id-b.id);
  for(const t of targets.slice(0,rules.shieldLimit)){
   const hp=t.maxHp*rules.shieldFraction;
@@ -145,6 +145,7 @@ function install({FrontGame}){
   this.foamShots=this.foamShots.filter(shot=>advanceShot(this,shot,Math.min(dt,this.time-shot.startedAt),allies));
  };
 }
+root.FrontBubbleOctopusRules=rules;
 if(typeof module!=='undefined'&&module.exports)module.exports=install;
 else install({FrontGame:root.FrontGame});
 })(typeof window==='undefined'?globalThis:window);

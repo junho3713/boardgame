@@ -16,7 +16,11 @@ test('the laboratory preserves turtle insect-only push and universal jackpot wav
  for(const enemy of ['rhinoBeetle','crimsonAce'])for(const tier of [0,2]){const g=new Lab({mode:'support',toy:'toyTurtle',tier,enemy,count:1}),x=g.labTargets[0].x;g.cast();advance(g,2);a.equal(g.labTargets[0].x>x,enemy==='rhinoBeetle'||tier===2);}
 });
 test('every evolved troop runs its production special attack or healing without further unlocking',()=>{
- for(const troop of Object.keys(EVOLUTIONS)){const g=new Lab({mode:'evolution',troop});a.equal(g.evolved[troop],true);a.equal(g.tech[0][troop],5);a.equal(g.cast(),true);advance(g,12);a.ok(troop==='medic'?g.result().healing>0:g.result().damage>0,troop);}
+ for(const troop of Object.keys(EVOLUTIONS)){
+  const g=new Lab({mode:'evolution',troop});a.equal(g.evolved[troop],true);a.equal(g.tech[0][troop],5);a.equal(g.cast(),true);
+  if(troop==='rocket')Object.assign(g.labTargets[0],{x:g.actor.x,y:g.actor.y});
+  advance(g,12);a.ok(troop==='medic'?g.result().healing>0:g.result().damage>0,troop);
+ }
 });
 test('all commanders including Hwarin can launch a real ultimate and remain safe',()=>{
  for(const commander of Object.keys(COMMANDERS)){const g=new Lab({mode:'ultimate',commander,level:1}),hp=g.actor.hp;a.ok(g.level>=10);a.equal(g.cast(),true);a.equal(g.ultimateStatus().active,true);advance(g,5);a.ok(g.result().damage>0,commander);a.equal(g.actor.hp,hp);a.equal(g.ultimateStatus().active,false);}

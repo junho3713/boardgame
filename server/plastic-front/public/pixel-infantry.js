@@ -9,7 +9,7 @@
  let ready;
  function load(){
   if(!ready){
-   body.src='assets/pixel-room/infantry-v1.png';
+   body.src='assets/pixel-room/infantry-v1.png?v=round-mine1';
    ready=body.decode().catch(err=>{ready=null;throw err;});
   }
   return ready;
@@ -43,8 +43,11 @@
    if(time-u.radioDoubleAt>=.5&&time-u.radioDoubleAt<1.05)return 4;
    if(time-u.radioRollAt>=0&&time-u.radioRollAt<.5)return 5;
   }
-  if(role==='engineer'&&u.cooldown>=0&&u.cooldown<.13)return 5;
-  if(u.recoil>.04||time-u.blockMineThrownAt>=0&&time-u.blockMineThrownAt<.18)return 4;
+  if(role==='engineer'){
+   const age=time-u.minePlantedAt;
+   return age>=0&&age<.2?5:step.pose;
+  }
+  if(u.recoil>.04)return 4;
   return step.pose;
  }
  function draw(ctx,u,time,evolved){

@@ -16,7 +16,7 @@ test('the left shield segment shrinks without changing the width of the right he
  const window={},context=vm.createContext({window,Math});
  for(const name of ['bubble-octopus-view.js','sword-boss-view.js'])vm.runInContext(fs.readFileSync(__dirname+'/public/'+name,'utf8'),context);
  const view=Object.create(window.FrontSwordBossView.prototype);
- for(const hp of [60,100])for(const shield of [28,12,0]){
+ for(const hp of [60,100])for(const shield of [35,12,0]){
   const fills=[],stops=[];
   const c={save(){},restore(){},strokeText(){},fillText(){},
    fillRect(x,y,w,h){fills.push({x,y,w,h});},

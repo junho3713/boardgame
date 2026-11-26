@@ -1,23 +1,13 @@
-/* Thrown interlocking toy blocks. Arming, contact and chains use simulation time. */
+/* Ground mines. Planting, contact and chains use simulation time. */
 (function(root){'use strict';
 function install({FrontGame}){
  const p=FrontGame.prototype,reset=p.reset,fire=p.fireUnitProjectiles,impact=p.impact,select=p.selectCombatTarget;
- const limit=54,life=30,linkRange=98,linkDelay=.16;
+ const limit=18,life=30,linkRange=148,linkDelay=.16,spacing=24;
  const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
  const ground=(g,t)=>!!t.type&&!t.base&&!t.structure&&!t.built&&!g.isFlying(t);
  const valid=(g,u,t)=>t.team!==u.team&&t.hp>0&&!t.hidden&&!(t.base&&g.baseShielded())&&g.canTarget(u,t);
  function cue(g,kind,point,data,max){
   g.effects.push({kind,x:point.x,y:point.y,team:0,...data,t:max,max});
- }
- function landing(g,u,angle,forward){
-  const dx=Math.cos(angle)*forward,dy=Math.sin(angle)*forward;
-  const b=g.bounds(),solids=g.solidObstacles();
-  // Keep each landing spot on reachable floor, including map edges and cover.
-  for(let step=1;step>0;step-=.06){
-   const x=Math.max(45,Math.min(b.width-45,u.x+dx*step)),y=Math.max(70,Math.min(b.height-70,u.y+dy*step));
-   if(g.freePosition(x,y,6,solids)&&g.lineClear(u,{x,y},0,{fireTeam:u.team}))return {x,y};
-  }
-  return {x:u.x,y:u.y};
  }
  p.reset=function(...args){const result=reset.apply(this,args);this.blockMines=[];this.blockMineSerial=0;return result;};
  p.selectCombatTarget=function(u,candidates,threats,s){
@@ -27,28 +17,30 @@ function install({FrontGame}){
  p.fireUnitProjectiles=function(u,target,attack,s=this.stats(u)){
   if(u.team!==0||u.type!=='rocket'||u.built)return fire.call(this,u,target,attack,s);
   const evolved=this.evolutionEnabled(u),owner=u.coopOwner||0;
-  const level=this.coop?this.withOwner(owner,()=>this.tech[0].rocket):this.tech[0].rocket;
-  // Carry the combined damage of the previous spread into the single mine.
-  const damageScale=evolved?3.15:level>=5?2.76:1.84;
-  const angle=target.commandShot?target.angle:Math.atan2(target.y-u.y,target.x-u.x);
-  const reach=target.commandShot?s.range:Math.min(s.range,dist(u,target));
+  const damageScale=evolved?4.6:3.2;
   let mines=this.blockMines??=[];
-  // Retire the oldest blocks of this squad without touching its partner's mines.
-  const excess=mines.filter(m=>m.owner===owner).length+1-limit;
-  if(excess>0){
-   let removed=0;mines=this.blockMines=mines.filter(m=>m.owner!==owner||removed++>=excess);
+  const own=mines.filter(m=>m.owner===owner&&!m.spent&&m.expiresAt>this.time);
+  // Soldiers on the same footprint can try again after moving away from the first mine.
+  if(own.some(m=>Math.hypot(m.toX-u.x,m.toY-u.y)<spacing)){
+   u.cooldown=Math.min(u.cooldown,.4);
+   return [];
   }
-  const point=landing(this,u,angle,target.commandShot?reach*.62:reach);
-  const landAt=this.time+.3+dist(u,point)/750,radius=Math.max(54,s.splash||0)+(evolved?21:0);
-  const mine={id:this.blockMineSerial=(this.blockMineSerial||0)+1,source:u,owner,index:0,
-   x:u.x,y:u.y,fromX:u.x,fromY:u.y,toX:point.x,toY:point.y,angle,startedAt:this.time,landAt,armAt:landAt,expiresAt:landAt+life,
-   evolved,damage:attack.damage*damageScale,critical:!!attack.critical,radius,triggerRadius:14,chainAt:null};
+  const excess=own.length+1-limit;
+  if(excess>0){
+   const retire=new Set(own.slice(0,excess));
+   mines=this.blockMines=mines.filter(m=>!retire.has(m));
+  }
+  const {x,y}=u,landAt=this.time+.16;
+  const mine={id:this.blockMineSerial=(this.blockMineSerial||0)+1,source:u,owner,
+   x,y,fromX:x,fromY:y,toX:x,toY:y,startedAt:this.time,landAt,armAt:landAt+.34,expiresAt:landAt+life,
+   evolved,damage:attack.damage*damageScale,critical:!!attack.critical,radius:evolved?125:88,triggerRadius:evolved?23:18,chainAt:null};
   mines.push(mine);
-  u.blockMineThrownAt=this.time;
+  u.minePlantedAt=this.time;
+  cue(this,'blockMinePlant',mine,{evolved},.32);
   return [mine];
  };
  // Evolution links modify the primary contact's damage/radius before this method
- // evaluates the blast. Each victim is charged once, centered on the block.
+ // evaluates the blast. Each victim is charged once, centered on the mine.
  p.impact=function(b){
   if(b.kind!=='blockMineImpact')return impact.call(this,b);
   const m=b.mine,u=m.source;
@@ -94,7 +86,7 @@ function install({FrontGame}){
    if(this.coop)this.withOwner(m.owner,explode);else explode();
    if(!m.evolved)continue;
    const neighbors=mines.filter(next=>{
-    if(next.spent||!next.evolved||next.owner!==m.owner||next.chainAt!==null||now>=next.expiresAt)return false;
+    if(next.spent||next.owner!==m.owner||next.chainAt!==null||now>=next.expiresAt)return false;
     const end={x:next.toX,y:next.toY};
     return next.armAt<=now+linkDelay&&dist(m,end)<=linkRange&&this.lineClear(m,end,0,{fireTeam:0});
    }).sort((a,b)=>Math.hypot(a.toX-m.x,a.toY-m.y)-Math.hypot(b.toX-m.x,b.toY-m.y));

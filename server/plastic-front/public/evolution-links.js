@@ -4,15 +4,15 @@ const links=[
  {id:'precision',types:['sniper','mortar'],name:'정밀 폭격',detail:'저격 표식 4초 · 박격포 우선 조준 / 비행 0.65초'},
  {id:'hunter',types:['sniper','lucky'],name:'표적 사냥',detail:'저격 표식 우선 미사일 조준 · 레토나 피해 +10%'},
  {id:'barrage',types:['mortar','tank'],name:'집중 포화',detail:'포격에 맞은 적에게 전차 강화탄 +15% · 분대 재사용 6초'},
- {id:'breach',types:['tank','rocket'],name:'장갑 분쇄',detail:'전차가 낸 균열에 블록 지뢰 피해 +20% · 분대 재사용 6초'},
- {id:'suppress',types:['rocket','machinegun'],name:'제압 포화',detail:'과열 기관총에 맞은 일반 적 2초간 15% 둔화 · 블록 지뢰 폭발 범위 +20% / 분대 재사용 6초'},
+ {id:'breach',types:['tank','rocket'],name:'장갑 분쇄',detail:'전차가 낸 균열에 원형 지뢰 피해 +20% · 분대 재사용 6초'},
+ {id:'suppress',types:['rocket','machinegun'],name:'제압 포화',detail:'과열 기관총에 맞은 일반 적 2초간 15% 둔화 · 원형 지뢰 폭발 범위 +20% / 분대 재사용 6초'},
  {id:'crossfire',types:['rifle','machinegun'],name:'교차 탄막',detail:'기관총병 과열 중 산탄총병 재장전 시간 −25%'},
  {id:'pursuit',types:['rifle','sniper'],name:'표적 추격',detail:'저격 표식이 남은 적을 산탄총병이 맞히면 피해 +15%'},
  {id:'breakthrough',types:['rifle','medic'],name:'전선 돌파',detail:'의무병에게 치료받은 산탄총병의 다음 탄창 4발 피해 +15%'},
  {id:'medicalFire',types:['machinegun','medic'],name:'전선 유지',detail:'진화 의무병에게 치료받은 기관총병은 2초간 받는 피해 12% 감소'},
- {id:'volatile',types:['rocket','lucky'],name:'연쇄 폭약',detail:'레토나가 맞힌 적이 블록 지뢰에 걸리면 0.2초 뒤 20% 추가 폭발 · 반경 65 / 분대 재사용 6초'},
+ {id:'volatile',types:['rocket','lucky'],name:'연쇄 폭약',detail:'레토나가 맞힌 적이 원형 지뢰를 밟으면 0.2초 뒤 20% 추가 폭발 · 반경 65 / 분대 재사용 6초'},
  {id:'fieldRepair',types:['tank','medic'],name:'야전 수리',detail:'진화 의무병의 전차 치료량 +15% · 치료 간격 유지'},
- {id:'gamblers',types:['guntruck','lucky'],name:'행운의 핫라인',detail:'진화 레토나의 777·보스킬러 발동 시 5초간 강화 미사일 6발씩 발사 · 진화 통신병이 있으면 시작과 함께 분대 전술 핵 1발'},
+ {id:'gamblers',types:['guntruck','lucky'],name:'행운의 핫라인',detail:'진화 레토나의 777·보스킬러 발동 시 5초간 강화 미사일 6발씩 발사 · 진화 통신병은 시작 시 핵 1발 (공용 대기 중 미사일 6발)'},
  {id:'chainBombard',types:['guntruck','mortar'],name:'초토화 포격',detail:'같은 분대의 통신병 화염 지대에 착탄한 박격포는 폭발 반경·피해 +15%'},
  {id:'radioPrecision',types:['guntruck','sniper'],name:'정밀 좌표 수신',detail:'미사일·핵은 저격 표식 적을 우선 조준하고 해당 적에게 피해 +20%'},
  {id:'airObserver',types:['drone','sniper'],name:'공중 관측',detail:'드론 레이저는 저격 표식 대상을 우선 조준하며 해당 대상 피해 +20%'},
@@ -144,9 +144,10 @@ function install({FrontGame:Game}){
     const strength=this.stats(v).damage;
     if(!partner||strength>damage){partner=v;damage=strength;}
    }
-   if(partner)this.launchRadioHotline(partner,damage);
+   const strike=partner?this.launchRadioHotline(partner,damage):null;
    this.linkCue(u,partner??signalman,'gamblers');
-   this.notify('toast',partner?'행운의 핫라인 · 전술 핵 1발 · 5초간 강화 미사일':'행운의 핫라인 · 5초간 강화 미사일');
+   const opening=strike==='nuke'?'전술 핵 1발 · ':strike==='missile'?'강화 미사일 6발 · ':'';
+   this.notify('toast','행운의 핫라인 · '+opening+'5초간 강화 미사일');
   }
   return outcome;
  };

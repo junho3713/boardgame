@@ -207,12 +207,11 @@ class FrontModels{
    const phase=(time-u.shotgunPumpStartedAt)/Math.max(.01,u.shotgunPumpUntil-u.shotgunPumpStartedAt);
    frame=phase<.2?pump[1]:phase<.56?pump[0]:phase<.78?pump[1]:frame;
   }
-  const throwSpec=item.layers.body;
-  if(throwSpec.throwReleaseFrame!==undefined){
-   const elapsedSinceThrow=time-u.blockMineThrownAt;
-   if(elapsedSinceThrow>=0&&elapsedSinceThrow<.18)frame=throwSpec.throwReleaseFrame;
-   else if(Number.isFinite(u.aimFace)&&u.cooldown>=0&&u.cooldown<=.13)frame=throwSpec.throwFrame;
-  }else if(throwSpec.throwFrame!==undefined&&Number.isFinite(u.rosterLastThrowAt)&&time-u.rosterLastThrowAt<.3)frame=throwSpec.throwFrame;
+  const bodySpec=item.layers.body;
+  if(bodySpec.plantFrame!==undefined){
+   const age=time-u.minePlantedAt;
+   if(age>=0&&age<.28)frame=age<.16?bodySpec.plantFrame:bodySpec.plantRecoverFrame;
+  }else if(bodySpec.throwFrame!==undefined&&Number.isFinite(u.rosterLastThrowAt)&&time-u.rosterLastThrowAt<.3)frame=bodySpec.throwFrame;
   if(item.layers.body.listenFrame!==undefined){
    const rollAge=time-u.radioRollAt;
    if(rollAge>=0&&rollAge<.5)frame=item.layers.body.listenFrame;

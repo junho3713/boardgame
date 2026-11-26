@@ -26,7 +26,7 @@ test('one cast protects six nearby hostiles across enemy teams including distant
  cast(g,o);
  assert.deepEqual(g.units.filter(t=>t.bubbleShield).map(t=>t.id),[...ordinary.slice(0,4),special,beetle].map(t=>t.id));
  for(const t of [outside,ally,o,leader])assert.equal(t.bubbleShield,undefined);
- const hp=special.hp,max=hp*.28;
+ const hp=special.hp,max=hp*.35;
  close(special.bubbleShield.hp,max);
  const factor=g.defenseFactor(special,leader);
  g.damage(special,10/factor,leader);

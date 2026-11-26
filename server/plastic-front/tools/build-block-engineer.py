@@ -1,7 +1,7 @@
-"""Bake the allied block engineer with the shared olive toy miniature renderer.
+"""Bake the allied mine layer with the shared olive toy miniature renderer.
 
 Each 128-pixel atlas has eight directions across and five animation rows.
-Rows are idle, left stride, right stride, throwing wind-up, and release.
+Rows are idle, left stride, right stride, placing a mine, and recovering.
 Run with Python, numpy and Pillow. The enemy rocket soldier is a separate asset.
 """
 
@@ -20,8 +20,8 @@ CELL, DIRECTIONS, FRAMES = 128, 8, 5
 DARK = (39, 65, 35)
 STRAP = (55, 78, 42)
 SAGE = (140, 163, 90)
-MINE = (102, 148, 56)
-MINE_TOP = (134, 173, 78)
+MINE = (66, 79, 50)
+MINE_TOP = (99, 115, 70)
 GOLD = (222, 176, 65)
 GOLD_LIGHT = (243, 209, 119)
 METAL = (59, 72, 52)
@@ -47,32 +47,23 @@ def subdivide_caps(mesh):
     mesh.faces = faces
 
 
-def block(mesh, center, size, evolved=False, tilt=0, yaw=0):
-    """A bevelled 2-by-2 toy brick with four solid, separately lit studs."""
+def mine(mesh, center, radius, height, evolved=False, tilt=0):
+    """A round molded toy with a raised lid and a red indicator."""
     piece = Mesh()
-    width, depth, height = size
-    piece.box(DARK, (0, 0, -height * .40), (width, depth, height * .22), .9)
-    piece.box(MINE, (0, 0, 0), (width, depth, height), 1.1)
-    subdivide_caps(piece)
+    piece.tube(METAL, (0, 0, -height * .5), (0, 0, -height * .32), radius * .94, radius, n=24)
+    piece.tube(MINE, (0, 0, -height * .32), (0, 0, height * .08), radius, radius, n=24)
+    piece.tube(MINE_TOP, (0, 0, height * .08), (0, 0, height * .42),
+               radius, radius * .82, n=24, gloss=.5)
     if evolved:
-        for side in (-1, 1):
-            piece.box(GOLD, (side * width * .493, 0, height * .21),
-                      (.5, depth * .87, 1.3), .15)
-            piece.box(GOLD, (0, side * depth * .493, height * .21),
-                      (width * .87, .5, 1.3), .15)
-    for x in (-width * .25, width * .25):
-        for y in (-depth * .25, depth * .25):
-            piece.tube(MINE_TOP, (x, y, height * .48),
-                       (x, y, height * .48 + height * .34), width * .16,
-                       width * .151, n=16, gloss=.6)
-    # A small flush latch gives the block an equipment detail without a barrel.
-    piece.box(METAL, (0, -depth * .5, -.1), (width * .28, .65, height * .46), .2)
-    piece.box(GOLD_LIGHT if evolved else SAGE, (0, -depth * .54, .25),
-              (width * .13, .3, height * .16), .1)
+        piece.tube(GOLD, (0, 0, height * .13), (0, 0, height * .19),
+                   radius * .99, radius * .96, n=24)
+    piece.tube(DARK, (0, 0, height * .42), (0, 0, height * .63),
+               radius * .32, radius * .26, n=16)
+    piece.ball((211, 64, 52), (0, 0, height * .63),
+               (radius * .14, radius * .14, height * .08), n=12, rings=5, gloss=.65)
+    subdivide_caps(piece)
     co, si = math.cos(tilt), math.sin(tilt)
-    cy, sy = math.cos(yaw), math.sin(yaw)
-    rotate = np.array([[cy, -sy, 0], [sy, cy, 0], [0, 0, 1]]) @ np.array(
-        [[1, 0, 0], [0, co, -si], [0, si, co]])
+    rotate = np.array([[1, 0, 0], [0, co, -si], [0, si, co]])
     mesh.faces.extend((points @ rotate.T + center, colour, gloss)
                       for points, colour, gloss in piece.faces)
 
@@ -81,14 +72,14 @@ def make_engineer(evolved, frame):
     elbows = {-1: (-11, -7, 40.5), 1: (11.5, -6.5, 41)}
     hands = {-1: (-7, -18.4, 43.8), 1: (7.5, -18.4, 43.8)}
     carried = (0, -19.3, 47.0)
-    tilt, yaw = .15, -.07
+    tilt = -.25
     if frame == 3:
-        elbows[1], hands[1] = (12.5, -2, 53), (11, -5, 59)
-        elbows[-1], hands[-1] = (-11, -7, 42), (-3, -15, 48)
-        carried, tilt, yaw = (11, -6, 63), -.22, -.22
+        elbows[1], hands[1] = (11, -8, 36), (7, -12, 23)
+        elbows[-1], hands[-1] = (-11, -8, 36), (-7, -12, 23)
+        carried, tilt = (0, -12, 21), -.08
     elif frame == 4:
-        elbows[1], hands[1] = (12, -15, 50), (8, -29, 51)
-        elbows[-1], hands[-1] = (-10, -6, 40), (-7, -12, 35)
+        elbows[1], hands[1] = (12, -8, 37), (9, -11, 30)
+        elbows[-1], hands[-1] = (-11, -7, 38), (-8, -11, 31)
     mesh = infantry("rifle", 0, frame if frame < 3 else 0,
                     arms={side: (elbows[side], hands[side]) for side in (-1, 1)},
                     weapon=False)
@@ -110,16 +101,16 @@ def make_engineer(evolved, frame):
         for x in (-2.8, 0, 2.8):
             mesh.box(GOLD, (x, -7.8, 48.5), (1.3, .45, 3.9), .18)
 
-    # Rear rack exposes the spare blocks' studs from rear and oblique directions.
+    # The rear rack shows spare round mines from rear and oblique directions.
     mesh.box(DARK, (0, 10.5, 44.5), (17, 6, 23.3), 1.4)
     for x in (-7.6, 7.6):
         mesh.tube(GOLD if evolved else SAGE, (x, 13.7, 34.4),
                   (x, 13.7, 54.5), .65, n=8)
     for z in (39.3, 50.3):
-        block(mesh, (0, 13.1, z), (12.2, 9.3, 5.3), evolved, -math.pi / 2)
+        mine(mesh, (0, 13.1, z), 5.9, 3.9, evolved, -math.pi / 2)
     mesh.tube(STRAP, (-5.1, 11.3, 57.0), (5.1, 11.3, 57.0), .8, n=10)
     if frame != 4:
-        block(mesh, carried, (17.2, 14.5, 7.3), evolved, tilt, yaw)
+        mine(mesh, carried, 8.7 if evolved else 7.7, 4.1, evolved, tilt)
     return mesh
 
 
@@ -132,7 +123,7 @@ def build(evolved, output=OUTPUT):
             sheet.paste(tile, (direction * CELL, frame * CELL))
     output.mkdir(parents=True, exist_ok=True)
     name = "blockEngineerElite" if evolved else "blockEngineer"
-    path = output / f"{name}-0-body-v212.webp"
+    path = output / f"{name}-0-body-round-v1.webp"
     sheet.save(path, "WEBP", quality=93, method=6, exact=True)
     print(f"{path.name}  {path.stat().st_size} bytes", flush=True)
 

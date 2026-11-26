@@ -15,7 +15,7 @@ class View{
   c.textAlign='center';c.textBaseline='middle';c.font='700 12px system-ui';c.fillStyle='#fff2fa';c.fillText('사검의 군주'+(phase?' · 각성':''),x,y-9);c.font='700 10px system-ui';c.strokeStyle='#29182c';c.lineWidth=3;const label=Math.ceil(b.hp).toLocaleString()+' / '+Math.ceil(b.maxHp).toLocaleString();c.strokeText(label,x,y+11);c.fillText(label,x,y+11);c.restore();
  }
  health(c,g){const b=g.trialBoss;if(!b||b.hp<=0||g.visible&&!g.visible(b))return;this.healthBar(c,b,b.x,b.y-221,220);}
- hud(c,g,width){const b=g.trialBoss;if(!b?.finalBoss||b.hp<=0)return;this.healthBar(c,b,width/2,80,Math.max(1,Math.min(300,(width-36)/1.28)));}
+ hud(c,g,width){const b=g.trialBoss;if(!b?.finalBoss||b.hp<=0)return;this.healthBar(c,b,width/2,80,Math.max(1,Math.min(300,(width-36)/root.FrontBubbleOctopusView.maxHealthBarTrack)));}
  shieldGeometry(b,s,g){const half=g.trialConfig.shieldHalfAngle,front=Math.sin(s.dir),rx=Math.max(18,Math.tan(Math.min(1.25,half))*(Math.abs(front)>.5?48:27));return{x:b.x+Math.cos(s.dir)*98,y:b.y+front*45-68,rx,ry:Math.abs(front)>.5?83:71,front:front>.5,half};}
  parts(g){const b=g.trialBoss;if(!b||b.hp<=0)return[];const out=[{kind:'body',depth:b.y,b}];for(const s of b.swords.blades){if(s.mode==='defend')out.push({kind:'shield',depth:b.y+Math.sin(s.dir)*60-1,s,b});out.push({kind:'blade',depth:s.y,s,b});}return out;}
  drawPart(c,p,g){if(p.kind==='body')this.bodyPart(c,p.b,g);else if(p.kind==='blade')this.bladePart(c,p.s,p.b,g);else this.shield(c,p.s,p.b,g);}

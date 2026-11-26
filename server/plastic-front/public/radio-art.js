@@ -119,7 +119,7 @@ function rolls(c,game,visible) {
   const duration=rank===3?.16:.23,spinning=age<duration;
   let label='';
   if(roll.strike==='turret')label='기관포탑';
-  if(roll.strike==='nuke')label='전술 핵';
+  if(roll.strike==='nuke')label=e.jackpot?'트리플 잭팟 · 전술 핵':'전술 핵';
   if(roll.strike==='incendiary')label=e.golden?'강화 소이탄':'소이탄';
   if(roll.strike==='missile'){
    const count=roll.missileCount??(e.golden?4:roll.dice[0]-2);
@@ -127,7 +127,7 @@ function rolls(c,game,visible) {
   }
   const x=u.x*scale;
   let y=(u.y-57)*scale-10;
-  const width=label?48:35,top=label?41:19,bottom=19;
+  const width=e.jackpot?82:label?48:35,top=label?41:19,bottom=19;
   let overlap;
   while((overlap=lanes.find(lane=>Math.abs(lane.x-x)<lane.width+width
    && y+bottom>lane.y-lane.top && y-top<lane.y+lane.bottom))){
@@ -145,7 +145,12 @@ function rolls(c,game,visible) {
    stroke(c,1.2,'#ffeab0',()=>c.arc(lampX,lampY,r+4,-1.5,-.22)); c.restore();
   }
   c.translate(x/scale,y/scale); c.scale(1/scale,1/scale);
-  drawRollPair(c,roll,rank,age,spinning,reduced,duration);
+  if(e.jackpot){
+   for(const [index,pair] of e.rolls.entries()){
+    c.save();c.translate((index-1)*52,0);c.scale(.8,.8);
+    drawRollPair(c,pair,rank,age,spinning,reduced,duration);c.restore();
+   }
+  }else drawRollPair(c,roll,rank,age,spinning,reduced,duration);
   if(label&&!spinning)rollLabel(c,label,roll,u,tr);
   c.restore();
  }
@@ -313,7 +318,7 @@ function turretModel(c,t,view){
  const x=-pose.co*pose.recoil,y=-pose.si*pose.recoil*.8;
  if(sheet?.complete&&sheet.naturalWidth){
   turretFrame(c,sheet,0,rows*3);
-  turretFrame(c,sheet,pose.dir%turretColumns,(t.rank-1)*rows+Math.floor(pose.dir/turretColumns),x,y);
+  turretFrame(c,sheet,pose.dir%turretColumns,((t.mountRank??t.rank)-1)*rows+Math.floor(pose.dir/turretColumns),x,y);
   return;
  }
  // Immediate silhouette while the WebP decodes.
@@ -327,7 +332,7 @@ function turretModel(c,t,view){
 
 function turretBody(c,t,view){
  const descent=clamp((view.time-t.startedAt)/(t.landAt-t.startedAt));
- const height=158*(1-descent**2.4),boosted=view.time<t.overclockUntil&&descent===1;
+ const height=158*(1-descent**2.4);
  const scale=t.scale*turretModelScale;
  c.save();
  c.translate(t.x,t.y);
@@ -346,15 +351,10 @@ function turretBody(c,t,view){
   c.restore();
  }
  turretModel(c,t,view);
- c.translate(0,-15);
- if(boosted){
-  const phase=view.time*12;
-  glow(c,0,1,15,6,'#fb663bce','#ec3d1c50');
-  for(let i=0;i<(view.reduced?2:5);i++){
-   const q=(phase*.21+i*.27)%1,a=i*2.4+phase*.1,r=9+12*q;
-   c.globalAlpha=1-q;
-   ellipse(c,Math.cos(a)*r,Math.sin(a)*r*.63-q*12,1.7,.9,'#ff9b54');
-  }
+ if(descent===1&&t.maxHp>0){
+  const health=clamp(t.hp/t.maxHp);
+  c.fillStyle='#203029';c.fillRect(-15,-43,30,5);
+  c.fillStyle=t.owner===1?'#9edaf4':'#d3eba0';c.fillRect(-14,-42,28*health,3);
  }
  c.restore();
 }
@@ -370,14 +370,24 @@ function turretEvent(c,e,p,view){
   const x=(pose.co*(reach-pose.recoil)-pose.si*side)*scale;
   const y=((pose.si*(reach-pose.recoil)+pose.co*side)*.8-height*.6)*scale;
   const tx=e.tx-e.x,ty=e.ty-e.y-11;
-  const speed=e.boosted?'#ffae51':'#ffe174';
+  const speed=e.pierced?'#ffb96c':'#ffe174';
   stroke(c,3*scale,speed,()=>{c.moveTo(x,y);c.lineTo(tx,ty);});
   stroke(c,1*scale,'#fff4b3',()=>{c.moveTo(x,y);c.lineTo(tx,ty);});
-  glow(c,x,y,13*scale,7*scale,'#fff5be',e.boosted?'#ff74399a':'#ffaa429a');
+  glow(c,x,y,13*scale,7*scale,'#fff5be',e.pierced?'#ff74399a':'#ffaa429a');
   c.save();c.translate(x,y);c.rotate(Math.atan2(pose.si*.8,pose.co));c.scale(scale,scale);
   polygon(c,[[-2,0],[3,-2],[2,-6],[7,-3],[12,0],[6,3],[2,6],[3,2]],'#fff1b2');
   c.restore();
   ellipse(c,tx,ty,2.4*scale,1.7*scale,'#ffdda0');
+ }else if(e.kind==='radioTurretEnd'&&e.radius>0){
+  const reach=Math.max(1,e.radius*ease(p)),spark=e.radius*(.18+.60*p);
+  stroke(c,1.1+3*(1-p),'#ffc782',()=>c.ellipse(0,0,reach,reach*.58,0,0,tau));
+  if(p<.5)glow(c,0,-9*scale,scale*(22+40*p),scale*(11+18*p),'#fff1bb','#e87640a0');
+  for(let i=0;i<8;i++){
+   const angle=i*2.4+seedFor(e),x=Math.cos(angle)*spark,y=Math.sin(angle)*spark*.58;
+   const lift=Math.sin(Math.PI*p)*(14+6*(i%3))*scale;
+   glow(c,x,y-lift,scale*(7+9*p),scale*(4+6*p),'#ad785eb8','#61493813');
+   if(p<.55)ellipse(c,x,y-lift-4*scale,1.7*scale,1.1*scale,'#ffda94');
+  }
  }else{
   const landed=e.kind==='radioTurretLand',reach=scale*(7+20*ease(p));
   stroke(c,1.7*scale,landed?'#dbc295':'#d69255',()=>c.ellipse(0,0,reach,reach*.52,0,0,tau));
@@ -405,7 +415,7 @@ function ground(c,game,visible=()=>true) {
   if (visible(zone)) fireZone(c, zone, view);
  }
  for(const turret of game.radioTurrets||[]){
-  if(view.time<turret.until&&visible(turret))turretBody(c,turret,view);
+  if(turret.hp!==0&&view.time<turret.until&&visible(turret))turretBody(c,turret,view);
  }
  flyovers(c,game);
  groundPasses(c,game,visible,view);

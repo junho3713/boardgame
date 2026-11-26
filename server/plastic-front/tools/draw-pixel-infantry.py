@@ -113,10 +113,10 @@ def frame(role, enemy, elite, direction, pose):
             box(mx,my-9,6,3,o);box(mx+1,my-9,4,1,light)
             stroke(mx-1,my+3,mx+3,my+7,o,2)
         elif role=="engineer":
-            ex=round(19+vx*(8 if pose==4 else 4));ey=18+y-(4 if pose==5 else 0)
-            box(ex-3,ey,9,6,o);box(ex-2,ey+1,7,3,AMBER if elite else h)
-            for xx in (ex-2,ex+2):box(xx,ey-1,2,2,light)
-            box(ex+2,ey+3,2,2,"#e67d50")
+            ex=round(19+vx*4);ey=(27 if pose==5 else 20)+y
+            pen.ellipse((ex-4,ey-2,ex+4,ey+4),fill=o)
+            pen.ellipse((ex-3,ey-1,ex+3,ey+2),fill=AMBER if elite else h)
+            pen.point((ex,ey),fill="#ec583c")
         elif role=="radio":
             ex=round(20+vx*4);ey=14+y if pose in (4,5) else 19+y
             stroke(12,23+y,ex,ey+3,o,2);box(ex-1,ey-2,4,7,o);box(ex,ey-1,2,2,light)
@@ -154,7 +154,7 @@ def frame(role, enemy, elite, direction, pose):
     # Forearm bridges the torso and equipment, even when firing straight down.
     elbow=14 if back else 15
     wrist=round(18+vx*(3 if pose==4 else 2))
-    wy=15+y if role=="radio" and pose in (4,5) else 21+y+round(vy*2)
+    wy=15+y if role=="radio" and pose in (4,5) else 27+y if role=="engineer" and pose==5 else 21+y+round(vy*2)
     stroke(elbow,18+y,elbow-1,22+y,o,5);stroke(elbow-1,22+y,wrist,wy,o,4)
     stroke(elbow,18+y,elbow-1,21+y,m,3);stroke(elbow-1,22+y,wrist,wy,h,2)
     if direction in (3,4,5):
