@@ -432,8 +432,10 @@ function showUpgrade(options){
  $('promotionLevel').textContent=initial?'00:00':recovery?'EMERGENCY SUPPORT · 유료 충원':boss?'BOSS REWARD · 추가 강화':`LEVEL ${pad(game.level)}`;
  $('promotionTitle').textContent=initial?'초기 지원 병과 선택':recovery?'분대를 다시 편성하세요.':boss?'보스 격파 보상을 선택하세요.':'레벨업 선택';
  $('promotionDescription').textContent=initial?'병과 하나를 고르면 무료 지원군이 착지하고 작전이 시작돼요.':recovery?'보유 자원으로 해금한 병과를 충원합니다. XP·레벨·강화 기회 소비 없음 · 확정 후 90초 대기.':boss?'레벨업과 별개의 무료 강화입니다. 작전 능력은 같은 5종 선택 한도를 따릅니다.':'병과를 키우거나 능력 5종을 구성하세요. Lv.5 + 지정 능력 Lv.5면 자동 진화합니다.';
- if(lockedLevel)$('promotionDescription').textContent='소환 슬롯 6개가 찼어요. 등록 병과와 작전 능력을 강화할 수 있어요.';
- if(!initial&&!recovery&&!lockedLevel&&game.completedEvolutions()>=5)$('promotionDescription').textContent='진화 5종 완성 · 남은 강화 최대 1개 + 골드 상자 + 긴급 치료. 더 올릴 강화가 없으면 보급 보상을 선택하세요.';
+ const partnerAtCapacity=(lockedLevel||boss&&game.summonSlotsLocked())&&window.FrontCombatDrone.pair.find(t=>game.dronePartnerSlot(t));
+ if(partnerAtCapacity)$('promotionDescription').textContent=`소환 슬롯 6칸 사용 중 · ${types[partnerAtCapacity].name} 해금 카드도 나올 수 있어요. 고르면 기존 드론 슬롯에 합쳐져요.`;
+ else if(lockedLevel)$('promotionDescription').textContent='소환 슬롯 6개가 찼어요. 등록 병과와 작전 능력을 강화할 수 있어요.';
+ else if(!initial&&!recovery&&game.completedEvolutions()>=5)$('promotionDescription').textContent='진화 5종 완성 · 남은 강화 최대 1개 + 골드 상자 + 긴급 치료. 더 올릴 강화가 없으면 보급 보상을 선택하세요.';
  document.querySelector('.support-panel').hidden=boss||game.mode==='pve'&&!recovery;document.querySelector('.upgrade-layout').classList.toggle('boss-reward',boss);
  $('continueBattle').hidden=true;$('continueBattle').disabled=true;syncUpgradeActions();
  document.querySelector('.choice-foot>b').textContent=initial||!COOP?.active?'선택 중 전투 일시정지':'전투 계속 · 내 분대만 5초 무적';

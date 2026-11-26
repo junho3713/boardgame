@@ -25,13 +25,13 @@ def pack(source, output):
                 x = direction % 6 * CELL
                 y = (2 * frame + direction // 6) * CELL
                 sheet.paste(image, (x, y))
-        sheet.save(output / f"{name}-body-v2.webp", quality=91, method=4)
+        sheet.save(output / f"{name}-body-v3.webp", quality=91, method=4)
         portrait = Image.open(source / f"{name}-review.png").convert("RGBA")
         portrait = portrait.crop(portrait.getbbox())
         portrait.thumbnail((145, 133), Image.Resampling.LANCZOS)
         portraits.alpha_composite(portrait, (k * 160 + (160 - portrait.width) // 2, (160 - portrait.height) // 2))
     (output.parent / "ui").mkdir(exist_ok=True)
-    portraits.save(output.parent / "ui" / "combat-drone-portraits-v2.webp", quality=94, method=4)
+    portraits.save(output.parent / "ui" / "combat-drone-portraits-v3.webp", quality=94, method=4)
 
 
 def bake(output, qa_scripts, preview):
@@ -44,7 +44,7 @@ def bake(output, qa_scripts, preview):
     bpy.ops.wm.read_factory_settings(use_empty=True)
     scene = bpy.context.scene
     scene.render.engine = "CYCLES"
-    scene.cycles.samples = 9
+    scene.cycles.samples = 20
     scene.cycles.use_denoising = True
     scene.cycles.max_bounces = 4
     scene.render.use_persistent_data = True
@@ -180,31 +180,73 @@ def bake(output, qa_scripts, preview):
 
     def assemble(combined, evolved):
         width = 1.03 if combined else .86
-        # Layered moulding follows the long canopy profile of the approved concept.
-        nose = [(-.36,-1.48),(.36,-1.48),(.66,-1.12),(.94,-.40),
-                (1,.44),(.76,1.04),(.47,1.29),(-.47,1.29),(-.76,1.04),
-                (-1,.44),(-.94,-.40),(-.66,-1.12)]
-        rim = [(x*width,y) for x,y in nose]
-        prism("Lower olive chin",[(x*.98,y*.97) for x,y in rim],-.18,.23,olive,.15)
-        prism("Olive bonnet",rim,.08,.49,olive,.18)
-        def canopy(name, size, levels, mat):
-            # Sloped cap, the leading tip sits nearly flush with the bonnet.
-            n=32
+        # Longitudinal hull stations: distance aft, half-beam, keel, crown.
+        # Keeping the keel low while raising the crown gives the rear genuine volume.
+        stations = [
+            (-1.72,.11,-.11,.06), (-1.60,.43,-.19,.18), (-1.36,.67,-.28,.35),
+            (-1.00,.83,-.34,.61), (-.50,.97,-.34,.91), (.04,1.04,-.30,1.16),
+            (.49,1.045,-.23,1.32), (.89,1.00,-.15,1.36), (1.21,.87,-.08,1.30),
+            (1.43,.67,.03,1.17), (1.54,.40,.16,1.01), (1.58,.14,.34,.79)]
+        def section(y):
+            ix = next((i for i in range(len(stations)-1) if y<=stations[i+1][0]),len(stations)-2)
+            a,b=stations[ix:ix+2]
+            prev,nxt=stations[max(0,ix-1)],stations[min(len(stations)-1,ix+2)]
+            span=b[0]-a[0]
+            t=(y-a[0])/span
+            def value(k):
+                da=(b[k]-prev[k])/(b[0]-prev[0])
+                db=(nxt[k]-a[k])/(nxt[0]-a[0])
+                return ((2*t**3-3*t*t+1)*a[k]+(t**3-2*t*t+t)*span*da
+                        +(-2*t**3+3*t*t)*b[k]+(t**3-t*t)*span*db)
+            return value(1)*width,value(2),value(3)
+        def surface(y, angle, lift=0):
+            w,keel,crown=section(y)
+            sn,cs=math.sin(angle),math.cos(angle)
+            return (w*math.copysign(abs(sn)**.85,sn),y,
+                    (crown+keel)/2+(crown-keel)/2*math.copysign(abs(cs)**.76,cs)+lift)
+        n=32
+        ys=[a[0]+(b[0]-a[0])*i/4 for a,b in zip(stations,stations[1:]) for i in range(4)]
+        ys.append(stations[-1][0])
+        verts=[surface(y,math.tau*i/n) for y in ys for i in range(n)]
+        faces=[tuple(range(n))]
+        for j in range(len(ys)-1):
+            faces.extend((j*n+i,j*n+(i+1)%n,(j+1)*n+(i+1)%n,(j+1)*n+i) for i in range(n))
+        faces.append(tuple(range(len(verts)-n,len(verts))))
+        mesh("Swept olive monocoque",verts,faces,olive,smooth=True)
+
+        # The rim and glass track the same curved surface as the olive bonnet.
+        def insert(name, front, back, breadth, edge, dome, mat):
+            steps,across=28,14
             verts=[]
-            for k,h in levels:
-                for i in range(n):
-                    t=i*math.tau/n
-                    f=math.sin(t)
-                    x=size*k*math.cos(t)*(.60+.16*f)*width
-                    y=-.38+size*k*.92*f
-                    verts.append((x,y,h+.125*(y+.38)))
-            faces=[tuple(range(n-1,-1,-1))]
-            for j in range(len(levels)-1):
-                faces.extend((j*n+i,j*n+(i+1)%n,(j+1)*n+(i+1)%n,(j+1)*n+i) for i in range(n))
-            faces.append(tuple(range(len(verts)-n,len(verts))))
+            for j in range(steps+1):
+                t=j/steps
+                y=front+(back-front)*t
+                sweep=breadth*(.11+.89*math.sin(math.pi*t)**.55)*(.92+.12*t)
+                for i in range(across+1):
+                    u=2*i/across-1
+                    verts.append(surface(y,u*sweep,edge+dome*(1-u*u)*math.sin(math.pi*t)))
+            stride=across+1
+            faces=[(j*stride+i,j*stride+i+1,(j+1)*stride+i+1,(j+1)*stride+i)
+                   for j in range(steps) for i in range(across)]
+            boundary=(list(range(stride))+[j*stride+across for j in range(1,steps+1)]
+                      +[steps*stride+i for i in range(across-1,-1,-1)]
+                      +[j*stride for j in range(steps-1,0,-1)])
+            bottom=len(verts)
+            for v in boundary:
+                x,y,z=verts[v]
+                verts.append((x*.992,y,z-.10))
+            for i,v in enumerate(boundary):
+                k=(i+1)%len(boundary)
+                faces.append((v,boundary[k],bottom+k,bottom+i))
+            # Close the invisible underside with a fan, as it follows a compound curve.
+            mid=len(verts)
+            verts.append((0,(front+back)/2,section((front+back)/2)[2]-.22))
+            faces.extend((bottom+i,bottom+(i+1)%len(boundary),mid) for i in range(len(boundary)))
             return mesh(name,verts,faces,mat,smooth=True)
-        canopy("Raised olive canopy rim",1.15,[(1,.36),(1,.52),(.93,.59),(.5,.59)],olive)
-        canopy("Unbroken smoked window",1.04,[(1,.49),(1,.565),(.93,.62),(.64,.691),(.23,.72)],visor)
+        insert("Canopy lip",-1.51,.50,.84,.032,.016,olive)
+        insert("Smoked windscreen",-1.44,.43,.785,.061,.105,visor)
+        for side in (-1,1):
+            shell("Rear shoulder fairing",(side*width*.935,.53,.57),.125,.48,.21,olive)
         # The combat saddle is below the mass centre, with just the lips visible at the nose.
         front = -1.66 if combined else -1.26
         box("Ventral saddle",(0,-.28,-.23),(.64,1.05,.35),graphite,.09)
@@ -217,6 +259,7 @@ def bake(output, qa_scripts, preview):
                     tube("Skid strut",(side*.75,y,.15),(x,y-.18,-.78),.13,olive)
                 box("Landing runner",(x,-.03,-.79),(.25,2.45,.19),olive,.09)
         if combined:
+            deck_parts = set(bpy.data.objects)
             # Raise the support head above the canopy crest on a separate toy saddle.
             box("Olive rear deck",(0,.78,.52),(1.38,.99,.26),olive,.10)
             box("Graphite docking socket",(0,.78,.68),(1.12,.84,.25),graphite,.085)
@@ -234,12 +277,12 @@ def bake(output, qa_scripts, preview):
             tube("Gold optic housing",(0,.56,1.40),(0,.255,1.45),.460,brass,36)
             tube("Teal lens gasket",(0,.281,1.446),(0,.222,1.456),.379,teal,36)
             shell("Convex cyan optic",(0,.237,1.46),.353,.142,.352,aqua)
-        else:
-            box("Rear spine",(0,.66,.45),(.83,.71,.16),olive,.07)
+            for part in set(bpy.data.objects)-deck_parts:
+                part.location.z += .82
         if evolved:
             for side in (-1,1):
-                box("Gatling shroud",(side*.62,.27,.38),(.28,.93,.25),graphite,.09)
-                box("Silver trim",(side*.64,.32,.50),(.12,.49,.055),nickel,.02)
+                box("Gatling shroud",(side*width*.85,.29,.85),(.28,.93,.25),graphite,.09)
+                box("Silver trim",(side*width*.89,.32,.967),(.12,.49,.055),nickel,.02)
         pivots = []
         for j,(side,fwd) in enumerate([(-1,-1),(1,-1),(-1,1),(1,1)]):
             x,y = side*(1.76 if combined else 1.45),fwd*(1.12 if combined else 1.03)
@@ -247,9 +290,10 @@ def bake(output, qa_scripts, preview):
             start = (side*width*.52,fwd*.47)
             length=math.hypot(x-start[0],y-start[1])
             turn=math.atan2(y-start[1],x-start[0])
-            box("Swept olive arm",((x+start[0])/2,(y+start[1])/2,.28),
+            arm_z=.28 if fwd<0 else .75
+            box("Swept olive arm",((x+start[0])/2,(y+start[1])/2,arm_z),
                 (length+.29,.34 if combined else .265,.235),olive,.092,turn)
-            pivots.append(rotor(f"Rotor {j+1}",x,y,.49,.69 if combined else .63))
+            pivots.append(rotor(f"Rotor {j+1}",x,y,arm_z+.21,.69 if combined else .63))
         return pivots
 
     def area(name, position, energy, size, color):
@@ -261,17 +305,17 @@ def bake(output, qa_scripts, preview):
         ob.rotation_euler = (-ob.location).to_track_quat("-Z", "Y").to_euler()
 
     area("Warm studio key", (-3.8,-5.5,7.4), 760, 4.7, (1,.86,.69))
-    area("Cool front fill", (5,-2.5,3.8), 360, 4.3, (.83,.93,1))
+    area("Cool front fill", (5,-2.5,3.8), 250, 4.3, (.83,.93,1))
     area("Rim light", (2,5.1,6), 680, 3.8, (1,.77,.51))
     camera = bpy.data.objects.new("Sprite camera", bpy.data.cameras.new("Sprite camera"))
     scene.collection.objects.link(camera)
     camera.data.type = "ORTHO"
     scene.camera = camera
 
-    def render(name, direction, size, scale):
+    def render(name, direction, size, scale, elevation=5.65):
         # Camera zero looks toward the nose. The atlas packer maps views to game headings.
-        camera.location = (math.sin(direction)*8.3,-math.cos(direction)*8.3,7.0)
-        camera.rotation_euler = (Vector((0,0,.22))-camera.location).to_track_quat("-Z","Y").to_euler()
+        camera.location = (math.sin(direction)*8.3,-math.cos(direction)*8.3,elevation)
+        camera.rotation_euler = (Vector((0,0,.27))-camera.location).to_track_quat("-Z","Y").to_euler()
         camera.data.ortho_scale = scale
         scene.render.resolution_x = scene.render.resolution_y = size
         scene.render.filepath = str(output / (name + ".png"))
@@ -297,8 +341,10 @@ def bake(output, qa_scripts, preview):
                 for mode in ("random", "wire"):
                     review_shots.run(objects=geometry, out=str(output / f"{name}-{mode}.png"),
                                      views=["front", "right", "three_quarter"], mode=mode, res=224)
-        render(f"{name}-review", .64, 384, 5.8)
-        if not preview:
+        render(f"{name}-review", .80, 600, 5.8)
+        if preview:
+            render(f"{name}-profile", math.pi/2, 600, 5.8, elevation=1.25)
+        else:
             for frame in range(FRAMES):
                 for i, pivot in enumerate(active):
                     pivot.rotation_euler.z = frame * math.pi / FRAMES + i * .68

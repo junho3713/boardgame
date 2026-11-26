@@ -26,7 +26,39 @@ function land(g){
 function add(g,type,star=1){
  const c=g.commander(0),u=g.addUnit(0,type,c.x+70,c.y+10);u.star=star;u.hp=u.maxHp=g.stats(u).hp;return u;
 }
-test('a sixth occupied slot can unlock the partner and free a slot while keeping both cards and levels independent',()=>{
+for(const [owned,partner] of [['drone','combatDrone'],['combatDrone','drone']]){
+ for(const source of ['level','reroll','boss','five-evolution boss']){
+  test(`six filled slots with ${owned} offer ${partner} through ${source}`,()=>{
+   const g=battle(),slots=['rifle','machinegun','sniper','lucky','rocket',owned];
+   g.summonSlots=slots.slice();
+   for(const unit of slots)g.tech[0][unit]=5;
+   if(source==='reroll'){
+    g.tech[0].rifle=g.tech[0].machinegun=4;
+    g.random=()=>.999;
+   }
+   if(source==='five-evolution boss')for(const unit of slots.slice(0,5))g.evolved[unit]=true;
+   if(source.includes('boss'))g.bossState.rewards=1;
+   else g.xp=g.neededXP();
+   g.levelCheck();
+   if(source==='reroll'){assert(!g.currentOptions.includes(partner));assert(g.rerollUpgrade());}
+   assert(g.currentOptions.includes(partner));
+   assert(!g.currentOptions.includes('tank'));assert(!g.eligibleCard('tank'));
+   assert(g.chooseUpgradeCard(partner));
+   assert.deepEqual(g.summonSlots,[...slots.slice(0,5),'multiDrone']);
+   assert.equal(g.summonStatus(6).cost,110);
+   assert.equal(g.tech[0][owned],5);assert.equal(g.tech[0][partner],1);
+  });
+ }
+}
+test('six non-drone slots offer neither drone as a new unlock',()=>{
+ const g=battle();g.summonSlots=['rifle','machinegun','sniper','lucky','rocket','tank'];
+ for(const type of g.summonSlots)g.tech[0][type]=1;
+ g.xp=g.neededXP();g.levelCheck();
+ for(const type of ['drone','combatDrone']){
+  assert(!g.eligibleCard(type));assert(!g.currentOptions.includes(type));assert(!g.bossRewardEligible(type));
+ }
+});
+test('a sixth occupied slot can unlock the partner in place while keeping both cards and levels independent',()=>{
  const g=battle();g.summonSlots=['rifle','machinegun','drone','sniper','lucky','rocket'];
  g.tech[0].drone=4;
  assert.equal(g.dronePartnerSlot('combatDrone'),3);
@@ -34,7 +66,7 @@ test('a sixth occupied slot can unlock the partner and free a slot while keeping
  card(g,'combatDrone');
  assert.deepEqual(g.summonSlots,['rifle','machinegun','multiDrone','sniper','lucky','rocket']);
  assert.deepEqual([g.tech[0].drone,g.tech[0].combatDrone,g.tech[0].multiDrone],[4,1,1]);
- g.summonSlots.push('tank');
+ assert.equal(g.summonSlots.length,6);
  assert(g.eligibleCard('drone'));assert(g.eligibleCard('combatDrone'));assert(!g.eligibleCard('multiDrone'));
  assert.equal(g.summonStatus(3).cost,110);
  g.abilities.haste=5;

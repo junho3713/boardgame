@@ -6,7 +6,7 @@ const other=type=>type===support?combat:support;
 const rank=u=>u.star||1;
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const sameOwner=(game,u)=>!game.coop||u.coopOwner===game.coopOwner;
-const guideText='두 드론을 해금하면 슬롯 1칸을 돌려받습니다. 통합 슬롯에서 각각 110G로 교대 소환하며, 같은 성급의 짝은 자동 도킹합니다. 지원·전투 레벨은 따로 올리며, 두 병과와 경험치 획득량·공격속도가 모두 Lv.5면 완전 진화합니다.';
+const guideText='소환 슬롯 6칸이 차도 드론 한 종류를 해금했다면 짝 드론 해금 카드가 나올 수 있습니다. 두 드론은 기존 드론 슬롯 하나를 함께 씁니다. 통합 슬롯에서 각각 110G로 교대 소환하며, 같은 성급의 짝은 자동 도킹합니다. 지원·전투 레벨은 따로 올리며, 두 병과와 경험치 획득량·공격속도가 모두 Lv.5면 완전 진화합니다.';
 function install({FrontGame}){
  const p=FrontGame.prototype;
  p.droneDockingActive=function(){

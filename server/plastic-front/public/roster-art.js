@@ -118,7 +118,7 @@ function drone(c,u,time,evolved){
  ellipse(c,4,2,combined?31:evolved?26:22,8,'#182b2339');c.translate(0,-hover);if(combined||evolved)c.scale(combined?1.23:1.2,combined?1.23:1.2);
  const supports=combined?[[-15,-23],[-15,23],[15,-25],[15,25]]:
   attack?[[-19,-15],[-19,15],[9,-22],[9,22]]:[[-23,0],[0,-23],[0,23],[23,0]];
- const arms=supports.map(([f,s],i)=>({p:P(f,s,4),i})).sort((a,b)=>a.p[1]-b.p[1]);
+ const arms=supports.map(([f,s],i)=>({p:P(f,s,attack&&f<0?10:4),i})).sort((a,b)=>a.p[1]-b.p[1]);
  for(const {p,i} of arms){
   rod(c,[0,0],p,8,dark);rod(c,[0,-2],p,4,shell);
   if(attack){const a=time*36+i;rod(c,[p[0]-Math.cos(a)*9,p[1]-Math.sin(a)*6],[p[0]+Math.cos(a)*9,p[1]+Math.sin(a)*6],3,'#25292a');ellipse(c,...p,2,2,dark);continue;}
@@ -130,16 +130,17 @@ function drone(c,u,time,evolved){
   ball(c,...p,2.2,2,'#d1d49c','#8e9969','#3f4a30');
  }
  if(attack){
+  const rake=f=>Math.min(8,Math.max(0,(12-f)*.32));
   const plate=(shape,top,side,z)=>{
-   polygon(c,shape.map(([f,s])=>P(f,s,z-3)),side);
-   polygon(c,shape.map(([f,s])=>P(f,s,z)),top);
+   polygon(c,shape.map(([f,s])=>P(f,s,z+rake(f)-4)),side);
+   polygon(c,shape.map(([f,s])=>P(f,s,z+rake(f))),top);
   };
   const body=[[-16,-7],[-9,-12],[5,-12],[15,-6],[15,6],[5,12],[-9,12],[-16,7]];
   plate(body,dark,'#2f2e23',3);
   plate([[-14,-6],[-8,-9],[4,-10],[13,-5],[13,5],[4,10],[-8,9],[-14,6]],'#657347',dark,7);
   plate([[-8,-5],[-4,-8],[5,-7],[11,-2],[11,2],[5,7],[-4,8],[-8,5]],'#848e57',shell,10);
-  const cap=P(2,0,13);
-  ball(c,...cap,5.1,3.8,'#4d5051','#232527',dark);
+  const glass=[[-7,-4],[-3,-6.6],[3,-6],[10,-3.5],[12,0],[10,3.5],[3,6],[-3,6.6],[-7,4]];
+  plate(glass,'#252629','#41433b',11);
   for(const offset of [-6,6]){
    const f=combined?0:-2;
    rod(c,P(f-7,offset,10),P(f-4,offset,10),1.2,combined?'#f7db92':'#606658');
@@ -148,7 +149,7 @@ function drone(c,u,time,evolved){
    const saddle=[[-13,-7],[-3,-7],[0,-5],[0,5],[-3,7],[-13,7]];
    plate(saddle,'#29a5a2','#294b48',14);
    plate(saddle.map(([f,s])=>[f-1,s*.9]),'#34b3af','#126b6f',21);
-   const eye=P(-2,0,18);ball(c,...eye,5,4.4,'#f0d38a','#b8883f','#776333');
+   const eye=P(-2,0,18+rake(-2));ball(c,...eye,5,4.4,'#f0d38a','#b8883f','#776333');
    ball(c,...eye,3.9,3.4,'#a6fff9','#4ccbcc','#158985');
    for(const side of [-1,1])plate([[-7,side*10],[-3,side*15],[8,side*14],[10,side*10]],
     side<0?'#398c89':'#637847',dark,7);

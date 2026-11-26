@@ -878,15 +878,15 @@ class FrontGame{
  completedEvolutions(){return this.upgradeRoster().filter(type=>this.evolved[type]).length;}
  options(avoid=[]){
   const unseen=t=>!avoid.includes(t),boss=this.choiceKind==='boss';
-  const roster=this.upgradeRoster(),owned=t=>this.ownedForUpgrade(t);
+  const roster=this.upgradeRoster(),allowed=t=>boss?this.bossRewardEligible(t):this.eligibleCard(t);
   if(this.completedEvolutions()>=5&&(boss||!this.summonSlotsLocked?.())){
-   const pool=[...roster.filter(t=>this.eligibleCard(t)&&(!boss||owned(t))),...Object.keys(ABILITIES).filter(k=>!boss||this.abilities[k]>0).map(k=>'ability_'+k).filter(t=>this.eligibleCard(t))];
+   const pool=[...roster.filter(allowed),...Object.keys(ABILITIES).filter(k=>!boss||this.abilities[k]>0).map(k=>'ability_'+k).filter(t=>this.eligibleCard(t))];
    const fresh=avoid.length?pool.filter(unseen):pool,choices=fresh.length?fresh:pool;
    const result=[...(choices.length?[choices[Math.floor(this.random()*choices.length)]]:!boss&&this.usesSummoning?.()?['fieldSupply']:[]),'fieldGold','fieldRepair'];
    if(!boss)for(const t of result)this.cardShownCounts[t]=(this.cardShownCounts[t]||0)+1;
    return result;
   }
-  if(boss){const pool=[...roster.filter(t=>owned(t)&&this.eligibleCard(t)),...Object.keys(ABILITIES).filter(k=>this.abilities[k]>0).map(k=>'ability_'+k).filter(t=>this.eligibleCard(t))];for(let i=pool.length-1;i>0;i--){const j=Math.floor(this.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}return pool.length?pool.slice(0,3):['fieldGold','fieldRepair'];}
+  if(boss){const pool=[...roster.filter(allowed),...Object.keys(ABILITIES).filter(k=>this.abilities[k]>0).map(k=>'ability_'+k).filter(t=>this.eligibleCard(t))];for(let i=pool.length-1;i>0;i--){const j=Math.floor(this.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}return pool.length?pool.slice(0,3):['fieldGold','fieldRepair'];}
   const shuffle=list=>{for(let i=list.length-1;i>0;i--){const j=Math.floor(this.random()*(i+1));[list[i],list[j]]=[list[j],list[i]];}return list;};
   // Owning or fielding a card does not increase its chance: locked units and
   // unselected abilities share the same eligible pools as existing upgrades.
@@ -908,7 +908,13 @@ class FrontGame{
   return result;
  }
 
- bossRewardEligible(type){if(type==='fieldGold'||type==='fieldRepair')return true;const key=this.abilityKey(type);return this.eligibleCard(type)&&(key?this.abilities[key]>0:this.ownedForUpgrade(type));}
+ bossRewardEligible(type){
+  if(type==='fieldGold'||type==='fieldRepair')return true;
+  if(!this.eligibleCard(type))return false;
+  const key=this.abilityKey(type);
+  if(key)return this.abilities[key]>0;
+  return this.ownedForUpgrade(type)||Boolean(this.summonSlotsLocked()&&this.dronePartnerSlot(type));
+ }
  choose(type){
   if(this.phase!=='choice'||this.turnChoice||type==='scout')return false;
   if(['recovery','supply','periodic'].includes(this.choiceKind))return false;
@@ -921,7 +927,7 @@ class FrontGame{
     const old=this.tech[0][type]||0;this.tech[0][type]=old+1;this.registerSummon?.(type);
     const docking=this.droneDockingActive()&&['drone','combatDrone','multiDrone'].includes(type);
     this.alive(0).filter(u=>(docking?['drone','combatDrone','multiDrone'].includes(u.type):u.type===type)&&(!this.coop||u.coopOwner===this.coopOwner)).forEach(u=>{const hp=this.stats(u).hp;u.hp+=hp-u.maxHp;u.maxHp=hp;});
-    this.notify('toast',docking&&!old?'통합 드론 해금 · 110G 교대 소환 · 슬롯 1칸 반환':old?`${TYPES[type].name} Lv.${this.tech[0][type]} · 병과 강화`:`${TYPES[type].name} 해금`);
+    this.notify('toast',docking&&!old?'통합 드론 해금 · 기존 드론 슬롯에서 110G 교대 소환':old?`${TYPES[type].name} Lv.${this.tech[0][type]} · 병과 강화`:`${TYPES[type].name} 해금`);
     if(docking)this.dockDrones();
    }
    this.checkEvolutions();this.refreshCommanderHealth();this.refreshBuildingStats();

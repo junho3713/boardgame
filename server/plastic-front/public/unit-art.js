@@ -3,7 +3,7 @@
  const atlas='assets/ui/unit-portraits-v140.webp',width=1254,height=1254;
  const specialists={rifle:0},specialistAtlas='assets/ui/specialist-portraits-v211.webp';
  const droneAtlas='assets/ui/support-drone-portraits.webp';
- const combatDroneAtlas='assets/ui/combat-drone-portraits-v2.webp';
+ const combatDroneAtlas='assets/ui/combat-drone-portraits-v3.webp';
  const engineerAtlas='assets/ui/block-engineer-portraits-v212.webp';
  const radioAtlas='assets/ui/radio-portraits-v213.webp';
  const crop={width:360,height:328};
