@@ -1102,7 +1102,8 @@ class FrontGame{
   const react=dealt>0&&(!target.hitReaction||this.time<target.hitReaction.at||this.time+1e-8>=target.hitReaction.at+.5);
   if(react){
    target.hitReaction={at:this.time,angle,power,heavy};
-   if(heavy&&(!this.impactPulse||this.time<this.impactPulse.at||this.time+1e-8>=this.impactPulse.at+.5))this.impactPulse={at:this.time,x:target.x,y:target.y,power};
+   const commanderHit=source?.team===0&&source.type==='leader';
+   if(heavy&&!commanderHit&&(!this.impactPulse||this.time<this.impactPulse.at||this.time+1e-8>=this.impactPulse.at+.5))this.impactPulse={at:this.time,x:target.x,y:target.y,power};
    if(target.team===0&&target.type==='medic'&&target.appearance==='rina'){target.hurtStartedAt=this.time;target.hurtUntil=this.time+.32;target.hurtAngle=angle;}
    if(this.isSwordCommander(target)||this.isFlameCommander(target)&&target.flameSkin==='hwarin'){target.hurtUntil=this.time+.18;target.hurtAngle=angle;}
   }

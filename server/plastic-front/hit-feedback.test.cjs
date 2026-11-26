@@ -15,6 +15,23 @@ test('heavy hits recoil rigid vehicles gently and camera impact fades with the s
  const g=scene(),target=g.addUnit(2,'tank',800,1500),source=g.addUnit(0,'rocket',700,1500);g.camera={x:800,y:1500};g.damage(target,100,source);a.equal(target.hitReaction.heavy,true);a.ok(Math.abs(pose(target,.04).x)<3);g.time=.05;const first=shake(g);a.deepEqual(shake(g),first);a.ok(Math.abs(first.x)<=3);g.time=.3;a.deepEqual(shake(g),{x:0,y:0});g.time=.05;g.camera.x=3000;a.deepEqual(shake(g),{x:0,y:0});
 });
 
+test('repeated allied commander hits keep heavy body reactions without moving the camera',()=>{
+ for(const appearance of ['classic','shino','blaze','shion']){
+  const g=scene(),commander=g.addUnit(0,'leader',700,1500);
+  commander.appearance=appearance;
+  g.camera={x:800,y:1500};
+  for(let shot=0;shot<4;shot++){
+   const target=g.addUnit(2,'rifle',800,1500);
+   target.hp=target.maxHp=100;g.time=shot*.6;
+   const [bullet]=g.fireUnitProjectiles(commander,target,{damage:60,critical:true});
+   g.impact(bullet);g.time+=.05;
+   a.ok(target.hp<100&&target.hitReaction.heavy,appearance);
+   a.ok(pose(target,g.time),appearance);
+   a.deepEqual(shake(g),{x:0,y:0},appearance);
+  }
+ }
+});
+
 test('continuous incoming fire deals full damage while body reactions restart only every half second',()=>{
  for(const team of [0,2]){const g=scene(),target=g.addUnit(team,'rifle',800,1500),source=g.addUnit(team?0:2,'rifle',700,1500);target.hp=target.maxHp=1e6;let expected=target.hp;const x=target.x,y=target.y,hit=()=>{expected-=10*g.defenseFactor(target,source);g.damage(target,10,source);};
   hit();const first=target.hitReaction;for(let i=1;i<50;i++){g.time=i*.01;hit();a.equal(target.hitReaction,first);}a.equal(pose(target,.3),null);a.ok(Math.abs(target.hp-expected)<1e-6);g.time=.5;hit();a.notEqual(target.hitReaction,first);a.equal(target.hitReaction.at,.5);a.equal(target.x,x);a.equal(target.y,y);
