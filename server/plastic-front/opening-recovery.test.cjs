@@ -10,18 +10,45 @@ function scene(map='livingroom-star'){
 const enemy={team:2,type:'ant'};
 function elite(g,type,star=2){const u=g.addUnit(0,type,1500,7500);u.star=star;u.hp=u.maxHp=g.stats(u).hp;return u;}
 
-test('first-minute pulses alternate three and four ants and the next phases use the specified counts, intervals and caps',()=>{
+test('warm-up uses ordinary cadence without refill in solo or cooperative play',()=>{
+ for(const g of [scene(),new CoopGame()]){
+  g.start();g.units=g.units.filter(u=>u.team===0);
+  const s=g.roomCampaign;g.roomEntry=()=>({x:1500,y:6800});
+  a.equal(g.roomWavePlan().interval,3.2);a.equal(g.roomWaveCap(),g.coop?18:10);
+  g.updateRoomWaves();a.equal(s.nextSpawnAt,4);a.equal(g.roomEnemyCount(),0);
+  g.time=3.99;g.updateRoomWaves();a.equal(g.roomEnemyCount(),0);
+  g.time=4;a.equal(g.updateRoomWaves(),g.coop?3:2);
+  g.time=4.05;g.updateRoomWaves();a.equal(s.nextSpawnAt,7.2);
+  g.time=7.2;a.equal(g.updateRoomWaves(),g.coop?4:2);
+  a.ok(g.units.filter(u=>u.roomWave).every(u=>u.type==='ant'));
+ }
+});
+
+test('the 30-second phase uses three ants per pulse and restores low-count refill',()=>{
  const g=scene(),s=g.roomCampaign;g.roomEntry=()=>({x:1500,y:6800});
- g.updateRoomWaves();a.equal(s.nextSpawnAt,.5);a.equal(g.roomEnemyCount(),0);
- g.time=.49;g.updateRoomWaves();a.equal(g.roomEnemyCount(),0);
- g.time=.5;a.equal(g.updateRoomWaves(),3);
- g.time=.55;g.updateRoomWaves();a.equal(s.nextSpawnAt,1.05);
- g.time=1.05;a.equal(g.updateRoomWaves(),4);
- a.equal(g.roomEnemyCount(),7);a.ok(g.units.every(u=>u.type==='ant'));
- g.time=1.1;g.updateRoomWaves();a.equal(s.nextSpawnAt,3.25);
- for(const [at,count,interval,cap] of [[60,5,2.2,28],[120,6,2,36],[180,10,5.4,44]]){
-  g.time=at;
-  a.equal(g.roomWavePlan().count,count);a.equal(g.roomWavePlan().interval,interval);a.equal(g.roomWaveCap(),cap);
+ g.time=29.99;g.updateRoomWaves();a.equal(g.roomWaveCap(),10);
+ g.time=30;s.nextSpawnAt=33.19;g.updateRoomWaves();
+ a.equal(g.roomWavePlan().count,3);a.equal(g.roomWavePlan().interval,2.4);a.equal(g.roomWaveCap(),16);
+ a.equal(s.nextSpawnAt,30.5);a.equal(g.roomEnemyCount(),2);
+ g.time=30.5;a.equal(g.updateRoomWaves(),3);a.ok(g.units.every(u=>u.type==='ant'));
+ for(let i=0;i<5;i++)g.addUnit(2,'ant',1500,6800).roomWave=true;
+ g.time=60;s.nextSpawnAt=64;g.updateRoomWaves();a.equal(s.nextSpawnAt,62.2);
+});
+
+test('the one-minute phase alternates four and five on successful waves, including after save restore',()=>{
+ const g=scene(),s=g.roomCampaign,entry=()=>({x:1500,y:6800});g.roomEntry=entry;
+ g.time=60;s.nextSpawnAt=60;g.random=()=>.99;
+ a.equal(g.roomWaveCap(),26);a.equal(g.roomWavePlan().interval,2.2);
+ a.equal(g.updateRoomWaves(),4);a.equal(g.roomWavePlan().count,5);
+ a.ok(g.units.some(u=>u.roomWave&&u.type!=='ant'));
+ g.time=s.nextSpawnAt;g.roomEntry=()=>null;
+ a.equal(g.updateRoomWaves(),0);a.equal(g.roomWavePlan().count,5);
+ const restored=unpack(new FrontGame(),JSON.parse(JSON.stringify(pack(g))));
+ restored.time=restored.roomCampaign.nextSpawnAt;restored.roomEntry=entry;
+ a.equal(restored.updateRoomWaves(),5);a.equal(restored.roomWavePlan().count,4);
+ for(const [at,count,interval,cap] of [[120,6,2,36],[180,10,5.4,44]]){
+  restored.time=at;
+  a.equal(restored.roomWavePlan().count,count);a.equal(restored.roomWavePlan().interval,interval);a.equal(restored.roomWaveCap(),cap);
  }
 });
 
@@ -29,14 +56,14 @@ test('uncleared opening waves respect their caps and co-op advances its 1.8x all
  for(const g of [scene(),new CoopGame()]){
   g.start();g.units=g.units.filter(u=>u.team===0);g.roomEntry=()=>({x:1500,y:6800});
   for(let tick=0;tick<2400;tick++){g.time=tick/20;g.updateRoomWaves();a.ok(g.roomEnemyCount()<=g.roomWaveCap());}
-  a.equal(g.roomEnemyCount(),g.coop?Math.ceil(28*1.8):28);
+  a.equal(g.roomEnemyCount(),g.coop?Math.ceil(26*1.8):26);
  }
  const g=new CoopGame();g.start();g.roomEntry=()=>({x:1500,y:6800});let count=0;
- for(let i=0;i<6;i++){
+ for(let i=0;i<10;i++){
   g.time=i*10;g.roomCampaign.nextSpawnAt=g.time;g.units=g.units.filter(u=>u.team===0);
   count+=g.updateRoomWaves();
  }
- a.equal(count,37);a.ok(Math.abs(g.coopSpawnRemainder-.8)<1e-8);
+ a.equal(count,59);a.ok(Math.abs(g.coopSpawnRemainder-.4)<1e-8);
 });
 
 test('5:30 uses the denser quiet beat and the floor retries low living waves outside boss combat and recovery',()=>{
@@ -55,7 +82,7 @@ test('5:30 uses the denser quiet beat and the floor retries low living waves out
  const blocked=scene(),bs=blocked.roomCampaign,entry=blocked.roomEntry;bs.nextSpawnAt=0;blocked.roomEntry=()=>null;
  blocked.updateRoomWaves();a.equal(bs.nextSpawnAt,2);
  blocked.time=1;blocked.roomEntry=entry;blocked.updateRoomWaves();a.equal(bs.nextSpawnAt,2);a.equal(blocked.roomEnemyCount(),0);
- blocked.time=2;a.equal(blocked.updateRoomWaves(),3);
+ blocked.time=2;a.equal(blocked.updateRoomWaves(),2);
 });
 
 test('each two-star class returns one fresh one-star with current upgrades, and only its next death yields salvage',()=>{

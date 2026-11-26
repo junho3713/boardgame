@@ -90,7 +90,9 @@ test('the normal scheduled wave spends existing slots on a bomb and ants without
  const small=scene(190);small.upgradeRoomCampaign=()=>false;small.updateRoomScheduledTanks=()=>{};small.roomWavePlan=()=>({count:2,interval:5,forced:[],surge:false});small.roomCampaign.nextSpawnAt=190;small.random=()=>.15;small.updateRoomWaves();a.ok(small.units.every(u=>u.type!=='bombBug'));
 });
 test('the new opening caps preserve the composition weights',()=>{
- const g=scene(0);a.equal(g.roomPhase().mix.ant,1);a.equal(g.roomPhase().cap,18);g.time=60;a.equal(g.roomPhase().mix.ant,8);g.time=120;a.equal(g.roomPhase().mix.ant,7);g.time=180;a.equal(g.roomPhase().mix.ant,8);g.time=480;a.equal(g.roomPhase().mix.ant,8);g.time=600;a.equal(g.roomPhase().mix.ant,6);
+ const g=scene(0);a.deepEqual(g.roomPhase().mix,{ant:1});a.equal(g.roomPhase().cap,10);
+ g.time=30;a.deepEqual(g.roomPhase().mix,{ant:1});a.equal(g.roomPhase().cap,16);
+ g.time=60;a.equal(g.roomPhase().mix.ant,8);g.time=120;a.equal(g.roomPhase().mix.ant,7);g.time=180;a.equal(g.roomPhase().mix.ant,8);g.time=480;a.equal(g.roomPhase().mix.ant,8);g.time=600;a.equal(g.roomPhase().mix.ant,6);
 });
 
 test('active waves cycle bomb packets, pure ants including weak extras, and ordinary mixed troops in solo and co-op',()=>{

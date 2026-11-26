@@ -32,8 +32,9 @@ const config={version:116,duration:1200,enemyLuckyInterval:5,recoverySeconds:16,
   lines:[{id:'first-patrol',y:6200,roster:['ant','ant','bayonet']},{id:'laser-approach',y:4800,roster:['ant','ant','bladeGuard']},{id:'laser-left',x:450,y:4300,roster:['bladeGuard','machinegun']},{id:'laser-right',x:2550,y:4300,roster:['bladeGuard','machinegun']},{id:'approach',y:5600,roster:['bladeGuard','bayonet','rifle']},{id:'laser',y:4200,roster:['bayonet','bladeGuard','machinegun','machinegun','sniper']},{id:'witch',y:2400,roster:['stagBeetle','bladeGuard','machinegun','sniper']},{id:'final',y:1600,roster:['stagBeetle','bladeGuard','bladeGuard','machinegun','machinegun','sniper']}],leash:600,engage:650},
  lessons:{laser:{field:'laserExposureQuest',unlock:'mortar',hits:1},mage:{field:'mageShieldQuest',unlock:'sniper',uses:2}},
  phases:[
- {at:0,name:'첫 지원 대기',interval:2.2,batch:3,alternateBatch:4,cap:18,mix:{ant:1}},
- {at:60,name:'분대 성장',interval:2.2,batch:5,cap:28,mix:{ant:8,rifle:2,bladeGuard:1}},
+ {at:0,name:'초반 워밍업',interval:3.2,batch:2,cap:10,antOnly:true,refill:false,mix:{ant:1}},
+ {at:30,name:'물량 시작',interval:2.4,batch:3,cap:16,antOnly:true,mix:{ant:1}},
+ {at:60,name:'분대 성장',interval:2.2,batch:4,alternateBatch:5,cap:26,mix:{ant:8,rifle:2,bladeGuard:1}},
  {at:120,name:'폭탄개미와 소총병 합류',interval:2,batch:6,cap:36,mix:{ant:7,rifle:3,bladeGuard:2}},
  {at:180,name:'투석 딱정벌레 합류',interval:4,batch:4,cap:44,mix:{ant:8,bombBug:.45,acidBeetle:.55,bayonet:1,bladeGuard:2,rifle:3}},
  {at:240,name:'장갑·저격 혼합',interval:3.84,batch:5,cap:38,mix:{ant:4,bombBug:.45,acidBeetle:.55,bayonet:1.5,stagBeetle:2,sniper:1.5,honeybee:1,bladeGuard:2,rifle:2,butterfly:.6}},
@@ -306,7 +307,7 @@ const methods={
  roomCanSpawn(type){return this.roomEnemyReady(type)&&this.roomEnemyCount()<this.roomWaveCap()&&this.roomEnemyCount(type)<this.roomEnemyTypeCap(type);},
  roomWavePlan(){
   const p=this.roomPhase(),beat=this.roomBeat(),s=this.roomCampaign,r=config.surges;
-  const batch=p.alternateBatch&&(s?.firstMinuteWaves||0)%2?p.alternateBatch:p.batch;
+  const batch=p.alternateBatch&&(s?.alternatingWaves||0)%2?p.alternateBatch:p.batch;
   const surge=r.enabled&&this.time>=r.from&&beat.density>1;
   const portal=this.roomPortalAlive(),late=this.time>=config.lateWaves.from;
   const boss=this.units.some(u=>u.boss&&!u.miniBoss&&!u.roadCaptain&&u.hp>0),recovering=this.time<(s?.recoveryUntil||0);
@@ -405,7 +406,11 @@ const methods={
  updateRoomWaves(){
   if(this.phase!=='playing')return;this.upgradeRoomCampaign();const s=this.roomCampaign,p=this.roomPhase(),plan=this.roomWavePlan();
   const beat=this.roomBeat();
-  if(s.phaseAt!==p.at){s.phaseAt=p.at;this.notify('toast',p.name+' · '+beat.name);}
+  if(s.phaseAt!==p.at){
+   s.phaseAt=p.at;
+   if(p.at===30||p.at===60)s.nextSpawnAt=Math.min(s.nextSpawnAt,this.time+plan.interval);
+   this.notify('toast',p.name+' · '+beat.name);
+  }
   if(plan.surge&&s.surgeWindow!==plan.window){s.surgeWindow=plan.window;this.notify('toast','집중 공세 · 혼합 병력 접근');}
   this.updateRoomScheduledTanks();
   if(this.time<(s.waveEntryRetryAt||0))return;
@@ -413,7 +418,7 @@ const methods={
   const opening=config.insects.opening,openingPending=!s.openingAntWave&&this.time<opening.until;
   if(openingPending&&this.time<opening.at)s.nextSpawnAt=Math.min(s.nextSpawnAt,opening.at);
   const refill=config.waveRefill,refillAt=this.time+refill.delay;
-  if(s.nextSpawnAt>refillAt&&this.time>=(s.recoveryUntil||0)&&beat.name!=='보스 전투'){
+  if(p.refill!==false&&s.nextSpawnAt>refillAt&&this.time>=(s.recoveryUntil||0)&&beat.name!=='보스 전투'){
    const cap=this.roomWaveCap();
    if(this.roomEnemyCount()<cap&&this.units.filter(u=>u.hp>0&&u.team!==0&&u.roomWave&&!u.boss&&!u.rareSupplyGuard).length<cap*refill.minimumFraction)s.nextSpawnAt=refillAt;
   }
@@ -422,7 +427,7 @@ const methods={
   const isOpening=openingPending&&this.time>=opening.at&&count>0;
   const insects=config.insects,rotation=this.time<insects.midgame.from?insects.earlyRotation:inBombMidgame(this.time)?insects.midgame.rotation:ordinaryRotation;
   const varied=!isOpening&&this.time>=insects.bombFrom&&count>=bombPacketMinimum(this.time)&&beat.density>=.6&&this.time>=(s.recoveryUntil||0);
-  const encounter=isOpening?encounters.opening:p.alternateBatch?encounters.ants:varied?encounters[rotation[(s.antWaveCursor||0)%rotation.length]]:encounters.troops;
+  const encounter=isOpening?encounters.opening:p.antOnly?encounters.ants:varied?encounters[rotation[(s.antWaveCursor||0)%rotation.length]]:encounters.troops;
   const result=encounter.deploy(this,p,plan,count);
   if(result.retry){
    s.nextSpawnAt=isOpening?Math.min(s.nextSpawnAt,this.time+2):this.time+2;
@@ -430,7 +435,7 @@ const methods={
   }
   s.spawned+=result.count;
   s.waveSpawnDebt+=Math.max(0,result.count-count);
-  if(p.alternateBatch&&result.count)s.firstMinuteWaves=(s.firstMinuteWaves||0)+1;
+  if(p.alternateBatch&&result.count)s.alternatingWaves=(s.alternatingWaves||0)+1;
   if(isOpening){
    if(result.opened){s.openingAntWave=true;this.notify('toast','폭탄개미를 먼저 노려! · 주변 개미도 폭발에 휩쓸립니다.');}
    return result.count;
