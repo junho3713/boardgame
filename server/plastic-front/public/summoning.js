@@ -92,6 +92,7 @@
    this.skipEmptyLevelUpgrade();
   };
   p.nextSummonSlot=function(type){
+   if(this.droneDockingActive()&&drones.pair.includes(type))return null;
    return this.dronePartnerSlot(type)||(this.usesSummoning()&&ROSTER.includes(type)&&!this.summonSlots.includes(type)&&!this.summonSlotsLocked()?this.summonSlots.length+1:null);
   };
   p.registerSummon=function(type){
@@ -102,7 +103,7 @@
   };
   p.mercenaryLevel=function(){
    if(!this.summonSlots.length)return 1;
-   const total=this.summonSlots.reduce((sum,type)=>sum+Math.max(1,this.tech[0][type]||1),0);
+   const total=this.summonSlots.reduce((sum,type)=>sum+(type===drones.multi?(this.tech[0].drone+this.tech[0].combatDrone)/2:Math.max(1,this.tech[0][type]||1)),0);
    return Math.max(1,Math.round(total/this.summonSlots.length));
   };
   p.summonStatus=function(slot){

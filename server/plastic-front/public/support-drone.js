@@ -27,10 +27,10 @@ function lootTarget(drops,drone,leader,range){
  }
  return xp;
 }
-function collectLoot(game,drone,leader,range,dt,speed){
+function collectLoot(game,drone,leader,range,dt,speed,sweepRadius){
  const active=game.isDroneStealthed(drone),now=game.time;
  if(!active&&now+1e-8<(drone.nextDroneLootAt??0))return false;
- const {stealthDuration,minStealth,recovery,flightBoost,sweepRadius}=rules.collection;
+ const {stealthDuration,minStealth,recovery,flightBoost}=rules.collection;
  const drop=lootTarget(game.experienceDrops,drone,leader,range);
  if(!drop){
   if(!active)return false;
@@ -126,18 +126,18 @@ function install({FrontGame}){
   }
   return remainder;
  };
- function shieldAllies(game,drone,leader,evolved,range){
+ function shieldAllies(game,drone,leader,evolved,range,power){
   const rank=Math.min(2,Math.max(0,(drone.star||1)-1));
   const count=evolved?5:rules.shield.allies[rank];
   const allies=game.units.filter(u=>u.team===0&&u!==leader&&u.hp>0&&owner(u)===owner(drone)&&!game.isSupportEntity?.(u)&&distance(u,leader)<=range);
   allies.sort((a,b)=>a.hp/a.maxHp-b.hp/b.maxHp||distance(a,leader)-distance(b,leader)||a.id-b.id);
   for(const ally of [leader,...allies.slice(0,count)]){
-   const hp=ally.maxHp*rules.shield.strength[rank],previous=ally.droneShield;
+   const hp=ally.maxHp*rules.shield.strength[rank]*power*(evolved&&drone.type==='multiDrone'?1.3:1),previous=ally.droneShield;
    if(previous?.until>game.time&&previous.hp>hp)continue;
    ally.droneShield={hp,maxHp:hp,until:game.time+rules.shield.duration,evolved:evolved||!!(previous?.until>game.time&&previous.evolved)};
   }
  }
- function searchlight(game,drone,leader,evolved,contacts,range){
+ function searchlight(game,drone,leader,evolved,contacts,range,power){
   const previous=drone.droneScan;
   const active=previous&&game.time<previous.until;
   if(!active&&game.time+1e-8<(drone.nextDroneScanAt??0)){delete drone.droneScan;return;}
@@ -155,7 +155,7 @@ function install({FrontGame}){
    drone.nextDroneScanAt=game.time+rules.search.period;
    drone.droneScan={startedAt:game.time,until:game.time+rules.search.duration};
   }
-  Object.assign(drone.droneScan,{x:target.x,y:target.y,targetId:target.id,radius:rules.search.radius[+evolved],vulnerability:rules.search.vulnerability[+evolved]});
+  Object.assign(drone.droneScan,{x:target.x,y:target.y,targetId:target.id,radius:rules.search.radius[+evolved]*power,vulnerability:rules.search.vulnerability[+evolved]});
  }
  function pulseLoot(game,drone,dt){
   const drops=game.experienceDrops,{pulsePeriod,pulseRadius}=rules.collection;
@@ -182,14 +182,16 @@ function install({FrontGame}){
  p.updateSupportDrone=function(drone,leader,dt,stats,contacts=this.combatCandidates()){
   if(leader?.type!=='leader'||leader.hp<=0){delete drone.droneScan;delete drone.droneLootUntil;return;}
   const evolved=this.evolutionEnabled(drone),range=rules.collection.range[+evolved];
-  searchlight(this,drone,leader,evolved,contacts,range);
+  const tech=this.coop?this.withOwner(owner(drone),()=>this.tech[0]):this.tech[0];
+  const power=drone.type==='multiDrone'?1+.05*(Math.max(1,tech.drone||1)-1):1;
+  searchlight(this,drone,leader,evolved,contacts,range,power);
   if(this.time+1e-8>=(drone.nextDroneShieldAt??0)){
    drone.nextDroneShieldAt=this.time+rules.shield.period;
-   shieldAllies(this,drone,leader,evolved,range);
+   shieldAllies(this,drone,leader,evolved,range,power);
   }
   if(evolved)pulseLoot(this,drone,dt);
   const speed=stats.speed*rules.collection.speed[+evolved];
-  if(!collectLoot(this,drone,leader,range,dt,speed)){
+  if(!collectLoot(this,drone,leader,range,dt,speed,rules.collection.sweepRadius*power)){
    const facing=this.formationFacing,side=Math.sin(this.time*.85+drone.id*2.4)*rules.flight.rearSweep;
    const rear=boundFlight(this,{x:leader.x-Math.cos(facing)*rules.flight.rearDistance-Math.sin(facing)*side,
     y:leader.y-Math.sin(facing)*rules.flight.rearDistance+Math.cos(facing)*side});

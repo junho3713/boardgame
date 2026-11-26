@@ -13,7 +13,7 @@
   const config=settings();if(config.enemy!==$('enemy').value)$('enemy').value=config.enemy;
   if(config.outcome==='bossKiller'&&config.mode==='lucky')$('evolved').checked=true;
   document.querySelectorAll('[data-mode]').forEach(el=>el.hidden=el.dataset.mode!==config.mode);$('toyActions').hidden=config.mode!=='support';$('starsLabel').hidden=config.mode==='ultimate';
- $('troopHint').textContent=config.troop==='drone'?'서치라이트로 적을 추적하고 주변 아군에게 실드를 씌웁니다.':config.troop==='combatDrone'||config.troop==='multiDrone'?'펄스 연사와 유도 미사일을 확인합니다.':config.troop==='medic'?'의무관이 부상·중독 아군을 치료하는 과정을 확인합니다.':'진화 병과의 공격을 확인합니다.';
+ $('troopHint').textContent=config.troop==='drone'?'서치라이트로 적을 추적하고 주변 아군에게 실드를 씌웁니다.':config.troop==='combatDrone'||config.troop==='multiDrone'?'기관포 연사·유도 로켓·방어 무시 관통 레이저를 확인합니다.':config.troop==='medic'?'의무관이 부상·중독 아군을 치료하는 과정을 확인합니다.':'진화 병과의 공격을 확인합니다.';
   $('detail').textContent=config.mode==='support'?FrontSupportToys.toys[config.toy].detail:config.mode==='evolution'?'병과 레벨 5 · '+FrontEvolutions[config.troop].detail:config.mode==='lucky'?'병과 레벨 5 · 성장·당첨 대기 없이 바로 시전합니다. 2성 이상은 독립 룰렛 3개에 같은 결과를 적용합니다. 보스킬러는 진화 상태와 보스를 자동 준비합니다.':'직접 움직이며 5초마다 실제 4초 궁극기를 발동합니다. 즉시 스킬 버튼으로도 재시전합니다.';
   if(config.mode==='support'&&config.toy==='toyDrum')$('detail').textContent=FrontSupportToys.toys.toyDrum.detail+' · 북은 적을 공격하지 않으며 아군 강화 효과를 시험합니다.';
  }
@@ -70,7 +70,7 @@
   if(game.actor.type==='leader'&&game.ultimateStatus().active)fx.drawUltimateArea?.(c,game.actor,game.ultimate,game.time);
   for(const u of [...game.units].sort((a,b)=>a.y-b.y||a.id-b.id)){if(FrontHitFeedback.airborne(u,game.time))continue;unit(u);if(u.type==='lucky')fx.luckyReels(c,u,game);}
   window.FrontRosterArt?.field(c,game);fx.drawLuckySprays(c,game);for(const p of game.mortarShells)fx.drawMortar(c,p,game.time);for(const p of game.shots)fx.drawShot(c,p,game.evolved[p.source.type]);
-  for(const e of game.effects)if(!FrontSupportDroneView.event(c,e)&&!FrontSupportToyView.event(c,e,game))fx.drawEvent(c,e);for(const u of game.units.filter(u=>FrontHitFeedback.airborne(u,game.time)).sort((a,b)=>a.y-b.y||a.id-b.id))unit(u);fx.drawParticles(c);window.FrontRosterArt?.results(c,game);fx.drawStunStatuses(c,game);c.restore();FrontHitFeedback.screenFlash(c,game);
+  for(const e of game.effects)if(!FrontSupportDroneView.event(c,e,models,game.time)&&!FrontSupportToyView.event(c,e,game))fx.drawEvent(c,e);for(const u of game.units.filter(u=>FrontHitFeedback.airborne(u,game.time)).sort((a,b)=>a.y-b.y||a.id-b.id))unit(u);fx.drawParticles(c);window.FrontRosterArt?.results(c,game);fx.drawStunStatuses(c,game);c.restore();FrontHitFeedback.screenFlash(c,game);
  }
  function clearControls(){keys.clear();stick={x:0,y:0};if(game)game.input={x:0,y:0};$('joy').querySelector('i').style.transform='';}
  document.addEventListener('visibilitychange',()=>{if(document.hidden&&game){game.phase='paused';clearControls();acc=0;hud();}});window.addEventListener('blur',clearControls);

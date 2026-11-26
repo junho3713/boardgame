@@ -130,8 +130,8 @@ TYPES.rocket={...TYPES.rocket,name:'지뢰 설치병',enemyName:TYPES.rocket.nam
 TYPES.mortar={...TYPES.mortar,cost:130,rate:3.2};
 TYPES.tank={...TYPES.tank,cost:230,damage:115};
 TYPES.drone={name:'지원 드론',icon:'✜',hp:130,damage:0,rate:6,range:260,speed:175,r:12,cost:125,flying:true,flightHeight:54,role:'서치라이트 피해 +25% · 아군 에너지 실드 · 경험치 결정 공중 회수'};
-TYPES.combatDrone={...TYPES.drone,name:'전투 드론',icon:'✦',damage:14,rate:.75,range:360,role:'2연발 펄스 · 발당 피해 14 · 0.75초 간격 · 사거리 360px'};
-TYPES.multiDrone={...TYPES.combatDrone,name:'전술 멀티드론',hp:220,damage:14*.88,r:15,cost:220,role:'지원 드론의 스캔·실드·XP 회수와 전투 드론의 펄스를 사용합니다. 통합 슬롯에서 110G로 짝을 교대 소환합니다.'};
+TYPES.combatDrone={...TYPES.drone,name:'전투 드론',icon:'✦',damage:10,rate:.85,range:360,role:'0.85초마다 트윈 기관포 10×2 · 5초마다 유도 로켓 26×2 · 7초마다 방어 무시 관통 레이저 65 · 사거리 360px'};
+TYPES.multiDrone={...TYPES.combatDrone,name:'전술 멀티드론',hp:220,damage:8.5,r:15,cost:220,role:'서치라이트·실드·XP 회수와 기관포·로켓·관통 레이저를 사용합니다. 미진화 공격력 85%. 통합 슬롯에서 110G로 짝을 교대 소환합니다.'};
 const ROSTER=['rifle','machinegun','sniper','guntruck','rocket','mortar','tank','medic','lucky','drone','combatDrone'];
 const TROOP_TYPES=[...ROSTER,'multiDrone'];
 const MELEE=new Set(['bladeGuard','bayonetCaptain','bayonet','honeybee','hornet','ant','soldierAnt','beetle','bruteBeetle','stagBeetle','rhinoBeetle']);
@@ -172,8 +172,8 @@ const EVOLUTIONS={
  mortar:{name:'중박격포 분대',ability:'capacity',detail:'공격력 +35% · 폭발 범위 +30 · 사거리 +70 · 낙탄 시간 2초 유지'},
  lucky:{name:'슈퍼 럭키 레토나',ability:'speed',detail:'꽝 40→30% · 스프레이 10→17% · 777 미사일 2→5% · 끈끈이 폭탄/혼란 섬광탄 확률 유지 · 섬광에 맞은 적은 서로 공격'},
  drone:{name:'전술 관제 쿼드콥터',ability:'xpGain',detail:'스캔 피해 +35% · 최대 6기 실드 및 실드 파괴 넉백 · 회수 420px / 경험치 펄스'},
- combatDrone:{name:'강습 전투 드론',ability:'haste',detail:'3연발 펄스 · 3.5초마다 소형 유도 미사일 2발'},
- multiDrone:{name:'진화 전술 멀티드론',ability:'xpGain',abilities:['xpGain','haste'],detail:'지원·전투 기능 동시 진화 · 스캔 피해 +35% · 실드 파괴 넉백 · XP 회수 420px · 3연발 펄스와 3.5초마다 유도 미사일 2발'},
+ combatDrone:{name:'강습 전투 드론',ability:'haste',detail:'3연발 개틀링 · 유도 로켓 4발·반경 +20% · 레이저 5초·보스/정예 피해 +25%'},
+ multiDrone:{name:'진화 전술 멀티드론',ability:'xpGain',abilities:['xpGain','haste'],troops:['drone','combatDrone'],detail:'완전 진화 · 화력 100% · 스캔 피증 35% · 실드량 +30% · XP 탐색 420px · 개틀링 3발 · 로켓 4발·반경 +25% · 레이저 4.5초·보스/정예 피해 +35%'},
  medic:{name:'야전 의무관',ability:'defense',detail:'1초마다 최대 3명 치료 · 각 대상 치료량 +40% · 치료 범위 +60 · 방어력 +12 · 최대 체력 +20% · 10초마다 최대 5명의 빙결·치유 감소·둔화·중독 정화'}
 };
 const FIELD_CARDS={fieldSupply:{name:'현장 보급',icon:'▣',detail:'생산 자원 +90',kind:'supply'},fieldRepair:{name:'긴급 치료',icon:'✚',detail:'살아 있는 아군 최대 체력의 40% 회복',kind:'repair'},fieldGold:{name:'골드 상자',icon:'◈',detail:'기본 골드 +15 · 골드 획득량 보너스 적용',kind:'gold'}};
@@ -595,11 +595,15 @@ class FrontGame{
  }
  stats(u){
   const b=u.type==='blizzardMage'&&u.mobileMage?{...TYPES.blizzardMage,speed:85,stationary:false,role:'이동형 얼음 마녀 · 광역 빙결 속박 · 아이스 실드 · 저격병 우선 공략'}:this.isFlameCommander(u)?{...TYPES.leader,name:'화염방사 대장',damage:FLAME.damage,rate:FLAME.rate,range:FLAME.range}:this.isSwordCommander(u)?{...TYPES.leader,name:'시온',damage:SWORD.damage,rate:SWORD.rate,range:SWORD.range}:(u.team===0?TYPES[u.type]:ENEMY_REPLACED_TYPES[u.type]||TYPES[u.type]),p=this.profile.upgrades,ally=u.team===0,r=this.abilities,tier=u.threat||0,e=ally&&(u.summonEvolved||this.evolved[u.type])?u.type:null,fort=this.roomDefenseRules(u);
-  const troopLevel=Math.max(1,this.tech[u.team]?.[u.type]||1);
+  const merged=ally&&u.type==='multiDrone';
+  const troopLevel=Math.max(1,this.tech[u.team]?.[merged?'combatDrone':u.type]||1);
   const mercenaryLevel=ally&&Number.isFinite(u.mercenaryLevel)?u.mercenaryLevel:null;
   const summonLevel=mercenaryLevel===null?u.summonEvolved?5:troopLevel:
    this.summonSlots.includes(u.type)?Math.max(troopLevel,mercenaryLevel):mercenaryLevel;
   const level=ally&&u.type==='leader'?this.commanderLevel(u):TROOP_TYPES.includes(u.type)?summonLevel:1;
+  // Each chassis contributes half the base HP. Weapons use the combat branch.
+  const healthLevel=merged?(troopLevel+Math.max(1,this.tech[0].drone||1))/2:level;
+  const baseDamage=merged&&e?TYPES.combatDrone.damage:b.damage;
   const enemyPower=(this.mode==='pve'&&u.team===1&&ROSTER.includes(u.type)?(u.type==='sniper'?.6:.85):1.25)*(!ally?this.enemyDamageScale(u):1);
   const hpBonus=(e==='tank'||e==='medic'||e==='machinegun'?1.2:e==='rifle'?1.15:e==='guntruck'?1.1:1)*(this.isRoomCampaign()?(this.bossPatternRules(u)?.hpScale||1):1)*(fort?.hp||1)*(ally?1:u.evolutionWaveHp||1);
   const damageBonus=e==='tank'||e==='mortar'?1.35:e==='machinegun'?1.2:e==='rifle'?1.3:e==='rocket'?1.25:e==='guntruck'?1.15:1;
@@ -607,29 +611,34 @@ class FrontGame{
   const goldenTank=ally&&u.type==='tank'&&u.goldenSummon?1.5:1;
   const name=ally&&u.goldenSummon?(u.type==='lucky'?'황금 레토나':'황금 전차'):e?EVOLUTIONS[e].name:b.name;
   const defense=commanderMilestones*6+({crimsonAce:34,bikeRaider:12,bladeGuard:u.boss?8:14,bayonetCaptain:20,bayonet:6,hornet:30,soldierAnt:6,beetle:8,bruteBeetle:12,stagBeetle:30,rhinoBeetle:40}[u.type]??(ARMORED.has(combatKind(u))?18:0))+(ally?p.defense*3+r.defense*5:tier*3)+(e==='medic'?12:0)+(fort?.defense||0);
-  return {...b,name,hp:(u.boss&&u.type==='bladeGuard'?140:b.hp)*(1+.2*commanderMilestones)*(1+.18*(level-1))*(1+.12*tier)*(u.boss?({bayonetCaptain:4,bladeGuard:18,bikeRaider:7}[u.type]||(u.type==='hornet'?8:5)):1)*(u.boss?2:1)*hpBonus*this.enemyHealthScale(u)*(ally?1+.1*(r.health||0):1)*goldenTank,damage:b.damage*(1+.18*(level-1))*(ally?(1+.04*p.damage)*(1+.1*r.damage):enemyPower)*(1+.10*tier)*(u.boss?1.69:1)*damageBonus*(fort?.damage||1)*goldenTank,rate:u.type==='medic'?MEDIC_HEALING.interval:b.rate/(1+.09*(level-1))/(ally?(1+.03*p.haste)*(1+.08*r.haste):1)*(e==='guntruck'||e==='machinegun'?.75:1)*(!ally&&this.mode==='pve'&&u.type==='sniper'?1.25:1)*(fort?.rate||1)/(1+this.berserkerHaste(u))/this.tacticalFeverHaste(u),speed:b.speed*(ally?(1+.03*p.speed)*(1+.06*r.speed):1)*(e==='rifle'?1.15:1)*(u.boss?u.type==='rhinoBeetle'?1.6:u.type==='stagBeetle'?1.5:1.35:1),defense,range:b.range+(e==='tank'?35:e==='rifle'?20:e==='sniper'?65:e==='medic'?60:e==='mortar'?70:0),splash:(b.splash||0)+(e==='tank'?35:e==='rocket'||e==='mortar'?30:0),critChance:ally?clamp(.05+p.critChance*.02+r.critChance*.04+(e==='sniper'?.25:e==='rocket'?.2:0),0,.95):0,critDamage:1.5+(ally?p.critDamage*.1+r.critDamage*.15:0)+(e==='sniper'?.5:0),heal:u.type==='medic'?MEDIC_HEALING.base*(1+MEDIC_HEALING.perLevel*(level-1))*(e==='medic'?MEDIC_HEALING.evolvedMultiplier:1):12*(1+.2*(level-1))};
+  return {...b,name,hp:(u.boss&&u.type==='bladeGuard'?140:b.hp)*(1+.2*commanderMilestones)*(1+.18*(healthLevel-1))*(1+.12*tier)*(u.boss?({bayonetCaptain:4,bladeGuard:18,bikeRaider:7}[u.type]||(u.type==='hornet'?8:5)):1)*(u.boss?2:1)*hpBonus*this.enemyHealthScale(u)*(ally?1+.1*(r.health||0):1)*goldenTank,damage:baseDamage*(1+.18*(level-1))*(ally?(1+.04*p.damage)*(1+.1*r.damage):enemyPower)*(1+.10*tier)*(u.boss?1.69:1)*damageBonus*(fort?.damage||1)*goldenTank,rate:u.type==='medic'?MEDIC_HEALING.interval:b.rate/(1+.09*(level-1))/(ally?(1+.03*p.haste)*(1+.08*r.haste):1)*(e==='guntruck'||e==='machinegun'?.75:1)*(!ally&&this.mode==='pve'&&u.type==='sniper'?1.25:1)*(fort?.rate||1)/(1+this.berserkerHaste(u))/this.tacticalFeverHaste(u),speed:b.speed*(ally?(1+.03*p.speed)*(1+.06*r.speed):1)*(e==='rifle'?1.15:1)*(u.boss?u.type==='rhinoBeetle'?1.6:u.type==='stagBeetle'?1.5:1.35:1),defense,range:b.range+(e==='tank'?35:e==='rifle'?20:e==='sniper'?65:e==='medic'?60:e==='mortar'?70:0),splash:(b.splash||0)+(e==='tank'?35:e==='rocket'||e==='mortar'?30:0),critChance:ally?clamp(.05+p.critChance*.02+r.critChance*.04+(e==='sniper'?.25:e==='rocket'?.2:0),0,.95):0,critDamage:1.5+(ally?p.critDamage*.1+r.critDamage*.15:0)+(e==='sniper'?.5:0),heal:u.type==='medic'?MEDIC_HEALING.base*(1+MEDIC_HEALING.perLevel*(level-1))*(e==='medic'?MEDIC_HEALING.evolvedMultiplier:1):12*(1+.2*(level-1))};
  }
  selectedAbilities(){return Object.keys(ABILITIES).filter(k=>this.abilities[k]>0);}
  abilityKey(type){return typeof type==='string'&&type.startsWith('ability_')?type.slice(8):null;}
+ droneThreatRank(t){
+  if(t.boss||t.miniBoss||t.finalBoss)return 2;
+  return Number(!!(t.elite||t.roadCaptain||t.type==='bayonetCaptain'||ROOM_CAMPAIGN.config.evolutionPacing.eliteTypes.includes(t.type)));
+ }
  upgradeRoster(){
-  return this.droneDockingActive()?ROSTER.filter(t=>t!=='drone'&&t!=='combatDrone').concat('multiDrone'):ROSTER;
+  return ROSTER;
  }
  ownedForUpgrade(type){
-  return this.alive(0).some(u=>(u.type===type||type==='multiDrone'&&['drone','combatDrone'].includes(u.type))&&(!this.coop||u.coopOwner===this.coopOwner));
+  return this.alive(0).some(u=>(u.type===type||u.type==='multiDrone'&&['drone','combatDrone'].includes(type))&&(!this.coop||u.coopOwner===this.coopOwner));
  }
  eligibleCard(type){
   const key=this.abilityKey(type);if(key)return !!ABILITIES[key]&&(key!=='magnet'||this.mode==='pve')&&this.abilities[key]<5&&(this.abilities[key]>0||this.selectedAbilities().length<5);
   const locked=this.summonSlotsLocked?.();
-  if(TROOP_TYPES.includes(type))return this.upgradeRoster().includes(type)&&(this.tech[0][type]||0)<5&&(!locked||this.summonSlots.includes(type)||!!this.dronePartnerSlot(type));
+  if(TROOP_TYPES.includes(type))return this.upgradeRoster().includes(type)&&(this.tech[0][type]||0)<5&&(!locked||this.summonSlots.includes(type)||!!this.dronePartnerSlot(type)||this.droneDockingActive()&&['drone','combatDrone'].includes(type));
   return !!FIELD_CARDS[type]&&(!locked||this.choiceKind!=='level');
  }
  checkEvolutions(){
   for(const [type,e]of Object.entries(EVOLUTIONS)){
-   if(this.evolved[type]||(this.tech[0][type]||0)<5||!(e.abilities||[e.ability]).some(key=>this.abilities[key]>=5))continue;
+   if(this.evolved[type]||!(e.troops||[type]).every(t=>this.tech[0][t]>=5)||
+      !(e.abilities||[e.ability]).every(key=>this.abilities[key]>=5))continue;
    this.evolved[type]=true;
    this.alive(0).filter(u=>u.type===type&&(!this.coop||u.coopOwner===this.coopOwner)).forEach(u=>{const hp=this.stats(u).hp;u.hp+=hp-u.maxHp;u.maxHp=hp;this.effects.push({kind:'evolve',x:u.x,y:u.y,t:1.2,max:1.2,team:0});});
-   const ability=(e.abilities||[e.ability]).find(key=>this.abilities[key]>=5);
-   this.notify('toast',`${e.name} 진화! ${TYPES[type].name} Lv.5 + ${ABILITIES[ability].name} Lv.5`);
+   const requirements=[...(e.troops||[type]).map(t=>TYPES[t].name),...(e.abilities||[e.ability]).map(k=>ABILITIES[k].name)];
+   this.notify('toast',`${e.name} 진화! ${requirements.join(' Lv.5 + ')} Lv.5`);
   }
  }
 

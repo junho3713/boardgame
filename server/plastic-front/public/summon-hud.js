@@ -11,7 +11,7 @@
   medic:['의무','#43785b','M12 5h8v7h7v8h-7v7h-8v-7H5v-8h7z'],
   lucky:['레토나','#4f7245','M16 15C4 17 5 6 12 6c3 0 4 3 4 6 0-3 1-6 4-6 7 0 8 11-4 9 12-2 11 9 4 9-3 0-4-3-4-6 0 3-1 6-4 6-7 0-8-11 4-9z M15 21h2l-2 8h-3z'],
   drone:['드론','#427589','M2 7h10v3H2z M20 7h10v3H20z M2 22h10v3H2z M20 22h10v3H20z M9 9l7 5 7-5 2 2-6 5 6 5-2 2-7-5-7 5-2-2 6-5-6-5z','M14 14h4v4h-4z'],
-  combatDrone:['전투 드론','#984e36','M2 7h10v3H2z M20 7h10v3H20z M2 22h10v3H2z M20 22h10v3H20z M6 11l10 3 10-3v10l-10-3-10 3z M13 5h2v8h-2z M17 5h2v8h-2z','M14 14h4v4h-4z'],
+  combatDrone:['전투 드론','#67734b','M2 7h10v3H2z M20 7h10v3H20z M2 22h10v3H2z M20 22h10v3H20z M6 11l10 3 10-3v10l-10-3-10 3z M13 5h2v8h-2z M17 5h2v8h-2z','M14 14h4v4h-4z'],
   mystery:['미스터리','#735783','M4 13l12-6 12 6-12 6z M5 16l10 5v8L5 24z M17 21l10-5v8l-10 5z M16 2l2 2-2 2-2-2z','M15 12h3v2h-2v2h-2v-2h1z']
  };
  function icon(type){
@@ -40,19 +40,20 @@
     const feverSeconds=type==='mystery'?Math.ceil(game.tacticalFeverRemaining?.()||0):0,cooldown=status.cooldown||0;
     const ratio=status.cost?Math.min(1,Math.max(0,game.cash[0]/status.cost)):0;
     node.style.setProperty('--charge',ratio*100+'%');
-    const key=[type,display,waiting,level,evolved,status.reason,status.cost,fever,feverSeconds,cooldown].join('/');
+    const branches=status.docking?'지원 '+game.tech[0].drone+' · 전투 '+game.tech[0].combatDrone:'';
+    const key=[type,display,waiting,!!status.docking?.partner,branches,level,evolved,status.reason,status.cost,fever,feverSeconds,cooldown].join('/');
     if(previous[i]===key)return;previous[i]=key;
     node.style.setProperty('--summon-accent',fever?'#816031':entry?.[1]||'#3c5045');
-    node.classList.toggle('evolved',evolved);node.classList.toggle('affordable',!!entry&&!status.reason);
+    node.classList.toggle('dock-ready',!!status.docking?.partner);node.classList.toggle('drone-pair',!!status.docking);node.classList.toggle('evolved',evolved);node.classList.toggle('affordable',!!entry&&!status.reason);
     node.classList.toggle('empty',!entry);node.disabled=!entry;
     node.setAttribute('aria-disabled',String(!!status.reason));
     const name=(i===last?(fever?'전술 피버':'미스터리 장난감 박스'):root.FrontTypes[type]?.name)||'빈 슬롯';
     const detail=status.docking?`다음 소환 ${root.FrontTypes[display].name} · ${waiting?'도킹 대기 · ':''}같은 성급 자동 합체 · 만석에서도 미합체 1성의 짝은 소환 가능`:fever?'10초간 공속 +40% · 체력 30% 회복 · 480px XP 흡수 · 재사용 25초':
      i===last?'보병 1기와 50G 환급 30% · 일반 2기 44% · 2성 17% · 진화 2성 6%(6분 전 일반 2성) · 황금 전차·레토나 각 1.5%':'';
     const timers=[fever&&feverSeconds?`효과 ${feverSeconds}초`:null,cooldown?`재사용 ${cooldown}초`:null].filter(Boolean);
-    node.title=[name,status.cost?status.cost+'G':null,...timers,status.reason,detail].filter(Boolean).join(' · ');
-    node.setAttribute('aria-label',(i===last?'F':(i+1)+'번')+', '+name+(status.docking?', 다음 '+root.FrontTypes[display].name:'')+(waiting?', 도킹 대기':'')+(level?', 레벨 '+level:'')+(status.cost?', '+status.cost+' 골드':'')+(status.reason?', '+status.reason:''));
-    node.children[1].textContent=cooldown?'쿨 '+cooldown+'초':waiting?'도킹 대기':level?(status.docking?'통합 ':'')+'Lv.'+level:'';
+    node.title=[name,branches,status.cost?status.cost+'G':null,...timers,status.reason,detail].filter(Boolean).join(' · ');
+    node.setAttribute('aria-label',(i===last?'F':(i+1)+'번')+', '+name+(status.docking?', 다음 '+root.FrontTypes[display].name:'')+(waiting?', 도킹 대기':'')+(branches?', '+branches:level?', 레벨 '+level:'')+(status.cost?', '+status.cost+' 골드':'')+(status.reason?', '+status.reason:''));
+    node.children[1].textContent=cooldown?'쿨 '+cooldown+'초':branches||(level?'Lv.'+level:'');
     node.children[2].innerHTML=icon(display);
     node.children[3].textContent=fever?(feverSeconds?'피버 발동':'전술 피버'):status.docking?root.FrontTypes[display].name:entry?.[0]||'미등록';
     node.children[4].textContent=status.cost?status.cost+'G':'';

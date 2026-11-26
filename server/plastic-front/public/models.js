@@ -187,6 +187,7 @@ class FrontModels{
   if(u.shotgunBurns?.length)window.FrontRosterArt?.burning(ctx,u,time);
   if(u.type==='bubbleOctopus'&&window.FrontBubbleOctopusView)return window.FrontBubbleOctopusView.model(ctx,u,time);
   const attackDrone=u.type==='combatDrone'||u.type==='multiDrone';
+  if(u.type==='multiDrone'&&time-(u.droneDockAt??-1)<.17)return true;
   if(attackDrone){
    const model=this.ensure(this.visualFor(u,evolved),u.team);
    if(!model?.ready)return !!window.FrontRosterArt?.model(ctx,u,time,evolved);
@@ -245,24 +246,14 @@ class FrontModels{
    ctx.save();ctx.globalAlpha*=.22;ctx.fillStyle='#172b21';ctx.beginPath();
    ctx.ellipse(5,4,attackDrone?(u.type==='multiDrone'?27:23):u.type==='hornet'?23:15,u.type==='hornet'?9:6,0,0,TAU);ctx.fill();ctx.restore();
    ctx.translate(0,-lift);
-   if(attackDrone){
-    const x=Math.cos(aimFace),y=Math.sin(aimFace),flicker=1+Math.sin(time*47+(u.id??0))*.28;
-    ctx.save();ctx.globalCompositeOperation='lighter';
-    for(const side of [-5,5]){
-     const px=-x*15-y*side,py=(-y*15+x*side)*.77+5;
-     const glow=ctx.createRadialGradient(px,py,.2,px,py,5.5*flicker);
-     glow.addColorStop(0,'#fff6b1');glow.addColorStop(.38,'#ff944f');glow.addColorStop(1,'#ff541b00');
-     ctx.fillStyle=glow;ctx.fillRect(px-8,py-8,16,16);
-    }
-    ctx.restore();
-   }
   }
   const recoil=ultimate||flying||walking?0:u.recoil||0,bounce=elapsed===0?(state.bounce||0):walking?-Math.abs(Math.sin((state.walkPhase||0)*TAU))*.25:moved?Math.sin((u.walk||0)*2)*.45:0;
   if(visual==='crimsonAce'){ctx.save();ctx.fillStyle='#17271f';ctx.globalAlpha*=.18;ctx.filter='blur(3px)';ctx.beginPath();ctx.ellipse(10,8,45,22,-.12,0,TAU);ctx.fill();ctx.filter='none';ctx.globalAlpha=.24;ctx.beginPath();ctx.ellipse(0,2,32,13,0,0,TAU);ctx.fill();ctx.restore();}
   if(custom)this.ground(ctx,walkSpec,sideWalking?bodyAngle:aim,frame);
   this.sprite(ctx,walkSpec,bodyAngle,frame,custom?-Math.cos(aimFace)*recoil*9:0,bounce+(custom?-Math.sin(aimFace)*recoil*7:0)+(visual==='blizzardMage'?Math.sin(time*2.1+(u.id||0))*.65:0),time*TAU*(item.layers.body.flapRate||9)+(u.id||0)*1.7);
   if(attackDrone&&time-(u.droneFlashAt??-1)<.075){
-   const x=Math.cos(aimFace)*21,y=Math.sin(aimFace)*17+7;
+   const muzzle=u.type==='multiDrone'?16:12;
+   const x=Math.cos(aimFace)*muzzle,y=Math.sin(aimFace)*muzzle*.78+7;
    ctx.save();ctx.globalCompositeOperation='lighter';ctx.fillStyle='#fff1a0';
    ctx.beginPath();ctx.ellipse(x,y,5,2.5,aimFace,0,TAU);ctx.fill();ctx.restore();
   }

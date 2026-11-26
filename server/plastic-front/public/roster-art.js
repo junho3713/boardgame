@@ -111,7 +111,7 @@ function infantry(c,u,time,evolved,dice){
 }
 function drone(c,u,time,evolved){
  const attack=u.type!=='drone',combined=u.type==='multiDrone';
- const dark=combined?'#63431e':attack?'#513026':'#425033',shell=combined?'#c09042':attack?'#b95b38':'#7d8958';
+ const dark='#39402e',shell='#798450';
  const trim=attack?'#ff9254':'#51dcdf';
  const angle=u.aimFace??u.face??0,hover=(u.visualFlightHeight??54)+Math.sin(time*5+(u.id||0))*1.6;
  const P=(f,s,z=0)=>[Math.cos(angle)*f-Math.sin(angle)*s,(Math.sin(angle)*f+Math.cos(angle)*s)*.78-z];
@@ -121,7 +121,7 @@ function drone(c,u,time,evolved){
  const arms=supports.map(([f,s],i)=>({p:P(f,s,4),i})).sort((a,b)=>a.p[1]-b.p[1]);
  for(const {p,i} of arms){
   rod(c,[0,0],p,8,dark);rod(c,[0,-2],p,4,shell);
-  if(attack){const f=2+Math.sin(time*39+i)*1.5;ellipse(c,p[0],p[1]+5,4,4+f,'#eb602e80');ellipse(c,p[0],p[1]+6,1.8,3+f,'#ffd784');}
+  if(attack){const a=time*36+i;rod(c,[p[0]-Math.cos(a)*9,p[1]-Math.sin(a)*6],[p[0]+Math.cos(a)*9,p[1]+Math.sin(a)*6],3,'#25292a');ellipse(c,...p,2,2,dark);continue;}
   ellipse(c,p[0],p[1]+2,10.6,8.2,dark);
   ellipse(c,...p,10.5,7.9,shell);ellipse(c,p[0],p[1]-.7,8.2,5.9,attack?'#342e28':'#3c4e2b');
   c.beginPath();c.ellipse(p[0],p[1],9.8,7.4,0,0,TAU);c.strokeStyle=combined&&i%2?'#58dbd3':trim;c.lineWidth=1.8;c.stroke();
@@ -136,28 +136,34 @@ function drone(c,u,time,evolved){
   };
   const body=[[-16,-7],[-9,-12],[5,-12],[15,-6],[15,6],[5,12],[-9,12],[-16,7]];
   plate(body,dark,'#2f2e23',3);
-  plate([[-14,-6],[-8,-9],[4,-10],[13,-5],[13,5],[4,10],[-8,9],[-14,6]],combined?'#bf934b':'#9e5037',dark,7);
-  plate([[-8,-5],[-4,-8],[5,-7],[11,-2],[11,2],[5,7],[-4,8],[-8,5]],combined?'#ebc673':'#d78050',shell,10);
+  plate([[-14,-6],[-8,-9],[4,-10],[13,-5],[13,5],[4,10],[-8,9],[-14,6]],'#657347',dark,7);
+  plate([[-8,-5],[-4,-8],[5,-7],[11,-2],[11,2],[5,7],[-4,8],[-8,5]],'#848e57',shell,10);
   const cap=P(2,0,13);
-  ball(c,...cap,combined?5.6:5.1,3.8,combined?'#effffe':'#fff1bc',combined?'#52c6c6':'#ee8c52',dark);
+  ball(c,...cap,5.1,3.8,'#4d5051','#232527',dark);
   for(const offset of [-6,6]){
    const f=combined?0:-2;
-   rod(c,P(f-7,offset,10),P(f-4,offset,10),1.2,combined?'#f7db92':'#fdb47a');
+   rod(c,P(f-7,offset,10),P(f-4,offset,10),1.2,combined?'#f7db92':'#606658');
   }
   if(combined){
+   const saddle=[[-13,-7],[-3,-7],[0,-5],[0,5],[-3,7],[-13,7]];
+   plate(saddle,'#29a5a2','#294b48',14);
+   plate(saddle.map(([f,s])=>[f-1,s*.9]),'#34b3af','#126b6f',21);
+   const eye=P(-2,0,18);ball(c,...eye,5,4.4,'#f0d38a','#b8883f','#776333');
+   ball(c,...eye,3.9,3.4,'#a6fff9','#4ccbcc','#158985');
    for(const side of [-1,1])plate([[-7,side*10],[-3,side*15],[8,side*14],[10,side*10]],
-    side<0?'#398c89':'#b95436',dark,7);
+    side<0?'#398c89':'#637847',dark,7);
   }
  }else ball(c,0,-3,10.2,9,'#c8ca92','#798552','#3b482b');
- if(!attack||combined){const lens=P(12,0,2);ball(c,...lens,4.1,3.7,'#fffce1',combined?'#72e6e0':'#ffeaa0','#86733f');}
+ if(!attack){const lens=P(12,0,2);ball(c,...lens,4.1,3.7,'#fffce1',combined?'#72e6e0':'#ffeaa0','#86733f');}
  if(attack){
-  rod(c,P(9,0,-4),P(18,0,-5),evolved?10:8,'#482f2a');
-  rod(c,P(12,0,-4),P(17,0,-4),evolved?7:5,'#d8804e');
-  ball(c,...P(19,0,-5),3.1,2.7,'#ffd087','#ed7034','#742c23');
-  if(evolved)for(const side of [-1,1])ellipse(c,...P(18,side*4,-5),1.4,1.6,'#ee9e56');
-  if(time-(u.droneFlashAt??-1)<.08)ellipse(c,...P(21,0,-5),5.5,3,'#fff5b5');
+  const front=combined?16:12;
+  for(const side of [-2.7,2.7]){
+   rod(c,P(1,side,-4),P(front,side,-5),4.8,'#373839');
+   ball(c,...P(front,side,-5),2.4,2,'#535454','#27282a','#111212');
+  }
+  if(time-(u.droneFlashAt??-1)<.08)ellipse(c,...P(front,0,-5),5,2.5,'#fff5b5');
  }
- if(evolved){
+ if(evolved&&!attack){
   const core=P(3,0,10),mount=P(-4,0,10),dish=P(-6,0,17);
   ball(c,...core,4.8,2.8,'#edffff','#65e7f7','#226d79');
   rod(c,mount,dish,3,'#646f46');ball(c,...dish,7,3.7,'#c1cb88','#7a8854','#3c4a37');

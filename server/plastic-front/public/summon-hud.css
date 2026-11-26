@@ -108,3 +108,7 @@
  #upgradeOverlay .ui-actions:has(.upgrade-skip:not([hidden])){grid-template-columns:repeat(2,minmax(0,1fr))}
  #upgradeOverlay .ui-actions:has(.upgrade-skip:not([hidden])) #continueBattle{grid-column:1/-1}
 }
+
+.summon-slot.drone-pair{grid-template-columns:auto 1fr}
+.summon-slot.drone-pair .summon-level{font-size:9px;letter-spacing:-.3px}
+.summon-slot.dock-ready,.summon-slot.dock-ready.affordable{border-color:#79dfd4;box-shadow:inset 0 0 0 1px #79dfd4,0 0 5px #43aea9}

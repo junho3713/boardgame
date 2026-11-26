@@ -139,9 +139,33 @@ function shield(c,u,time,radius,layer='front'){
  }
  c.restore();
 }
-function event(c,e){
+function event(c,e,models,time=0){
+ if(e.kind==='droneLock'){
+  const k=clamp(e.t/e.max,0,1);
+  c.save();c.strokeStyle='#fc5266';c.globalAlpha=.85;c.lineWidth=1.3;
+  ellipse(c,e.tx,e.ty,5+9*k,5+9*k);c.stroke();c.setLineDash([3,5]);c.globalAlpha=.5;
+  c.beginPath();c.moveTo(e.x,e.y-63);c.lineTo(e.tx,e.ty);c.stroke();c.restore();return true;
+ }
+ if(e.kind==='droneLaser'){
+  const k=1-e.t/e.max,originY=e.y-63;
+  c.save();c.globalCompositeOperation='lighter';c.globalAlpha=Math.max(0,1-k);
+  const line=(x,y,width,color)=>{c.strokeStyle=color;c.lineWidth=width;c.beginPath();c.moveTo(e.x,originY);c.lineTo(e.lockX,e.lockY-e.lockHeight-10);c.lineTo(x,y);c.stroke();};
+  line(e.tx,e.ty-10,6,'#d52a4670');line(e.tx,e.ty-10,2.2,'#ff667e');line(e.tx,e.ty-10,.9,'#fff1ed');
+  c.strokeStyle='#ff626d';c.lineWidth=1.6;ellipse(c,e.lockX,e.lockY-e.lockHeight-10,7+k*9,7+k*9);c.stroke();
+  c.fillStyle='#ff6a7e';ellipse(c,e.x,originY,4*(1-k)+1,3*(1-k)+1);c.fill();
+  c.restore();return true;
+ }
  if(e.kind==='droneDock'){
   const k=clamp(1-e.t/e.max,0,1),y=e.y-54;
+  if(k<.37&&models){
+   const t=k/.37,s=t*t*(3-2*t);
+   e.from.forEach((p,i)=>{
+    const x=p.x+(e.x-p.x)*s,y=p.y+(e.y-p.y)*s;
+    c.save();c.translate(x,y);
+    models.draw(c,{type:i?'combatDrone':'drone',team:0,face:e.face,x,y,id:-(i+1),star:e.star},time,false);
+    c.restore();
+   });
+  }
   c.save();c.globalCompositeOperation='lighter';c.globalAlpha=1-k;
   if(k<.65){
    const slide=Math.min(1,k/.4);
@@ -150,7 +174,11 @@ function event(c,e){
     c.beginPath();c.moveTo(from.x+(e.x-from.x)*slide,from.y-54+(e.y-from.y)*slide);c.lineTo(e.x,y);c.stroke();
    }
   }
-  c.strokeStyle='#ffe499';c.lineWidth=2;ellipse(c,e.x,y,4+k*24,3+k*11);c.stroke();
+  for(const [offset,color] of [[0,'#59efec'],[5,'#ff9f57']]){
+   c.strokeStyle=color;c.lineWidth=2;ellipse(c,e.x,y,4+k*24+offset,3+k*11+offset*.5);c.stroke();
+  }
+  const flash=Math.max(0,1-Math.abs(k-.38)/.17);
+  if(flash){c.fillStyle='#fff6d9';ellipse(c,e.x,y,flash*12,flash*9);c.fill();}
   for(let i=0;i<8;i++){
    const a=i*TAU/8,step=4+29*k;
    c.fillStyle=i%2?'#ffba60':'#78f7f2';c.fillRect(e.x+Math.cos(a)*step,y+Math.sin(a)*step*.7,2,2);

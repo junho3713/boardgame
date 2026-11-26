@@ -25,13 +25,13 @@ def pack(source, output):
                 x = direction % 6 * CELL
                 y = (2 * frame + direction // 6) * CELL
                 sheet.paste(image, (x, y))
-        sheet.save(output / f"{name}-body-v1.webp", quality=91, method=4)
+        sheet.save(output / f"{name}-body-v2.webp", quality=91, method=4)
         portrait = Image.open(source / f"{name}-review.png").convert("RGBA")
         portrait = portrait.crop(portrait.getbbox())
         portrait.thumbnail((145, 133), Image.Resampling.LANCZOS)
         portraits.alpha_composite(portrait, (k * 160 + (160 - portrait.width) // 2, (160 - portrait.height) // 2))
     (output.parent / "ui").mkdir(exist_ok=True)
-    portraits.save(output.parent / "ui" / "combat-drone-portraits-v1.webp", quality=94, method=4)
+    portraits.save(output.parent / "ui" / "combat-drone-portraits-v2.webp", quality=94, method=4)
 
 
 def bake(output, qa_scripts, preview):
@@ -39,6 +39,7 @@ def bake(output, qa_scripts, preview):
     import bmesh
     from mathutils import Vector
 
+    output = output.resolve()
     output.mkdir(parents=True, exist_ok=True)
     bpy.ops.wm.read_factory_settings(use_empty=True)
     scene = bpy.context.scene
@@ -53,7 +54,7 @@ def bake(output, qa_scripts, preview):
     scene.view_settings.view_transform = "AgX"
     scene.world = bpy.data.worlds.new("Room bounce")
     scene.world.use_nodes = True
-    scene.world.node_tree.nodes.get("Background").inputs[0].default_value = (.29, .30, .32, 1)
+    scene.world.node_tree.nodes.get("Background").inputs[0].default_value = (.23, .25, .27, 1)
     scene.world.node_tree.nodes.get("Background").inputs[1].default_value = .42
 
     def material(name, rgb, roughness=.34, metal=.04, glow=0):
@@ -67,15 +68,13 @@ def bake(output, qa_scripts, preview):
         node.inputs["Emission Strength"].default_value = glow
         return mat
 
-    graphite = material("Graphite nylon", (.044, .051, .046), .44)
-    olive = material("Olive ABS", (.19, .237, .12))
-    orange = material("Burnt orange resin", (.67, .18, .055))
-    orange_light = material("Saffron molded trim", (.96, .39, .09))
-    brass = material("Gold docking frame", (.69, .41, .10), .30, .32)
-    teal = material("Teal polymer", (.048, .39, .37), .31)
-    aqua = material("Aqua status lens", (.064, .85, .91), .26, .12, .34)
-    signal = material("Amber pulse lens", (1, .28, .037), .26, .10, .45)
-    blade = material("Rotor blades", (.21, .23, .20), .42)
+    graphite = material("Graphite nylon", (.025, .026, .028), .43)
+    olive = material("Olive ABS", (.157, .184, .048))
+    visor = material("Smoked canopy", (.014, .014, .018), .18)
+    brass = material("Gold docking frame", (.67, .38, .056), .30, .32)
+    teal = material("Teal polymer", (.015, .30, .31), .31)
+    aqua = material("Aqua status lens", (.024, .67, .78), .26, .12, .34)
+    blade = material("Black rotor blades", (.018, .020, .023), .40)
     nickel = material("Nickel fasteners", (.38, .43, .39), .34, .45)
 
     def mesh(name, vertices, faces, mat, bevel=0, smooth=False):
@@ -129,83 +128,128 @@ def bake(output, qa_scripts, preview):
         faces += [(i, (i + 1) % steps, (i + 1) % steps + steps, i + steps) for i in range(steps)]
         return mesh(name, points, faces, mat, min(radius * .13, (q-p).length * .22, .024))
 
-    def duct(name, x, y, z, radius, exterior, trim):
-        profile = [(1, -.09), (1.025, -.03), (1.025, .12), (.99, .18), (.88, .18),
-                   (.81, .112), (.79, -.014), (.85, -.09)]
-        n = 36
-        vertices = [(x + r * radius * math.cos(i * math.tau / n), y + r * radius * math.sin(i * math.tau / n), z + h)
-                    for r, h in profile for i in range(n)]
-        faces = []
-        for j in range(len(profile)):
-            other = (j + 1) % len(profile)
-            faces.extend((j*n+i, j*n+(i+1)%n, other*n+(i+1)%n, other*n+i) for i in range(n))
-        ob = mesh(name, vertices, faces, exterior, smooth=True)
-        ob.data.materials.append(trim)
-        ob.data.materials.append(graphite)
-        for poly in ob.data.polygons:
-            poly.material_index = 1 if poly.index // n in (2, 3) else 2 if poly.index // n in (5, 6, 7) else 0
+    def shell(name, center, width, length, height, mat):
+        # Rounded moulded shell with a narrower leading end.
+        x, y, z = center
+        n, bands = 32, 12
+        verts = [(x, y, z-height)]
+        for j in range(1, bands):
+            lat = math.pi*j/bands-math.pi/2
+            for i in range(n):
+                angle = math.tau*i/n
+                f = math.sin(angle)*math.cos(lat)
+                verts.append((x+width*math.cos(lat)*math.cos(angle)*(1+.20*f),
+                              y+length*f, z+height*math.sin(lat)))
+        verts.append((x, y, z+height))
+        faces = [(0,1+(i+1)%n,1+i) for i in range(n)]
+        for j in range(bands-2):
+            t = 1+j*n
+            faces.extend((t+i,t+(i+1)%n,t+n+(i+1)%n,t+n+i) for i in range(n))
+        top = 1+(bands-1)*n
+        faces.extend((top-n+i,top-n+(i+1)%n,top) for i in range(n))
+        return mesh(name, verts, faces, mat, smooth=True)
 
-        tube(name + " motor", (x, y, z - .14), (x, y, z + .18), radius * .24, graphite)
-        tube(name + " hub", (x, y, z + .13), (x, y, z + .23), radius * .13, nickel)
-        for sign in (-1, 1):
-            box(name + f" support {sign}", (x + sign * radius * .47, y, z - .045),
-                (radius * .80, .089, .09), graphite, .018)
-        pivot = bpy.data.objects.new(name + " blade pivot", None)
+    def muzzle(x, front, radius):
+        # Dark recessed opening, with a rounded lip that catches the studio light.
+        n = 24
+        profile = [(radius*.91,.78),(radius,.70),(radius,.05),(radius*.91,0),
+                   (radius*.68,0),(radius*.63,.045),(radius*.63,.23)]
+        verts = [(x+r*math.cos(i*math.tau/n),front+y,-.46+r*math.sin(i*math.tau/n))
+                 for r,y in profile for i in range(n)]
+        faces = [tuple(range(n))]
+        for j in range(len(profile)-1):
+            faces.extend((j*n+i,j*n+(i+1)%n,(j+1)*n+(i+1)%n,(j+1)*n+i) for i in range(n))
+        faces.append(tuple(range(len(verts)-n,len(verts))))
+        barrel = mesh("Recessed twin cannon", verts, faces, graphite, smooth=True)
+        barrel.data.materials.append(visor)
+        barrel.data.polygons[-1].material_index = 1
+
+    def rotor(name, x, y, z, radius):
+        tube(name+" casing",(x,y,z-.22),(x,y,z+.12),.215,olive)
+        tube(name+" motor",(x,y,z+.10),(x,y,z+.19),.145,graphite)
+        pivot = bpy.data.objects.new(name+" rotor", None)
         scene.collection.objects.link(pivot)
-        pivot.location = (x, y, z)
-        for i in range(3):
-            a = math.tau * i / 3
-            c, s = math.cos(a), math.sin(a)
-            shape = [(radius * (f * c - w * s), radius * (f * s + w * c))
-                     for f, w in [(0.06, -.12), (.27, -.15), (.75, -.052), (.73, .15), (.36, .17), (.08, .07)]]
-            vane = prism(name + f" vane {i}", shape, .052, .108, blade, .018)
+        pivot.location = (x,y,z+.17)
+        for sign in (-1,1):
+            shape = [(sign*radius*f,sign*w) for f,w in
+                     [(0,-.065),(.42,-.145),(.85,-.12),(1,-.045),(.98,.058),(.60,.12),(.12,.08)]]
+            vane = prism(name+" blade",shape,0,.055,blade,.026)
             vane.parent = pivot
+        tube(name+" hub",(x,y,z+.18),(x,y,z+.26),.097,graphite)
         return pivot
 
     def assemble(combined, evolved):
-        mount = brass if combined else olive
-        cap = brass if combined else orange
-        outline = [(-.60,-1.47),(.60,-1.47),(1.03,-.77),(1.02,.66),(.68,1.31),
-                   (-.68,1.31),(-1.02,.66),(-1.03,-.77)]
+        width = 1.03 if combined else .86
+        # Layered moulding follows the long canopy profile of the approved concept.
+        nose = [(-.36,-1.48),(.36,-1.48),(.66,-1.12),(.94,-.40),
+                (1,.44),(.76,1.04),(.47,1.29),(-.47,1.29),(-.76,1.04),
+                (-1,.44),(-.94,-.40),(-.66,-1.12)]
+        rim = [(x*width,y) for x,y in nose]
+        prism("Lower olive chin",[(x*.98,y*.97) for x,y in rim],-.18,.23,olive,.15)
+        prism("Olive bonnet",rim,.08,.49,olive,.18)
+        def canopy(name, size, levels, mat):
+            # Sloped cap, the leading tip sits nearly flush with the bonnet.
+            n=32
+            verts=[]
+            for k,h in levels:
+                for i in range(n):
+                    t=i*math.tau/n
+                    f=math.sin(t)
+                    x=size*k*math.cos(t)*(.60+.16*f)*width
+                    y=-.38+size*k*.92*f
+                    verts.append((x,y,h+.125*(y+.38)))
+            faces=[tuple(range(n-1,-1,-1))]
+            for j in range(len(levels)-1):
+                faces.extend((j*n+i,j*n+(i+1)%n,(j+1)*n+(i+1)%n,(j+1)*n+i) for i in range(n))
+            faces.append(tuple(range(len(verts)-n,len(verts))))
+            return mesh(name,verts,faces,mat,smooth=True)
+        canopy("Raised olive canopy rim",1.15,[(1,.36),(1,.52),(.93,.59),(.5,.59)],olive)
+        canopy("Unbroken smoked window",1.04,[(1,.49),(1,.565),(.93,.62),(.64,.691),(.23,.72)],visor)
+        # The combat saddle is below the mass centre, with just the lips visible at the nose.
+        front = -1.66 if combined else -1.26
+        box("Ventral saddle",(0,-.28,-.23),(.64,1.05,.35),graphite,.09)
+        box("Cannon breech",(0,front+.72,-.44),(.90,.73,.38),graphite,.10)
+        for side in (-1,1):
+            muzzle(side*.226,front,.215)
+            if combined:
+                x = side*.98
+                for y in (-.72,.72):
+                    tube("Skid strut",(side*.75,y,.15),(x,y-.18,-.78),.13,olive)
+                box("Landing runner",(x,-.03,-.79),(.25,2.45,.19),olive,.09)
         if combined:
-            outline = [(x * 1.22, y) for x, y in outline]
-        prism("Lower hull", outline, -.35, .14, graphite, .105)
-        body = [(x * .94, y * .92) for x, y in outline]
-        prism("Main shell", body, .04, .53, mount, .11)
-        prism("Nose armor", [(-.42,-1.43),(.42,-1.43),(.77,-.84),(.71,.25),(-.71,.25),(-.77,-.84)],
-              .40, .66, cap, .10)
-        prism("Cockpit arch", [(-.33,-1.23),(.33,-1.23),(.5,-.74),(.34,-.30),(-.34,-.30),(-.5,-.74)],
-              .63, .79, graphite, .061)
-        box("Segmented projector", (0,-.994,.741), (.61,.19,.14), aqua if combined else signal, .040)
-        for j in range(3):
-            box(f"Rear heat vent {j}", (0,.39+j*.18,.53), (.76,.075,.084), graphite, .022)
-        # Compact underslung projector. The same housing carries the evolved missile ports.
-        box("Ventral mount", (0,-.71,-.34), (.88,.86,.26), graphite, .069)
-        box("Ventral pulse housing", (0,-1.04,-.51), (1.03 if evolved else .87,.88,.31), cap, .089)
-        box("Ventral emitter face", (0,-1.458,-.51), (.73 if evolved else .60,.10,.22), graphite, .046)
-        tube("Pulse aperture rim", (0,-1.47,-.51), (0,-1.542,-.51), .108, nickel, 24)
-        tube("Pulse aperture glass", (0,-1.53,-.51), (0,-1.551,-.51), .074, signal, 24)
+            # Raise the support head above the canopy crest on a separate toy saddle.
+            box("Olive rear deck",(0,.78,.52),(1.38,.99,.26),olive,.10)
+            box("Graphite docking socket",(0,.78,.68),(1.12,.84,.25),graphite,.085)
+            for sx in (-1,1):
+                box("Turquoise saddle foot",(sx*.54,.80,.79),(.29,1.18,.29),teal,.075)
+            box("Raised teal saddle",(0,.82,.915),(1.37,1.23,.23),teal,.10)
+            prism("Gold front catch",[(-.21,-.025),(.21,-.025),(.19,.43),(-.19,.43)],
+                  .72,1.01,brass,.060)
+            box("Support head",(0,.98,1.39),(1.31,1.07,.96),teal,.19)
+            for sx in (-1,1):
+                tube("Gold pivot",(sx*.617,.99,1.31),(sx*.719,.99,1.31),.195,brass,28)
+                box("Raised side stripe",(sx*.637,.99,1.58),(.070,.59,.095),teal,.014)
+            tube("Top gold cap",(0,1.06,1.831),(0,1.06,1.96),.182,brass,28)
+            # The optic projects beyond the flat front panel with a visible gold surround.
+            tube("Gold optic housing",(0,.56,1.40),(0,.255,1.45),.460,brass,36)
+            tube("Teal lens gasket",(0,.281,1.446),(0,.222,1.456),.379,teal,36)
+            shell("Convex cyan optic",(0,.237,1.46),.353,.142,.352,aqua)
+        else:
+            box("Rear spine",(0,.66,.45),(.83,.71,.16),olive,.07)
         if evolved:
-            for slot in (-.232,.232):
-                tube("Recessed missile port", (slot,-1.47,-.51), (slot,-1.537,-.51), .076, olive)
-                tube("Missile status cap", (slot,-1.529,-.51), (slot,-1.552,-.51), .048, signal)
-        for sx in (-1, 1):
-            box("Underbody skid", (sx*.68,.12,-.30), (.19,1.93,.19), graphite, .045)
-            box("Lateral power pack", (sx*(.98 if combined else .76),.43,.35), (.43,.91,.44),
-                teal if combined and sx<0 else orange, .095, .07*sx)
-        if combined:
-            tube("Searchlight collar", (0,-1.24,.18), (0,-1.51,.18), .36, teal, 28)
-            tube("Searchlight glass", (0,-1.48,.18), (0,-1.56,.18), .28, aqua, 28)
-            tube("Top sensor mount", (.0,.17,.49), (0,.17,.73), .37, graphite)
-            tube("Top sensor dome", (.0,.17,.69), (0,.17,.84 if not evolved else .97), .26, aqua, 28)
+            for side in (-1,1):
+                box("Gatling shroud",(side*.62,.27,.38),(.28,.93,.25),graphite,.09)
+                box("Silver trim",(side*.64,.32,.50),(.12,.49,.055),nickel,.02)
         pivots = []
-        for j, (sx, front) in enumerate([(-1,True),(1,True),(-1,False),(1,False)]):
-            x = sx*(1.70 if combined else (1.57 if front else 1.46))
-            y = -.88 if front else 1.04
-            box("Molded rotor arm", ((x + sx*.44)/2, y*.81,.24), (abs(x-sx*.44)+.58,.37,.31),
-                mount,.065, sx*(.11 if front else -.14))
-            pivots.append(duct(f"Rotor {j+1}", x,y,.387,(.68 if front else .58)+(0.045 if combined else 0),
-                               graphite if front else olive, teal if combined and sx<0 else orange_light))
+        for j,(side,fwd) in enumerate([(-1,-1),(1,-1),(-1,1),(1,1)]):
+            x,y = side*(1.76 if combined else 1.45),fwd*(1.12 if combined else 1.03)
+            # Broad, swept solid arms blend into each side of the shell.
+            start = (side*width*.52,fwd*.47)
+            length=math.hypot(x-start[0],y-start[1])
+            turn=math.atan2(y-start[1],x-start[0])
+            box("Swept olive arm",((x+start[0])/2,(y+start[1])/2,.28),
+                (length+.29,.34 if combined else .265,.235),olive,.092,turn)
+            pivots.append(rotor(f"Rotor {j+1}",x,y,.49,.69 if combined else .63))
         return pivots
 
     def area(name, position, energy, size, color):
@@ -216,9 +260,9 @@ def bake(output, qa_scripts, preview):
         ob.location = position
         ob.rotation_euler = (-ob.location).to_track_quat("-Z", "Y").to_euler()
 
-    area("Warm studio key", (-3.8,-5.5,7.4), 1050, 5.2, (1,.86,.69))
-    area("Cool front fill", (5,-2.5,3.8), 650, 4.8, (.83,.93,1))
-    area("Rim light", (2,5.1,6), 1150, 3.8, (1,.77,.51))
+    area("Warm studio key", (-3.8,-5.5,7.4), 760, 4.7, (1,.86,.69))
+    area("Cool front fill", (5,-2.5,3.8), 360, 4.3, (.83,.93,1))
+    area("Rim light", (2,5.1,6), 680, 3.8, (1,.77,.51))
     camera = bpy.data.objects.new("Sprite camera", bpy.data.cameras.new("Sprite camera"))
     scene.collection.objects.link(camera)
     camera.data.type = "ORTHO"
@@ -226,7 +270,7 @@ def bake(output, qa_scripts, preview):
 
     def render(name, direction, size, scale):
         # Camera zero looks toward the nose. The atlas packer maps views to game headings.
-        camera.location = (math.sin(direction)*8.3,-math.cos(direction)*8.3,10.1)
+        camera.location = (math.sin(direction)*8.3,-math.cos(direction)*8.3,7.0)
         camera.rotation_euler = (Vector((0,0,.22))-camera.location).to_track_quat("-Z","Y").to_euler()
         camera.data.ortho_scale = scale
         scene.render.resolution_x = scene.render.resolution_y = size
@@ -257,7 +301,7 @@ def bake(output, qa_scripts, preview):
         if not preview:
             for frame in range(FRAMES):
                 for i, pivot in enumerate(active):
-                    pivot.rotation_euler.z = frame * math.tau / 9 + i * .68
+                    pivot.rotation_euler.z = frame * math.pi / FRAMES + i * .68
                 for direction in range(DIRECTIONS):
                     render(f"{name}-{frame}-{direction}", -math.tau * direction / DIRECTIONS, CELL, 6.6)
         for ob in created:

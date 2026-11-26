@@ -23,7 +23,7 @@
    const leader=this.commander(0);Object.assign(leader,{x:1200,y:6000,face:0,cooldown:1e6});leader.hp=leader.maxHp=this.stats(leader).hp;
    if(config.mode==='support'){this.actor=this.addSupportToy(config.toy);Object.assign(this.actor,{x:1260,y:6000,toyUpgradeLevel:config.stars-1});this.refreshSupportToyCooldown(this.actor);}
    else if(config.mode==='ultimate'){this.actor=leader;Object.assign(leader,{x:1260,y:6000});}
-   else{const type=config.mode==='lucky'?'lucky':config.troop;this.tech[0][type]=5;this.evolved[type]=config.mode==='evolution'||config.evolved;if(this.evolved[type])this.abilities[EVOS[type].ability]=5;this.actor=this.addUnit(0,type,1260,6000);this.actor.star=config.stars;this.actor.hp=this.actor.maxHp=this.stats(this.actor).hp;}
+   else{const type=config.mode==='lucky'?'lucky':config.troop;this.tech[0][type]=5;this.evolved[type]=config.mode==='evolution'||config.evolved;if(this.evolved[type])this.abilities[EVOS[type].ability]=5;if(type==='multiDrone'){this.tech[0].drone=this.tech[0].combatDrone=5;if(this.evolved[type])this.abilities.xpGain=this.abilities.haste=5;}this.actor=this.addUnit(0,type,1260,6000);this.actor.star=config.stars;this.actor.hp=this.actor.maxHp=this.stats(this.actor).hp;}
    Object.assign(this.actor,{face:0,aimFace:0,moveFace:0,turretFace:0,cooldown:1e6});
    this.labTargets=[];for(let i=0;i<config.count;i++){
     let x,y;if(config.layout==='ring'){const a=i*Math.PI*2/config.count;x=this.actor.x+Math.cos(a)*210;y=this.actor.y+Math.sin(a)*210;}
@@ -59,7 +59,7 @@
    else if(c.troop==='medic'){this.labHealingUntil=this.time+12;u.cooldown=0;this.updateMedicHealing(u);}
    else if(c.troop==='drone'){u.nextDroneScanAt=u.nextDroneShieldAt=this.time;delete u.droneScan;}
    else if(c.troop==='combatDrone'||c.troop==='multiDrone'){
-    u.nextDroneScanAt=u.nextDroneShieldAt=u.nextDroneMissileAt=this.time;
+    u.nextDroneScanAt=u.nextDroneShieldAt=u.nextDroneLaserAt=u.nextDroneMissileAt=this.time;
     u.cooldown=0;this.labFireUntil=this.time+8;
    }
    else{const target=this.labTargets.find(t=>t.hp>0);if(!target)return false;const attack=this.attackRoll(u);if(c.troop==='mortar')this.launchMortar(u,target,attack);else this.fireUnitProjectiles(u,target,attack,this.stats(u));u.cooldown=this.stats(u).rate;this.labFireUntil=this.time+8;}
