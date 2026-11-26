@@ -38,6 +38,43 @@ test('spotlight follows boss priority, buffs each lit enemy, and doubles bubble 
  boss.hp=0;g.time=36;tick(g,drone);a.equal(drone.droneScan.targetId,special.id);
 });
 
+test('the drone leaves melee danger, returns behind the commander, and keeps its spotlight and shield active',()=>{
+ const g=scene(),c=g.commander(0);
+ Object.assign(c,{x:900,y:2200});g.formationFacing=-Math.PI/2;
+ const drone=spawn(g,0,'drone',0,-95),enemy=spawn(g,2,'bombBug',0,-150);
+ for(let i=0;i<28;i++){g.time+=.05;tick(g,drone,.05);}
+ a.ok(drone.y>c.y+75,`drone should return behind commander: ${drone.y}`);
+ a.ok(Math.hypot(drone.x-enemy.x,drone.y-enemy.y)>190);
+ a.equal(drone.droneScan.targetId,enemy.id);
+ a.ok(g.supportScanAt(enemy));
+ a.ok(c.droneShield.hp>0);
+});
+
+test('the drone takes a safer side when riflemen occupy the rear',()=>{
+ const g=scene(),c=g.commander(0);
+ Object.assign(c,{x:900,y:2200});g.formationFacing=-Math.PI/2;
+ const drone=spawn(g,0,'drone',0,108),enemy=spawn(g,2,'rifle',30,285);
+ const separation=()=>Math.hypot(drone.x-enemy.x,drone.y-enemy.y);
+ for(let i=0;i<25;i++){g.time+=.05;tick(g,drone,.05);}
+ a.ok(separation()>g.stats(enemy).range+20,`drone should leave rifle range: ${separation()}`);
+ a.ok(Math.hypot(drone.x-c.x,drone.y-c.y)<230);
+ a.equal(drone.droneScan.targetId,enemy.id);
+});
+
+test('the drone skips guarded crystals, collects safer ones, and returns when the guard is gone',()=>{
+ const g=scene(),c=g.commander(0);
+ Object.assign(c,{x:900,y:2200});
+ const drone=spawn(g,0,'drone',0,-35),enemy=spawn(g,2,'bombBug',0,185);
+ const guarded={x:c.x+25,y:c.y+38,owner:0,amount:10};
+ const open={x:c.x-118,y:c.y-65,owner:0,amount:8};
+ g.experienceDrops=[guarded,open];
+ for(let i=0;i<18;i++){g.time+=.05;tick(g,drone,.05);}
+ a.deepEqual(g.experienceDrops,[guarded]);a.equal(g.xp,8);
+ enemy.hp=0;
+ for(let i=0;i<30;i++){g.time+=.05;tick(g,drone,.05);}
+ a.deepEqual(g.experienceDrops,[]);a.equal(g.xp,18);
+});
+
 test('energy coating uses health ratios, star strength and same-owner recipients; only an evolved break shoves enemies',()=>{
  const g=scene(true),c=g.commander(0),drone=spawn(g,0,'drone',0,-50);
  const friend=g.withOwner(1,()=>spawn(g,0,'rifle',-150,-15));friend.hp=1;
