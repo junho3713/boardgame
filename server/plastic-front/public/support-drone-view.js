@@ -112,6 +112,10 @@ function activeShieldHp(unit,time){
  const shield=unit.droneShield;
  return shield&&time<shield.until?Math.max(0,shield.hp):0;
 }
+function cloakOpacity(u,time){
+ if(u.team!==0||u.type!=='drone'||time>=(u.droneLootUntil??0))return 1;
+ return 1-.58*clamp((time-u.droneLootStartedAt+.04)/.16,0,1);
+}
 function shield(c,u,time,radius,layer='front'){
  const hp=activeShieldHp(u,time);
  if(!hp)return;
@@ -150,5 +154,5 @@ function event(c,e){
  }
  c.restore();return true;
 }
-root.FrontSupportDroneView={searchlights,shield,event,activeShieldHp};
+root.FrontSupportDroneView={searchlights,shield,event,activeShieldHp,cloakOpacity};
 })(typeof window==='undefined'?globalThis:window);

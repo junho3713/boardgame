@@ -46,6 +46,7 @@
  function unit(u){
   if(game.isSupportEntity(u)){FrontSupportToyView.draw(c,u,game);return;}if(u.hp<=0)return;
   c.save();c.translate(u.x,u.y);FrontHitFeedback.transform(c,u,game.time);
+  if(u.type==='drone')c.globalAlpha*=FrontSupportDroneView.cloakOpacity(u,game.time);
   const radius=window.FrontTypes[u.type].r;
   FrontSupportDroneView.shield(c,u,game.time,radius,'ground');
   if(!models.draw(c,u,game.time,!!game.evolved[u.type])){c.fillStyle=u.team?'#bc7151':'#9ccf92';c.beginPath();c.arc(0,-10,12,0,Math.PI*2);c.fill();}

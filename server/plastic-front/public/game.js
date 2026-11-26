@@ -733,6 +733,7 @@ function drawUnitRaw(u,mine=true){
  const t=u.team,alive=u.hp>0,evolved=window.FrontUnitLabels.isEvolved(game,u);if(!alive){if(u.type==='medic'&&t===0&&u.appearance==='rina'&&Number.isFinite(u.diedAt)){ctx.save();ctx.translate(u.x,u.y);unitModels.draw(ctx,u,game.time);ctx.restore();}if(u.guardianRespawn&&Number.isFinite(u.respawnAt)&&game.mission.stage>=3&&game.visible(u))text(ctx,'얼음 마녀 귀환 · '+Math.max(0,Math.ceil(u.respawnAt-game.time))+'초',u.x,u.y+28,11,'#acdfff');if(u.type==='leader'&&t===0){const p=point(u);text(ctx,u.deadUntil>game.time?'제자리 부활 '+Math.ceil(u.deadUntil-game.time)+'초':'부활 기회 소진',u.x,u.y-25,13,'#f5edc6');}return;}
  if(t&&!game.visible(u))return;window.FrontToyInsects?.warning?.(ctx,u,game.time);
  const col=t===2?'#77543a':t?'#bd6e55':'#5f863e',light=t===2?'#a17b4d':t?'#d88c71':'#84a953',dark=t===2?'#493c2b':t?'#82472f':'#36592b';ctx.save();ctx.translate(u.x,u.y);window.FrontHitFeedback.transform(ctx,u,game.time);
+ if(u.type==='drone')ctx.globalAlpha*=window.FrontSupportDroneView.cloakOpacity(u,game.time);
 
  if(u.type==='leader'&&t===0){circle(ctx,0,0,25,null,'#edf6cb99');ctx.setLineDash([3,7]);circle(ctx,0,0,30,null,'#edf6cb55');ctx.setLineDash([]);drawCommandHeading(ctx,u,mine);if(game.commanderReviveProtected(u)){circle(ctx,0,-26,43,'#83e8ff20','#9eefff');text(ctx,`부활 보호 ${Math.ceil(u.reviveProtectionUntil-game.time)}초`,0,-82,11,'#b8f4ff');}}
  if(evolved){circle(ctx,0,0,types[u.type].r+9,null,'#e9c76b');}

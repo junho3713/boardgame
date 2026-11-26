@@ -417,7 +417,7 @@ class FrontGame{
    for(const patient of patients){patient.rootedUntil=0;patient.healingReductionUntil=0;patient.luckySlowUntil=0;patient.slowUntil=0;patient.poisonUntil=0;patient.poisonDps=0;patient.poisonSource=null;patient.poisonNextAt=0;this.effects.push({kind:'cleanse',x:patient.x,y:patient.y,target:patient,sourceId:medic.id,source:medic,wave:patient===patients[0],t:.85,max:.85,team:0});}
   }
  }
- butterflyTargets(source){return [...this.alive(0),...this.buildings.filter(b=>b.kind==='repairBot'&&b.hp>0&&b.buildUntil<=this.time)].filter(u=>u.hp>0&&dist(source,u)<=BUTTERFLY.range&&this.lineClear(source,u,0,{fireTeam:source.team}));}
+ butterflyTargets(source){return [...this.alive(0),...this.buildings.filter(b=>b.kind==='repairBot'&&b.hp>0&&b.buildUntil<=this.time)].filter(u=>this.canTarget(source,u)&&dist(source,u)<=BUTTERFLY.range&&this.lineClear(source,u,0,{fireTeam:source.team}));}
  updateButterfly(u,dt){
   const cast=u.butterflyCast;
   if(cast){u.face=u.aimFace=cast.angle;if(this.time+1e-8<cast.fireAt)return;
@@ -706,6 +706,7 @@ class FrontGame{
  attackRoll(u,random=()=>this.random()){const s=this.stats(u),critical=s.critChance>0&&random()<s.critChance;return {damage:s.damage*(critical?s.critDamage:1),critical};}
  canTarget(attacker,target){
   if(target===this.bases[0]&&this.hasInvulnerableHQ())return false;
+  if(this.isDroneStealthed?.(target))return false;
   if(target.radioTurret&&(this.time<target.landAt||this.time>=target.until))return false;
   if(this.bossInvulnerable(target))return false;
   if(target.hp<=0||attacker.team===target.team||target.fixedGuard&&this.mission.stage<(target.activeStage||2)||target.roadCaptain&&this.mission.stage<target.roadStage)return false;
@@ -1079,6 +1080,7 @@ class FrontGame{
  }
  damage(target,amount,source){
   if(target===this.bases[0]&&this.hasInvulnerableHQ())return;
+  if(this.isDroneStealthed?.(target))return;
   if(target.radioTurret&&(this.time<target.landAt||this.time>=target.until))return;
   if(target.roadCaptain&&this.mission.stage<target.roadStage)return;
   if(this.mode==='crisis'&&target.base&&target.team===1)return;
@@ -2178,7 +2180,7 @@ class FrontGame{
   return combatCandidates;
  }
  updateBattleProjectiles(dt,combatCandidates){
-  for(const p of this.shots){p.life-=dt;if(p.commandAngle!==undefined){this.advanceCommandShot(p,dt,combatCandidates);continue;}if(p.target.hp<=0&&p.kind==='bossKiller'&&p.guidedFlight?.hovering){const next=this.bossKillerTarget(p.source);if(next)p.target=next;}if(p.target.hp<=0){p.life=0;continue;}if(p.kind==='bossKiller'&&p.guidedFlight&&this.updateBossKillerFlight){this.updateBossKillerFlight(p,dt);continue;}const d=dist(p,p.target),step=p.speed*dt;if(d<step+10){this.impact(p);p.life=0;}else{p.x+=(p.target.x-p.x)/d*step;p.y+=(p.target.y-p.y)/d*step;}}
+  for(const p of this.shots){p.life-=dt;if(p.commandAngle!==undefined){this.advanceCommandShot(p,dt,combatCandidates);continue;}if(p.target.hp<=0&&p.kind==='bossKiller'&&p.guidedFlight?.hovering){const next=this.bossKillerTarget(p.source);if(next)p.target=next;}if(p.target.hp<=0||this.isDroneStealthed?.(p.target)){p.life=0;continue;}if(p.kind==='bossKiller'&&p.guidedFlight&&this.updateBossKillerFlight){this.updateBossKillerFlight(p,dt);continue;}const d=dist(p,p.target),step=p.speed*dt;if(d<step+10){this.impact(p);p.life=0;}else{p.x+=(p.target.x-p.x)/d*step;p.y+=(p.target.y-p.y)/d*step;}}
  }
  finish(result,reason){if(this.phase==='ended')return;this.phase='ended';this.result=result;if(result==='win')this.awardGold(80);this.notify('end',{result,reason});}
 }

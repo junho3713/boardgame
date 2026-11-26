@@ -3,7 +3,8 @@
 const rules={
  search:{period:6,duration:3.5,radius:[76,112],vulnerability:[.25,.35]},
  shield:{period:8,duration:6,allies:[2,3,5],strength:[.22,.28,.34],knockbackRadius:70},
- collection:{range:[260,420],speed:[1,1.45],pulsePeriod:10,pulseRadius:160},
+ collection:{range:[260,420],speed:[1,1.45],sweepRadius:105,flightBoost:1.2,
+  stealthDuration:2.8,minStealth:.28,recovery:1.6,pulsePeriod:10,pulseRadius:160},
  flight:{rearDistance:114,rearSweep:56,escapeStep:170,escapeSpeed:1.2,preferredLeash:220}
 };
 const special=new Set(['pirateCannon','bubbleOctopus','rhinoBeetle','stagBeetle','bruteBeetle','acidBeetle','blizzardMage','crimsonAce','bayonetCaptain','bombBug','hornet','butterfly','artillery','bikeRaider']);
@@ -14,14 +15,41 @@ const isDrone=u=>u.team===0&&u.type==='drone'&&u.hp>0;
 function fieldEffect(game,kind,at,radius,duration){
  game.effects.push({kind,x:at.x,y:at.y,radius,t:duration,max:duration,team:0});
 }
-function lootTarget(drops,drone,leader,range,safeRoute){
+function lootInRange(drop,drone,leader,range){
+ return drop.owner===owner(drone)&&!drop.pulling&&distance(drop,leader)<=range;
+}
+function lootTarget(drops,drone,leader,range){
  let xp=null,nearest=Infinity;
  for(const drop of drops){
-  if(drop.owner!==owner(drone)||drop.pulling||distance(drop,leader)>range)continue;
+  if(!lootInRange(drop,drone,leader,range))continue;
   const d=distance(drop,drone);
-  if(d<nearest&&safeRoute(drop)){xp=drop;nearest=d;}
+  if(d<nearest){xp=drop;nearest=d;}
  }
  return xp;
+}
+function collectLoot(game,drone,leader,range,dt,speed){
+ const active=game.isDroneStealthed(drone),now=game.time;
+ if(!active&&now+1e-8<(drone.nextDroneLootAt??0))return false;
+ const {stealthDuration,minStealth,recovery,flightBoost,sweepRadius}=rules.collection;
+ const drop=lootTarget(game.experienceDrops,drone,leader,range);
+ if(!drop){
+  if(!active)return false;
+  if(now-drone.droneLootStartedAt<minStealth)return true;
+  drone.droneLootUntil=now;
+  drone.nextDroneLootAt=now+recovery;
+  return false;
+ }
+ if(!active){
+  drone.droneLootStartedAt=now;
+  drone.droneLootUntil=now+stealthDuration;
+  drone.nextDroneLootAt=drone.droneLootUntil+recovery;
+ }
+ if(distance(drone,drop)>sweepRadius)game.move(drone,drop.x-drone.x,drop.y-drone.y,dt,speed*flightBoost);
+ for(let i=game.experienceDrops.length-1;i>=0;i--){
+  const crystal=game.experienceDrops[i];
+  if(lootInRange(crystal,drone,leader,range)&&distance(drone,crystal)<=sweepRadius)game.collectExperienceDrop(crystal);
+ }
+ return true;
 }
 function droneThreats(game,drone,leader,contacts,range){
  const areas=[];
@@ -72,6 +100,7 @@ function escapePoint(game,drone,leader,rear,areas){
 function install({FrontGame}){
  const p=FrontGame.prototype;
  p.hasSupportDrone=function(id=this.coopOwner??0){return this.units.some(u=>isDrone(u)&&owner(u)===id);};
+ p.isDroneStealthed=function(u){return !!u&&isDrone(u)&&this.time<(u.droneLootUntil??0);};
  p.supportScanAt=function(target,id=null){
   if(target.team===0||target.hidden||target.hp<=0)return null;
   let strongest=null;
@@ -151,7 +180,7 @@ function install({FrontGame}){
   }
  }
  p.updateSupportDrone=function(drone,leader,dt,stats,contacts=this.combatCandidates()){
-  if(leader?.type!=='leader'||leader.hp<=0){delete drone.droneScan;return;}
+  if(leader?.type!=='leader'||leader.hp<=0){delete drone.droneScan;delete drone.droneLootUntil;return;}
   const evolved=this.evolutionEnabled(drone),range=rules.collection.range[+evolved];
   searchlight(this,drone,leader,evolved,contacts,range);
   if(this.time+1e-8>=(drone.nextDroneShieldAt??0)){
@@ -159,19 +188,18 @@ function install({FrontGame}){
    shieldAllies(this,drone,leader,evolved,range);
   }
   if(evolved)pulseLoot(this,drone,dt);
-  const facing=this.formationFacing,side=Math.sin(this.time*.85+drone.id*2.4)*rules.flight.rearSweep;
-  const rear=boundFlight(this,{x:leader.x-Math.cos(facing)*rules.flight.rearDistance-Math.sin(facing)*side,
-   y:leader.y-Math.sin(facing)*rules.flight.rearDistance+Math.cos(facing)*side});
-  const areas=droneThreats(this,drone,leader,contacts,range),safeRoute=point=>routeDanger(drone,point,areas)===0;
-  const drop=lootTarget(this.experienceDrops,drone,leader,range,safeRoute);
-  const evading=!drop&&!safeRoute(rear);
-  const goal=drop||(evading?escapePoint(this,drone,leader,rear,areas):rear);
-  const speed=stats.speed*rules.collection.speed[+evolved]*(evading?rules.flight.escapeSpeed:1);
-  if(distance(drone,goal)>(drop?10:8))this.move(drone,goal.x-drone.x,goal.y-drone.y,dt,speed);
+  const speed=stats.speed*rules.collection.speed[+evolved];
+  if(!collectLoot(this,drone,leader,range,dt,speed)){
+   const facing=this.formationFacing,side=Math.sin(this.time*.85+drone.id*2.4)*rules.flight.rearSweep;
+   const rear=boundFlight(this,{x:leader.x-Math.cos(facing)*rules.flight.rearDistance-Math.sin(facing)*side,
+    y:leader.y-Math.sin(facing)*rules.flight.rearDistance+Math.cos(facing)*side});
+   const areas=droneThreats(this,drone,leader,contacts,range);
+   const evading=routeDanger(drone,rear,areas)>0,goal=evading?escapePoint(this,drone,leader,rear,areas):rear;
+   if(distance(drone,goal)>8)this.move(drone,goal.x-drone.x,goal.y-drone.y,dt,speed*(evading?rules.flight.escapeSpeed:1));
+  }
   const scan=drone.droneScan,spot=scan?.targetId!=null?scan:null;
   if(spot&&distance(drone,spot)>8)drone.aimFace=Math.atan2(spot.y-drone.y,spot.x-drone.x);
   else drone.aimFace=null;
-  if(drop&&distance(drone,drop)<=20)this.collectExperienceDrop(drop);
  };
 }
 if(typeof module!=='undefined'&&module.exports){module.exports=install;module.exports.rules=rules;}

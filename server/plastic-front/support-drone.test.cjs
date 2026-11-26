@@ -61,18 +61,30 @@ test('the drone takes a safer side when riflemen occupy the rear',()=>{
  a.equal(drone.droneScan.targetId,enemy.id);
 });
 
-test('the drone skips guarded crystals, collects safer ones, and returns when the guard is gone',()=>{
+test('the drone enters stealth to sweep clusters near enemies and is exposed again after the outing',()=>{
  const g=scene(),c=g.commander(0);
  Object.assign(c,{x:900,y:2200});
- const drone=spawn(g,0,'drone',0,-35),enemy=spawn(g,2,'bombBug',0,185);
- const guarded={x:c.x+25,y:c.y+38,owner:0,amount:10};
- const open={x:c.x-118,y:c.y-65,owner:0,amount:8};
- g.experienceDrops=[guarded,open];
- for(let i=0;i<18;i++){g.time+=.05;tick(g,drone,.05);}
- a.deepEqual(g.experienceDrops,[guarded]);a.equal(g.xp,8);
- enemy.hp=0;
- for(let i=0;i<30;i++){g.time+=.05;tick(g,drone,.05);}
- a.deepEqual(g.experienceDrops,[]);a.equal(g.xp,18);
+ const drone=spawn(g,0,'drone',0,-95),enemy=spawn(g,2,'rifle',0,185);
+ const crystals=[{x:c.x+25,y:c.y+60,owner:0,amount:10},{x:c.x-23,y:c.y+74,owner:0,amount:8},{x:c.x+48,y:c.y+52,owner:0,amount:12}];
+ const beyond={x:c.x+265,y:c.y+60,owner:0,amount:100};
+ g.experienceDrops=[...crystals,beyond];
+ const [round]=g.fireUnitProjectiles(enemy,drone,{damage:40,critical:false});
+ const health=drone.hp;tick(g,drone,.05);
+ a.equal(g.canTarget(enemy,drone),false);
+ a.ok(g.isDroneStealthed(drone));
+ g.damage(drone,40,enemy);a.equal(drone.hp,health);
+ g.updateBattleProjectiles(.05,g.combatCandidates());a.equal(round.life,0);
+ for(let i=0;i<12;i++){g.time+=.05;tick(g,drone,.05);}
+ a.deepEqual(g.experienceDrops,[beyond]);a.equal(g.xp,30);
+ a.ok(!g.isDroneStealthed(drone));a.ok(g.canTarget(enemy,drone));
+ const shield=drone.droneShield?.hp??0;
+ g.damage(drone,40,enemy);near(drone.hp,health-40+shield);
+ const waiting={...crystals[0]};g.experienceDrops.push(waiting);
+ tick(g,drone,.05);a.ok(g.experienceDrops.includes(waiting));
+ g.time=drone.nextDroneLootAt;tick(g,drone,.05);a.ok(g.isDroneStealthed(drone));
+ const remaining={x:c.x-245,y:c.y,owner:0,amount:16};
+ g.experienceDrops.push(remaining);g.time=drone.droneLootUntil;tick(g,drone);
+ a.ok(!g.isDroneStealthed(drone)&&g.experienceDrops.includes(remaining));
 });
 
 test('energy coating uses health ratios, star strength and same-owner recipients; only an evolved break shoves enemies',()=>{
@@ -100,15 +112,16 @@ test('air pickup collects the drone owner’s boss and ordinary crystals and ign
  const foreign={...owned,owner:0},regular={...owned,boss:false,amount:10};
  g.experienceDrops=[foreign,owned,regular];
  g.pickups=['magnet','heal','rare','star'].map(combatDrop=>({x:u.x,y:u.y,combatDrop,active:true,owner:1}));
- tick(g,u);a.deepEqual(g.experienceDrops,[foreign,regular]);a.equal(g.coopStates[1].xp,16);a.equal(g.coopStates[0].xp,0);
- tick(g,u);a.deepEqual(g.experienceDrops,[foreign]);a.equal(g.coopStates[1].xp,26);a.ok(g.pickups.every(x=>x.active));
- u.summonEvolved=true;tick(g,u);
- const xp={...owned,x:u.x+105},other={...foreign,x:u.x+90};
- g.experienceDrops=[xp,other];g.time=40;tick(g,u,.05);
- a.equal(xp.dronePullId,u.id);a.ok(xp.x<u.x+105);a.equal(other.dronePullId,undefined);
+ tick(g,u);a.deepEqual(g.experienceDrops,[foreign]);a.equal(g.coopStates[1].xp,26);a.equal(g.coopStates[0].xp,0);a.ok(g.pickups.every(x=>x.active));
+ const snapshot=unpack(scene(true),pack(g));
+ a.ok(snapshot.isDroneStealthed(snapshot.units.find(x=>x.id===u.id)));
+ u.summonEvolved=true;g.time=30.3;tick(g,u);
+ const xp={...owned,x:u.x+136},other={...foreign,x:u.x+90};
+ g.experienceDrops=[xp,other];g.time=40.3;u.nextDroneLootAt=41;tick(g,u,.05);
+ a.equal(xp.dronePullId,u.id);a.ok(xp.x<u.x+136);a.equal(other.dronePullId,undefined);
  const restored=unpack(scene(true),pack(g));
  a.equal(restored.experienceDrops.find(x=>x.dronePullId===u.id).owner,1);
- a.equal(restored.units.find(x=>x.id===u.id).nextDronePulseAt,50);
+ a.equal(restored.units.find(x=>x.id===u.id).nextDronePulseAt,50.3);
 });
 
 test('ordinary defeat gold still credits immediately while a support drone lives',()=>{
