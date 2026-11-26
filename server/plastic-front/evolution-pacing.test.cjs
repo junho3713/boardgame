@@ -54,10 +54,10 @@ test('cooperative pacing keeps the existing shared one-point-eight spawn account
 });
 
 test('a full minute of actual regular reinforcements adds bounded pressure versus the previous balance',()=>{
- function run(previous){const saved={...pacing};try{if(previous)Object.assign(pacing,{spawnIncrease:.50,capExtra:8,eliteWeight:.65,eliteHp:.30});const g=scene('livingroom-star');g.roomBeat=()=>({density:1,name:'test'});g.northernSpawn=()=>({x:1500,y:6200});g.roomCanSpawnMageGroup=()=>false;g.roomCampaign.tankScheduleVersion=170;g.roomCampaign.tanksDone=config.tanks.map(()=>true);g.roomCampaign.nextSpawnAt=780;let spawned=0,seed=177;
+ function run(previous){const saved={...pacing},minimum=config.waveRefill.minimumFraction;try{config.waveRefill.minimumFraction=0;if(previous)Object.assign(pacing,{spawnIncrease:.50,capExtra:8,eliteWeight:.65,eliteHp:.30});const g=scene('livingroom-star');g.roomBeat=()=>({density:1,name:'test'});g.northernSpawn=()=>({x:1500,y:6200});g.roomCanSpawnMageGroup=()=>false;g.roomCampaign.tankScheduleVersion=170;g.roomCampaign.tanksDone=config.tanks.map(()=>true);g.roomCampaign.nextSpawnAt=780;let spawned=0,seed=177;
   g.random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
   for(let i=0;i<1200;i++){g.time=780+i*.05;g.units=g.units.filter(u=>u.team===0);g.updateRoomWaves();spawned+=g.units.filter(u=>u.team!==0&&u.roomWave).length;}
   return spawned;
- }finally{Object.assign(pacing,saved);}}
+ }finally{config.waveRefill.minimumFraction=minimum;Object.assign(pacing,saved);}}
  const old=run(true),now=run(false);a.ok(now>=old*1.10&&now<=old*1.22,JSON.stringify({old,now}));
 });

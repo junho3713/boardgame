@@ -16,7 +16,7 @@ test('early bees and bayonets have bounded living counts and co-op scales the sa
  for(const coop of [false,true])for(const [type,time,base]of [['bayonet',180,3],['honeybee',240,2],['honeybee',360,4],['honeybee',480,8]]){const g=scene(coop);g.time=time;const cap=coop?Math.ceil(base*g.coopSpawnScale):base;for(let i=0;i<cap;i++)a.ok(g.spawnRoomEnemy(type));a.equal(g.spawnRoomEnemy(type),null);a.equal(g.roomEnemyCount(type),cap);}
 });
 test('two-minute normal waves use rifles and blades with a gradual count and cap increase',()=>{
- const g=scene();g.time=119.99;a.equal(g.roomWaveCap(),16);g.time=120;const plan=g.roomWavePlan();a.equal(plan.count,3);a.equal(plan.interval,5);a.equal(g.roomWaveCap(),24);a.deepEqual(Object.keys(g.roomPhase().mix).sort(),['ant','bladeGuard','rifle']);
+ const g=scene();g.time=119.99;a.equal(g.roomWaveCap(),28);g.time=120;const plan=g.roomWavePlan();a.equal(plan.count,6);a.equal(plan.interval,2);a.equal(g.roomWaveCap(),36);a.deepEqual(Object.keys(g.roomPhase().mix).sort(),['ant','bladeGuard','rifle']);
  a.equal(config.phases[0].mix.ant,1);a.equal(config.phases.find(p=>p.at===60).mix.rifle,2);a.ok(config.surges.rosters.filter(r=>r.at<360).every(r=>!r.types.includes('machinegun')));
 });
 test('the actual scheduler does not leak early bayonets, bees or machine gunners through forced surge choices',()=>{

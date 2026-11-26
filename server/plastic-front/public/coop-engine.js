@@ -86,7 +86,14 @@ class CoopGame extends Game{
  roomWaveCap(){return Math.ceil(super.roomWaveCap()*(this.coop?this.coopSpawnScale:1));}
  roomCanSpawn(type){if(!this.coop)return super.roomCanSpawn(type);return this.roomEnemyReady(type)&&this.roomEnemyCount()<this.roomWaveCap()&&this.roomEnemyCount(type)<Math.ceil(this.roomEnemyTypeCap(type)*this.coopSpawnScale);}
  roomWavePlan(){const plan=super.roomWavePlan();if(this.coop){const exact=plan.count*this.coopSpawnScale+(this.coopSpawnRemainder||0);plan.count=Math.floor(exact+1e-8);}return plan;}
- updateRoomWaves(){const before=this.roomCampaign?.nextSpawnAt,base=super.roomWavePlan().count;super.updateRoomWaves();if(this.coop&&this.roomCampaign?.nextSpawnAt!==before&&this.time>=before)this.coopSpawnRemainder=(base*this.coopSpawnScale+(this.coopSpawnRemainder||0))%1;}
+ updateRoomWaves(){
+  const base=super.roomWavePlan().count,spawned=super.updateRoomWaves();
+  if(this.coop&&spawned>0){
+   const exact=base*this.coopSpawnScale+(this.coopSpawnRemainder||0);
+   this.coopSpawnRemainder=Math.max(0,exact-Math.floor(exact+1e-8));
+  }
+  return spawned;
+ }
  finish(result,reason){if(this.coop&&result==='lose'&&reason==='commander'&&[0,1].some(owner=>this.withOwner(owner,()=>this.retreated)<3))return;return super.finish(result,reason);}
 }
 root.FrontCoopGame=CoopGame;if(node)module.exports={CoopGame};

@@ -7,6 +7,8 @@ const FLAME={damage:14.4,rate:.12,range:250,arc:50*Math.PI/180,armor:.65,ultimat
 const BALANCE_VERSION=71;
 const PIRATE_REINFORCEMENT={from:360,interval:55,roomFrom:150,roomUntil:720,roomInterval:30,cap:2};
 const OCTOPUS_REINFORCEMENT={from:270,interval:65};
+const ROOM_ANT_HEALTH={scale:.5,restoreFrom:180,restoreAt:240};
+const ROOM_KILL_XP={ant:5,rifle:12,machinegun:14,sniper:14,mortar:14,bombBug:32,acidBeetle:32,pirateCannon:40,bubbleOctopus:42,blizzardMage:38};
 const UNIT_TYPE_CAP=8;
 const STAR_COMBAT=[
  {damage:1,hp:1,attackSpeed:1,range:1,heal:1},
@@ -148,7 +150,7 @@ const PERMANENT={
  turretDamage:{name:'포탑 데미지 증가',icon:'✹',gain:5,unit:'%',max:10,detail:'기관총·미사일 포탑 공격력 · 단계당 +5%'},
  turretDefense:{name:'포탑 방어력 증가',icon:'⬟',gain:3,unit:'',max:10,detail:'기관총·미사일 포탑 방어력 · 단계당 +3 · 기본 10'}
 };
-const ABILITIES={...Object.fromEntries(Object.entries(PERMANENT).filter(([k])=>k!=='gold'&&!k.startsWith('turret')).map(([k,b])=>[k,{...b,max:5,gain:{damage:10,speed:6,haste:8,critChance:4,critDamage:15,capacity:2,defense:5}[k]}])),magnet:{name:'자석',icon:'🧲',gain:24,unit:'',max:5,detail:'대장이 경험치 결정을 끌어오는 범위 증가'},health:{name:'체력',icon:'♥',gain:10,unit:'%',max:5,detail:'대장과 모든 분대원의 최대 체력 · 단계당 +10%'},xpGain:{name:'경험치 획득량',icon:'✧',gain:5,unit:'%',max:5,detail:'작전 중 획득하는 경험치 · 단계당 +5%'}};
+const ABILITIES={...Object.fromEntries(Object.entries(PERMANENT).filter(([k])=>k!=='gold'&&!k.startsWith('turret')).map(([k,b])=>[k,{...b,max:5,gain:{damage:10,speed:6,haste:8,critChance:4,critDamage:15,capacity:2,defense:5}[k]}])),magnet:{name:'자석',icon:'🧲',gain:24,unit:'',max:5,detail:'대장이 경험치 결정을 끌어오는 범위 증가'},health:{name:'체력',icon:'♥',gain:10,unit:'%',max:5,detail:'대장과 모든 분대원의 최대 체력 · 단계당 +10%'},xpGain:{name:'경험치 획득량',icon:'✧',gain:8,unit:'%',max:5,detail:'작전 중 획득하는 경험치 · 단계당 +8%'}};
 const EVOLUTIONS={
  tank:{name:'공성 전차',ability:'damage',detail:'공격력 +35% · 폭발 범위 +35 · 사거리 +35 · 최대 체력 +20%'},
  guntruck:{name:'전략 폭격 통신관',ability:'haste',detail:'1·2 더블 기관포탑 · 3·4 더블 강화 소이탄 · 5-5 미사일 4발 · 6-6 전술 핵 (공용 12초, 대기 중 강화 미사일 6발)'},
@@ -506,7 +508,19 @@ class FrontGame{
  isFlameCommander(u){return u?.team===0&&u.type==='leader'&&(u.appearance||this.commanderId)==='blaze';}
  // Balance multipliers apply when attacks are created, never again on impact.
  enemyDamageScale(u){if(!this.isRoomCampaign()||u?.team===0||u?.defenseKind==='laserTower')return 1;const r=ROOM_CAMPAIGN.config.combat,a=ROOM_CAMPAIGN.config.attrition,pressure=this.starExperiment&&this.starMax===2&&!this.coop&&this.time>=a.from&&u.roomWave&&!u.boss&&u.type!=='mortar'?(this.time>=a.lateAt?a.lateWaveDamage:a.soloTwoStarWaveDamage):1,mortar=u.type==='mortar'&&!u.boss?(this.time>=a.lateAt?a.lateMortarDamage:a.mortarDamage):1;const melee=!u.boss&&(MELEE.has(u.type)||TYPES[u.type]?.stab||TYPES[u.type]?.charge)?(r?.meleeDamageScale??1):1;return pressure*mortar*melee*(r?.damageScale??1)*(u?.type==='bikeRaider'?(r?.bikeDamageScale??1):1)*(u?.boss?(r?.bossDamageScale??1):1)*(this.bossPatternRules(u)?.damageMultiplier??1)*(u?.miniBoss?ROOM_CAMPAIGN.config.miniBoss.damage:1);}
- enemyHealthScale(u){if(!this.isRoomCampaign()||u.team===0)return 1;const r=ROOM_CAMPAIGN.config.combat,o=r.openingHp,spawnedAt=u.spawnedAt??this.time,opening=o?o.scale+(1-o.scale)*clamp((spawnedAt-o.until)/(o.restoreAt-o.until),0,1):1;return u.boss?(r.bossHpScale??1)*(r.bossHpExtra?.[u.type]??1)*(u.miniBoss?ROOM_CAMPAIGN.config.miniBoss.hp:1):(r.hpScale??1)*(u.fixedGuard||u.roomGarrison||u.roadCaptain?1:opening)*(u.openingBombBug?ROOM_CAMPAIGN.config.insects.opening.hpScale:1);}
+ enemyHealthScale(u){
+  if(!this.isRoomCampaign()||u.team===0)return 1;
+  const rules=ROOM_CAMPAIGN.config.combat,opening=rules.openingHp;
+  if(u.boss)return (rules.bossHpScale??1)*(rules.bossHpExtra?.[u.type]??1)*(u.miniBoss?ROOM_CAMPAIGN.config.miniBoss.hp:1);
+  const spawnedAt=u.spawnedAt??this.time,fixed=u.fixedGuard||u.roomGarrison||u.roadCaptain;
+  let openingScale=1;
+  if(opening&&!fixed)openingScale=opening.scale+(1-opening.scale)*clamp((spawnedAt-opening.until)/(opening.restoreAt-opening.until),0,1);
+  if(u.type==='ant'&&!fixed){
+   const {scale,restoreFrom,restoreAt}=ROOM_ANT_HEALTH;
+   openingScale*=scale+(1-scale)*clamp((spawnedAt-restoreFrom)/(restoreAt-restoreFrom),0,1);
+  }
+  return (rules.hpScale??1)*openingScale*(u.openingBombBug?ROOM_CAMPAIGN.config.insects.opening.hpScale:1);
+ }
  stats(u){
   const b=u.type==='blizzardMage'&&u.mobileMage?{...TYPES.blizzardMage,speed:85,stationary:false,role:'이동형 얼음 마녀 · 광역 빙결 속박 · 아이스 실드 · 저격병 우선 공략'}:this.isFlameCommander(u)?{...TYPES.leader,name:'화염방사 대장',damage:FLAME.damage,rate:FLAME.rate,range:FLAME.range}:this.isSwordCommander(u)?{...TYPES.leader,name:'시온',damage:SWORD.damage,rate:SWORD.rate,range:SWORD.range}:(u.team===0?TYPES[u.type]:ENEMY_REPLACED_TYPES[u.type]||TYPES[u.type]),level=u.team===0&&u.type==='leader'?this.commanderLevel(u):ROSTER.includes(u.type)?u.summonEvolved?5:Math.max(1,this.tech[u.team]?.[u.type]||1):1,p=this.profile.upgrades,ally=u.team===0,r=this.abilities,tier=u.threat||0,e=ally&&(u.summonEvolved||this.evolved[u.type])?u.type:null,fort=this.roomDefenseRules(u);
   const enemyPower=(this.mode==='pve'&&u.team===1&&ROSTER.includes(u.type)?(u.type==='sniper'?.6:.85):1.25)*(!ally?this.enemyDamageScale(u):1);
@@ -813,13 +827,15 @@ class FrontGame{
  }
 
  gainXP(n){this.xp+=n*(1+this.abilityBonus('xpGain')/100);}
- experienceRadius(){return 54+this.abilityBonus('magnet');}
- earnDefeatXP(target,amount){
+ experienceRadius(){return 85+this.abilityBonus('magnet');}
+ earnDefeatXP(target,amount,boss=false){
   if(this.mode!=='pve'){this.gainXP(amount);return;}
   const owner=this.coop?this.coopOwner:0,drops=this.experienceDrops;
+  // Keep a boss crystal at each boss's defeat position. Regular XP never absorbs a boss crystal.
+  if(boss){drops.push({x:target.x,y:target.y,amount,owner,pulling:false,boss:true});return;}
   let nearest=null,best=Infinity;
   for(const drop of drops){
-   if(drop.owner!==owner||drop.pulling)continue;
+   if(drop.owner!==owner||drop.pulling||drop.boss)continue;
    const distance=dist(drop,target);
    if(distance<best){nearest=drop;best=distance;}
   }
@@ -1033,8 +1049,11 @@ class FrontGame{
     this.kills++;this.awardGold(target.boss&&!target.miniBoss?30:TYPES[target.type]?.rewardGold??(ARMORED.has(target.type)||target.type==='hornet'?5:2));
     const originalXP={bubbleOctopus:32,pirateCannon:28,bombBug:20,acidBeetle:22,butterfly:28,crimsonAce:65,bikeRaider:28,bladeGuard:14,bayonetCaptain:35,bayonet:20,honeybee:18,hornet:50,rhinoBeetle:65,stagBeetle:38,bruteBeetle:45,tank:22,beetle:24,soldierAnt:20,ant:13},originalCash={bubbleOctopus:20,pirateCannon:16,bombBug:18,acidBeetle:18,butterfly:22,crimsonAce:60,bikeRaider:24,bladeGuard:12,bayonetCaptain:25,bayonet:16,honeybee:18,hornet:48,rhinoBeetle:65,stagBeetle:38,bruteBeetle:45,soldierAnt:20,ant:14,beetle:28};
     const pveCash={bubbleOctopus:20,pirateCannon:12,bombBug:10,acidBeetle:10,butterfly:16,crimsonAce:40,bikeRaider:16,bladeGuard:7,bayonetCaptain:16,bayonet:10,honeybee:10,hornet:26,rhinoBeetle:28,stagBeetle:20,bruteBeetle:20,soldierAnt:8,ant:6,beetle:12};
-    const xp=originalXP[target.type]||9,cash=(this.mode==='pve'?pveCash:originalCash)[target.type]||8;
-    this.earnDefeatXP(target,Math.ceil(xp*(target.ambient?.22:1)));this.rollCombatDrop(target);this.cash[0]+=Math.ceil(cash*(target.ambient?.25:1));
+    const room=this.isRoomCampaign(),cash=(this.mode==='pve'?pveCash:originalCash)[target.type]||8;
+    const xp=(room?ROOM_KILL_XP[target.type]:undefined)??originalXP[target.type]??9;
+    const boss=room&&target.boss&&!target.roadCaptain;
+    const award=boss?xp*(target.miniBoss?2.5:4):Math.ceil(xp*(target.ambient?.22:1));
+    this.earnDefeatXP(target,award,boss);this.rollCombatDrop(target);this.cash[0]+=Math.ceil(cash*(target.ambient?.25:1));
    }
    if(target.finalBoss){this.finalBattle.killed=true;if(this.isRoomCampaign()){this.finish('win','finalBoss');return;}}
    if(target.miniBoss)this.notify('toast',target.bossName+' 격파');

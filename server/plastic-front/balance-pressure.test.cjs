@@ -36,15 +36,15 @@ test('old two-star saves immediately adopt the requested HP without healing, rev
  assert.equal(copy.units.find(v=>v.id===dead.id).hp,0);
 });
 
-test('enemy HP recovery is gradual from five to eight minutes, and reopening a save preserves the wounded fraction',()=>{
- const g=scene();for(const [at,factor]of [[0,.75],[120,.75],[300,.75],[360,5/6],[420,11/12],[480,1],[600,1],[900,1]]){g.time=at;const u=g.addUnit(2,'ant',1500,6000);near(g.enemyHealthScale(u)/config.combat.hpScale,factor);}
+test('opening ants ramp out of their extra HP reduction before the general five-to-eight-minute recovery',()=>{
+ const g=scene();for(const [at,factor]of [[0,.375],[120,.375],[180,.375],[210,.5625],[240,.75],[300,.75],[360,5/6],[420,11/12],[480,1],[600,1],[900,1]]){g.time=at;const u=g.addUnit(2,'ant',1500,6000);near(g.enemyHealthScale(u)/config.combat.hpScale,factor);}
  g.time=420;const u=g.addUnit(2,'ant',1500,6000),full=g.stats({...u,spawnedAt:480}).hp;u.maxHp=full*.75;u.hp=u.maxHp*.4;g.roomHealthVersion=138;
  const restored=unpack(scene(),JSON.parse(JSON.stringify(pack(g)))),v=restored.units.find(t=>t.id===u.id);near(v.maxHp,full*11/12);near(v.hp/v.maxHp,.4);restored.refreshRoomEnemyHealth();near(v.hp/v.maxHp,.4);
 });
 
 test('midgame and late ordinary wave pressure grows without increasing boss attack or removing opening limits',()=>{
  const g=scene();g.roomBeat=()=>({density:1.3,name:'test'});g.time=420;assert.equal(g.roomWavePlan().count,14);
- const r=config.encirclement,p=config.evolutionPacing,saved={...r};try{g.roomBeat=()=>({density:1,name:'test'});for(const at of [300,420,600,780,900]){g.time=at;const now=g.roomWavePlan().interval;r.lateIntervalScale=r.intervalScale;const old=g.roomWavePlan().interval;Object.assign(r,saved);assert.ok(now<=old);if(at>300)assert.ok(now<old);}}
+ const r=config.encirclement,p=config.evolutionPacing,saved={...r};try{g.roomBeat=()=>({density:1,name:'test'});for(const at of [180,300,420,600,780,900]){g.time=at;const now=g.roomWavePlan().interval;r.intervalScale=2.25;const old=g.roomWavePlan().interval;Object.assign(r,saved);if(at<600)assert.ok(now<old);else near(now,old);}}
  finally{Object.assign(r,saved);}
  g.time=780;near(g.evolutionPace().spawnScale,1.7);assert.equal(g.evolutionPace().capExtra,10);const before=g.addUnit(2,'bladeGuard',1500,6000);g.stampEvolutionWave(before);near(before.evolutionWaveHp,1.45);
  const boss=g.addUnit(2,'crimsonAce',1500,6000);Object.assign(boss,{boss:true,bossPattern:'rearBarrage'});const attack=g.stats(boss).damage,old=p.enabled;p.enabled=false;try{near(g.stats(boss).damage,attack);}finally{p.enabled=old;}

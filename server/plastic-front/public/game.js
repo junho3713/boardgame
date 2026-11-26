@@ -841,9 +841,55 @@ function drawFieldPickupModel(context,index,bob){
  context.drawImage(fieldPickupSprite,index*size,0,size,size,-size/2,-size*.70+bob,size,size);
  return true;
 }
+const rubyEdge=[[-4,-20],[7,-16],[14,-6],[12,7],[4,19],[-7,14],[-14,3],[-11,-12]];
+const rubyTable=[[-3,-12],[4,-10],[8,-4],[7,5],[2,11],[-5,8],[-8,1],[-6,-7]];
+const rubyBevels=['#ff897a','#f54953','#a51d3a','#701730','#9e2037','#f2384c','#f9615a','#ffa98c'];
+function rubyPath(c,points){
+ c.beginPath();c.moveTo(...points[0]);
+ for(let i=1;i<points.length;i++)c.lineTo(...points[i]);
+ c.closePath();
+}
+function drawBossExperienceDrop(c,drop,bob){
+ // Keep the reward silhouettes separate when the 9-minute boss drops both.
+ const star=!drop.pulling&&game.pickups.find(p=>p.active&&p.destinyStar&&Math.hypot(drop.x-p.x,drop.y-p.y)<42);
+ const x=star?star.x+(drop.x<star.x?-47:47):drop.x;
+ c.save();c.translate(x,drop.y);
+ if(!drop.pulling){
+  const glow=c.createRadialGradient(0,0,3,0,0,28);
+  glow.addColorStop(0,'#ff382d50');glow.addColorStop(1,'#ff382d00');
+  c.save();c.scale(1,.53);circle(c,0,0,28,glow);c.restore();
+  c.fillStyle='#30132280';c.beginPath();c.ellipse(1,1,16,5.5,0,0,Math.PI*2);c.fill();
+ }
+ c.translate(0,bob-21);c.lineJoin='round';
+ rubyPath(c,rubyEdge);c.fillStyle='#601b30';c.fill();
+ c.strokeStyle='#431823';c.lineWidth=2.4;c.stroke();
+ for(let i=0;i<rubyEdge.length;i++){
+  const next=(i+1)%rubyEdge.length;
+  rubyPath(c,[rubyEdge[i],rubyEdge[next],rubyTable[next],rubyTable[i]]);
+  c.fillStyle=rubyBevels[i];c.fill();
+ }
+ const table=c.createLinearGradient(-7,-12,9,12);
+ table.addColorStop(0,'#ffbd9c');table.addColorStop(.36,'#fa574d');
+ table.addColorStop(.73,'#d52142');table.addColorStop(1,'#9c1732');
+ rubyPath(c,rubyTable);c.fillStyle=table;c.fill();
+ c.strokeStyle='#ffd5bbab';c.lineWidth=1.25;
+ c.beginPath();c.moveTo(-12,2);c.lineTo(-9,-11);c.lineTo(-4,-18);c.lineTo(6,-15);c.stroke();
+ c.strokeStyle='#ff8e806b';c.lineWidth=1;
+ c.beginPath();c.moveTo(-6,-6);c.lineTo(-3,-12);c.lineTo(4,-10);c.stroke();
+ const shine=reduceMotion.matches ? .48 : Math.max(0,Math.cos(game.time*2.7+drop.x*.039))**9;
+ if(shine>.08){
+  c.globalAlpha*=.25+.75*shine;
+  const length=2+4*shine;
+  c.translate(-4,-17);
+  rubyPath(c,[[0,-length],[.9,-.8],[length*.82,0],[.9,.8],[0,length],[-.9,.8],[-length*.82,0],[-.9,-.8]]);
+  c.fillStyle='#fff6dd';c.fill();
+ }
+ c.restore();
+}
 function drawExperienceDrop(context,drop){
  const large=drop.amount>=40,r=large?10:7.5;
  const bob=reduceMotion.matches?0:Math.sin(game.time*4+drop.x*.039)*1.3;
+ if(drop.boss){drawBossExperienceDrop(context,drop,bob);return;}
  context.save();
  context.translate(drop.x,drop.y);
  if(!drop.pulling){

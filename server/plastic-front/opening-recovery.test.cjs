@@ -10,24 +10,52 @@ function scene(map='livingroom-star'){
 const enemy={team:2,type:'ant'};
 function elite(g,type,star=2){const u=g.addUnit(0,type,1500,7500);u.star=star;u.hp=u.maxHp=g.stats(u).hp;return u;}
 
-test('the opening borrows two spawn slots for one bomb packet and keeps the two-minute ramp',()=>{
- const g=scene();g.northernSpawn=()=>({x:1500,y:6800});const totals=[0,0],maxBatch=[0,0];
- for(let tick=0;tick<2400;tick++){
-  g.time=tick/20;g.units=[];const before=g.roomCampaign.spawned;g.updateRoomWaves();
-  const minute=Math.floor(g.time/60),added=g.roomCampaign.spawned-before;totals[minute]+=added;maxBatch[minute]=Math.max(maxBatch[minute],added);
-  a.equal(g.roomBeat().density,1);a.ok(g.roomEnemyCount()<=g.roomWaveCap());if(minute===0&&added>1)a.equal(g.units.filter(u=>u.openingBombBug).length,1);
+test('first-minute pulses alternate three and four ants and the next phases use the specified counts, intervals and caps',()=>{
+ const g=scene(),s=g.roomCampaign;g.roomEntry=()=>({x:1500,y:6800});
+ g.updateRoomWaves();a.equal(s.nextSpawnAt,.5);a.equal(g.roomEnemyCount(),0);
+ g.time=.49;g.updateRoomWaves();a.equal(g.roomEnemyCount(),0);
+ g.time=.5;a.equal(g.updateRoomWaves(),3);
+ g.time=.55;g.updateRoomWaves();a.equal(s.nextSpawnAt,1.05);
+ g.time=1.05;a.equal(g.updateRoomWaves(),4);
+ a.equal(g.roomEnemyCount(),7);a.ok(g.units.every(u=>u.type==='ant'));
+ g.time=1.1;g.updateRoomWaves();a.equal(s.nextSpawnAt,3.25);
+ for(const [at,count,interval,cap] of [[60,5,2.2,28],[120,6,2,36],[180,10,5.4,44]]){
+  g.time=at;
+  a.equal(g.roomWavePlan().count,count);a.equal(g.roomWavePlan().interval,interval);a.equal(g.roomWaveCap(),cap);
  }
- a.deepEqual(maxBatch,[3,2]);a.ok(totals[0]===6);a.ok(totals[1]>=20&&totals[1]<=22);
- g.time=119.95;a.equal(g.roomWaveCap(),16);g.time=120;a.equal(g.roomWaveCap(),24);a.equal(g.roomWavePlan().count,3);a.equal(g.roomWavePlan().interval,5);
 });
 
-test('uncleared opening waves respect the lower caps and co-op keeps its 1.8x spawn accounting',()=>{
+test('uncleared opening waves respect their caps and co-op advances its 1.8x allowance on actual waves',()=>{
  for(const g of [scene(),new CoopGame()]){
-  g.start();g.units=g.units.filter(u=>u.team===0);g.northernSpawn=()=>({x:1500,y:6800});
+  g.start();g.units=g.units.filter(u=>u.team===0);g.roomEntry=()=>({x:1500,y:6800});
   for(let tick=0;tick<2400;tick++){g.time=tick/20;g.updateRoomWaves();a.ok(g.roomEnemyCount()<=g.roomWaveCap());}
-  a.equal(g.roomEnemyCount(),g.coop?Math.ceil(16*1.8):16);
+  a.equal(g.roomEnemyCount(),g.coop?Math.ceil(28*1.8):28);
  }
- const g=new CoopGame();let count=0;for(let i=0;i<5;i++){count+=g.roomWavePlan().count;g.coopSpawnRemainder=(1*1.8+g.coopSpawnRemainder)%1;}a.equal(count,9);
+ const g=new CoopGame();g.start();g.roomEntry=()=>({x:1500,y:6800});let count=0;
+ for(let i=0;i<6;i++){
+  g.time=i*10;g.roomCampaign.nextSpawnAt=g.time;g.units=g.units.filter(u=>u.team===0);
+  count+=g.updateRoomWaves();
+ }
+ a.equal(count,37);a.ok(Math.abs(g.coopSpawnRemainder-.8)<1e-8);
+});
+
+test('5:30 uses the denser quiet beat and the floor retries low living waves outside boss combat and recovery',()=>{
+ const g=scene(),s=g.roomCampaign;g.time=330;
+ a.equal(g.roomBeat().name,'전진·재정비');a.equal(g.roomBeat().density,.55);
+ a.ok(Math.abs(g.roomWavePlan().interval-3.84/.55*1.415)<1e-8);
+ s.nextSpawnAt=340;
+ for(let i=0;i<3;i++)Object.assign(g.addUnit(2,'rifle',1500,4000),{rareSupplyGuard:true});
+ for(let i=0;i<12;i++)g.addUnit(2,'ant',1500,4000).roomWave=true;
+ g.updateRoomWaves();a.equal(s.nextSpawnAt,330.5);
+ s.nextSpawnAt=340;s.recoveryUntil=334;
+ g.updateRoomWaves();a.equal(s.nextSpawnAt,340);a.equal(g.roomBeat().density,.3);
+ s.recoveryUntil=0;g.addUnit(2,'stagBeetle',1500,4000).boss=true;
+ g.updateRoomWaves();a.equal(s.nextSpawnAt,340);a.equal(g.roomBeat().name,'보스 전투');
+
+ const blocked=scene(),bs=blocked.roomCampaign,entry=blocked.roomEntry;bs.nextSpawnAt=0;blocked.roomEntry=()=>null;
+ blocked.updateRoomWaves();a.equal(bs.nextSpawnAt,2);
+ blocked.time=1;blocked.roomEntry=entry;blocked.updateRoomWaves();a.equal(bs.nextSpawnAt,2);a.equal(blocked.roomEnemyCount(),0);
+ blocked.time=2;a.equal(blocked.updateRoomWaves(),3);
 });
 
 test('each two-star class returns one fresh one-star with current upgrades, and only its next death yields salvage',()=>{

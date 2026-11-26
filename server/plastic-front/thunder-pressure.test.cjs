@@ -9,7 +9,7 @@ test('every ordinary boss and mini boss gains exactly ten percent while troops r
  for(const type of ['stagBeetle','bayonetCaptain','bladeGuard','rhinoBeetle','bikeRaider','hornet','crimsonAce'])for(const miniBoss of [false,true]){
   const u=g.addUnit(2,type,1500,6000);Object.assign(u,{boss:true,miniBoss});const old=g.stats(u).hp/1.1;u.maxHp=old;u.hp=old*.4;g.roomHealthVersion=139;g.refreshRoomEnemyHealth();a.ok(Math.abs(u.hp/u.maxHp-.4)<1e-8);a.ok(Math.abs(u.maxHp/old-1.1)<1e-8);const hp=u.hp;g.refreshRoomEnemyHealth();a.equal(u.hp,hp);
  }
- a.equal(r.combat.bossHpScale,1.485);const regular=g.addUnit(2,'ant',1500,6000);a.ok(Math.abs(g.enemyHealthScale(regular)-.9)<1e-8);
+ a.equal(r.combat.bossHpScale,1.485);const regular=g.addUnit(2,'soldierAnt',1500,6000);a.ok(Math.abs(g.enemyHealthScale(regular)-.9)<1e-8);
 });
 test('basic reinforcements add fifteen/twenty percent on the same wave clock and never bank blocked waves',()=>{
  for(const [time,expected]of [[299,0],[300,15],[599,15],[600,20],[1000,20]]){

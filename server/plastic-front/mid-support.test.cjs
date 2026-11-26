@@ -7,8 +7,8 @@ const near=(x,y)=>a.ok(Math.abs(x-y)<1e-7,`${x} != ${y}`);
 function scene(coop=false){const g=coop?new CoopGame():new FrontGame({},undefined,{map:'livingroom-star'});g.start();g.units=g.units.filter(u=>u.team===0&&u.type==='leader');g.obstacles=[];g.structures=[];g.buildings=[];g.defenses=[];g.pickups=[];g.cash[0]=1000;g.xp=0;g.roomEntry=()=>({x:1500,y:6000});return g;}
 function resume(g){g.phase='playing';g.turnChoice=null;g.pendingChoice=null;}
 function fill(g){const types=['rifle','rocket','machinegun'];for(const t of types)g.tech[0][t]=1;for(let i=0;i<g.capacity();i++)g.addUnit(0,types[i%3],1500,6000);}
-test('early room enemies have 25 percent less HP with a smooth spawn-time return from five to eight minutes; bosses and allies stay unchanged',()=>{
- const g=scene(),spawn=(at,team=2)=>{g.time=at;return g.addUnit(team,'ant',1500,6000);};
+test('early non-ant room enemies have 25 percent less HP with a smooth spawn-time return from five to eight minutes',()=>{
+ const g=scene(),spawn=(at,team=2)=>{g.time=at;return g.addUnit(team,'soldierAnt',1500,6000);};
  const early=spawn(0),edge=spawn(300),middle=spawn(390),late=spawn(480),later=spawn(900),base=g.stats(late).hp/(1+.12*late.threat);
  const normalized=u=>g.stats(u).hp/(1+.12*u.threat);near(normalized(early),base*.75);near(normalized(edge),base*.75);near(normalized(middle),base*.875);near(normalized(later),base);
  const persisted=unpack(scene(),JSON.parse(JSON.stringify(pack(g))));near(persisted.stats(persisted.units.find(u=>u.id===early.id)).hp,g.stats(early).hp);
@@ -18,8 +18,8 @@ test('early room enemies have 25 percent less HP with a smooth spawn-time return
  const other=new FrontGame({},undefined,{map:'backyard'});other.start();other.time=0;const a=other.addUnit(2,'ant',1500,1500);other.time=300;const b=other.addUnit(2,'ant',1500,1500);near(other.stats(a).hp/(1+.12*a.threat),other.stats(b).hp/(1+.12*b.threat));
 });
 test('old opening saves adopt the reduced HP at the saved time without healing wounded enemies',()=>{
- const g=scene();g.time=100;const u=g.addUnit(2,'ant',1500,6000);u.maxHp=g.stats(u).hp/.75;u.hp=u.maxHp*.4;delete u.spawnedAt;g.roomHealthVersion=136;
- const copy=unpack(scene(),JSON.parse(JSON.stringify(pack(g)))),v=copy.units.find(v=>v.id===u.id);near(v.maxHp,u.maxHp*.75);near(v.hp/v.maxHp,.4);a.equal(v.spawnedAt,100);
+ const g=scene();g.time=100;const u=g.addUnit(2,'ant',1500,6000);u.maxHp=g.stats(u).hp/.375;u.hp=u.maxHp*.4;delete u.spawnedAt;g.roomHealthVersion=136;
+ const copy=unpack(scene(),JSON.parse(JSON.stringify(pack(g)))),v=copy.units.find(v=>v.id===u.id);near(v.maxHp,u.maxHp*.375);near(v.hp/v.maxHp,.4);a.equal(v.spawnedAt,100);
 });
 test('mid-boss migration keeps missing health proportion and saved identity while applying 30 percent once',()=>{
  const g=scene();g.time=180;g.updateRoomMiniBosses();const u=g.units.find(u=>u.miniBoss);delete u.midBossVersion;u.bossName='중간 보스 · 사슴벌레';const main=g.stats({...u,miniBoss:false});u.maxHp=main.hp*.5;u.hp=u.maxHp*.4;
