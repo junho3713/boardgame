@@ -16,7 +16,7 @@ function install({FrontGame,TYPES,multiplier}){
  p.shotgunReloadTime=function(u,s=this.stats(u)){return 1.8*s.rate/TYPES.rifle.rate;};
  p.shotgunShotMultiplier=function(){return 1;};
  p.droneLaserDamage=function(u,t,amount){return amount;};
- p.droneLaserPeriod=function(u){return 6/this.rankCombat(u).attackSpeed;};
+ p.droneLaserPeriod=function(u){return 6/this.rankCombat(u).attackSpeed/this.tacticalFeverHaste(u);};
  p.droneLaserTarget=function(u,range,target){return target;};
  p.diceFace=function(){
   return Math.min(6,1+Math.floor(this.random()*6));
@@ -121,7 +121,7 @@ function install({FrontGame,TYPES,multiplier}){
   missile: {radius:88, multiplier:1.7, delay:1.16, knockback:44},
   nuke: {radius:225, multiplier:7, delay:2.4, knockback:0}
  };
- const radioRank=(g,u)=>g.starExperiment?(u.star||1):1;
+ const radioRank=(g,u)=>g.starExperiment||u.summonedTwoStar?(u.star||1):1;
  const missileSpread=[0,-21,21,0,-38,38];
  const missileGuidance={lockBeforeImpact:.20,maxTravel:220,retargetRange:145};
  const nukeCooldown=12;

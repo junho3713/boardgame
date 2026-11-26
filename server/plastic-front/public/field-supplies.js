@@ -85,7 +85,7 @@ function install({FrontGame:Game,TYPES}){
  };
  p.levelCheck=function(){
   if(this.phase!=='playing')return;
-  if(this.usesSummoning?.()){levelCheck.call(this);if(this.phase==='playing')this.runSummonPlan();return;}
+  if(this.usesSummoning?.()){levelCheck.call(this);return;}
   this.scheduleMinuteSupport();
   if(this.beginSupplySupport())return;
   levelCheck.call(this);this.beginMinuteSupport();

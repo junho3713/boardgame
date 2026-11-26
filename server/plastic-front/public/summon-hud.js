@@ -33,20 +33,22 @@
    slots.forEach((node,i)=>{
     const type=i===5?'mystery':game.summonSlots[i],entry=art[type];
     const status=game.summonStatus(i+1),level=type&&i<5?game.tech[0][type]:0,evolved=!!game.evolved[type];
+    const fever=type==='mystery'&&status.fever;
+    const feverSeconds=type==='mystery'?Math.ceil(game.tacticalFeverRemaining?.()||0):0;
     const ratio=status.cost?Math.min(1,Math.max(0,game.cash[0]/status.cost)):0;
     node.style.setProperty('--charge',ratio*100+'%');
-    const key=[type,level,evolved,status.reason,status.cost].join('/');
+    const key=[type,level,evolved,status.reason,status.cost,fever,feverSeconds].join('/');
     if(previous[i]===key)return;previous[i]=key;
-    node.style.setProperty('--summon-accent',entry?.[1]||'#3c5045');
+    node.style.setProperty('--summon-accent',fever?'#816031':entry?.[1]||'#3c5045');
     node.classList.toggle('evolved',evolved);node.classList.toggle('affordable',!!entry&&!status.reason);
     node.classList.toggle('empty',!entry);node.disabled=!entry;
     node.setAttribute('aria-disabled',String(!!status.reason));
-    const name=(i===5?'미스터리 장난감 박스':root.FrontTypes[type]?.name)||'빈 슬롯';
-    node.title=name+' · '+(status.reason||'소환 가능');
+    const name=(i===5?(fever?'전술 피버 상자':'미스터리 장난감 박스'):root.FrontTypes[type]?.name)||'빈 슬롯';
+    node.title=name+' · '+(status.reason||(fever?'공속 +40% · 10초 · 체력 30% 회복 · XP 자석':'소환 가능'));
     node.setAttribute('aria-label',(i===5?'F 또는 6':i+1)+'번, '+name+(level?', 레벨 '+level:'')+(status.cost?', '+status.cost+' 골드':'')+(status.reason?', '+status.reason:''));
-    node.children[1].textContent=level?'Lv.'+level:'';
+    node.children[1].textContent=feverSeconds?feverSeconds+'초':level?'Lv.'+level:'';
     node.children[2].innerHTML=icon(type);
-    node.children[3].textContent=entry?.[0]||'미등록';
+    node.children[3].textContent=fever?'전술 피버':entry?.[0]||'미등록';
     node.children[4].textContent=status.cost?status.cost+'G':'';
    });
   }};
@@ -158,7 +160,7 @@
    const pose=descent(p,game.time,reduced);
    attachedChutes(ctx,p,pose);
    ctx.save();ctx.translate(p.x+pose.sway,p.y-pose.lift);
-   if(p.goldenSummon){ctx.scale(1.5,1.5);ctx.filter='sepia(.9) saturate(2.4) brightness(1.3)';}
+   if(p.goldenSummon){if(p.type==='tank')ctx.scale(1.5,1.5);ctx.filter='sepia(.9) saturate(2.4) brightness(1.3)';}
    const draw=()=>drawModel(p,!!(p.summonEvolved||game.evolved[p.type]));
    if(!(game.coop?game.withOwner(p.coopOwner,draw):draw())){
     ctx.fillStyle=art[p.type][1];ctx.fillRect(-13,-33,26,27);

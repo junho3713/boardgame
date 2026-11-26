@@ -15,7 +15,7 @@ test('defeats drop experience and the magnet attracts distant crystals before gr
  const foe=g.addUnit(2,'ant',leader.x+135,leader.y,true),cash=g.cash[0];
  g.damage(foe,1e9,leader);g.damage(foe,1e9,leader);
  assert.equal(g.xp,0);assert.ok(g.cash[0]>cash);
- assert.deepEqual(g.experienceDrops,[{x:foe.x,y:foe.y,amount:5,owner:0,pulling:false}]);
+ assert.deepEqual(g.experienceDrops,[{x:foe.x,y:foe.y,amount:4,owner:0,pulling:false}]);
  g.updateExperienceDrops(.05);
  assert.equal(g.experienceDrops[0].pulling,false);
  g.abilities.magnet=5;g.abilities.xpGain=2;
@@ -24,13 +24,13 @@ test('defeats drop experience and the magnet attracts distant crystals before gr
  const restored=unpack(game(),pack(g));
  for(let i=0;i<14;i++)restored.updateExperienceDrops(.05);
  assert.equal(restored.experienceDrops.length,0);
- assert.ok(Math.abs(restored.xp-5.8)<1e-8);
+ assert.ok(Math.abs(restored.xp-4.64)<1e-8);
 });
 
-test('the room needs the same XP for each level, with 85px base pickup reach and +8% per XP rank',()=>{
+test('the room needs 55 + 12 XP per level, with 85px base pickup reach and +8% per XP rank',()=>{
  const g=game(),leader=g.commander(0);
- assert.equal(g.neededXP(),46);
- g.level=10;assert.equal(g.neededXP(),136);
+ assert.equal(g.neededXP(),67);
+ g.level=10;assert.equal(g.neededXP(),175);
  assert.equal(g.experienceRadius(),85);
  g.earnDefeatXP({x:leader.x+85,y:leader.y},25);
  g.earnDefeatXP({x:leader.x+170,y:leader.y},25);
@@ -68,21 +68,26 @@ test('old operation saves migrate the early ant maximum while retaining damage t
  assert.ok(Math.abs(copy.hp/copy.maxHp-.4)<1e-8);
 });
 
-test('the room XP table distinguishes regular infantry and dangerous enemies from ordinary ants',()=>{
+test('the room kill table rewards dangerous enemies with extra combat gold without changing profile gold',()=>{
  const g=game(),leader=g.commander(0);
  g.units=[leader];
- const xp={ant:5,rifle:12,machinegun:14,sniper:14,mortar:14,bombBug:32,acidBeetle:32,pirateCannon:40,bubbleOctopus:42,blizzardMage:38};
- for(const [type,expected] of Object.entries(xp)){
+ const rewards={ant:[4,3,2],rifle:[12,8,2],machinegun:[14,8,2],sniper:[14,8,2],mortar:[14,8,2],
+  bombBug:[32,18,2],acidBeetle:[32,10,2],pirateCannon:[40,25,2],bubbleOctopus:[42,30,6],blizzardMage:[38,20,2]};
+ for(const [type,[xp,battleGold,profileGold]] of Object.entries(rewards)){
   g.experienceDrops=[];
   const target=g.addUnit(2,type,leader.x+300,leader.y,true);
+  const cash=g.cash[0],savedGold=g.profile.gold;
   g.damage(target,1e9,leader);
   assert.equal(g.experienceDrops.length,1,type);
-  assert.equal(g.experienceDrops[0].amount,expected,type);
+  assert.equal(g.experienceDrops[0].amount,xp,type);
   assert.equal(g.experienceDrops[0].boss,undefined,type);
+  assert.equal(g.cash[0]-cash,battleGold,type);
+  assert.equal(g.profile.gold-savedGold,profileGold,type);
  }
  const outside=new FrontGame({},undefined,{map:'backyard'});
  outside.damage(outside.addUnit(2,'ant',800,1000,true),1e9,outside.commander(0));
  assert.equal(outside.experienceDrops[0].amount,13);
+ assert.equal(outside.cash[0],141);
 });
 
 test('red boss crystals keep exact mini and full rewards separate from ordinary drops and Destiny Star',()=>{
@@ -91,16 +96,20 @@ test('red boss crystals keep exact mini and full rewards separate from ordinary 
  const mini=g.addUnit(2,'rhinoBeetle',1800,6000,true);
  Object.assign(mini,{boss:true,miniBoss:true,miniBossMinute:9});
  g.earnDefeatXP(mini,5);
+ const cash=g.cash[0];
  g.damage(mini,1e9,leader);
+ assert.equal(g.cash[0],cash+52);
  assert.ok(g.pickups.some(p=>p.destinyStar));
  assert.equal(g.bossState.rewards,0);
  const full=g.addUnit(2,'hornet',mini.x,mini.y,true);
  full.boss=true;
  g.damage(full,1e9,leader);
+ assert.equal(g.cash[0],cash+52+110);
  assert.equal(g.bossState.rewards,1);
  const road=g.addUnit(2,'bayonet',mini.x,mini.y,true);
  Object.assign(road,{boss:true,roadCaptain:true,roadStage:1});
  g.damage(road,1e9,leader);
+ assert.equal(g.cash[0],cash+52+110+10);
  assert.equal(g.bossState.rewards,2);
  g.earnDefeatXP(full,5);
  assert.deepEqual(g.experienceDrops.map(d=>[d.amount,d.boss||false]),[[30,false],[162.5,true],[200,true]]);
@@ -110,7 +119,10 @@ test('a saved cooperative boss crystal belongs only to the player credited with 
  const g=new CoopGame();g.start();
  const green=g.commander(0),blue=g.withOwner(1,()=>g.commander(0));
  const boss=g.addUnit(2,'stagBeetle',green.x+300,green.y,true);boss.boss=true;
+ const cash=g.cash[0],blueCash=g.withOwner(1,()=>g.cash[0]);
  g.damage(boss,1e9,blue);
+ assert.equal(g.cash[0],cash);
+ g.withOwner(1,()=>{assert.equal(g.cash[0],blueCash+80);assert.equal(g.profile.gold,30);});
  const restored=unpack(new CoopGame(),pack(g)),red=restored.experienceDrops[0];
  assert.deepEqual([red.amount,red.boss,red.owner],[152,true,1]);
  for(const commander of [restored.commander(0),restored.withOwner(1,()=>restored.commander(0))]){
@@ -120,6 +132,18 @@ test('a saved cooperative boss crystal belongs only to the player credited with 
  assert.equal(restored.xp,0);assert.equal(restored.experienceDrops.length,1);
  restored.withOwner(1,()=>{restored.updateExperienceDrops(.05);assert.equal(restored.xp,152);});
  assert.equal(restored.experienceDrops.length,0);
+});
+
+test('both realtime co-op wallets accrue 1.5 battle gold per second independently from profile gold',()=>{
+ const g=new CoopGame({}, {realtimeSummons:true});
+ const wallet=owner=>g.withOwner(owner,()=>[g.cash[0],g.profile.gold]);
+ assert.deepEqual([wallet(0),wallet(1)],[[90,0],[90,0]]);
+ g.coopIncome(4);
+ assert.deepEqual([wallet(0),wallet(1)],[[96,0],[96,0]]);
+ const blue=g.withOwner(1,()=>g.commander(0));
+ const enemy=g.addUnit(2,'pirateCannon',blue.x+350,blue.y,true);
+ g.damage(enemy,1e9,blue);
+ assert.deepEqual([wallet(0),wallet(1)],[[96,0],[121,2]]);
 });
 
 test('old gold ranks and offered cards migrate to magnet without adding a gold multiplier',()=>{
@@ -159,7 +183,7 @@ test('rare rolls create a map magnet or a healing pack at the enemy position',()
  assert.ok(g.experienceDrops.every(drop=>drop.pulling));
  assert.equal(g.xp,0);
  for(let i=0;i<100;i++)g.updateExperienceDrops(.05);
- assert.equal(g.experienceDrops.length,0);assert.equal(g.xp,95);
+ assert.equal(g.experienceDrops.length,0);assert.equal(g.xp,92);
  Object.assign(leader,{x:heal.x,y:heal.y});
  assert.equal(g.collectFieldSupply(heal),false);
  assert.equal(heal.active,true);

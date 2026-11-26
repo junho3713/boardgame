@@ -43,6 +43,12 @@ function shake(game){
  if(game.reducedMotion??motionPreference?.matches)return{x:0,y:0};
  const ageNuke=nuclearAge(game);
  if(ageNuke>=0&&ageNuke<.30)return nuclearShake(game,ageNuke);
+ const jackpot=game.effects?.findLast(e=>e.kind==='summonJackpot');
+ const ageJackpot=jackpot?game.time-jackpot.at:Infinity;
+ if(ageJackpot>=0&&ageJackpot<.27&&Math.hypot(jackpot.x-game.camera.x,jackpot.y-game.camera.y)<=600){
+  const force=(1-ageJackpot/.27)**1.6;
+  return{x:Math.sin(ageJackpot*92+1)*8*force,y:Math.cos(ageJackpot*108)*6*force};
+ }
  const h=game.impactPulse;if(!h)return{x:0,y:0};const age=game.time-h.at;if(age<0||age>=.18||Math.hypot(h.x-game.camera.x,h.y-game.camera.y)>650)return{x:0,y:0};const k=(1-age/.18)*Math.min(3,h.power*1.6);return{x:Math.sin(age*103)*k,y:Math.cos(age*87)*k*.65};
 }
 function install(Effects){const p=Effects.prototype,draw=p.drawEvent,emit=p.emit;p.emit=function(e){emit.call(this,e);if(e.kind==='hit')this.impactSound?.(e);};

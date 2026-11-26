@@ -252,6 +252,45 @@ class FrontEffects{
   if(warmup){ctx.save();ctx.font='700 12px sans-serif';ctx.textAlign='center';ctx.lineWidth=4;ctx.strokeStyle='#3e2025';ctx.fillStyle='#fff2d7';const label=`돌진 ${Math.max(0,a.chargeAt-time).toFixed(1)}초`;ctx.strokeText(label,a.origin.x,a.origin.y-88);ctx.fillText(label,a.origin.x,a.origin.y-88);ctx.restore();}
   return true;
  }
+ drawSummonJackpot(ctx,e,progress){
+  const age=e.max-e.t,ring=Math.min(1,age/.45),fade=1-progress;
+  ctx.save();ctx.translate(e.x,e.y);
+  if(ring<1){
+   const radius=18+ring*107;
+   ctx.globalAlpha=(1-ring)*.85;ctx.strokeStyle='#fff2ab';ctx.lineWidth=5-ring*4;
+   ctx.beginPath();ctx.ellipse(0,0,radius,radius*.44,0,0,TAU);ctx.stroke();
+  }
+  const flash=Math.max(0,1-age/.22);
+  if(flash>0){
+   const glow=ctx.createRadialGradient(0,-18,0,0,-18,86);
+   glow.addColorStop(0,'#fffadabb');glow.addColorStop(.36,'#ffd45d60');glow.addColorStop(1,'#ffb63c00');
+   ctx.globalAlpha=flash;ctx.fillStyle=glow;ctx.fillRect(-86,-104,172,172);
+  }
+  ctx.lineCap='round';
+  for(let i=0;i<25;i++){
+   const a=i*2.399963,length=52+(i*29%94),lift=36+(i*17%77);
+   const reach=1-Math.pow(1-progress,2),height=4*progress*(1-progress)*lift;
+   const x=Math.cos(a)*length*reach,y=Math.sin(a)*length*.47*reach-height-9;
+   const trail=4+12*fade,trailX=Math.cos(a)*trail,trailY=Math.sin(a)*trail*.47-6*fade;
+   ctx.globalAlpha=fade*.62;ctx.lineWidth=i%3?2:3.5;ctx.strokeStyle=i%3?'#ffc751':'#fff2bd';
+   ctx.beginPath();ctx.moveTo(x-trailX,y-trailY);ctx.lineTo(x,y);ctx.stroke();ctx.globalAlpha=1;
+   this.toyStar(ctx,x,y,(i%3?3:5)*fade+1,a+age*3,fade,'#fff3ab');
+  }
+  ctx.restore();
+ }
+ drawTacticalFever(ctx,e,progress){
+  ctx.save();ctx.translate(e.x,e.y);
+  for(let i=0;i<2;i++){
+   const t=clamp(progress*1.22-i*.18,0,1),radius=24+(e.radius-24)*(1-(1-t)**2);
+   ctx.globalAlpha=(1-progress)*(i?.45:.75);ctx.lineWidth=i?2.5:5;ctx.strokeStyle=i?'#ffd677':'#fff2ba';
+   ctx.beginPath();ctx.arc(0,0,radius,0,TAU);ctx.stroke();
+  }
+  ctx.globalAlpha=(1-progress)*.85;ctx.textAlign='center';ctx.font='800 16px system-ui';
+  ctx.strokeStyle='#58421e';ctx.lineWidth=4;ctx.lineJoin='round';
+  const labelY=-70-10*progress;
+  ctx.strokeText('전술 피버',0,labelY);ctx.fillStyle='#fff2ba';ctx.fillText('전술 피버',0,labelY);
+  ctx.restore();
+ }
  drawEvent(ctx,e){
   if(root.FrontBubbleOctopusView?.event(ctx,e)||root.FrontBlockFlashView?.event(ctx,e)||root.FrontPirateCannonView?.event(ctx,e))return true;
   if(root.FrontRosterArt?.event(ctx,e,this))return true;
@@ -259,6 +298,8 @@ class FrontEffects{
   if(e.kind==='explosion'&&this.drawImpactMaterial?.(ctx,e,{boss:e.visualKind==='bossKiller',style:e.visualKind}))return true;
   if(e.kind==='muzzle'&&this.drawMuzzleMaterial?.(ctx,e))return true;
   const k=clamp(e.t/e.max,0,1),p=1-k;
+  if(e.kind==='summonJackpot'){this.drawSummonJackpot(ctx,e,p);return true;}
+  if(e.kind==='tacticalFever'){this.drawTacticalFever(ctx,e,p);return true;}
   if(!['shionSlash','shionSpin','bossSlashWarn','bossDiveWarn','bossBarrageWarn','bossGroggy','butterflyWarn','butterflyWind','healingWeaken','cleanse','muzzle','explosion','hit','burst','tracer','heal','evolve','ultimateVolley','sting','bayonetWarn','bayonetThrust','bladeSlash','flame','luckyGlueThrow','luckyGlue','luckySpray','luckyJackpot'].includes(e.kind))return false;
   ctx.save();
   if(e.kind==='shionSlash'&&e.finisher){

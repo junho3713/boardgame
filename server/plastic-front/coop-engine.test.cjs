@@ -26,7 +26,7 @@ test('movement, spending, combat credit, upgrade stats and fusion remain persona
  assert.equal(g.xp,greenXP);assert.equal(g.experienceDrops.length,1);
  Object.assign(blue,{x:drop.x,y:drop.y});
  g.withOwner(1,()=>g.updateExperienceDrops(.05));
- assert.equal(g.withOwner(1,()=>g.xp),otherXP+5);assert.equal(g.experienceDrops.length,0);
+ assert.equal(g.withOwner(1,()=>g.xp),otherXP+4);assert.equal(g.experienceDrops.length,0);
  const greenRifle=g.owned(0).find(u=>u.type==='rifle'),blueRifle=g.owned(1).find(u=>u.type==='rifle'),oldBlue=g.stats(blueRifle).damage;
  g.withOwner(0,()=>{g.abilities.damage=5;g.tech[0].rifle=5;});assert.equal(g.stats(blueRifle).damage,oldBlue);assert.ok(g.stats(greenRifle).damage>oldBlue);
 });

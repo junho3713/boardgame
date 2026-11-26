@@ -42,8 +42,7 @@
  const fieldFullscreen=$('fullscreenBtn');if(fieldFullscreen){fieldFullscreen.classList.remove('field-fullscreen');fieldFullscreen.classList.add('hud-menu-fullscreen');menu.append(fieldFullscreen);}
  const test=$('waveTestStrip');if(test)frame.append(test);
  const auto=$('autoState');if(auto)frame.append(auto);
- // Register before game.js attaches the existing action handlers. New buttons
- // (including automatic reinforcement) receive the same handoff after insertion.
+ // Register before game.js attaches the existing action handlers.
  const wired=new WeakSet();
  for(const id of ['battleSquadOverlay','battleMenuOverlay']){
   const overlay=$(id),wire=()=>{for(const button of overlay.querySelectorAll('button')){if(wired.has(button))continue;wired.add(button);button.addEventListener('click',()=>root.dispatchEvent(new root.CustomEvent('front-hud-close',{detail:id})));}};

@@ -83,8 +83,14 @@ function install(api){
  };
  p.bossKillerTarget=function(u){const range=LUCKY.missileRange*this.rankCombat(u).range;return this.evolutionEnemies(u).filter(t=>t.boss&&distance(u,t)<=range&&this.visible(t)&&this.lineClear(u,t,0,{fireTeam:0})).sort((a,b)=>distance(u,a)-distance(u,b))[0]||null;};
  p.evolutionLuckyOdds=function(u,base){
-  if(!u||!this.evolutionEnabled(u)||!this.bossKillerTarget(u))return base;
-  const chance=Math.min(.08,base.blank);return {...base,blank:base.blank-chance,bossKiller:chance};
+  if(!u||!this.evolutionEnabled(u))return base;
+  const bossKiller=this.bossKillerTarget(u)?Math.min(.08,base.blank):0;
+  if(u.goldenSummon&&u.type==='lucky'){
+   // Reassign the blank weight among regular wins and preserve the evolved boss-only odds.
+   const scale=(1-bossKiller)/(1-base.blank);
+   return {glue:base.glue*scale,mine:base.mine*scale,spray:base.spray*scale,missiles:base.missiles*scale,bossKiller,blank:0};
+  }
+  return bossKiller?{...base,blank:base.blank-bossKiller,bossKiller}:base;
  };
  p.luckyOdds=function(u){const base=this.coop&&u?.team===0?this.withOwner(u.coopOwner,()=>odds.call(this,u)):odds.call(this,u);return this.evolutionLuckyOdds(u,base);};
  p.castLucky=function(u,result){

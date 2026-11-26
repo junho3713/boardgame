@@ -87,7 +87,7 @@ p.autoFuseUnits=function(){
 // The third recruit merges immediately, including while support is being confirmed.
 p.buy=function(type,team=0){const ok=buy.call(this,type,team);if(ok&&team===0)this.autoFuseUnits();return ok;};
 p.updateLuckyUnit=function(u){
- if(!(this.starExperiment&&u.star>=2&&u.team===0))return lucky.call(this,u);
+ if(this.rankCombat(u).damage===1)return lucky.call(this,u);
  this.updateLuckyInterval(u);
  u.luckyChannels??=Array.from({length:RULES.roulettes},(_,i)=>({roll:i===0?u.luckyRoll:null,next:u.nextLuckyAt}));
  for(const [i,ch] of u.luckyChannels.entries()){u.activeLuckyChannel=i;u.luckyRoll=ch.roll;u.nextLuckyAt=ch.next;lucky.call(this,u);ch.roll=u.luckyRoll;ch.next=u.nextLuckyAt;}

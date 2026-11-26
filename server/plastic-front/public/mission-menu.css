@@ -62,11 +62,6 @@
   gap: 6px;
 }
 
-.mission-tools #startReinforcement {
-  order: -1;
-  width: auto;
-}
-
 .mission-tools button,
 .mission-menu .mode-picker > *,
 .mission-menu .mission-resume {
@@ -349,7 +344,6 @@
   .mission-header { flex-wrap: wrap; }
   .mission-tools { flex-basis: 100%; }
   .mission-tools button { flex: 1 0 auto; white-space: nowrap; }
-  .mission-tools #startReinforcement { justify-content: flex-start; }
   .mission-tools button,
   .mission-menu .mode-picker > * { min-height: 36px; padding-inline: 8px; font-size: 12px; }
   .mission-scroll { padding: 12px; }

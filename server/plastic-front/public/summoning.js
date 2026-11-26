@@ -1,18 +1,19 @@
 /* Shared realtime orders for the player and the authoritative co-op battle. */
 (function(root){'use strict';
- const rules={slots:5,skipGold:30,boxCost:150,boxReserve:6,income:2.5,fall:.58,height:200,chuteFade:.3};
+ const rules={slots:5,skipGold:30,boxCost:180,boxReserve:1,fall:.58,height:200,chuteFade:.3};
  const vehicles=['tank','lucky'];
  const isVehicle=type=>vehicles.includes(type);
  const choose=(pool,random)=>pool[Math.min(pool.length-1,Math.floor(random()*pool.length))];
  const infantry=['rifle','machinegun','sniper','guntruck','rocket','mortar','medic'];
  function rollBox(roster,random){
   const roll=random();
-  const drop=(type,flags={})=>({type,...flags});
-  if(roll<.60)return {name:'혼합 지원',units:[drop(choose(vehicles,random)),drop(choose(infantry,random))]};
-  if(roll<.80)return {name:'보병 지원',units:Array.from({length:4},()=>drop('rifle'))};
-  if(roll<.95)return {name:'대박 · 진화 병과',units:[drop(choose(roster,random),{summonEvolved:true})]};
-  if(random()<.5)return {name:'잭팟 · 황금 전차',units:[drop('tank',{goldenSummon:true})]};
-  return {name:'잭팟 · 대규모 지원',units:Array.from({length:5+(random()<.5?0:1)},()=>drop(choose(roster,random)))};
+  if(roll<.25)return {name:'소소한 꽝',units:[{type:choose(infantry,random)}],refund:50};
+  const draw=(flags={})=>({type:choose(roster,random),...flags});
+  if(roll<.65)return {name:'일반 분대',units:[draw(),draw()]};
+  if(roll<.85)return {name:'희귀 직구 · 2성',units:[draw({star:2})]};
+  if(roll<.96)return {name:'대박 용병 · 진화 2성',units:[draw({star:2,summonEvolved:true})]};
+  if(random()<.5)return {name:'잭팟 · 황금 전차',units:[{type:'tank',goldenSummon:true}]};
+  return {name:'잭팟 · 황금 레토나',units:[{type:'lucky',goldenSummon:true,summonEvolved:true}]};
  }
  function install({FrontGame,TYPES,ROSTER}){
   const p=FrontGame.prototype;
@@ -95,6 +96,11 @@
   p.registerSummon=function(type){
    if(this.nextSummonSlot(type))this.summonSlots.push(type);
   };
+  p.mercenaryLevel=function(){
+   if(!this.summonSlots.length)return 1;
+   const total=this.summonSlots.reduce((sum,type)=>sum+Math.max(1,this.tech[0][type]||1),0);
+   return Math.max(1,Math.round(total/this.summonSlots.length));
+  };
   p.summonStatus=function(slot){
    const mystery=slot===rules.slots+1,type=Number.isInteger(slot)&&slot>=1&&slot<=rules.slots?this.summonSlots[slot-1]:null;
    const cost=mystery?rules.boxCost:TYPES[type]?.cost||0;
@@ -104,11 +110,13 @@
    const owned=u=>!this.coop||u.coopOwner===this.coopOwner;
    const live=this.units.filter(u=>owned(u)&&u.team===0&&u.hp>0&&!u.patrol&&u.type!=='leader');
    const pending=this.dropPods.filter(owned);
+   const openSquadSlots=Math.max(0,this.capacity()-live.length-pending.length);
+   const status={cost,openSquadSlots,fever:mystery&&openSquadSlots<rules.boxReserve};
    const remainingCap=()=>this.recruitmentRemaining(type);
-   if(this.capacity()-live.length-pending.length<(mystery?rules.boxReserve:1))return {cost,reason:mystery?'미스터리 박스는 병력 자리가 6칸 필요해요':'병력 한도에 도달했어요'};
-   if(!mystery&&(this.coop?this.scoped(remainingCap):remainingCap())<=pending.filter(u=>u.type===type).length)return {cost,reason:'이 병과의 충원 한도에 도달했어요'};
-   if(this.cash[0]+1e-8<cost)return {cost,reason:'전투 골드가 부족해요'};
-   return {cost,reason:''};
+   if(!mystery&&!openSquadSlots)return {...status,reason:'병력 한도에 도달했어요'};
+   if(!mystery&&(this.coop?this.scoped(remainingCap):remainingCap())<=pending.filter(u=>u.type===type).length)return {...status,reason:'이 병과의 충원 한도에 도달했어요'};
+   if(this.cash[0]+1e-8<cost)return {...status,reason:'전투 골드가 부족해요'};
+   return {...status,reason:''};
   };
   p.planSummonLandings=function(units){
    const leader=this.commander(0),bounds=this.bounds(),landings=[];
@@ -133,33 +141,24 @@
    const status=this.summonStatus(slot);
    if(status.reason)return false;
    const type=this.summonSlots[slot-1],mystery=slot===rules.slots+1;
+   if(status.fever){
+    if(!this.activateTacticalFever())return false;
+    this.cash[0]-=status.cost;
+    this.notify('toast','전술 피버 · 10초간 공격속도 +40%');
+    this.notify('change');return true;
+   }
    const order=mystery?rollBox(ROSTER,()=>this.random()):{name:TYPES[type].name,units:[{type}]};
-   const landings=this.planSummonLandings(order.units);
+   // Reserve only available squad space, including orders that are still airborne.
+   const units=order.units.slice(0,status.openSquadSlots).map(unit=>
+    mystery&&!this.summonSlots.includes(unit.type)?{...unit,mercenaryLevel:this.mercenaryLevel()}:unit);
+   const landings=this.planSummonLandings(units);
    if(!landings)return false;
-   this.cash[0]-=status.cost;
+   this.cash[0]-=status.cost-(order.refund||0);
    this.dropPods.push(...landings.map(pod=>({...pod,mystery})));
-   if(mystery)this.notify('toast',order.name+' · '+landings.length+'기 투하');
+   if(mystery)this.notify('toast',order.name+' · '+landings.length+'기 투하'+(order.refund?' · '+order.refund+'G 환급':''));
    this.notify('change');return true;
   };
 
-  p.runSummonPlan=function(){
-   if(!this.reinforcementPlan().enabled||this.commander(0).hp<=0)return;
-   const cycle=Math.floor((this.time+1e-8)/30),state=this.supplyState();
-   if(cycle<1||state.autoReinforcedCycle===cycle)return;
-   state.autoReinforcedCycle=cycle;
-   const slots=this.reinforcementCandidates().filter(type=>this.summonSlots.includes(type)).slice(0,2);
-   const targets=this.reinforcementPlan().targets,live=this.reinforcementCounts();
-   const placed={};let spent=0;
-   for(const type of slots){
-    const pending=this.dropPods.filter(p=>p.type===type&&(!this.coop||p.coopOwner===this.coopOwner)).length;
-    const needed=targets[type]-live[type]-pending;
-    for(let i=0;i<needed;i++){
-     if(!this.summon(this.summonSlots.indexOf(type)+1))break;
-     placed[type]=(placed[type]||0)+1;spent+=TYPES[type].cost;
-    }
-   }
-   state.autoReinforcementResult={cycle,at:this.time,bought:placed,spent,reason:spent?'complete':'waiting'};
-  };
   p.updateDropPods=function(){
    if(!this.dropPods.length)return;
    const remaining=[];
@@ -171,6 +170,8 @@
      if(unit.turretFace!==undefined)unit.turretFace=pod.face;
      unit.summonEvolved=!!pod.summonEvolved;
      unit.goldenSummon=!!pod.goldenSummon;
+     if(pod.mercenaryLevel!==undefined)unit.mercenaryLevel=pod.mercenaryLevel;
+     if(pod.star===2){unit.star=2;unit.summonedTwoStar=true;}
      if(unit.goldenSummon){this.resolvePosition(unit);unit.homeX=unit.x;unit.homeY=unit.y;}
      unit.hp=unit.maxHp=this.stats(unit).hp;
      unit.summonLandedAt=this.time;
@@ -182,6 +183,7 @@
      const duration=heavy?.34:.20;
      this.effects.push({kind:'summonChute',x:unit.x,y:unit.y,heavy,mystery:pod.mystery===true,drone:pod.type==='drone',t:rules.chuteFade,max:rules.chuteFade,visualUntil:this.time+rules.chuteFade,team:0});
      this.effects.push({kind:'summonLanding',x:unit.x,y:unit.y,heavy,radius,t:duration,max:duration,at:this.time,team:0});
+     if(unit.goldenSummon)this.completeGoldenSummon(unit);
     };
     if(this.coop)this.withOwner(pod.coopOwner,deploy);else deploy();
    }
