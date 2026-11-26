@@ -63,9 +63,9 @@ function healthBarLayout(hp,maxHp,shieldHp=0){
 function healthPaint(c,bar,x,baseWidth,hpColor){
  if(!bar.shield)return hpColor;
  const fill=c.createLinearGradient(x,0,x+baseWidth*bar.filled,0);
- const seam=bar.health/bar.filled;
- fill.addColorStop(0,hpColor);fill.addColorStop(seam,hpColor);
- fill.addColorStop(seam,'#72d8ff');fill.addColorStop(1,'#72d8ff');
+ const seam=bar.shield/bar.filled;
+ fill.addColorStop(0,'#72d8ff');fill.addColorStop(seam,'#72d8ff');
+ fill.addColorStop(seam,hpColor);fill.addColorStop(1,hpColor);
  return fill;
 }
 function shieldCast(c,u,time){

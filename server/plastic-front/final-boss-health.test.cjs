@@ -12,7 +12,7 @@ test('finale world and pinned health bars show current/max HP, clamp fills and p
  const window={},context=vm.createContext({window,Math,Promise,Image:class{}});for(const name of ['bubble-octopus-view.js','sword-boss-view.js'])vm.runInContext(fs.readFileSync(__dirname+'/public/'+name,'utf8'),context);const view=Object.create(window.FrontSwordBossView.prototype),calls=[],noop=()=>{},c={save:noop,restore:noop,fillRect:(...v)=>calls.push(['rect',...v]),strokeText:noop,fillText:(...v)=>calls.push(['text',...v])},b={x:600,y:800,hp:70400,maxHp:140800,finalBoss:true,swords:{phase:2}},g={trialBoss:b,visible:()=>true},before=JSON.stringify(b);
  view.health(c,g);a.equal(calls.filter(v=>v[0]==='rect')[2][3],110);a.ok(calls.some(v=>v[0]==='text'&&v[1]==='70,400 / 140,800'));calls.length=0;view.hud(c,g,390);const rect=calls.find(v=>v[0]==='rect');a.ok(rect[1]>=0&&rect[1]+rect[3]<=390);a.equal(JSON.stringify(b),before);b.hp=0;calls.length=0;view.health(c,g);view.hud(c,g,390);a.equal(calls.length,0);
 });
-test('health and shield share one full-height fill and shield loss never moves the health boundary',()=>{
+test('the left shield segment shrinks without changing the width of the right health segment',()=>{
  const window={},context=vm.createContext({window,Math});
  for(const name of ['bubble-octopus-view.js','sword-boss-view.js'])vm.runInContext(fs.readFileSync(__dirname+'/public/'+name,'utf8'),context);
  const view=Object.create(window.FrontSwordBossView.prototype);
@@ -25,8 +25,10 @@ test('health and shield share one full-height fill and shield loss never moves t
   a.equal(fills.length,3); // Frame, track and a single fill.
   const fill=fills[2];a.equal(fill.y,24);a.equal(fill.h,14);a.ok(Math.abs(fill.w-hp-shield)<1e-8);
   if(shield){
-   a.equal(stops[1][0],stops[2][0]);a.equal(stops[2][1],'#72d8ff');
-   a.ok(Math.abs(fill.w*stops[1][0]-hp)<1e-8);
+   a.deepEqual(stops.map(([,color])=>color),['#72d8ff','#72d8ff','#b480eb','#b480eb']);
+   a.equal(stops[1][0],stops[2][0]);
+   a.ok(Math.abs(fill.w*stops[1][0]-shield)<1e-8);
+   a.ok(Math.abs(fill.w*(1-stops[2][0])-hp)<1e-8);
   }else a.equal(stops.length,0);
  }
 });
