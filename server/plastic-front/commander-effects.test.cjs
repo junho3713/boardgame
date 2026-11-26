@@ -126,7 +126,7 @@ test('simultaneous and catch-up ultimate events respect the mobile particle and 
 });
 
 test('main and boss-practice entrypoint script orders boot a playable engine and upgraded ultimate renderer',()=>{
- const runtime=new Set(['waves-survival.js','waves-defense.js','room-campaign.js','battle-systems.js','engine.js','evolution-combat.js','sword-boss.js','two-star.js','coop-engine.js','effects.js','impact-materials.js','projectile-materials.js','evolution-effects.js','commander-effects.js']);
+ const runtime=new Set(['waves-survival.js','waves-defense.js','room-campaign.js','battle-systems.js','engine.js','combat-drone.js','evolution-combat.js','sword-boss.js','two-star.js','coop-engine.js','effects.js','impact-materials.js','projectile-materials.js','evolution-effects.js','commander-effects.js']);
  for(const entry of ['index.html','boss-test.html']){
   const html=fs.readFileSync(__dirname+'/public/'+entry,'utf8'),window={},context=vm.createContext({window,Math,Map,Set,WeakMap,WeakSet,Promise,structuredClone});
   for(const match of html.matchAll(/<script\b[^>]*\bsrc=["']([^"']+)["'][^>]*>/g)){

@@ -1,5 +1,6 @@
 /* Shared realtime orders for the player and the authoritative co-op battle. */
 (function(root){'use strict';
+ const drones=typeof module!=='undefined'&&module.exports?require('./combat-drone.js'):root.FrontCombatDrone;
  const rules={slots:6,skipGold:30,boxCost:220,feverCost:180,boxReserve:1,boxEvolvedAt:360,fall:.58,height:200,chuteFade:.3};
  const vehicles=['tank','lucky'];
  const isVehicle=type=>vehicles.includes(type);
@@ -91,9 +92,12 @@
    this.skipEmptyLevelUpgrade();
   };
   p.nextSummonSlot=function(type){
-   return this.usesSummoning()&&ROSTER.includes(type)&&!this.summonSlots.includes(type)&&!this.summonSlotsLocked()?this.summonSlots.length+1:null;
+   return this.dronePartnerSlot(type)||(this.usesSummoning()&&ROSTER.includes(type)&&!this.summonSlots.includes(type)&&!this.summonSlotsLocked()?this.summonSlots.length+1:null);
   };
   p.registerSummon=function(type){
+   if((drones.pair.includes(type)||type===drones.multi)&&this.droneDockingActive()){
+    this.syncDroneDocking();return;
+   }
    if(this.nextSummonSlot(type))this.summonSlots.push(type);
   };
   p.mercenaryLevel=function(){
@@ -108,16 +112,17 @@
    const live=this.units.filter(u=>owned(u)&&u.team===0&&u.hp>0&&!u.patrol&&u.type!=='leader');
    const pending=this.dropPods.filter(owned);
    const openSquadSlots=Math.max(0,this.capacity()-live.length-pending.length);
+   const docking=type===drones.multi?this.droneSummonStatus(live,pending):null;
    const fever=mystery&&openSquadSlots<rules.boxReserve;
-   const cost=fever?rules.feverCost:mystery?rules.boxCost:TYPES[type].cost;
+   const cost=fever?rules.feverCost:mystery?rules.boxCost:docking?drones.discount:TYPES[type].cost;
    const cooldown=fever?Math.ceil(this.tacticalFeverCooldown()):0;
-   const status={cost,openSquadSlots,fever,cooldown};
+   const status={cost,openSquadSlots,fever,cooldown,docking};
    if(!this.usesSummoning()||this.phase!=='playing'||this.bossIntro?.remaining>0||
       this.commander(0).hp<=0||this.coopChoosing?.[this.coopOwner])return {...status,reason:'전투 중에 소환할 수 있어요'};
    if(cooldown)return {...status,reason:`전술 피버 재사용까지 ${cooldown}초`};
    const remainingCap=()=>this.recruitmentRemaining(type);
-   if(!mystery&&!openSquadSlots)return {...status,reason:'병력 한도에 도달했어요'};
-   if(!mystery&&(this.coop?this.scoped(remainingCap):remainingCap())<=pending.filter(u=>u.type===type).length)return {...status,reason:'이 병과의 충원 한도에 도달했어요'};
+   if(!mystery&&!openSquadSlots&&!docking?.partner)return {...status,reason:'병력 한도에 도달했어요'};
+   if(!mystery&&!docking&&(this.coop?this.scoped(remainingCap):remainingCap())<=pending.filter(u=>u.type===type).length)return {...status,reason:'이 병과의 충원 한도에 도달했어요'};
    if(this.cash[0]+1e-8<cost)return {...status,reason:'전투 골드가 부족해요'};
    return {...status,reason:''};
   };
@@ -146,20 +151,28 @@
   p.summon=function(slot){
    const status=this.summonStatus(slot);
    if(status.reason)return false;
-   const type=this.summonSlots[slot-1],mystery=slot===rules.slots+1;
+   const {docking}=status,type=docking?.type??this.summonSlots[slot-1],mystery=slot===rules.slots+1;
    if(status.fever){
     if(!this.activateTacticalFever())return false;
     this.cash[0]-=status.cost;
     this.notify('toast','전술 피버 · 10초간 공격속도 +40%');
     this.notify('change');return true;
    }
+   if(docking?.partner&&!status.openSquadSlots){
+    const partner=docking.partner,unit=this.addUnit(0,type,partner.x,partner.y);
+    const result=type===drones.combat?this.dockDronePair(partner,unit):this.dockDronePair(unit,partner);
+    if(!result){this.units.splice(this.units.indexOf(unit),1);return false;}
+    this.cash[0]-=status.cost;this.droneNextType=type===drones.support?drones.combat:drones.support;
+    this.notify('change');return true;
+   }
    const order=mystery?rollBox(ROSTER,()=>this.random(),this.time):{name:TYPES[type].name,units:[{type}]};
    // Reserve only available squad space, including orders that are still airborne.
    const units=order.units.slice(0,status.openSquadSlots).map(unit=>
-    mystery&&!this.summonSlots.includes(unit.type)?{...unit,mercenaryLevel:this.mercenaryLevel()}:unit);
+    mystery&&!this.summonSlots.includes(unit.type)&&!(drones.pair.includes(unit.type)&&this.droneDockingActive())?{...unit,mercenaryLevel:this.mercenaryLevel()}:unit);
    const landings=this.planSummonLandings(units);
    if(!landings)return false;
    this.cash[0]-=status.cost-(order.refund||0);
+   if(docking)this.droneNextType=type===drones.support?drones.combat:drones.support;
    this.dropPods.push(...landings.map(pod=>({...pod,mystery})));
    if(mystery)this.notify('toast',order.name+' · '+landings.length+'기 투하'+(order.refund?' · '+order.refund+'G 환급':''));
    this.notify('change');return true;
@@ -187,9 +200,10 @@
       this.pushSupportTarget(unit,target,heavy?.9:.32,{duration:heavy?.18:.10,pop:heavy?16:6});
      }
      const duration=heavy?.34:.20;
-     this.effects.push({kind:'summonChute',x:unit.x,y:unit.y,heavy,mystery:pod.mystery===true,drone:pod.type==='drone',t:rules.chuteFade,max:rules.chuteFade,visualUntil:this.time+rules.chuteFade,team:0});
+     this.effects.push({kind:'summonChute',x:unit.x,y:unit.y,heavy,mystery:pod.mystery===true,drone:drones.pair.includes(pod.type),t:rules.chuteFade,max:rules.chuteFade,visualUntil:this.time+rules.chuteFade,team:0});
      this.effects.push({kind:'summonLanding',x:unit.x,y:unit.y,heavy,radius,t:duration,max:duration,at:this.time,team:0});
      if(unit.goldenSummon)this.completeGoldenSummon(unit);
+     if(drones.pair.includes(unit.type))this.dockDrones();
     };
     if(this.coop)this.withOwner(pod.coopOwner,deploy);else deploy();
    }

@@ -1,6 +1,7 @@
 /* Isolated room experiments. The regular room keeps the original unit rules. */
 (function(root){'use strict';
 const api=typeof module!=='undefined'&&module.exports?require('./engine.js'):root,Game=api.FrontGame,roster=api.ROSTER||root.FrontRoster;
+const fusionRoster=[...roster,'multiDrone'];
 const RULES={copies:3,maxTwoStars:3,capacityGains:[1,1,2,2,3],roulettes:3,
  three:{sniperShots:2,lucky:{normal:{glue:.44,mine:.20,spray:.24,missiles:.06,blank:.06},evolved:{glue:.29,mine:.13,spray:.41,missiles:.14,blank:.03}}}};
 const p=Game.prototype,stats=p.stats,upgrade=p.upgradeBalance,buy=p.buy,bonus=p.abilityBonus,remaining=p.recruitmentRemaining,lucky=p.updateLuckyUnit,scale=p.luckyScale,odds=p.luckyOdds,projectiles=p.fireUnitProjectiles;
@@ -18,23 +19,24 @@ p.stats=function(u){
 };
 p.refreshTwoStarHealth=function(){
  if(!this.starExperiment||this.mode!=='pve')return false;let changed=false;
- for(const u of this.units){if(u.team!==0||!(u.star>=2)||!roster.includes(u.type))continue;const hp=this.stats(u).hp;if(Math.abs(hp-u.maxHp)<1e-6)continue;const ratio=Math.max(0,Math.min(1,u.hp/Math.max(1,u.maxHp)));u.maxHp=hp;u.hp=hp*ratio;changed=true;}return changed;
+ for(const u of this.units){if(u.team!==0||!(u.star>=2)||!fusionRoster.includes(u.type))continue;const hp=this.stats(u).hp;if(Math.abs(hp-u.maxHp)<1e-6)continue;const ratio=Math.max(0,Math.min(1,u.hp/Math.max(1,u.maxHp)));u.maxHp=hp;u.hp=hp*ratio;changed=true;}return changed;
 };
 p.upgradeBalance=function(){const changed=upgrade.call(this);return this.refreshTwoStarHealth()||changed;};
-p.fusionCandidates=function(type,star=1){return this.starExperiment&&this.mode==='pve'&&roster.includes(type)?this.alive(0).filter(u=>u.type===type&&!u.summonEvolved&&!u.goldenSummon&&(u.star||1)===star):[];};
+p.fusionCandidates=function(type,star=1){return this.starExperiment&&this.mode==='pve'&&fusionRoster.includes(type)?this.alive(0).filter(u=>u.type===type&&!u.summonEvolved&&!u.goldenSummon&&(u.star||1)===star):[];};
 p.twoStarCount=function(type){return this.alive(0).filter(u=>u.type===type&&u.star===2).length;};
 p.recoverTwoStarLoss=function(u){
- if(!this.starExperiment||this.mode!=='pve'||u.team!==0||u.star!==2||u.hp>0||u.merged||u.recoveredAs||!roster.includes(u.type))return null;
+ if(!this.starExperiment||this.mode!=='pve'||u.team!==0||u.star!==2||u.hp>0||u.merged||u.recoveredAs||!fusionRoster.includes(u.type))return null;
  const recover=()=>{const survivor=this.addUnit(0,u.type,u.x,u.y);survivor.star=1;u.recoveredAs=survivor.id;this.effects.push({kind:'drop',x:survivor.x,y:survivor.y,t:1,max:1,team:0});return survivor;};
  return this.coop?this.withOwner(u.coopOwner,recover):recover();
 };
 p.recruitmentRemaining=function(type,team=0){
- if(!this.starExperiment||this.mode!=='pve'||team!==0||!roster.includes(type))return remaining.call(this,type,team);
+ if(!this.starExperiment||this.mode!=='pve'||team!==0||!fusionRoster.includes(type))return remaining.call(this,type,team);
  if(this.threeStarCount(type))return 0;
  return Math.max(0,(RULES.maxTwoStars-this.twoStarCount(type))*RULES.copies-this.fusionCandidates(type).length);
 };
 function mergeCopies(type,fromStar){
  if(!this.starExperiment||this.mode!=='pve'||!['playing','paused','choice','resupply'].includes(this.phase))return null;
+ if(fromStar===1&&this.droneDockingActive()&&(type==='drone'||type==='combatDrone'))return null;
  if(this.threeStarCount(type)||fromStar===1&&this.twoStarCount(type)>=RULES.maxTwoStars)return null;
  const copies=this.fusionCandidates(type,fromStar).slice(0,RULES.copies);if(copies.length<RULES.copies)return null;
  const survivor=copies[0],ratio=copies.reduce((n,u)=>n+u.hp,0)/copies.reduce((n,u)=>n+u.maxHp,0);survivor.star=fromStar+1;survivor.maxHp=this.stats(survivor).hp;survivor.hp=survivor.maxHp*ratio;survivor.cooldown=Math.max(...copies.map(u=>u.cooldown||0));survivor.trialDodge=null;survivor.route=null;survivor.routeGoal=null;survivor.regroup=null;survivor.navCheck=null;survivor.tankCatchup=false;
@@ -70,7 +72,7 @@ p.destinyStarTypes=function(){
   if(u.star===2)counts.set(u.type,(counts.get(u.type)||0)+1);
   if(u.star===3)promoted.add(u.type);
  }
- return roster.filter(type=>counts.get(type)>=RULES.copies&&!promoted.has(type));
+ return fusionRoster.filter(type=>counts.get(type)>=RULES.copies&&!promoted.has(type));
 };
 const collectSupply=p.collectFieldSupply;
 p.collectFieldSupply=function(pickup){
@@ -85,8 +87,9 @@ p.collectFieldSupply=function(pickup){
  this.notify('change');return true;
 };
 p.autoFuseUnits=function(){
+ this.dockDrones();
  if(!this.starExperiment||this.mode!=='pve'||!['playing','paused','choice','resupply'].includes(this.phase))return;
- const counts=new Map();for(const u of this.alive(0))if(roster.includes(u.type)&&(u.star||1)===1)counts.set(u.type,(counts.get(u.type)||0)+1);
+ const counts=new Map();for(const u of this.alive(0))if(fusionRoster.includes(u.type)&&(u.star||1)===1)counts.set(u.type,(counts.get(u.type)||0)+1);
  for(const [type,count] of counts)for(let i=0;i<Math.floor(count/RULES.copies);i++)if(!this.fuseUnit(type))break;
 };
 // The third recruit merges immediately, including while support is being confirmed.

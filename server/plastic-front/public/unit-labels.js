@@ -8,7 +8,7 @@ function evolution(game,u,ctx){
  if(u.hp<=0||(!u.goldenSummon&&!isEvolved(game,u)))return null;
  const name=game.stats(u).name;
  const vehicle=['tank','crimsonAce','lucky'].includes(u.type),rina=u.type==='medic'&&u.appearance==='rina';
- const droneRise=u.type==='drone'?(u.visualFlightHeight??game.stats(u).flightHeight??54)+42:0;
+ const droneRise=['drone','combatDrone','multiDrone'].includes(u.type)?(u.visualFlightHeight??game.stats(u).flightHeight??54)+42:0;
  let rise=droneRise?droneRise+13:vehicle?90:rina?98:79;
  if(u.star>=2){
   const starY=u.y-((droneRise|| (vehicle?79:rina?86:66))-(vehicle?10:8))-6;

@@ -11,6 +11,7 @@
   medic:['의무','#43785b','M12 5h8v7h7v8h-7v7h-8v-7H5v-8h7z'],
   lucky:['레토나','#4f7245','M16 15C4 17 5 6 12 6c3 0 4 3 4 6 0-3 1-6 4-6 7 0 8 11-4 9 12-2 11 9 4 9-3 0-4-3-4-6 0 3-1 6-4 6-7 0-8-11 4-9z M15 21h2l-2 8h-3z'],
   drone:['드론','#427589','M2 7h10v3H2z M20 7h10v3H20z M2 22h10v3H2z M20 22h10v3H20z M9 9l7 5 7-5 2 2-6 5 6 5-2 2-7-5-7 5-2-2 6-5-6-5z','M14 14h4v4h-4z'],
+  combatDrone:['전투 드론','#984e36','M2 7h10v3H2z M20 7h10v3H20z M2 22h10v3H2z M20 22h10v3H20z M6 11l10 3 10-3v10l-10-3-10 3z M13 5h2v8h-2z M17 5h2v8h-2z','M14 14h4v4h-4z'],
   mystery:['미스터리','#735783','M4 13l12-6 12 6-12 6z M5 16l10 5v8L5 24z M17 21l10-5v8l-10 5z M16 2l2 2-2 2-2-2z','M15 12h3v2h-2v2h-2v-2h1z']
  };
  function icon(type){
@@ -32,27 +33,28 @@
    document.documentElement.classList.toggle('summon-active',!panel.hidden);
    if(panel.hidden)return;
    slots.forEach((node,i)=>{
-    const type=i===last?'mystery':game.summonSlots[i],entry=art[type];
-    const status=game.summonStatus(i+1),level=type&&i<last?game.tech[0][type]:0,evolved=!!game.evolved[type];
+    const type=i===last?'mystery':game.summonSlots[i],status=game.summonStatus(i+1);
+    const display=status.docking?.type??type,entry=art[display],waiting=status.docking?.waiting;
+    const level=type&&i<last?game.tech[0][type]:0,evolved=!!game.evolved[type];
     const fever=type==='mystery'&&status.fever;
     const feverSeconds=type==='mystery'?Math.ceil(game.tacticalFeverRemaining?.()||0):0,cooldown=status.cooldown||0;
     const ratio=status.cost?Math.min(1,Math.max(0,game.cash[0]/status.cost)):0;
     node.style.setProperty('--charge',ratio*100+'%');
-    const key=[type,level,evolved,status.reason,status.cost,fever,feverSeconds,cooldown].join('/');
+    const key=[type,display,waiting,level,evolved,status.reason,status.cost,fever,feverSeconds,cooldown].join('/');
     if(previous[i]===key)return;previous[i]=key;
     node.style.setProperty('--summon-accent',fever?'#816031':entry?.[1]||'#3c5045');
     node.classList.toggle('evolved',evolved);node.classList.toggle('affordable',!!entry&&!status.reason);
     node.classList.toggle('empty',!entry);node.disabled=!entry;
     node.setAttribute('aria-disabled',String(!!status.reason));
     const name=(i===last?(fever?'전술 피버':'미스터리 장난감 박스'):root.FrontTypes[type]?.name)||'빈 슬롯';
-    const detail=fever?'10초간 공속 +40% · 체력 30% 회복 · 480px XP 흡수 · 재사용 25초':
+    const detail=status.docking?`다음 소환 ${root.FrontTypes[display].name} · ${waiting?'도킹 대기 · ':''}같은 성급 자동 합체 · 만석에서도 미합체 1성의 짝은 소환 가능`:fever?'10초간 공속 +40% · 체력 30% 회복 · 480px XP 흡수 · 재사용 25초':
      i===last?'보병 1기와 50G 환급 30% · 일반 2기 44% · 2성 17% · 진화 2성 6%(6분 전 일반 2성) · 황금 전차·레토나 각 1.5%':'';
     const timers=[fever&&feverSeconds?`효과 ${feverSeconds}초`:null,cooldown?`재사용 ${cooldown}초`:null].filter(Boolean);
     node.title=[name,status.cost?status.cost+'G':null,...timers,status.reason,detail].filter(Boolean).join(' · ');
-    node.setAttribute('aria-label',(i===last?'F':(i+1)+'번')+', '+name+(level?', 레벨 '+level:'')+(status.cost?', '+status.cost+' 골드':'')+(status.reason?', '+status.reason:''));
-    node.children[1].textContent=cooldown?'쿨 '+cooldown+'초':level?'Lv.'+level:'';
-    node.children[2].innerHTML=icon(type);
-    node.children[3].textContent=fever?(feverSeconds?'피버 발동':'전술 피버'):entry?.[0]||'미등록';
+    node.setAttribute('aria-label',(i===last?'F':(i+1)+'번')+', '+name+(status.docking?', 다음 '+root.FrontTypes[display].name:'')+(waiting?', 도킹 대기':'')+(level?', 레벨 '+level:'')+(status.cost?', '+status.cost+' 골드':'')+(status.reason?', '+status.reason:''));
+    node.children[1].textContent=cooldown?'쿨 '+cooldown+'초':waiting?'도킹 대기':level?(status.docking?'통합 ':'')+'Lv.'+level:'';
+    node.children[2].innerHTML=icon(display);
+    node.children[3].textContent=fever?(feverSeconds?'피버 발동':'전술 피버'):status.docking?root.FrontTypes[display].name:entry?.[0]||'미등록';
     node.children[4].textContent=status.cost?status.cost+'G':'';
    });
   }};
@@ -127,7 +129,7 @@
  function attachedChutes(ctx,p,pose){
   const {sway,lift,heavy,opening,freed,cut}=pose,mystery=p.mystery===true;
   if(!heavy){
-   const drone=p.type==='drone',top=drone?108:88;
+   const drone=p.type==='drone'||p.type==='combatDrone',top=drone?108:88;
    drawChute(ctx,p.x+sway*1.5,p.y-lift-top+8*(1-opening),{
     heavy,mystery,opening,tilt:sway*.014,
     anchor:{x:p.x+sway,y:p.y-lift-(drone?57:32)}

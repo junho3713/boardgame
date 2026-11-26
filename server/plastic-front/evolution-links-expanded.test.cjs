@@ -22,7 +22,8 @@ test('sixteen distinct links include the three radio partnerships',()=>{
  a.equal(new Set(links.map(l=>[...l.types].sort().join('/'))).size,16);
  for(const t of ROSTER){
   const n=links.filter(l=>l.types.includes(t)).length;
-  a.ok(n>=(t==='drone'?2:3)&&n<=5,t+': '+n);
+  if(t==='combatDrone')a.equal(n,0,'the standalone combat drone has no support link');
+  else a.ok(n>=(t==='drone'?2:3)&&n<=5,t+': '+n);
  }
  a.ok(links.every(l=>l.detail.length>10));
 });

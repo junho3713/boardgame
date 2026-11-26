@@ -13,7 +13,7 @@
   const config=settings();if(config.enemy!==$('enemy').value)$('enemy').value=config.enemy;
   if(config.outcome==='bossKiller'&&config.mode==='lucky')$('evolved').checked=true;
   document.querySelectorAll('[data-mode]').forEach(el=>el.hidden=el.dataset.mode!==config.mode);$('toyActions').hidden=config.mode!=='support';$('starsLabel').hidden=config.mode==='ultimate';
-  $('troopHint').textContent=config.troop==='drone'?'서치라이트로 적을 추적하고 주변 아군에게 실드를 씌웁니다.':config.troop==='medic'?'의무관이 부상·중독 아군을 치료하는 과정을 확인합니다.':'진화 병과의 공격을 확인합니다.';
+ $('troopHint').textContent=config.troop==='drone'?'서치라이트로 적을 추적하고 주변 아군에게 실드를 씌웁니다.':config.troop==='combatDrone'||config.troop==='multiDrone'?'펄스 연사와 유도 미사일을 확인합니다.':config.troop==='medic'?'의무관이 부상·중독 아군을 치료하는 과정을 확인합니다.':'진화 병과의 공격을 확인합니다.';
   $('detail').textContent=config.mode==='support'?FrontSupportToys.toys[config.toy].detail:config.mode==='evolution'?'병과 레벨 5 · '+FrontEvolutions[config.troop].detail:config.mode==='lucky'?'병과 레벨 5 · 성장·당첨 대기 없이 바로 시전합니다. 2성 이상은 독립 룰렛 3개에 같은 결과를 적용합니다. 보스킬러는 진화 상태와 보스를 자동 준비합니다.':'직접 움직이며 5초마다 실제 4초 궁극기를 발동합니다. 즉시 스킬 버튼으로도 재시전합니다.';
   if(config.mode==='support'&&config.toy==='toyDrum')$('detail').textContent=FrontSupportToys.toys.toyDrum.detail+' · 북은 적을 공격하지 않으며 아군 강화 효과를 시험합니다.';
  }
@@ -46,7 +46,7 @@
  function unit(u){
   if(game.isSupportEntity(u)){FrontSupportToyView.draw(c,u,game);return;}if(u.hp<=0)return;
   c.save();c.translate(u.x,u.y);FrontHitFeedback.transform(c,u,game.time);
-  if(u.type==='drone')c.globalAlpha*=FrontSupportDroneView.cloakOpacity(u,game.time);
+  if(u.type==='drone'||u.type==='multiDrone')c.globalAlpha*=FrontSupportDroneView.cloakOpacity(u,game.time);
   const radius=window.FrontTypes[u.type].r;
   FrontSupportDroneView.shield(c,u,game.time,radius,'ground');
   if(!models.draw(c,u,game.time,!!game.evolved[u.type])){c.fillStyle=u.team?'#bc7151':'#9ccf92';c.beginPath();c.arc(0,-10,12,0,Math.PI*2);c.fill();}

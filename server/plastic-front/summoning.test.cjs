@@ -168,20 +168,21 @@ test('normal action gates reject unaffordable or capped orders without charging;
  assert(foe.toyKnockback);assert.equal(g.effects.at(-1).heavy,true);
 });
 const rng=(...values)=>()=>values.shift()??0;
+const rosterRoll=type=>(ROSTER.indexOf(type)+.5)/ROSTER.length;
 test('mystery box has five probability tiers and offers the full roster',()=>{
  assert.equal(rules.boxCost,220);
  assert.equal(rules.boxReserve,1);
  assert.deepEqual(rollBox(ROSTER,rng(.299,.999)).units,[{type:'medic'}]);
  assert.equal(rollBox(ROSTER,rng(.299)).refund,50);
- assert.deepEqual(rollBox(ROSTER,rng(.30,.99,.65)).units,[{type:'drone'},{type:'tank'}]);
+ assert.deepEqual(rollBox(ROSTER,rng(.30,rosterRoll('drone'),rosterRoll('tank'))).units,[{type:'drone'},{type:'tank'}]);
  assert.equal(rollBox(ROSTER,rng(.739)).units.length,2);
  assert.deepEqual(rollBox(ROSTER,rng(.74,.31)).units,[{type:'guntruck',star:2}]);
  assert.equal(rollBox(ROSTER,rng(.909)).units[0].star,2);
- assert.deepEqual(rollBox(ROSTER,rng(.91,.91),360).units,[{type:'drone',star:2,summonEvolved:true}]);
+ assert.deepEqual(rollBox(ROSTER,rng(.91,rosterRoll('combatDrone')),360).units,[{type:'combatDrone',star:2,summonEvolved:true}]);
  assert.equal(rollBox(ROSTER,rng(.969),360).units[0].summonEvolved,true);
  assert.deepEqual(rollBox(ROSTER,rng(.97,.499)).units,[{type:'tank',goldenSummon:true}]);
  assert.deepEqual(rollBox(ROSTER,rng(.97,.5)).units,[{type:'lucky',goldenSummon:true,summonEvolved:true}]);
- assert.deepEqual(rollBox(ROSTER,rng(.91,.91),359.99).units,[{type:'drone',star:2}]);
+ assert.deepEqual(rollBox(ROSTER,rng(.91,rosterRoll('combatDrone')),359.99).units,[{type:'combatDrone',star:2}]);
  assert.equal(rollBox(ROSTER,rng(.969),359.99).units[0].summonEvolved,undefined);
  for(const tier of [.30,.74,.91]){
   const types=ROSTER.map((_,i)=>rollBox(ROSTER,rng(tier,(i+.5)/ROSTER.length)).units[0].type);
@@ -191,7 +192,7 @@ test('mystery box has five probability tiers and offers the full roster',()=>{
 test('one remaining troop slot reserves one box landing and retains mercenary level through a save',()=>{
  const g=battle();g.capacity=()=>2;g.cash[0]=500;
  upgrade(g,'medic');g.tech[0].rifle=4;
- g.random=rng(.30,.99,.65);
+ g.random=rng(.30,rosterRoll('drone'),rosterRoll('tank'));
  assert(g.summon(boxSlot));assert.equal(g.cash[0],280);
  assert.equal(g.dropPods.length,1);assert.equal(g.dropPods[0].type,'drone');
  assert.equal(g.dropPods[0].mercenaryLevel,3);
@@ -248,7 +249,7 @@ test('an unregistered evolved mercenary lands at the average level with real 2-s
  for(const map of ['livingroom-star','livingroom']){
   const g=landInitial(new FrontGame({},undefined,{map,realtimeSummons:true}));g.cash[0]=500;
   upgrade(g,'medic');g.tech[0].rifle=3;
-  g.time=360;g.random=rng(.91,.99);
+  g.time=360;g.random=rng(.91,rosterRoll('drone'));
   assert(g.summon(boxSlot));assert.equal(g.cash[0],280);
   g.time=g.dropPods[0].landAt;g.updateDropPods();
   const u=g.alive(0).find(u=>u.type==='drone');
@@ -265,7 +266,7 @@ test('co-op mystery boxes reserve and bill only the purchasing squad',()=>{
  const box=boxSlot;
  g.withOwner(0,()=>{
   g.coopChoosing[0]=false;
-  g.cash[0]=500;g.random=rng(.30,.99,.65);
+  g.cash[0]=500;g.random=rng(.30,rosterRoll('drone'),rosterRoll('tank'));
   assert(g.summon(box));assert.equal(g.summonStatus(box).openSquadSlots,0);
  });
  g.withOwner(1,()=>{

@@ -25,7 +25,7 @@ function install({FrontGame:Game}){
  const owner=u=>u?.coopOwner||0,dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
  const meetsEvolution=(link,unit,evolved)=>{
   if(link.id==='airObserver'||link.id==='airSupport'&&unit.type==='lucky')return true;
-  if(link.id==='airSupport')return unit.summonEvolved===true||!!evolved?.drone;
+  if(link.id==='airSupport')return unit.summonEvolved===true||!!evolved?.[unit.type];
   return evolved?.[unit.type]||link.id==='gamblers'&&unit.type==='guntruck';
  };
  const {shotgunReloadTime,castLucky}=p;
@@ -37,7 +37,7 @@ function install({FrontGame:Game}){
  p.evolutionLinks=function(id=this.coopOwner||0){
   const state=this.coop?this.coopStates?.[id]:this,evolved=this.coop&&id===this.coopOwner?this.evolved:state?.evolved||{},live=this.units.filter(u=>u.team===0&&u.hp>0&&owner(u)===id);
   return links.map(link=>{
-   const progress=link.types.filter(type=>live.some(u=>u.type===type&&meetsEvolution(link,u,evolved))).length;
+   const progress=link.types.filter(type=>live.some(u=>(u.type===type||type==='drone'&&u.type==='multiDrone')&&meetsEvolution(link,u,evolved))).length;
    return {...link,active:progress===link.types.length,progress};
   });
  };

@@ -113,14 +113,14 @@ function activeShieldHp(unit,time){
  return shield&&time<shield.until?Math.max(0,shield.hp):0;
 }
 function cloakOpacity(u,time){
- if(u.team!==0||u.type!=='drone'||time>=(u.droneLootUntil??0))return 1;
+ if(u.team!==0||!['drone','multiDrone'].includes(u.type)||time>=(u.droneLootUntil??0))return 1;
  return 1-.58*clamp((time-u.droneLootStartedAt+.04)/.16,0,1);
 }
 function shield(c,u,time,radius,layer='front'){
  const hp=activeShieldHp(u,time);
  if(!hp)return;
  const s=u.droneShield;
- const vehicle=u.type==='tank'||u.type==='lucky',flying=u.type==='drone';
+ const vehicle=u.type==='tank'||u.type==='lucky',flying=['drone','combatDrone','multiDrone'].includes(u.type);
  const width=flying?47:vehicle?Math.max(55,radius*2.12):u.type==='leader'?40:clamp(radius*2.65,36,43);
  const height=flying?53:vehicle?width*1.21:u.type==='sniper'||u.appearance==='rina'?72:65;
  const depth=width*(vehicle ? .58 : .42);
@@ -140,6 +140,23 @@ function shield(c,u,time,radius,layer='front'){
  c.restore();
 }
 function event(c,e){
+ if(e.kind==='droneDock'){
+  const k=clamp(1-e.t/e.max,0,1),y=e.y-54;
+  c.save();c.globalCompositeOperation='lighter';c.globalAlpha=1-k;
+  if(k<.65){
+   const slide=Math.min(1,k/.4);
+   for(const [i,from] of e.from.entries()){
+    c.strokeStyle=i?'#ffb34f':'#5ce7e6';c.lineWidth=2;
+    c.beginPath();c.moveTo(from.x+(e.x-from.x)*slide,from.y-54+(e.y-from.y)*slide);c.lineTo(e.x,y);c.stroke();
+   }
+  }
+  c.strokeStyle='#ffe499';c.lineWidth=2;ellipse(c,e.x,y,4+k*24,3+k*11);c.stroke();
+  for(let i=0;i<8;i++){
+   const a=i*TAU/8,step=4+29*k;
+   c.fillStyle=i%2?'#ffba60':'#78f7f2';c.fillRect(e.x+Math.cos(a)*step,y+Math.sin(a)*step*.7,2,2);
+  }
+  c.restore();return true;
+ }
  if(e.kind!=='droneShieldBreak'&&e.kind!=='dronePickupPulse')return false;
  const k=clamp(1-e.t/e.max,0,1),r=3+(e.radius-3)*(1-(1-k)**2);
  c.save();c.globalAlpha=1-k;c.lineWidth=3-1.7*k;c.strokeStyle='#bffaff';

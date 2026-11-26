@@ -28,7 +28,7 @@ function recommended(game,seconds){
 function validateLoadout(game,loadout){
  const whole=(n,min,max,label)=>{if(!Number.isInteger(n)||n<min||n>max)throw Error(label+' 값을 확인하세요.');return n;};
  const result={level:whole(loadout?.level,1,100,'대장 레벨'),cash:whole(loadout?.cash,0,100000,'자원'),tech:{},abilities:{},counts:{}};
- for(const type of roster){result.tech[type]=whole(loadout?.tech?.[type]??(type==='drone'?0:undefined),0,5,'병과 강화');result.counts[type]=whole(loadout?.counts?.[type]??(type==='drone'?0:undefined),0,game.starExperiment?9:8,'투입 수');if(result.counts[type]&&!result.tech[type])throw Error('투입할 병과는 Lv.1 이상으로 해금하세요.');}
+ for(const type of roster){result.tech[type]=whole(loadout?.tech?.[type]??(['drone','combatDrone'].includes(type)?0:undefined),0,5,'병과 강화');result.counts[type]=whole(loadout?.counts?.[type]??(['drone','combatDrone'].includes(type)?0:undefined),0,game.starExperiment?9:8,'투입 수');if(result.counts[type]&&!result.tech[type])throw Error('투입할 병과는 Lv.1 이상으로 해금하세요.');}
  for(const key of Object.keys(abilities))result.abilities[key]=whole(loadout?.abilities?.[key]??(key==='magnet'?(loadout?.abilities?.gold??0):key==='xpGain'?0:undefined),0,5,'작전 능력');
  if(Object.values(result.abilities).filter(Boolean).length>5)throw Error('작전 능력은 최대 5종까지 선택하세요.');
  const count=roster.reduce((n,t)=>n+slots(game,result.counts[t]),0),cap=capacity(game,result.abilities);

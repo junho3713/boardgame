@@ -11,7 +11,7 @@ const special=new Set(['pirateCannon','bubbleOctopus','rhinoBeetle','stagBeetle'
 const owner=u=>u.coopOwner??0;
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const threat=t=>t.boss||t.miniBoss||t.finalBoss?2:special.has(t.type)||t.roadCaptain||t.guardian?1:0;
-const isDrone=u=>u.team===0&&u.type==='drone'&&u.hp>0;
+const isDrone=u=>u.team===0&&(u.type==='drone'||u.type==='multiDrone')&&u.hp>0;
 function fieldEffect(game,kind,at,radius,duration){
  game.effects.push({kind,x:at.x,y:at.y,radius,t:duration,max:duration,team:0});
 }
