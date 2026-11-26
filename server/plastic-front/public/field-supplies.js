@@ -57,7 +57,12 @@ function install({FrontGame:Game,TYPES}){
   if(!pickup?.active)return false;if(pickup.rareSupply&&this.time>=(pickup.expires||Infinity)){pickup.active=false;return false;}const c=this.commander(0);if(c.hp<=0||Math.hypot(c.x-pickup.x,c.y-pickup.y)>=60)return false;
   if(pickup.combatDrop)return this.collectCombatDrop(pickup,c);
   this.updateRareSupplySecurity();
-    if(!pickup.rareSupply){pickup.active=false;this.gainXP(18);this.cash[0]+=25;this.awardGold(5);this.notify('toast','보급품 확보 · +25 자원 / +18 XP');this.effects.push({kind:'drop',x:pickup.x,y:pickup.y,t:.6,max:.6,team:0});return true;}
+  if(!pickup.rareSupply){
+   pickup.active=false;this.gainXP(18);this.cash[0]+=25;
+   const gold=this.awardGold(this.isRoomCampaign()?root.FrontRoomCampaign.config.rewards.supplyGold:5);
+   this.notify('toast',`보급품 확보 · +25 자원 / +18 XP / +${gold} 영구 골드`);
+   this.effects.push({kind:'drop',x:pickup.x,y:pickup.y,t:.6,max:.6,team:0});return true;
+  }
   const kind=this.isSupportToy?.(pickup.supplyKind)||config.legacyOdds[pickup.supplyKind]!==undefined?pickup.supplyKind:this.rollSupply();pickup.supplyKind=kind;if(this.isSupportToy?.(kind))return this.collectSupportToy(pickup,kind);
   const state=this.supplyState();
   pickup.active=false;pickup.supplyKind=kind;state.collected++;this.gainXP(18);this.awardGold(5);

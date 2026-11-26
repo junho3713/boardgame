@@ -37,8 +37,8 @@ test('old two-star saves immediately adopt the requested HP without healing, rev
 });
 
 test('opening ants ramp out of their extra HP reduction before the general five-to-eight-minute recovery',()=>{
- const g=scene();for(const [at,factor]of [[0,.375],[120,.375],[180,.375],[210,.5625],[240,.75],[300,.75],[360,5/6],[420,11/12],[480,1],[600,1],[900,1]]){g.time=at;const u=g.addUnit(2,'ant',1500,6000);near(g.enemyHealthScale(u)/config.combat.hpScale,factor);}
- g.time=420;const u=g.addUnit(2,'ant',1500,6000),full=g.stats({...u,spawnedAt:480}).hp;u.maxHp=full*.75;u.hp=u.maxHp*.4;g.roomHealthVersion=138;
+ const g=scene();for(const [at,factor]of [[0,.375],[120,.375],[180,.375],[210,.5625],[240,.75],[300,.75],[360,5/6],[420,11/12],[480,1.25],[600,1.25],[900,1.4]]){g.time=at;const u=g.addUnit(2,'ant',1500,6000);near(g.enemyHealthScale(u)/config.combat.hpScale,factor);}
+ g.time=420;const u=g.addUnit(2,'ant',1500,6000),full=g.stats({...u,spawnedAt:480}).hp/1.25;u.maxHp=full*.75;u.hp=u.maxHp*.4;g.roomHealthVersion=138;
  const restored=unpack(scene(),JSON.parse(JSON.stringify(pack(g)))),v=restored.units.find(t=>t.id===u.id);near(v.maxHp,full*11/12);near(v.hp/v.maxHp,.4);restored.refreshRoomEnemyHealth();near(v.hp/v.maxHp,.4);
 });
 
@@ -49,6 +49,38 @@ test('midgame and late ordinary wave pressure grows without increasing boss atta
  g.time=780;near(g.evolutionPace().spawnScale,1.7);assert.equal(g.evolutionPace().capExtra,10);const before=g.addUnit(2,'bladeGuard',1500,6000);g.stampEvolutionWave(before);near(before.evolutionWaveHp,1.45);
  const boss=g.addUnit(2,'crimsonAce',1500,6000);Object.assign(boss,{boss:true,bossPattern:'rearBarrage'});const attack=g.stats(boss).damage,old=p.enabled;p.enabled=false;try{near(g.stats(boss).damage,attack);}finally{p.enabled=old;}
  near(config.patterns.rearBarrage.bossDamageMultiplier,.85);
+});
+
+test('living room spawn scaling starts at 8 and 12 minutes for troops and both boss ranks',()=>{
+ for(const coop of [false,true]){
+  const g=scene('livingroom-star',coop),rows=config.combat.spawnScaling;
+  for(const [time,hp,damage] of [[479.99,1,1],[480,1.25,1.2],[719.99,1.25,1.2],[720,1.4,1.3]]){
+   g.time=time;
+   const wave=g.spawnRoomEnemy('ant',null,{x:1550,y:6400});
+   const mid=g.addUnit(2,'rhinoBeetle',1720,6400),boss=g.addUnit(2,'bladeGuard',1860,6400);
+   Object.assign(mid,{boss:true,miniBoss:true,bossPattern:'rhinoCharge'});
+   Object.assign(boss,{boss:true,bossPattern:'wideSlash'});
+   for(const enemy of [wave,mid,boss]){
+    const current=g.stats(enemy);
+    config.combat.spawnScaling=[];
+    let base;
+    try{base=g.stats(enemy);}finally{config.combat.spawnScaling=rows;}
+    near(current.hp,base.hp*hp);near(current.damage,base.damage*damage);
+   }
+   near(wave.maxHp,g.stats(wave).hp);
+  }
+  const [early,mid]=g.units.filter(u=>u.type==='ant');
+  g.time=840;g.syncEnemyGrowth();
+  assert.equal(g.roomSpawnScaling(early).hp,1);assert.equal(g.roomSpawnScaling(mid).hp,1.25);
+  near(early.maxHp,g.stats(early).hp);near(mid.maxHp,g.stats(mid).hp);
+  mid.maxHp/=1.25;mid.hp=mid.maxHp*.4;g.roomHealthVersion=143;
+  const migrated=unpack(scene('livingroom-star',coop),pack(g));
+  const restored=migrated.units.find(u=>u.id===mid.id);
+  near(restored.maxHp,mid.maxHp*1.25);near(restored.hp/restored.maxHp,.4);
+ }
+ const other=scene('backyard');other.time=720;
+ const ant=other.addUnit(2,'ant',800,1000);
+ assert.deepEqual(other.roomSpawnScaling(ant),{hp:1,damage:1});
 });
 
 test('a fresh cast can overlap while the first bait retains all thirty seconds under fire',()=>{

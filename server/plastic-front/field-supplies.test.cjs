@@ -86,7 +86,22 @@ test('saved consumables, temporary buffs, special troops and pending artillery r
  const old=pack(scene());delete old.fields.fieldSupplyState;delete old.fields.supplyStrikes;const legacy=unpack(scene(),old);a.equal(legacy.supplyState().medkits,0);a.doesNotThrow(()=>legacy.updateSupplyStrikes());
 });
 
-test('ordinary map crates keep their original small rewards and never roll rare items',()=>{for(const coop of [false,true]){const g=scene(coop),owner=coop?1:0;scope(g,owner,()=>{const c=g.commander(0),cash=g.cash[0],xp=g.xp;g.random=()=>0;g.collectFieldSupply({x:c.x,y:c.y,active:true});a.equal(g.cash[0],cash+25);a.equal(g.xp,xp+18);a.equal(g.supplyState().collected,0);a.equal(g.supplyState().pendingSupport,0);});}});
+test('ordinary room crates award ten profile gold once and preserve the existing XP and combat gold',()=>{
+ for(const coop of [false,true]){
+  const g=scene(coop),owner=coop?1:0;
+  scope(g,owner,()=>{
+   const c=g.commander(0),cash=g.cash[0],xp=g.xp,gold=g.profile.gold;
+   const crate={x:c.x,y:c.y,active:true};
+   g.random=()=>0;
+   a.ok(g.collectFieldSupply(crate));a.equal(g.collectFieldSupply(crate),false);
+   a.equal(g.cash[0],cash+25);a.equal(g.xp,xp+18);a.equal(g.profile.gold,gold+10);
+   a.equal(g.supplyState().collected,0);a.equal(g.supplyState().pendingSupport,0);
+  });
+  if(coop)a.equal(g.profile.gold,0);
+ }
+ const other=new FrontGame({},undefined,{map:'backyard'}),c=other.commander(0);
+ a.ok(other.collectFieldSupply({x:c.x,y:c.y,active:true}));a.equal(other.profile.gold,5);
+});
 test('rare crates start at two minutes, repeat every two minutes and share one world schedule in cooperative play',()=>{for(const coop of [false,true]){const g=scene(coop);g.time=119.99;g.updateRareSupplies();a.equal(g.pickups.length,0);g.time=120;g.updateRareSupplies();a.equal(g.pickups.filter(p=>p.active&&p.rareSupply).length,1);a.equal(g.nextRareSupply,240);a.equal(g.pickups[0].expires,240);a.ok(Math.hypot(g.pickups[0].x-g.commander(0).x,g.pickups[0].y-g.commander(0).y)>60);g.updateRareSupplies();a.equal(g.pickups.length,1);g.time=240;g.updateRareSupplies();a.equal(g.pickups.filter(p=>p.active&&p.rareSupply).length,1);a.equal(g.nextRareSupply,360);g.phase='paused';g.time=360;g.updateRareSupplies();a.equal(g.nextRareSupply,360);}});
 test('rare supply expiry and saved schedule prevent retroactive stockpiles and retain 400-resource support',()=>{const g=scene();g.time=120;g.updateRareSupplies();const crate=g.pickups[0],restored=unpack(scene(),pack(g));a.equal(restored.nextRareSupply,240);a.equal(restored.pickups[0].rareSupply,true);const c=g.commander(0);Object.assign(crate,{x:c.x,y:c.y});g.time=240;a.equal(g.collectFieldSupply(crate),false);a.equal(g.supplyState().collected,0);const old=pack(scene());old.fields.time=601;delete old.fields.nextRareSupply;unpack(restored,old);a.equal(restored.nextRareSupply,720);});
 

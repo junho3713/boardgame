@@ -15,10 +15,22 @@ test('the fixed ten-minute power window and two-minute ramp do not depend on pla
  }
  for(const map of ['backyard','desktop']){const g=scene(map);g.time=900;if(map==='desktop')g.mode='duel';a.equal(g.evolutionPace().progress,0);a.equal(g.evolutionPace().relief,false);}
 });
-test('room waves ease for sixty seconds, then add at most seventy percent spawn rate and ten live slots',()=>{
+test('power transition runs at 6.8 seconds before the existing spawn-rate and cap ramp',()=>{
  const g=scene();g.roomBeat=()=>({density:1,name:'test'});
  for(const time of [120,599,660,690,720,750,780,900,970,1140]){g.time=time;const old=baseline(()=>({plan:g.roomWavePlan(),cap:g.roomWaveCap()})),now=g.roomWavePlan(),pace=g.evolutionPace();near(now.interval,old.plan.interval/pace.spawnScale);a.equal(now.count,old.plan.count);a.equal(g.roomWaveCap(),old.cap+pace.capExtra);}
- delete g.roomBeat;g.time=610;const old=baseline(()=>g.roomWavePlan()),now=g.roomWavePlan();a.ok(now.interval>old.interval);a.equal(g.roomBeat().name,'전력 전환 · 돌파');
+ delete g.roomBeat;
+ for(const time of [600,610,659.99]){
+  g.time=time;near(g.roomWavePlan().interval,6.8);a.equal(g.roomBeat().waveInterval,6.8);
+ }
+ g.bases[1].hp=0;near(g.roomWavePlan().interval,6.8*1.4);
+ g.bases[1].hp=g.bases[1].maxHp;
+ g.roomCampaign.recoveryUntil=670;near(g.roomWavePlan().interval,3.9/.3*2);
+ g.roomCampaign.recoveryUntil=0;
+ const boss=g.addUnit(2,'rhinoBeetle',1500,6000);boss.boss=true;
+ near(g.roomWavePlan().interval,3.9/.5);
+ const coop=new CoopGame();coop.start();coop.time=610;
+ g.time=610;boss.hp=0;
+ near(coop.roomWavePlan().interval,6.8);a.equal(coop.roomWavePlan().count,Math.floor(g.roomWavePlan().count*1.8));
 });
 test('quiet windows and active bosses retain their recovery and reinforcement rhythm',()=>{
  const g=scene();g.time=990;const old=baseline(()=>g.roomWavePlan()),now=g.roomWavePlan();a.equal(g.roomBeat().density,.8);near(now.interval,old.interval);

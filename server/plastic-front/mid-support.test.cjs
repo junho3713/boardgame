@@ -9,8 +9,8 @@ function resume(g){g.phase='playing';g.turnChoice=null;g.pendingChoice=null;}
 function fill(g){const types=['rifle','rocket','machinegun'];for(const t of types)g.tech[0][t]=1;for(let i=0;i<g.capacity();i++)g.addUnit(0,types[i%3],1500,6000);}
 test('early non-ant room enemies have 25 percent less HP with a smooth spawn-time return from five to eight minutes',()=>{
  const g=scene(),spawn=(at,team=2)=>{g.time=at;return g.addUnit(team,'soldierAnt',1500,6000);};
- const early=spawn(0),edge=spawn(300),middle=spawn(390),late=spawn(480),later=spawn(900),base=g.stats(late).hp/(1+.12*late.threat);
- const normalized=u=>g.stats(u).hp/(1+.12*u.threat);near(normalized(early),base*.75);near(normalized(edge),base*.75);near(normalized(middle),base*.875);near(normalized(later),base);
+ const early=spawn(0),edge=spawn(300),middle=spawn(390),late=spawn(480),later=spawn(900),base=g.stats(late).hp/((1+.12*late.threat)*1.25);
+ const normalized=u=>g.stats(u).hp/(1+.12*u.threat);near(normalized(early),base*.75);near(normalized(edge),base*.75);near(normalized(middle),base*.875);near(normalized(late),base*1.25);near(normalized(later),base*1.40);
  const persisted=unpack(scene(),JSON.parse(JSON.stringify(pack(g))));near(persisted.stats(persisted.units.find(u=>u.id===early.id)).hp,g.stats(early).hp);
  const ally=spawn(0,0),allyLate=spawn(300,0);near(g.stats(ally).hp,g.stats(allyLate).hp);
  const boss=spawn(0);boss.boss=true;boss.bossPattern='rhinoCharge';const before=g.stats(boss).hp;boss.spawnedAt=300;near(g.stats(boss).hp,before);

@@ -127,8 +127,8 @@ const ENEMY_REPLACED_TYPES={rifle:TYPES.rifle,guntruck:TYPES.guntruck,rocket:TYP
 TYPES.rifle={...TYPES.rifle,name:'산탄총병',enemyName:TYPES.rifle.name,icon:'✦',hp:160,damage:22,rate:1,range:210,cost:60,role:'근거리 산탄 피해 최대 +65% · 5갈래 · 4발 후 재장전'};
 TYPES.guntruck={...TYPES.guntruck,name:'통신병',enemyName:TYPES.guntruck.name,icon:'⚄',hp:200,damage:38,rate:2.4,range:620,speed:133,r:13,role:'주사위 한 쌍 · 1–2 더블 기관포탑 / 3–4 소이탄 / 5–6 미사일 · 진화 6-6 전술 핵 · 2성 화력 ×3.4·범위 ×1.15 / 3성 화력 ×10.5·범위 ×1.30'};
 TYPES.rocket={...TYPES.rocket,name:'지뢰 설치병',enemyName:TYPES.rocket.name,rate:5,role:'발밑에 원형 지뢰 1개 매설 · 기본 5초 간격 · 지상 적이 밟으면 반경 88 폭발'};
-TYPES.mortar={...TYPES.mortar,cost:125,rate:3.1};
-TYPES.tank={...TYPES.tank,cost:220,damage:120};
+TYPES.mortar={...TYPES.mortar,cost:130,rate:3.2};
+TYPES.tank={...TYPES.tank,cost:230,damage:115};
 TYPES.drone={name:'지원 드론',icon:'✜',hp:130,damage:0,rate:6,range:260,speed:175,r:12,cost:125,flying:true,flightHeight:54,role:'서치라이트 피해 +25% · 아군 에너지 실드 · 경험치 결정 공중 회수'};
 const ROSTER=['rifle','machinegun','sniper','guntruck','rocket','mortar','tank','medic','lucky','drone'];
 const MELEE=new Set(['bladeGuard','bayonetCaptain','bayonet','honeybee','hornet','ant','soldierAnt','beetle','bruteBeetle','stagBeetle','rhinoBeetle']);
@@ -152,7 +152,7 @@ const PERMANENT={
  critChance:{name:'치명타 확률',icon:'✧',gain:2,unit:'%p',max:10,detail:'기본 확률 5% · 치명타 발생 확률'},
  critDamage:{name:'치명타 피해',icon:'✦',gain:10,unit:'%p',max:10,detail:'치명타 배율 · 기본 150%'},
  gold:{name:'골드 획득량',icon:'◈',gain:10,unit:'%',max:10,detail:'처치·보급품·승리 골드만 증가'},
- capacity:{name:'유닛 수',icon:'▥',gain:1,unit:'기',max:10,detail:'대장 제외 편성 한도 · 기본 22기'},
+ capacity:{name:'유닛 수',icon:'▥',gain:1,unit:'기',max:10,detail:'대장 제외 편성 한도 · 기본 20기'},
  defense:{name:'방어력',icon:'⬟',gain:3,unit:'',max:10,detail:'방어력이 높을수록 받는 피해 감소'},
  turretHp:{name:'포탑 체력 증가',icon:'▣',gain:10,unit:'%',max:10,detail:'기관총·미사일 포탑 최대 체력 · 단계당 +10%'},
  turretDamage:{name:'포탑 데미지 증가',icon:'✹',gain:5,unit:'%',max:10,detail:'기관총·미사일 포탑 공격력 · 단계당 +5%'},
@@ -198,7 +198,7 @@ class FrontGame{
   this.manualAim=null;this.rerollCount=4;this.dropPods=[];this.experienceDrops=[];this.tacticalFeverUntil=[0,0];
   this.roomCampaign=null;this.bossIntro=null;this.roomHealthVersion=ROOM_CAMPAIGN.config.combat.healthVersion;this.roomHQAlarm=null;this.roomFenceVersion=0;this.roomEncounterVersion=0;this.enemyLuckySalvos=[];this.balanceVersion=BALANCE_VERSION;this.mode=['duel','crisis'].includes(mode)?mode:'pve';this.world={id:'backyard',width:1600,height:2800,scale:1};this.viewport=null;this.buildings=[];this.buildSerial=0;this.constructionLine=null;this.finalBattle={spawned:false,killed:false};this.roomEvents=0;
   this.mageShieldQuest=null;this.laserExposureQuest=null;this.roomGuardianVersion=0;this.roomFortificationVersion=0;this.roadCaptainVersion=0;this.guardianSiege=null;this.phase='ready';this.time=0;this.runGold=0;this.salvaged=0;this.nextRecoveryAt=0;this.stageSupplied=[];this.lastEnemyGrowth=-1;this.level=1;this.xp=0;this.kills=0;this.losses=[0,0];this.scouts=0;this.turnChoice=null;this.pendingChoice=null;this.navigationCache=new Map();this.cash=[135,135];this.trucks=[2,2];this.tech=[0,1].map(()=>Object.fromEntries(ROSTER.map(t=>[t,t==='rifle'?1:0])));
-  if(this.isRoomCampaign()&&this.usesSummoning?.())this.cash[0]=130;
+  if(this.isRoomCampaign()&&this.usesSummoning?.())this.cash[0]=120;
   this.summonSlots=this.usesSummoning?.()?[]:['rifle'];
   if(this.usesSummoning?.())this.tech[0].rifle=0;
   this.cardShownCounts={};this.choiceKind='level';this.abilities=Object.fromEntries(Object.keys(ABILITIES).map(k=>[k,0]));this.evolved=Object.fromEntries(ROSTER.map(k=>[k,false]));this.bossState={nextAt:this.waveRules().boss.firstAt,warned:false,spawned:0,killed:0,rewards:0,claimed:0};
@@ -572,12 +572,13 @@ class FrontGame{
   const recovery=clamp((this.time-opening.restoreFrom)/(opening.restoreAt-opening.restoreFrom),0,1);
   const openingScale=!u.boss&&!u.roadCaptain&&opening.types.includes(u.type)?opening.scale+(1-opening.scale)*recovery:1;
   return pressure*mortar*melee*openingScale*r.damageScale*(u.type==='bikeRaider'?r.bikeDamageScale:1)*
-   (u.boss?r.bossDamageScale:1)*(this.bossPatternRules(u)?.damageMultiplier??1)*(u.miniBoss?ROOM_CAMPAIGN.config.miniBoss.damage:1);
+   (u.boss?r.bossDamageScale:1)*(this.bossPatternRules(u)?.damageMultiplier??1)*(u.miniBoss?ROOM_CAMPAIGN.config.miniBoss.damage:1)*this.roomSpawnScaling(u).damage;
  }
  enemyHealthScale(u){
   if(!this.isRoomCampaign()||u.team===0)return 1;
   const rules=ROOM_CAMPAIGN.config.combat,opening=rules.openingHp;
-  if(u.boss)return (rules.bossHpScale??1)*(rules.bossHpExtra?.[u.type]??1)*(u.miniBoss?ROOM_CAMPAIGN.config.miniBoss.hp:1);
+  const spawnScale=u.finalBoss?1:this.roomSpawnScaling(u).hp;
+  if(u.boss)return (rules.bossHpScale??1)*(rules.bossHpExtra?.[u.type]??1)*(u.miniBoss?ROOM_CAMPAIGN.config.miniBoss.hp:1)*spawnScale;
   const spawnedAt=u.spawnedAt??this.time,fixed=u.fixedGuard||u.roomGarrison||u.roadCaptain;
   let openingScale=1;
   if(opening&&!fixed)openingScale=opening.scale+(1-opening.scale)*clamp((spawnedAt-opening.until)/(opening.restoreAt-opening.until),0,1);
@@ -585,7 +586,7 @@ class FrontGame{
    const {scale,restoreFrom,restoreAt}=ROOM_ANT_HEALTH;
    openingScale*=scale+(1-scale)*clamp((spawnedAt-restoreFrom)/(restoreAt-restoreFrom),0,1);
   }
-  return (rules.hpScale??1)*openingScale*(u.openingBombBug?ROOM_CAMPAIGN.config.insects.opening.hpScale:1);
+  return (rules.hpScale??1)*openingScale*(u.openingBombBug?ROOM_CAMPAIGN.config.insects.opening.hpScale:1)*spawnScale;
  }
  stats(u){
   const b=u.type==='blizzardMage'&&u.mobileMage?{...TYPES.blizzardMage,speed:85,stationary:false,role:'이동형 얼음 마녀 · 광역 빙결 속박 · 아이스 실드 · 저격병 우선 공략'}:this.isFlameCommander(u)?{...TYPES.leader,name:'화염방사 대장',damage:FLAME.damage,rate:FLAME.rate,range:FLAME.range}:this.isSwordCommander(u)?{...TYPES.leader,name:'시온',damage:SWORD.damage,rate:SWORD.rate,range:SWORD.range}:(u.team===0?TYPES[u.type]:ENEMY_REPLACED_TYPES[u.type]||TYPES[u.type]),p=this.profile.upgrades,ally=u.team===0,r=this.abilities,tier=u.threat||0,e=ally&&(u.summonEvolved||this.evolved[u.type])?u.type:null,fort=this.roomDefenseRules(u);
@@ -625,7 +626,7 @@ class FrontGame{
  recruitmentRemaining(type,team=0){return Math.max(0,this.unitTypeCap(team)-this.unitCount(type,team));}
  abilityBonus(key,level=this.abilities[key]||0){return (ABILITIES[key]?.gain||0)*level;}
  abilityStep(key,level){return this.abilityBonus(key,level)-this.abilityBonus(key,Math.max(0,level-1));}
- capacity(team=0){return team===0?(this.mode==='pve'?22:20)+this.profile.upgrades.capacity+this.abilityBonus('capacity'):20;}
+ capacity(team=0){return team===0?20+this.profile.upgrades.capacity+this.abilityBonus('capacity'):20;}
  awardGold(base){const amount=Math.round(base*(1+.1*this.profile.upgrades.gold)*100)/100;this.profile.gold=Math.round(Math.min(1e9,this.profile.gold+amount)*100)/100;this.runGold=Math.round((this.runGold+amount)*100)/100;this.notify('profile');return amount;}
  buyPermanent(key){
   this.lastPermanentAttempt=null;
@@ -1134,10 +1135,12 @@ class FrontGame{
    if(target.structure){if(target.fencePost)this.navigationCache.clear();if(source.team===0){const small=!!target.defenseKind;this.earnDefeatXP(target,small?25:60);this.cash[0]+=small?45:100;this.awardGold(small?10:20);this.notify('toast',`${target.name} 파괴 · +${small?45:100} 자원 / ${small?25:60} XP${this.mode==='pve'?' 결정':' 획득'}`);}return;}
    if(target.type==='artillery'){this.earnDefeatXP(target,60);this.cash[0]+=70;}
    if(source.team===0&&target.team!==0){
-    this.kills++;this.awardGold(target.boss&&!target.miniBoss?30:TYPES[target.type]?.rewardGold??(ARMORED.has(target.type)||target.type==='hornet'?5:2));
+    const room=this.isRoomCampaign(),boss=room&&target.boss&&!target.roadCaptain,rewards=ROOM_CAMPAIGN.config.rewards;
+    const profileGold=boss?(target.miniBoss?rewards.miniBossGold:rewards.bossGold):
+     target.boss&&!target.miniBoss?30:TYPES[target.type]?.rewardGold??(ARMORED.has(target.type)||target.type==='hornet'?5:2);
+    this.kills++;this.awardGold(profileGold);
     const originalXP={bubbleOctopus:32,pirateCannon:28,bombBug:20,acidBeetle:22,butterfly:28,crimsonAce:65,bikeRaider:28,bladeGuard:14,bayonetCaptain:35,bayonet:20,honeybee:18,hornet:50,rhinoBeetle:65,stagBeetle:38,bruteBeetle:45,tank:22,beetle:24,soldierAnt:20,ant:13},originalCash={bubbleOctopus:20,pirateCannon:16,bombBug:18,acidBeetle:18,butterfly:22,crimsonAce:60,bikeRaider:24,bladeGuard:12,bayonetCaptain:25,bayonet:16,honeybee:18,hornet:48,rhinoBeetle:65,stagBeetle:38,bruteBeetle:45,soldierAnt:20,ant:14,beetle:28};
     const pveCash={bubbleOctopus:20,pirateCannon:12,bombBug:10,acidBeetle:10,butterfly:16,crimsonAce:40,bikeRaider:16,bladeGuard:7,bayonetCaptain:16,bayonet:10,honeybee:10,hornet:26,rhinoBeetle:28,stagBeetle:20,bruteBeetle:20,soldierAnt:8,ant:6,beetle:12};
-    const room=this.isRoomCampaign(),boss=room&&target.boss&&!target.roadCaptain;
     let cash=(room?ROOM_KILL_GOLD[target.type]:undefined)??(this.mode==='pve'?pveCash:originalCash)[target.type]??8;
     if(boss)cash=target.miniBoss?(ROOM_BOSS_GOLD.mini[target.type]??50):(ROOM_BOSS_GOLD.main[target.type]??100);
     const xp=(room?ROOM_KILL_XP[target.type]:undefined)??originalXP[target.type]??9;
@@ -1308,7 +1311,9 @@ class FrontGame{
     const ally=target.team===0;
     if(target===blast.unit||target.hp<=0||blast.source.flashRedirect&&ally||dist(target,blast)>radius)continue;
     const ordinaryAnt=!ally&&target.type==='ant'&&!target.boss&&!target.roadCaptain&&!target.finalBoss;
-    const flatScale=ally&&blast.unit.openingBombBug?ROOM_CAMPAIGN.config.insects.opening.allyDamageScale:ordinaryAnt?2:1;
+    // Keep the blast as effective against its own ant escorts when their health and damage scale differently.
+    const spawnScale=this.roomSpawnScaling(blast.unit);
+    const flatScale=ally&&blast.unit.openingBombBug?ROOM_CAMPAIGN.config.insects.opening.allyDamageScale:ordinaryAnt?2*spawnScale.hp/spawnScale.damage:1;
     const hpDamage=ally?Math.max(0,target.maxHp||0)*INSECTS.bomb.maxHpDamage:0;
     this.damage(target,blast.damage*flatScale+hpDamage,ally?{...blast.source,team:2,coopOwner:undefined}:blast.source);
    }
@@ -2042,13 +2047,13 @@ class FrontGame{
   for(let d=8;d<=rules.distance;d+=8){const p={x:u.x+Math.cos(angle)*d,y:u.y+Math.sin(angle)*d};if(p.x<45||p.x>this.bounds().width-45||p.y<70||p.y>this.bounds().height-70||!this.lineClear(origin,p,r))break;distance=d;}
   if(distance<12){if(!target.built||this.targetDistance(u,target)>r+8)return false;distance=8;}
   u.bikeAttack={phase:'windup',origin,angle,startedAt:this.time,chargeAt:this.time+rules.windup,distance,remaining:distance,traveled:0,hit:[],target,halfWidth:rules.halfWidth,speed:rules.speed};
-  if(rules.infantryHpDamage!==undefined)u.bikeAttack.impactDamage=this.infantryChargeDamage(rules.infantryHpDamage);
+  if(rules.infantryHpDamage!==undefined)u.bikeAttack.impactDamage=this.infantryChargeDamage(rules.infantryHpDamage)*this.roomSpawnScaling(u).damage;
   u.face=u.moveFace=u.aimFace=angle;u.route=null;u.cooldown=rules.cooldown;return true;
  }
  updateBike(u,dt,rules=BIKE){
   const s=this.stats(u),a=u.bikeAttack;
   if(a){
-   if(rules.infantryHpDamage!==undefined&&!Number.isFinite(a.impactDamage))a.impactDamage=this.infantryChargeDamage(rules.infantryHpDamage);
+   if(rules.infantryHpDamage!==undefined&&!Number.isFinite(a.impactDamage))a.impactDamage=this.infantryChargeDamage(rules.infantryHpDamage)*this.roomSpawnScaling(u).damage;
    u.face=u.moveFace=u.aimFace=a.angle;
    if(a.phase==='windup'){if(this.time+1e-8<a.chargeAt)return;a.phase='charge';this.notify('fire',u);}
    let remaining=Math.min(a.remaining,rules.speed*dt*(this.time<(u.luckySlowUntil||0)?1-LUCKY.groundSlow:1));

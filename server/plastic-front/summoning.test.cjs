@@ -25,11 +25,11 @@ test('slot order is committed once and round trips through saves with pending or
  for(const type of ['tank','medic','tank','rocket','lucky','mortar'])upgrade(g,type);
  assert.deepEqual(g.summonSlots,['rifle','tank','medic','rocket','lucky','mortar']);
  assert.equal(g.nextSummonSlot('sniper'),null);
- assert.equal(g.capacity(),22);
- for(const [rank,cap] of [[1,23],[2,24],[3,26],[4,28],[5,31]]){
+ assert.equal(g.capacity(),20);
+ for(const [rank,cap] of [[1,21],[2,22],[3,24],[4,26],[5,29]]){
   g.abilities.capacity=rank;assert.equal(g.capacity(),cap);
  }
- assert.equal(g.summonStatus(6).cost,125);
+ assert.equal(g.summonStatus(6).cost,130);
  assert.equal(g.summonStatus(boxSlot).cost,220);
  const old=g.cash[0];assert(g.summon(1));assert.equal(g.cash[0],old-TYPES.rifle.cost);
  const restored=unpack(new FrontGame(),pack(g));
@@ -157,7 +157,7 @@ test('a maxed co-op squad does not enter the choice round while its partner can 
 });
 test('normal action gates reject unaffordable or capped orders without charging; vehicle landing pushes enemies',()=>{
  const g=battle();
- assert.equal(g.cash[0],130);
+ assert.equal(g.cash[0],120);
  assert.equal(g.income(0),1.5);
  g.cash[0]=59;assert(!g.summon(1));assert.equal(g.cash[0],59);
  g.cash[0]=1000;g.capacity=()=>2;
@@ -291,8 +291,8 @@ test('co-op owns each slot list, purchase, and deployed reinforcement separately
  assert.deepEqual([0,1].map(owner=>g.owned(owner).filter(u=>u.type==='rifle').length),[1,1]);
  g.withOwner(1,()=>upgrade(g,'medic'));
  assert.deepEqual(g.summonSlots,['rifle']);
- g.withOwner(1,()=>{assert.deepEqual(g.summonSlots,['rifle','medic']);assert(g.summon(2));assert.equal(g.cash[0],130-70);});
- assert.equal(g.cash[0],130);g.time=rules.fall;g.updateDropPods();
+ g.withOwner(1,()=>{assert.deepEqual(g.summonSlots,['rifle','medic']);assert(g.summon(2));assert.equal(g.cash[0],120-70);});
+ assert.equal(g.cash[0],120);g.time=rules.fall;g.updateDropPods();
  assert.equal(g.owned(1).filter(u=>u.type==='medic').length,1);
  assert.equal(g.owned(0).filter(u=>u.type==='medic').length,0);
 });

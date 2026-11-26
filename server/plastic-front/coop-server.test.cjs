@@ -39,7 +39,7 @@ test('legacy co-op reinforcement settings do not purchase at clock boundaries',a
   let cash=g.withOwner(1,()=>g.cash[0]);
   assert.equal((await summon(6)).status,200);
   assert.equal(g.dropPods[0].type,'mortar');
-  assert.equal(g.withOwner(1,()=>g.cash[0]),cash-125);
+  assert.equal(g.withOwner(1,()=>g.cash[0]),cash-130);
   cash=g.withOwner(1,()=>g.cash[0]);
   g.random=()=>.8;
   assert.equal((await summon(rules.slots+1)).status,200);

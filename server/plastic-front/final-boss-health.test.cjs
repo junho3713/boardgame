@@ -2,7 +2,7 @@
 const {test}=require('node:test'),a=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const {FrontGame}=require('./public/engine.js'),sword=require('./public/sword-boss.js'),{pack,unpack}=require('./public/autoplay.js');
 test('new campaign finale has 140800 HP while damage and phase rules retain their existing values',()=>{
- const g=new FrontGame({},undefined,{map:'livingroom-star'});g.start();const b=g.addUnit(2,'swordEmpress',1500,1100,true);b.finalBoss=b.boss=true;a.equal(b.maxHp,140800);a.equal(g.stats(b).hp,140800);a.equal(g.trialConfig.damage,85);a.equal(g.trialConfig.firstHitRatio,.5);a.equal(g.trialConfig.overlapHitRatio,.1);
+ const g=new FrontGame({},undefined,{map:'livingroom-star'});g.start();g.time=1200;const b=g.addUnit(2,'swordEmpress',1500,1100,true);b.finalBoss=b.boss=true;a.equal(b.maxHp,140800);a.equal(g.stats(b).hp,140800);a.equal(g.trialConfig.damage,85);a.equal(g.trialConfig.firstHitRatio,.5);a.equal(g.trialConfig.overlapHitRatio,.1);
  const lab=sword.create();a.equal(lab.trialBoss.maxHp,140800);const custom=sword.create({hp:9000});a.equal(custom.trialBoss.maxHp,9000);
 });
 test('old finale saves upgrade HP once, preserve damage ratio and never revive a dead boss',()=>{

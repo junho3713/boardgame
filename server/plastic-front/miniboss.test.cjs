@@ -33,9 +33,9 @@ test('co-op uses one shared mini schedule and save restore does not duplicate or
 test('wave lab exact-minute seeks rebuild the mini schedule in both directions without old enemies',()=>{
  const g=wave.fork(scene());g.roomEntry=g.northernSpawn=()=>({x:1500,y:6000});for(const [time,type]of [[300,'bayonetCaptain'],[780,'hornet'],[180,'stagBeetle']]){g.roomCampaign.antWaveCursor=99;wave.seek(g,time);a.equal(g.roomCampaign.antWaveCursor,0);a.equal(minis(g).length,0);g.phase='playing';g.updateRoomMiniBosses();a.equal(minis(g)[0].type,type);g.updateRoomMiniBosses();a.equal(minis(g).length,1);}
 });
-test('mini rhino and hornet percentage strikes use thirty percent too, including armor bypass',()=>{
- const g=scene();g.units=[];g.time=540;const t=g.addUnit(0,'rifle',1500,6000);t.hp=t.maxHp=1000;g.updateRoomMiniBosses();const rhino=minis(g)[0];Object.assign(rhino,{x:1440,y:6000,bikeAttack:{phase:'charge',angle:0,remaining:360,traveled:0,hit:[]}});g.updateBike(rhino,.1,g.bossPatternRules(rhino));near(1000-t.hp,150);
- g.units=[t];t.hp=1000;g.time=780;g.updateRoomMiniBosses();const hornet=minis(g)[0];hornet.bossAction={phase:'dive',started:g.time-.1,until:g.time,target:t,x:t.x,y:t.y,fromX:t.x,fromY:t.y};g.updateVenomDive(hornet,g.bossPatternRules(hornet));near(1000-t.hp,150);near(t.poisonDps,g.stats({...hornet,miniBoss:false}).damage*.3*config.patterns.venomDive.poisonPerSecond);
+test('mini rhino and hornet percentage strikes keep thirty percent of the main attack at their spawn tier',()=>{
+ const g=scene();g.units=[];g.time=540;const t=g.addUnit(0,'rifle',1500,6000);t.hp=t.maxHp=1000;g.updateRoomMiniBosses();const rhino=minis(g)[0];Object.assign(rhino,{x:1440,y:6000,bikeAttack:{phase:'charge',angle:0,remaining:360,traveled:0,hit:[]}});g.updateBike(rhino,.1,g.bossPatternRules(rhino));near(1000-t.hp,180);
+ g.units=[t];t.hp=1000;g.time=780;g.updateRoomMiniBosses();const hornet=minis(g)[0];hornet.bossAction={phase:'dive',started:g.time-.1,until:g.time,target:t,x:t.x,y:t.y,fromX:t.x,fromY:t.y};g.updateVenomDive(hornet,g.bossPatternRules(hornet));near(1000-t.hp,195);near(t.poisonDps,g.stats({...hornet,miniBoss:false}).damage*.3*config.patterns.venomDive.poisonPerSecond);
 });
 test('a mini keeps ordinary wave cadence and caps rather than imposing the main-boss reinforcement limit',()=>{
  const g=scene();g.time=540;const before=g.roomWavePlan(),cap=g.roomWaveCap();g.updateRoomMiniBosses();a.equal(minis(g).length,1);a.deepEqual(g.roomWavePlan(),before);a.equal(g.roomWaveCap(),cap);

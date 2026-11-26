@@ -96,9 +96,10 @@ test('red boss crystals keep exact mini and full rewards separate from ordinary 
  const mini=g.addUnit(2,'rhinoBeetle',1800,6000,true);
  Object.assign(mini,{boss:true,miniBoss:true,miniBossMinute:9});
  g.earnDefeatXP(mini,5);
- const cash=g.cash[0];
+ const cash=g.cash[0],gold=g.profile.gold;
  g.damage(mini,1e9,leader);
  assert.equal(g.cash[0],cash+52);
+ assert.equal(g.profile.gold,gold+15);
  assert.ok(g.pickups.some(p=>p.destinyStar));
  assert.equal(g.bossState.rewards,0);
  assert.ok(g.experienceDrops.every(drop=>drop.pulling));
@@ -106,6 +107,7 @@ test('red boss crystals keep exact mini and full rewards separate from ordinary 
  full.boss=true;
  g.damage(full,1e9,leader);
  assert.equal(g.cash[0],cash+52+110);
+ assert.equal(g.profile.gold,gold+15+40);
  assert.equal(g.bossState.rewards,1);
  const road=g.addUnit(2,'bayonet',mini.x,mini.y,true);
  Object.assign(road,{boss:true,roadCaptain:true,roadStage:1});
@@ -123,7 +125,7 @@ test('a saved cooperative boss crystal belongs only to the player credited with 
  const cash=g.cash[0],blueCash=g.withOwner(1,()=>g.cash[0]);
  g.damage(boss,1e9,blue);
  assert.equal(g.cash[0],cash);
- g.withOwner(1,()=>{assert.equal(g.cash[0],blueCash+80);assert.equal(g.profile.gold,30);});
+ g.withOwner(1,()=>{assert.equal(g.cash[0],blueCash+80);assert.equal(g.profile.gold,40);});
  const restored=unpack(new CoopGame(),pack(g)),red=restored.experienceDrops[0];
  assert.deepEqual([red.amount,red.boss,red.owner],[152,true,1]);
  for(const commander of [restored.commander(0),restored.withOwner(1,()=>restored.commander(0))]){
@@ -154,13 +156,13 @@ test('a co-op mid boss attracts both players’ distant XP without transferring 
 test('both realtime co-op wallets accrue 1.5 battle gold per second independently from profile gold',()=>{
  const g=new CoopGame({}, {realtimeSummons:true});
  const wallet=owner=>g.withOwner(owner,()=>[g.cash[0],g.profile.gold]);
- assert.deepEqual([wallet(0),wallet(1)],[[130,0],[130,0]]);
+ assert.deepEqual([wallet(0),wallet(1)],[[120,0],[120,0]]);
  g.coopIncome(4);
- assert.deepEqual([wallet(0),wallet(1)],[[136,0],[136,0]]);
+ assert.deepEqual([wallet(0),wallet(1)],[[126,0],[126,0]]);
  const blue=g.withOwner(1,()=>g.commander(0));
  const enemy=g.addUnit(2,'pirateCannon',blue.x+350,blue.y,true);
  g.damage(enemy,1e9,blue);
- assert.deepEqual([wallet(0),wallet(1)],[[136,0],[152,2]]);
+ assert.deepEqual([wallet(0),wallet(1)],[[126,0],[142,2]]);
 });
 
 test('old gold ranks and offered cards migrate to magnet without adding a gold multiplier',()=>{

@@ -81,7 +81,7 @@ test('moving after a red tank warning avoids its fixed landing point, and a dead
  const g=scene(),ally=g.addUnit(0,'crimsonAce',1500,6000);g.addUnit(0,'leader',1500,6400);g.updateBossPattern(ally,.05);a.equal(ally.bossBarrage,undefined);
 });
 
-test('the actual 19-minute red boss rear shells deal 15% less damage while its direct fire and ordinary red tanks stay unchanged',()=>{
+test('19-minute tanks gain the spawn damage multiplier and only boss rear shells get the 15% reduction',()=>{
  const near=(actual,expected)=>a.ok(Math.abs(actual-expected)<1e-7,`${actual} != ${expected}`);
  for(const coop of [false,true]){
   const g=scene(coop);g.time=1140;g.roomCampaign.rushCursor=3;g.roomCampaign.bossReadyAt=0;
@@ -89,7 +89,7 @@ test('the actual 19-minute red boss rear shells deal 15% less damage while its d
   a.equal(g.updateRoomBossRush(),true);
   const boss=g.units.find(u=>u.boss&&u.type==='crimsonAce');a.ok(boss);a.equal(boss.bossRushPair,'room-rush-3');a.equal(boss.bossPattern,'rearBarrage');
   const priorDamage=g.stats({...boss,bossPattern:null}).damage,damage=g.stats(boss).damage;
-  near(priorDamage,816.3228125);near(damage,priorDamage);near(g.bossArmorPenetration(boss),.4);
+  near(priorDamage,816.3228125*1.3);near(damage,priorDamage);near(g.bossArmorPenetration(boss),.4);
   const target=durable(coop?g.withOwner(1,()=>g.addUnit(0,'tank',1500,7300)):g.addUnit(0,'tank',1500,7300));
   const hp=target.hp,defense=g.defenseFactor(target,boss),shot=g.fireUnitProjectiles(boss,target,g.attackRoll(boss))[0];
   near(shot.damage,priorDamage);g.impact(shot);near(hp-target.hp,priorDamage*defense);
@@ -99,7 +99,7 @@ test('the actual 19-minute red boss rear shells deal 15% less damage while its d
   const afterDirect=target.hp;g.time=shells[0].landAt;g.updateMortars();near(afterDirect-target.hp,priorDamage*1.35*.85*defense);
   const regular=g.spawnRoomEnemy('crimsonAce');a.ok(regular&&!regular.boss&&regular.roomWave);
   // The existing late solo two-star wave reduction remains separate from the new boss reduction.
-  near(g.stats(regular).damage,82*1.25*1.25*2.9*(coop?1:.85));
+  near(g.stats(regular).damage,82*1.25*1.25*2.9*1.3*(coop?1:.85));
   g.updateBossPattern(regular,.01);a.equal(regular.bossBarrage.targets.length,1);
   g.time=regular.bossBarrage.hitAt;g.updateBossPattern(regular,.01);const ordinaryShells=g.mortarShells.filter(p=>p.source===regular);
   a.equal(ordinaryShells.length,1);near(ordinaryShells[0].damage,g.stats(regular).damage*1.35);

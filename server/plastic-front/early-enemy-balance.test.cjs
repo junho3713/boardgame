@@ -70,10 +70,10 @@ test('near-start garrison gunner changes to a rifle without resurrecting or heal
 });
 test('the existing boss order keeps the bayonet captain ahead of the blade captain',()=>{a.deepEqual(config.bosses.slice(0,3).map(b=>[b.at,b.type]),[[240,'stagBeetle'],[360,'bayonetCaptain'],[480,'bladeGuard']]);});
 
-test('ordinary shield blades gain HP and armor while captain and mini-captain HP, armor and damage stay unchanged',()=>{
+test('ordinary and boss shield blades gain the same 8-minute HP multiplier with their separate defense values',()=>{
  const g=scene();g.time=480;const u=g.addUnit(2,'bladeGuard',1500,6000,true),ordinary=g.stats(u);a.equal(ordinary.defense,38);
- near(ordinary.hp,160*(1+.12*8)*1.2);const boss={...u,boss:true,bossPattern:'wideSlash'},s=g.stats(boss);
- near(s.hp,140*(1+.12*8)*18*2*(config.patterns.wideSlash.hpScale||1)*config.combat.bossHpScale);a.equal(s.defense,32);near(g.stats({...boss,miniBoss:true}).hp,s.hp*.3);a.equal(TYPES.bladeGuard.damage,14);a.equal(TYPES.bladeGuard.rate,1.7);
+ near(ordinary.hp,160*(1+.12*8)*1.2*1.25);const boss={...u,boss:true,bossPattern:'wideSlash'},s=g.stats(boss);
+ near(s.hp,140*(1+.12*8)*18*2*(config.patterns.wideSlash.hpScale||1)*config.combat.bossHpScale*1.25);a.equal(s.defense,32);near(g.stats({...boss,miniBoss:true}).hp,s.hp*.3);a.equal(TYPES.bladeGuard.damage,14);a.equal(TYPES.bladeGuard.rate,1.7);
 });
 
 test('a resumed shield blade keeps its health fraction through the durability migration without reviving corpses',()=>{

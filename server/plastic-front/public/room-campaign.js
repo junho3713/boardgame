@@ -2,9 +2,11 @@
 (function(root){'use strict';
 const armoredWaveMix={ant:4,bombBug:.45,acidBeetle:.55,bayonet:1.5,stagBeetle:2,sniper:1.5,honeybee:1,bladeGuard:2,rifle:2,butterfly:.6};
 const config={version:116,duration:1200,enemyLuckyInterval:5,recoverySeconds:16,
- combat:{healthVersion:143,hpScale:1.2,openingHp:{until:300,restoreAt:480,scale:.75},openingDamage:{types:['ant','bladeGuard'],scale:.7,restoreFrom:180,restoreAt:300},bossHpScale:1.485,bossHpExtra:{rhinoBeetle:1.3,hornet:1.3,crimsonAce:1.3},damageScale:1.25,meleeDamageScale:1.1,bossDamageScale:1.3,bossArmorPenetration:{hornet:.3,crimsonAce:.4},bikeDamageScale:1.05},
+ combat:{healthVersion:144,hpScale:1.2,openingHp:{until:300,restoreAt:480,scale:.75},openingDamage:{types:['ant','bladeGuard'],scale:.7,restoreFrom:180,restoreAt:300},bossHpScale:1.485,bossHpExtra:{rhinoBeetle:1.3,hornet:1.3,crimsonAce:1.3},damageScale:1.25,meleeDamageScale:1.1,bossDamageScale:1.3,bossArmorPenetration:{hornet:.3,crimsonAce:.4},bikeDamageScale:1.05,
+  spawnScaling:[{at:720,hp:1.4,damage:1.3},{at:480,hp:1.25,damage:1.2}]},
+ rewards:{supplyGold:10,miniBossGold:15,bossGold:40},
  weakReinforcements:{from:300,lateAt:600,mid:.15,late:.20,types:['ant','rifle']},
- evolutionPacing:{enabled:true,expectedAt:600,reliefSeconds:60,rampSeconds:120,reliefDensity:.8,spawnIncrease:.70,capExtra:10,eliteWeight:.8,eliteHp:.45,eliteTypes:['bayonet','bladeGuard','soldierAnt','bruteBeetle','stagBeetle','rhinoBeetle','tank','guntruck']},
+ evolutionPacing:{enabled:true,expectedAt:600,reliefSeconds:60,rampSeconds:120,reliefDensity:.8,reliefInterval:6.8,spawnIncrease:.70,capExtra:10,eliteWeight:.8,eliteHp:.45,eliteTypes:['bayonet','bladeGuard','soldierAnt','bruteBeetle','stagBeetle','rhinoBeetle','tank','guntruck']},
  fences:{version:129,hp:12000,y:4550,postWidth:56,postDepth:32,threadDepth:22,lanes:[{id:'left',xs:[70,490,905,1360],colors:['blue','teal','coral','blue'],guns:[{id:'mg',kind:'bunker',x:960,y:4440},{id:'missile',kind:'missileTower',x:150,y:4410},{id:'inner-missile',kind:'missileTower',x:750,y:4370}]},{id:'right',xs:[1640,2095,2510,2930],colors:['coral','blue','teal','coral'],guns:[{id:'mg',kind:'bunker',x:2040,y:4440},{id:'missile',kind:'missileTower',x:2900,y:4440},{id:'inner-missile',kind:'missileTower',x:2250,y:4370}]}]},
  start:{x:1500,y:7560},
  finalBoss:{x:1500,offset:580,positionVersion:168,introSeconds:2.5},
@@ -58,6 +60,7 @@ const config={version:116,duration:1200,enemyLuckyInterval:5,recoverySeconds:16,
  patterns:{soldierDash:{hpScale:1.75,every:2,duration:1,speed:2.2,damageMultiplier:3},wideSlash:{range:220,arc:1.9,windup:.7,damageMultiplier:2},rhinoCharge:{range:420,cooldown:8,windup:1,distance:360,speed:800,halfWidth:30,recovery:3,vulnerable:1.3,damageScale:.6,infantryHpDamage:.5},rapidBike:{cooldown:4.2},venomDive:{cooldown:8,rise:.25,warning:.6,descent:.1,recovery:2,height:145,lowHeight:24,damage:1.6,maxHpDamage:.5,poisonDuration:4,poisonRate:.25,poisonPerSecond:.12},rearBarrage:{cooldown:7,warning:1.5,radius:100,damage:1.35,bossDamageMultiplier:.85,range:650,shots:3,spacing:220}}
 };
 const d=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y),clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const baseEnemyScaling={hp:1,damage:1};
 
 const meleeWaveTypes=new Set(['bombBug','ant','bayonet','bladeGuard','stagBeetle','rhinoBeetle']);
 const ordinaryRotation=Object.freeze(['mixed','ants','troops']);
@@ -151,6 +154,11 @@ const methods={
  roomPortalAlive(){return this.bases[1].hp>0;},
  roomPortalDestroyed(){const s=this.roomCampaign;if(s.portalRewarded)return;s.portalRewarded=true;s.portalDestroyedAt=this.time;this.cash[0]+=300;this.gainXP(300);this.awardGold(100);this.bossState.rewards++;this.notify('toast','최전방 포탈 폐쇄 · +300 전투 골드 / +300 XP / +100 영구 골드 / 강화 보상 · 증원 감소');},
  roomPhase(){return config.phases.filter(p=>p.at<=this.time).at(-1)||config.phases[0];},
+ roomSpawnScaling(u){
+  if(!u||u.team===0||!this.isRoomCampaign())return baseEnemyScaling;
+  const at=u.spawnedAt??0;
+  return config.combat.spawnScaling.find(phase=>at>=phase.at)??baseEnemyScaling;
+ },
  evolutionPace(){
   const r=config.evolutionPacing,enabled=r.enabled&&this.mode==='pve'&&(this.isRoomCampaign()||this.isDesktopDefense()),after=this.time-r.expectedAt,progress=enabled?clamp((after-r.reliefSeconds)/r.rampSeconds,0,1):0;
   return{relief:enabled&&after>=0&&after<r.reliefSeconds,progress,spawnScale:1+r.spawnIncrease*progress,capExtra:Math.round(r.capExtra*progress)};
@@ -161,7 +169,7 @@ const methods={
   const progress=this.evolutionPace().progress;if(progress<=0)return u;
   const ratio=u.hp/Math.max(1,u.maxHp);u.evolutionWaveHp=1+config.evolutionPacing.eliteHp*progress;u.maxHp=this.stats(u).hp;u.hp=u.maxHp*ratio;return u;
  },
- roomBeat(){const s=this.roomCampaign,p=this.roomPhase();if(this.time<(s?.recoveryUntil||0))return{name:'보스 격파 후 회복',density:.3};if(this.units.some(u=>u.boss&&!u.miniBoss&&!u.roadCaptain&&u.hp>0))return{name:'보스 전투',density:this.time>=config.midgame.from?config.midgame.bossDensity:.5};if(this.time<120)return{name:'초반 적응',density:1};if(this.time>=450&&this.time<510)return{name:'포병 특수 위기',density:.55};if(this.evolutionPace().relief)return{name:'전력 전환 · 돌파',density:config.evolutionPacing.reliefDensity};const r=config.rhythm,cycle=(this.time-(p.rhythmAt??p.at))%r.cycle,postBoss=s?.recoveryUntil>0&&this.time<s.recoveryUntil+30;if(this.time>=r.lateAt)return !postBoss&&cycle>=r.recoveryAt&&cycle<r.recoveryEnd?{name:'전진·재정비',density:this.time>=config.midgame.from?config.midgame.quietDensity:r.quietDensity}:cycle>=r.crisisAt&&cycle<r.recoveryAt?{name:'특수 혼합 공세',density:1.3}:{name:'일반 전투',density:1};return !postBoss&&cycle>=90&&cycle<110?{name:'재정비',density:.45}:cycle>=65&&cycle<90?{name:'특수 혼합 공세',density:1.3}:{name:'일반 전투',density:1};},
+ roomBeat(){const s=this.roomCampaign,p=this.roomPhase();if(this.time<(s?.recoveryUntil||0))return{name:'보스 격파 후 회복',density:.3};if(this.units.some(u=>u.boss&&!u.miniBoss&&!u.roadCaptain&&u.hp>0))return{name:'보스 전투',density:this.time>=config.midgame.from?config.midgame.bossDensity:.5};if(this.time<120)return{name:'초반 적응',density:1};if(this.time>=450&&this.time<510)return{name:'포병 특수 위기',density:.55};if(this.evolutionPace().relief)return{name:'전력 전환 · 돌파',density:config.evolutionPacing.reliefDensity,waveInterval:config.evolutionPacing.reliefInterval};const r=config.rhythm,cycle=(this.time-(p.rhythmAt??p.at))%r.cycle,postBoss=s?.recoveryUntil>0&&this.time<s.recoveryUntil+30;if(this.time>=r.lateAt)return !postBoss&&cycle>=r.recoveryAt&&cycle<r.recoveryEnd?{name:'전진·재정비',density:this.time>=config.midgame.from?config.midgame.quietDensity:r.quietDensity}:cycle>=r.crisisAt&&cycle<r.recoveryAt?{name:'특수 혼합 공세',density:1.3}:{name:'일반 전투',density:1};return !postBoss&&cycle>=90&&cycle<110?{name:'재정비',density:.45}:cycle>=65&&cycle<90?{name:'특수 혼합 공세',density:1.3}:{name:'일반 전투',density:1};},
  roomPressure(){const p=this.roomPhase(),plan=this.roomWavePlan(),tier=Math.floor(this.time/60);return{tier,late:true,hp:1+.12*tier,damage:1.25*(1+.10*tier),defense:3*tier,combatCap:this.roomWaveCap(),soldierCap:this.roomWaveCap(),swarmCap:this.roomWaveCap(),postCap:0,baseCap:0,postBatch:0,baseBatch:0,postInterval:30,baseInterval:30,swarmBatch:plan.count,swarmInterval:plan.interval,assaultBatch:0,assaultInterval:30};},
  upgradeRoomCampaign(){
   if(!this.isRoomCampaign())return false;this.upgradeRoomMidBosses();if(this.roomCampaign&&!this.roomCampaign.endgame153){this.roomCampaign.endgame153=true;for(const u of this.units)if(u.finalBoss){u.finalBoss=false;}this.finalBattle={spawned:false,killed:false};this.roomCampaign.bossCursor=Math.min(this.roomCampaign.bossCursor,config.bosses.length-1);}let updated=this.setupRoomFences();if(this.upgradeRoomEncounters())updated=true;if(this.setupRoomFortifications())updated=true;if(this.roomCampaign?.version===config.version){this.upgradeRoomFinalBossPosition();if(this.refreshRoomEnemyHealth())updated=true;if(this.upgradeRoomBombSpawns())updated=true;return updated;}
@@ -326,7 +334,7 @@ const methods={
   const boss=this.units.some(u=>u.boss&&!u.miniBoss&&!u.roadCaptain&&u.hp>0),recovering=this.time<(s?.recoveryUntil||0);
   const plan={
    surge,count:opening?batch:Math.min(6,batch+(beat.density>1&&this.time>=config.rhythm.lateAt?1:0)),
-   interval:p.interval/(opening&&beat.density>=1?1:beat.density)*(surge?r.intervalScale:1),
+   interval:beat.waveInterval??p.interval/(opening&&beat.density>=1?1:beat.density)*(surge?r.intervalScale:1),
    forced:surge?(r.rosters.filter(row=>row.at<=this.time).at(-1)?.types||[]):[],
    window:phaseStart+':'+Math.floor((this.time-phaseStart)/config.rhythm.cycle)
   };
@@ -344,7 +352,7 @@ const methods={
    plan.count=portal?row.openCount:row.closedCount;plan.interval=portal?row.openInterval:row.closedInterval;
    plan.surge=false;plan.forced=[];
   }
-  if(!boss&&!opening){
+  if(!boss&&!opening&&beat.waveInterval===undefined){
    const e=config.encirclement;
    if(this.time>=e.from){
     const q=clamp((this.time-e.pressureFrom)/Math.max(1,e.pressureUntil-e.pressureFrom),0,1);
@@ -439,7 +447,7 @@ const methods={
   if(plan.surge&&s.surgeWindow!==plan.window){s.surgeWindow=plan.window;this.notify('toast','집중 공세 · 혼합 병력 접근');}
   this.updateRoomScheduledTanks();
   if(this.time<(s.waveEntryRetryAt||0))return;
-  if(this.time>=config.midgame.from)s.nextSpawnAt=Math.min(s.nextSpawnAt,this.time+plan.interval);
+  if(this.time>=config.midgame.from||beat.waveInterval!==undefined)s.nextSpawnAt=Math.min(s.nextSpawnAt,this.time+plan.interval);
   const opening=config.insects.opening,openingPending=!s.openingAntWave&&this.time<opening.until;
   if(openingPending&&this.time<opening.at)s.nextSpawnAt=Math.min(s.nextSpawnAt,opening.at);
   const refill=config.waveRefill,refillAt=this.time+refill.delay;
@@ -568,7 +576,7 @@ const methods={
   else if(a.phase==='high'&&this.time>=a.until){a.phase='dive';a.started=this.time;a.until=this.time+p.descent;u.flightStrikeUntil=this.time+p.descent+.2;}
   else if(a.phase==='dive'){
    const q=clamp((this.time-a.started)/p.descent,0,1);u.x=a.fromX+(a.x-a.fromX)*q;u.y=a.fromY+(a.y-a.fromY)*q;
-   if(this.time>=a.until){const t=a.target;if(t?.hp>0&&this.canTarget(u,t)&&d(t,a)<=38+(t.r||12)){const damage=this.stats(u).damage,impact=p.maxHpDamage===undefined?damage*p.damage:t.maxHp*p.maxHpDamage/this.defenseFactor(t,u);this.damage(t,impact,u);if(t.hp>0)this.applyPoison(t,u,damage*p.poisonPerSecond,p);}
+   if(this.time>=a.until){const t=a.target;if(t?.hp>0&&this.canTarget(u,t)&&d(t,a)<=38+(t.r||12)){const damage=this.stats(u).damage,impact=p.maxHpDamage===undefined?damage*p.damage:t.maxHp*p.maxHpDamage*this.roomSpawnScaling(u).damage/this.defenseFactor(t,u);this.damage(t,impact,u);if(t.hp>0)this.applyPoison(t,u,damage*p.poisonPerSecond,p);}
     this.effects.push({kind:'sting',x:u.x,y:u.y,tx:a.x,ty:a.y,flightHeight:24,t:.25,max:.25,team:u.team});a.phase='low';a.started=this.time;a.until=this.time+p.recovery;u.cooldown=p.recovery;
    }
   }else if(a.phase==='low'&&this.time>=a.until){u.bossAction=null;u.visualFlightHeight=48;u.nextBossSkillAt=this.time+p.cooldown;}

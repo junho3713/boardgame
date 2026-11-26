@@ -6,7 +6,7 @@ const near=(x,y)=>a.ok(Math.abs(x-y)<1e-7,`${x} != ${y}`);
 function scene(coop=false){const g=coop?new CoopGame():new FrontGame({},undefined,{map:'livingroom-star'});g.start();g.units=g.units.filter(u=>u.team===0&&u.type==='leader');g.obstacles=[];g.buildings=[];g.structures=[];g.defenses=[];g.pickups=[];g.visible=g.lineClear=()=>true;return g;}
 test('the five-to-eight-minute health recovery restores midgame durability smoothly',()=>{
  const g=scene();for(const [time,factor]of [[300,.75],[360,5/6],[420,11/12],[480,1],[540,1],[600,1],[660,1],[720,1],[900,1]]){
-  g.time=time;const u=g.addUnit(2,'bladeGuard',1500,6000),full={...u,spawnedAt:720};near(g.stats(u).hp/g.stats(full).hp,factor);a.equal(g.stats(u).damage,g.stats(full).damage);a.equal(g.stats(u).defense,g.stats(full).defense);
+  g.time=time;const u=g.addUnit(2,'bladeGuard',1500,6000);near(g.stats(u).hp/(160*1.2*(1+.12*u.threat)*g.roomSpawnScaling(u).hp),factor);
  }
 });
 test('a seven-minute save migrates once without healing or changing boss HP',()=>{
