@@ -51,7 +51,8 @@
   if(!models.draw(c,u,game.time,!!game.evolved[u.type])){c.fillStyle=u.team?'#bc7151':'#9ccf92';c.beginPath();c.arc(0,-10,12,0,Math.PI*2);c.fill();}
   FrontSupportDroneView.shield(c,u,game.time,radius);c.restore();
   const y=u.y-(['ant','rhinoBeetle','hornet'].includes(u.type)?u.boss?95:40:80),w=u.boss?70:36,left=u.x-w/2;
-  const bar=FrontBubbleOctopusView.healthBarLayout(u.hp,u.maxHp,u.bubbleShield?.hp);
+  const shieldHp=(u.bubbleShield?.hp||0)+FrontSupportDroneView.activeShieldHp(u,game.time);
+  const bar=FrontBubbleOctopusView.healthBarLayout(u.hp,u.maxHp,shieldHp);
   c.fillStyle='#18362c';c.fillRect(left,y,w*bar.track,4);
   c.fillStyle=FrontBubbleOctopusView.healthPaint(c,bar,left,w,u.team?'#f1b37b':'#b8de9f');c.fillRect(left,y,w*bar.filled,4);
   if(u.boss)text(api.ENEMIES[u.type],u.x,y-8,'#ffdda1',10);

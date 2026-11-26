@@ -108,9 +108,14 @@ function domeFront(c,width,height,depth,shine){
  c.strokeStyle=gleam;c.lineWidth=1.75;c.stroke();c.restore();
  rimArc(c,width,depth,false);
 }
+function activeShieldHp(unit,time){
+ const shield=unit.droneShield;
+ return shield&&time<shield.until?Math.max(0,shield.hp):0;
+}
 function shield(c,u,time,radius,layer='front'){
+ const hp=activeShieldHp(u,time);
+ if(!hp)return;
  const s=u.droneShield;
- if(!s||s.hp<=0||time>=s.until)return;
  const vehicle=u.type==='tank'||u.type==='lucky',flying=u.type==='drone';
  const width=flying?47:vehicle?Math.max(55,radius*2.12):u.type==='leader'?40:clamp(radius*2.65,36,43);
  const height=flying?53:vehicle?width*1.21:u.type==='sniper'||u.appearance==='rina'?72:65;
@@ -118,7 +123,7 @@ function shield(c,u,time,radius,layer='front'){
  const lift=flying?(u.visualFlightHeight??54)+Math.sin(time*5+(u.id||0)*1.7)*2.4-9:0;
  c.save();c.translate(0,1-lift);c.filter='none';c.lineCap='round';
  if(u.goldenSummon&&u.type==='tank')c.scale(1.5,1.5);
- c.globalAlpha*=clamp((s.until-time)*3,0,1)*(.58+.42*clamp(s.hp/s.maxHp,0,1));
+ c.globalAlpha*=clamp((s.until-time)*3,0,1)*(.58+.42*clamp(hp/s.maxHp,0,1));
  if(layer==='ground'){
   c.save();c.scale(width,depth);
   const glow=c.createRadialGradient(0,0,.75,0,0,1.15);
@@ -145,5 +150,5 @@ function event(c,e){
  }
  c.restore();return true;
 }
-root.FrontSupportDroneView={searchlights,shield,event};
+root.FrontSupportDroneView={searchlights,shield,event,activeShieldHp};
 })(typeof window==='undefined'?globalThis:window);

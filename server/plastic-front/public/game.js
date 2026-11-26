@@ -811,10 +811,11 @@ function drawUnitRaw(u,mine=true){
  if(!u.rareSupplyGuard&&u.type==='bruteBeetle')text(ctx,'거대 갑충',u.x,u.y-67,11,'#f0d597');
  if(!u.rareSupplyGuard&&(u.type==='stagBeetle'||u.type==='rhinoBeetle'))text(ctx,(u.boss?(u.miniBoss?'MID / ':'BOSS / ')+u.bossName.replace(/^(중간 보스|미드 보스) · /,''):types[u.type].name)+' · 장갑',u.x,u.y-(u.type==='rhinoBeetle'?91:78)*(u.boss?1.35:1),u.boss?13:11,'#f0d597');
  if(u.team!==0&&!u.rareSupplyGuard&&types[u.type].flying&&(u.boss||game.units.find(v=>v.type===u.type&&!v.boss&&v.hp>0&&game.visible(v))===u))text(ctx,(u.boss?(u.miniBoss?'MID / ':'BOSS / ')+u.bossName.replace(/^(중간 보스|미드 보스) · /,''):types[u.type].name)+(u.type==='hornet'?' · 중장갑':' · 경장갑'),u.x,u.y-((u.visualFlightHeight??types[u.type].flightHeight)+49)*(u.boss?1.35:1),u.boss?13:10,u.boss?'#ffc079':'#f2d694');
- if(u.star>=2||u.boss||u.rareSupplyGuard||u.bubbleShield?.hp>0||u.hp<u.maxHp||u.type==='leader'||u.type==='artillery'||u.type==='bayonetCaptain'||u.type==='bombBug'){
+ const shieldHp=(u.bubbleShield?.hp||0)+window.FrontSupportDroneView.activeShieldHp(u,game.time);
+ if(u.star>=2||u.boss||u.rareSupplyGuard||shieldHp>0||u.hp<u.maxHp||u.type==='leader'||u.type==='artillery'||u.type==='bayonetCaptain'||u.type==='bombBug'){
   const vehicle=(u.team!==0||u.type!=='guntruck')&&['tank','crimsonAce','guntruck','artillery','lucky','pirateCannon'].includes(u.type),human=roster.includes(u.type)&&!vehicle||u.type==='leader'||types[u.type].stab,w=u.boss?84:vehicle?48:u.type==='bombBug'?36:30;
   const rise=(u.type==='medic'&&u.team===0&&u.appearance==='rina'?78+(u.star>=2?8:0):types[u.type].flying?(u.visualFlightHeight??types[u.type].flightHeight)+42:u.type==='crimsonAce'?140:u.type==='rhinoBeetle'?88:u.type==='stagBeetle'?76:u.type==='pirateCannon'?94:u.type==='bubbleOctopus'?52:u.type==='bombBug'?57:vehicle?79:u.type==='bayonetCaptain'?90:types[u.type].stab?75:human?66:u.type==='bruteBeetle'?58:35)*(u.boss?1.35:1)-(u.star>=2?(vehicle?10:8):0),y=u.y-rise;
-  const left=u.x-w/2,bar=window.FrontBubbleOctopusView.healthBarLayout(u.hp,u.maxHp,u.bubbleShield?.hp);
+  const left=u.x-w/2,bar=window.FrontBubbleOctopusView.healthBarLayout(u.hp,u.maxHp,shieldHp);
   const fill=window.FrontBubbleOctopusView.healthPaint(ctx,bar,left,w,u.boss?'#e6af57':t?'#e0a184':'#dceca2');
   rr(ctx,left-1,y-1,w*bar.track+2,6,2,'#172a20aa');rr(ctx,left,y,w*bar.track,4,2,'#293d2d88');rr(ctx,left,y,w*bar.filled,4,2,fill);
   if(u.star>=2){text(ctx,'★'.repeat(u.star),u.x,y-6,12,u.star===3?'#ffd36c':'#ffe4a0');}
