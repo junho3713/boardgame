@@ -92,7 +92,7 @@ test('the normal scheduled wave spends existing slots on a bomb and ants without
 test('the new opening caps preserve the composition weights',()=>{
  const g=scene(0);a.deepEqual(g.roomPhase().mix,{ant:1});a.equal(g.roomPhase().cap,10);
  g.time=30;a.deepEqual(g.roomPhase().mix,{ant:1});a.equal(g.roomPhase().cap,16);
- g.time=60;a.equal(g.roomPhase().mix.ant,8);g.time=120;a.equal(g.roomPhase().mix.ant,7);g.time=180;a.equal(g.roomPhase().mix.ant,8);g.time=480;a.equal(g.roomPhase().mix.ant,8);g.time=600;a.equal(g.roomPhase().mix.ant,6);
+ g.time=60;a.equal(g.roomPhase().mix.ant,10);g.time=120;a.equal(g.roomPhase().mix.ant,9);g.time=180;a.equal(g.roomPhase().mix.ant,8);g.time=480;a.equal(g.roomPhase().mix.ant,8);g.time=600;a.equal(g.roomPhase().mix.ant,6);
 });
 
 test('active waves cycle bomb packets, pure ants including weak extras, and ordinary mixed troops in solo and co-op',()=>{

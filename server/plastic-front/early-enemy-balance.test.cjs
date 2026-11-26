@@ -15,14 +15,45 @@ test('bayonets, bees and machine gunners obey distinct wave introduction times i
 test('early bees and bayonets have bounded living counts and co-op scales the same introduction caps',()=>{
  for(const coop of [false,true])for(const [type,time,base]of [['bayonet',180,3],['honeybee',240,2],['honeybee',360,4],['honeybee',480,8]]){const g=scene(coop);g.time=time;const cap=coop?Math.ceil(base*g.coopSpawnScale):base;for(let i=0;i<cap;i++)a.ok(g.spawnRoomEnemy(type));a.equal(g.spawnRoomEnemy(type),null);a.equal(g.roomEnemyCount(type),cap);}
 });
-test('two-minute normal waves use rifles and blades with a gradual count and cap increase',()=>{
- const g=scene();g.time=119.99;a.equal(g.roomWaveCap(),26);g.time=120;const plan=g.roomWavePlan();a.equal(plan.count,6);a.equal(plan.interval,2);a.equal(g.roomWaveCap(),36);a.deepEqual(Object.keys(g.roomPhase().mix).sort(),['ant','bladeGuard','rifle']);
- a.equal(config.phases[0].mix.ant,1);a.equal(config.phases.find(p=>p.at===60).mix.rifle,2);a.ok(config.surges.rosters.filter(r=>r.at<360).every(r=>!r.types.includes('machinegun')));
+test('the opening mixes delay wave rifles to three minutes with a low weight',()=>{
+ const g=scene();
+ g.time=60;a.deepEqual(g.roomPhase().mix,{ant:10,bladeGuard:1});a.equal(g.roomWaveCap(),26);
+ g.time=120;
+ const plan=g.roomWavePlan();a.equal(plan.count,6);a.equal(plan.interval,2);a.equal(g.roomWaveCap(),36);
+ a.deepEqual(g.roomPhase().mix,{ant:9,bladeGuard:2});
+ a.deepEqual(config.surges.rosters.find(r=>r.at===120).types,['ant','bladeGuard']);
+ g.roomBeat=()=>({density:1.3});
+ a.deepEqual(g.roomWavePlan().forced,['ant','bladeGuard']);
+ g.time=180;
+ a.deepEqual(g.roomPhase().mix,{ant:8,bombBug:.45,acidBeetle:.55,bayonet:1,bladeGuard:2,rifle:1.2});
+ a.ok(config.surges.rosters.filter(r=>r.at<360).every(r=>!r.types.includes('machinegun')));
 });
-test('the actual scheduler does not leak early bayonets, bees or machine gunners through forced surge choices',()=>{
- const g=scene();g.upgradeRoomCampaign=()=>false;g.updateRoomScheduledTanks=()=>{};const seen=new Set();let seed=112358;g.random=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
- for(let tick=0;tick<1440;tick++){g.time=tick/4;g.units=g.units.filter(u=>u.team===0);g.updateRoomWaves();for(const u of g.units.filter(u=>u.roomWave)){seen.add(u.type);if(g.time<180)a.ok(!['bayonet','honeybee','machinegun'].includes(u.type));else if(g.time<240)a.ok(!['honeybee','machinegun'].includes(u.type));else a.notEqual(u.type,'machinegun');}}
- a.ok(seen.has('rifle'));a.ok(seen.has('bayonet'));a.ok(seen.has('bombBug'));
+test('solo and co-op schedulers exclude early rifles and add them in the next phase',()=>{
+ for(const coop of [false,true]){
+  const g=scene(coop);g.upgradeRoomCampaign=()=>false;g.updateRoomScheduledTanks=()=>{};
+  const seen=new Set();let seed=112358;
+  g.random=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
+  let rifleBeforeFour=false;
+  for(let tick=0;tick<1440;tick++){
+   g.time=tick/4;g.units=g.units.filter(u=>u.team===0);g.updateRoomWaves();
+   for(const u of g.units.filter(u=>u.roomWave)){
+    seen.add(u.type);
+    if(g.time<180)a.ok(!['rifle','bayonet','honeybee','machinegun'].includes(u.type));
+    else if(g.time<240){a.ok(!['honeybee','machinegun'].includes(u.type));rifleBeforeFour||=u.type==='rifle';}
+    else a.notEqual(u.type,'machinegun');
+   }
+  }
+  a.ok(rifleBeforeFour);a.ok(seen.has('bayonet'));a.ok(seen.has('bombBug'));
+ }
+});
+test('enemy rifle troops fire one rifle round while allied rifle troops fire the shotgun spread',()=>{
+ const g=scene(),commander=g.commander(0);
+ const enemy=g.addUnit(1,'rifle',commander.x,commander.y-170,true);
+ const ally=g.addUnit(0,'rifle',commander.x+45,commander.y);
+ a.equal(g.stats(enemy).name,'소총병');
+ a.equal(g.stats(enemy).range,245);
+ a.equal(g.fireUnitProjectiles(enemy,commander,g.attackRoll(enemy)).length,1);
+ a.equal(g.fireUnitProjectiles(ally,enemy,g.attackRoll(ally)).length,5);
 });
 test('early rare supplies and their approach guards use rifles instead of machine gunners',()=>{
  for(const time of [120,240]){const g=scene();g.time=time;g.nextRareSupply=time;g.updateRareSupplies();const p=g.pickups.find(p=>p.rareSupply);a.ok(p);const guards=g.rareSupplyGuards(p);a.ok(guards.some(u=>u.type==='rifle'));a.ok(guards.every(u=>u.type!=='machinegun'));if(time===120)a.ok(guards.every(u=>u.type!=='bayonet'));
