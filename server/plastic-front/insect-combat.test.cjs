@@ -78,7 +78,9 @@ test('the actual fixed-step loop arms and explodes a nearby bomb',()=>{
 test('bomb ants precede acid beetles, which retain their three-minute threshold and cap',()=>{
  const g=scene();g.time=119.99;a.equal(g.roomCanSpawn('bombBug'),false);g.time=179.99;
  a.equal(g.roomCanSpawn('bombBug'),true);a.equal(g.roomCanSpawn('acidBeetle'),false);g.time=180;
- a.ok(g.roomPhase().mix.bombBug>0&&g.roomPhase().mix.acidBeetle>0);for(let i=0;i<5;i++)a.ok(g.spawnRoomEnemy('bombBug'));a.ok(g.spawnRoomEnemy('acidBeetle'));a.equal(g.spawnRoomEnemy('acidBeetle'),null);g.time+=14;a.ok(g.spawnRoomEnemy('acidBeetle'));g.time+=14;a.equal(g.spawnRoomEnemy('acidBeetle'),null);
+ a.ok(g.roomPhase().mix.bombBug>0&&g.roomPhase().mix.acidBeetle>0);
+ a.ok(g.spawnRoomEnemy('bombBug'));a.equal(g.spawnRoomEnemy('bombBug'),null);
+ a.ok(g.spawnRoomEnemy('acidBeetle'));a.equal(g.spawnRoomEnemy('acidBeetle'),null);g.time+=14;a.ok(g.spawnRoomEnemy('acidBeetle'));g.time+=14;a.equal(g.spawnRoomEnemy('acidBeetle'),null);
 });
 test('wave testing can rewind the new spawn intervals without blocking early encounters',()=>{
  const g=scene(),wave=require('./public/wave-test.js');g.waveTest=true;g.time=780;g.spawnRoomEnemy('bombBug');g.spawnRoomEnemy('acidBeetle');a.ok(g.roomCampaign.insectNext.acidBeetle>780);wave.seek(g,180);a.ok(g.roomCanSpawn('bombBug'));a.ok(g.roomCanSpawn('acidBeetle'));a.equal(Object.keys(g.roomCampaign.insectNext).length,0);

@@ -1,7 +1,7 @@
 /* Living-room campaign only. Times are simulation seconds; weights replace enemies, never add a second spawner. */
 (function(root){'use strict';
 const config={version:116,duration:1200,enemyLuckyInterval:5,recoverySeconds:16,
- combat:{healthVersion:143,hpScale:1.2,openingHp:{until:300,restoreAt:480,scale:.75},bossHpScale:1.485,bossHpExtra:{rhinoBeetle:1.3,hornet:1.3,crimsonAce:1.3},damageScale:1.25,meleeDamageScale:1.1,bossDamageScale:1.3,bossArmorPenetration:{hornet:.3,crimsonAce:.4},bikeDamageScale:1.05},
+ combat:{healthVersion:143,hpScale:1.2,openingHp:{until:300,restoreAt:480,scale:.75},openingDamage:{types:['ant','bladeGuard'],scale:.7,restoreFrom:180,restoreAt:300},bossHpScale:1.485,bossHpExtra:{rhinoBeetle:1.3,hornet:1.3,crimsonAce:1.3},damageScale:1.25,meleeDamageScale:1.1,bossDamageScale:1.3,bossArmorPenetration:{hornet:.3,crimsonAce:.4},bikeDamageScale:1.05},
  weakReinforcements:{from:300,lateAt:600,mid:.15,late:.20,types:['ant','rifle']},
  evolutionPacing:{enabled:true,expectedAt:600,reliefSeconds:60,rampSeconds:120,reliefDensity:.8,spawnIncrease:.70,capExtra:10,eliteWeight:.8,eliteHp:.45,eliteTypes:['bayonet','bladeGuard','soldierAnt','bruteBeetle','stagBeetle','rhinoBeetle','tank','guntruck']},
  fences:{version:129,hp:12000,y:4550,postWidth:56,postDepth:32,threadDepth:22,lanes:[{id:'left',xs:[70,490,905,1360],colors:['blue','teal','coral','blue'],guns:[{id:'mg',kind:'bunker',x:960,y:4440},{id:'missile',kind:'missileTower',x:150,y:4410},{id:'inner-missile',kind:'missileTower',x:750,y:4370}]},{id:'right',xs:[1640,2095,2510,2930],colors:['coral','blue','teal','coral'],guns:[{id:'mg',kind:'bunker',x:2040,y:4440},{id:'missile',kind:'missileTower',x:2900,y:4440},{id:'inner-missile',kind:'missileTower',x:2250,y:4370}]}]},
@@ -12,17 +12,17 @@ const config={version:116,duration:1200,enemyLuckyInterval:5,recoverySeconds:16,
  bossRush:{from:960,extraBosses:{crimsonAce:{type:'crimsonAce',name:'진홍 전차 에이스',pattern:'rearBarrage'}},pairs:[{at:960,types:['stagBeetle','bayonetCaptain']},{at:1020,types:['bladeGuard','rhinoBeetle']},{at:1080,types:['bikeRaider','hornet']},{at:1140,types:['crimsonAce','stagBeetle']}],troops:{boss:{openCount:3,closedCount:2,openInterval:3.6,closedInterval:4.2,cap:28},between:{openCount:5,closedCount:4,openInterval:3,closedInterval:3.6,cap:36}}},
  midgame:{from:660,bossDensity:.8,quietDensity:.8},
  rhythm:{lateAt:240,cycle:120,crisisAt:60,recoveryAt:90,recoveryEnd:115,quietDensity:.55},
- waveRefill:{minimumFraction:.35,delay:.5},
+ waveRefill:{from:90,minimumFraction:.22,delay:1.2},
  surges:{enabled:true,from:120,extra:4,maxBatch:9,growthFrom:360,growthUntil:600,growthMaxBatch:7,intervalScale:.8,lanes:[-1,0,1],frontWidth:420,rosters:[{at:120,types:['ant','bladeGuard']},{at:240,types:['stagBeetle','rifle','sniper','butterfly']},{at:360,types:['hornet','bikeRaider','machinegun','sniper']},{at:480,types:['rhinoBeetle','bikeRaider','butterfly','machinegun']},{at:600,types:['stagBeetle','machinegun','sniper','butterfly']},{at:720,types:['stagBeetle','hornet','sniper','machinegun']},{at:900,types:['rhinoBeetle','butterfly','machinegun','sniper']},{at:1080,types:['hornet','rhinoBeetle','bikeRaider','sniper']}]},
  layout:{version:6,oldWidth:2400,oldHeight:4200,width:3000,height:8400,extraProps:[{kind:'books',label:'쌓인 책',x:250,y:4321.071428571428,w:240,h:165,color:'#6c8582'},{kind:'plant',label:'화분',x:2760,y:6616.428571428572,w:210,h:210,color:'#a87350'},{kind:'plant',label:'화분',x:350,y:3187.8571428571427,w:210,h:210,color:'#a87350'},{kind:'blocks',label:'나무 블록',x:2280,y:2460.714285714286,w:210,h:150,color:'#b68b58'},{kind:'sofa',label:'시작 구역 소파',x:450,y:6850,w:900,h:420,color:'#727c72'},{kind:'blocks',label:'장난감 부품',x:1730,y:7070,w:210,h:150,color:'#b68b58'},{kind:'blocks',label:'장난감 블록',x:2120,y:7270,w:180,h:130,color:'#b68b58'},{kind:'books',label:'시작 구역 책',x:800,y:7510,w:240,h:165,color:'#6c8582'},{kind:'cushion',label:'소파 쿠션',x:2220,y:6680,w:250,h:170,color:'#bc8e70'},{kind:'plant',label:'거실 화분',x:2650,y:7130,w:210,h:210,color:'#a87350'}]},
  laser:{range:370,opacity:.3,color:'#ec443b'},
  opening:[{type:'ant',x:760,y:2240},{type:'ant',x:860,y:2240}],
  roadCaptains:[['road-soldier','bayonet','길목 장난감 병정',5600,1],['road-blade','bladeGuard','블랙 실드 검병 대장',3600,2],['road-bike','bikeRaider','바이크 돌격대장',2160,2]],
  mageEscort:{from:360,mortars:4,spacing:60,depth:80,interval:60},
- insects:{from:180,bombFrom:120,intervals:{acidBeetle:14},
+ insects:{from:180,bombFrom:120,bombSpawn:{cooldown:20,earlyUntil:240,earlyCap:1,cap:2},intervals:{acidBeetle:14},
   opening:{at:120,until:140,ants:2,hpScale:.26,allyDamageScale:.2},
   earlyRotation:['mixed','troops','mixed'],
-  midgame:{from:300,until:660,ants:6,packets:3,rotation:['mixed','ants','mixed','troops','mixed']}
+  midgame:{from:300,until:660,ants:6,rotation:['mixed','ants','mixed','troops','mixed']}
  },
  introductions:{bayonet:180,honeybee:240,machinegun:360},
  openingCaps:[{until:360,bayonet:3,honeybee:2},{until:480,honeybee:4}],
@@ -33,9 +33,9 @@ const config={version:116,duration:1200,enemyLuckyInterval:5,recoverySeconds:16,
  lessons:{laser:{field:'laserExposureQuest',unlock:'mortar',hits:1},mage:{field:'mageShieldQuest',unlock:'sniper',uses:2}},
  phases:[
  {at:0,name:'초반 워밍업',interval:3.2,batch:2,cap:10,antOnly:true,refill:false,mix:{ant:1}},
- {at:30,name:'물량 시작',interval:2.4,batch:3,cap:16,antOnly:true,mix:{ant:1}},
- {at:60,name:'분대 성장',interval:2.2,batch:4,alternateBatch:5,cap:26,mix:{ant:10,bladeGuard:1}},
- {at:120,name:'폭탄개미 합류',interval:2,batch:6,cap:36,mix:{ant:9,bladeGuard:2}},
+ {at:30,name:'물량 시작',interval:2.8,batch:3,cap:14,antOnly:true,mix:{ant:1}},
+ {at:60,name:'분대 성장',interval:2.8,batch:3,alternateBatch:4,cap:20,mix:{ant:10,bladeGuard:1}},
+ {at:120,name:'폭탄개미 합류',interval:2.8,batch:4,alternateBatch:5,cap:26,mix:{ant:9,bladeGuard:2}},
  {at:180,name:'투석 딱정벌레 합류',interval:4,batch:4,cap:44,mix:{ant:8,bombBug:.45,acidBeetle:.55,bayonet:1,bladeGuard:2,rifle:1.2}},
  {at:240,name:'장갑·저격 혼합',interval:3.84,batch:5,cap:38,mix:{ant:4,bombBug:.45,acidBeetle:.55,bayonet:1.5,stagBeetle:2,sniper:1.5,honeybee:1,bladeGuard:2,rifle:2,butterfly:.6}},
  {at:360,name:'기동·원거리 위기',interval:4,batch:5,cap:41,mix:{blizzardMage:.7,ant:4,bombBug:.45,acidBeetle:.55,bayonet:2,bladeGuard:3,hornet:1,bikeRaider:1,machinegun:2,sniper:1,honeybee:2}},
@@ -94,7 +94,7 @@ class TroopEncounter{
   return game.spawnRoomEnemy(type,lane)?1:0;
  }
  deploy(game,phase,plan,budget){
-  const batch={game,phase,plan,budget,slot:0,startCount:game.roomCampaign.spawned,packets:0,retry:false,mix:game.evolutionWaveMix(phase.mix)};
+  const batch={game,phase,plan,budget,slot:0,startCount:game.roomCampaign.spawned,retry:false,mix:game.evolutionWaveMix(phase.mix)};
   while(batch.slot<budget){
    const added=this.spawnSlot(batch);
    if(!added)break;
@@ -111,32 +111,15 @@ class AntOnlyEncounter extends TroopEncounter{
 }
 
 class BombAntEncounter extends TroopEncounter{
- packetLimit(game){return inBombMidgame(game.time)?config.insects.midgame.packets:2;}
- eligible(game,type,batch){
-  if(type==='bombBug')return batch.packets<this.packetLimit(game)&&game.roomCanSpawn(type);
-  return super.eligible(game,type,batch);
- }
  spawnPacket(game,lane,budget,point=null){return game.spawnRoomAntGroup(lane,budget,point).length;}
  spawnSlot(batch){
   const {game}=batch,remaining=batch.budget-batch.slot,minimum=bombPacketMinimum(game.time);
   if(remaining>minimum&&this.preferPirate(batch,this.forcedType(batch)))return super.spawnSlot(batch);
-  if(remaining>=minimum&&this.eligible(game,'bombBug',batch)){
-   const packets=Math.min(this.packetLimit(game)-batch.packets,Math.floor(remaining/minimum),
-    Math.floor((game.roomWaveCap()-game.roomEnemyCount())/minimum));
-   // Share the current wave budget across several led packs instead of crowding the first entry.
-   const budget=inBombMidgame(game.time)&&packets>1?Math.floor(remaining/packets):remaining;
-   const count=this.spawnPacket(game,null,budget);
-   if(count){batch.packets++;return count;}
+  if(remaining>=minimum&&game.roomCanSpawn('bombBug')){
+   const count=this.spawnPacket(game,null,remaining);
+   if(count)return count;
   }
   return super.spawnSlot(batch);
- }
- spawnType(batch,type,lane){
-  if(type==='bombBug'){
-   const count=this.spawnPacket(batch.game,lane,batch.budget-batch.slot);
-   if(count){batch.packets++;return count;}
-   type='ant';
-  }
-  return super.spawnType(batch,type,lane);
  }
 }
 
@@ -176,7 +159,7 @@ const methods={
  roomBeat(){const s=this.roomCampaign,p=this.roomPhase();if(this.time<(s?.recoveryUntil||0))return{name:'보스 격파 후 회복',density:.3};if(this.units.some(u=>u.boss&&!u.miniBoss&&!u.roadCaptain&&u.hp>0))return{name:'보스 전투',density:this.time>=config.midgame.from?config.midgame.bossDensity:.5};if(this.time<120)return{name:'초반 적응',density:1};if(this.time>=450&&this.time<510)return{name:'포병 특수 위기',density:.55};if(this.evolutionPace().relief)return{name:'전력 전환 · 돌파',density:config.evolutionPacing.reliefDensity};const r=config.rhythm,cycle=(this.time-p.at)%r.cycle,postBoss=s?.recoveryUntil>0&&this.time<s.recoveryUntil+30;if(this.time>=r.lateAt)return !postBoss&&cycle>=r.recoveryAt&&cycle<r.recoveryEnd?{name:'전진·재정비',density:this.time>=config.midgame.from?config.midgame.quietDensity:r.quietDensity}:cycle>=r.crisisAt&&cycle<r.recoveryAt?{name:'특수 혼합 공세',density:1.3}:{name:'일반 전투',density:1};return !postBoss&&cycle>=90&&cycle<110?{name:'재정비',density:.45}:cycle>=65&&cycle<90?{name:'특수 혼합 공세',density:1.3}:{name:'일반 전투',density:1};},
  roomPressure(){const p=this.roomPhase(),plan=this.roomWavePlan(),tier=Math.floor(this.time/60);return{tier,late:true,hp:1+.12*tier,damage:1.25*(1+.10*tier),defense:3*tier,combatCap:this.roomWaveCap(),soldierCap:this.roomWaveCap(),swarmCap:this.roomWaveCap(),postCap:0,baseCap:0,postBatch:0,baseBatch:0,postInterval:30,baseInterval:30,swarmBatch:plan.count,swarmInterval:plan.interval,assaultBatch:0,assaultInterval:30};},
  upgradeRoomCampaign(){
-  if(!this.isRoomCampaign())return false;this.upgradeRoomMidBosses();if(this.roomCampaign&&!this.roomCampaign.endgame153){this.roomCampaign.endgame153=true;for(const u of this.units)if(u.finalBoss){u.finalBoss=false;}this.finalBattle={spawned:false,killed:false};this.roomCampaign.bossCursor=Math.min(this.roomCampaign.bossCursor,config.bosses.length-1);}let updated=this.setupRoomFences();if(this.upgradeRoomEncounters())updated=true;if(this.setupRoomFortifications())updated=true;if(this.roomCampaign?.version===config.version){this.upgradeRoomFinalBossPosition();if(this.refreshRoomEnemyHealth())updated=true;return updated;}
+  if(!this.isRoomCampaign())return false;this.upgradeRoomMidBosses();if(this.roomCampaign&&!this.roomCampaign.endgame153){this.roomCampaign.endgame153=true;for(const u of this.units)if(u.finalBoss){u.finalBoss=false;}this.finalBattle={spawned:false,killed:false};this.roomCampaign.bossCursor=Math.min(this.roomCampaign.bossCursor,config.bosses.length-1);}let updated=this.setupRoomFences();if(this.upgradeRoomEncounters())updated=true;if(this.setupRoomFortifications())updated=true;if(this.roomCampaign?.version===config.version){this.upgradeRoomFinalBossPosition();if(this.refreshRoomEnemyHealth())updated=true;if(this.upgradeRoomBombSpawns())updated=true;return updated;}
   const old=this.time>0,cursor=old?config.bosses.findIndex(b=>b.at>=this.time):0;
   this.roomCampaign={endgame153:true,version:config.version,nextSpawnAt:this.time+4,spawned:0,miniScheduleVersion:2,miniMinute:Math.floor(this.time/60),bossCursor:cursor<0?config.bosses.length:cursor,recoveryUntil:0,bossReadyAt:this.time,tanksDone:config.tanks.map(at=>old&&at<this.time),tankSpawned:0,phaseAt:this.roomPhase().at};
   this.mission.stage=3;this.mission.nextAssault=Infinity;this.mission.nextWave=Infinity;
@@ -184,7 +167,26 @@ const methods={
   for(const u of this.units)if(u.roadCaptain){u.boss=false;u.roadStage=1;u.missionStage=1;}
   this.bossState.nextAt=config.bosses[this.roomCampaign.bossCursor]?.at??Infinity;this.bossState.warned=false;
   for(const u of this.units)if(u.boss&&!u.roadCaptain){const b=config.bosses.find(b=>b.type===u.type);if(b)u.bossPattern=b.pattern;}
-  this.finalBattle=this.finalBattle||{spawned:false,killed:false};this.refreshRoomEnemyHealth();return true;
+  this.finalBattle=this.finalBattle||{spawned:false,killed:false};this.refreshRoomEnemyHealth();this.upgradeRoomBombSpawns();return true;
+ },
+ upgradeRoomBombSpawns(){
+  const state=this.roomCampaign;
+  if(state.bombSpawnVersion===1)return false;
+  state.bombSpawnVersion=1;
+  const bombs=this.units.filter(u=>u.team!==0&&u.type==='bombBug');
+  if(bombs.some(u=>u.openingBombBug))state.openingAntWave=true;
+  const deployed=bombs.map(u=>u.spawnedAt).filter(at=>Number.isFinite(at)&&at<=this.time);
+  const next=state.insectNext??={};
+  if(deployed.length)next.bombBug=Math.max(...deployed)+config.insects.bombSpawn.cooldown;
+  else delete next.bombBug;
+  const active=bombs.filter(u=>u.hp>0).sort((a,b)=>Number(!!b.openingBombBug)-Number(!!a.openingBombBug)||a.id-b.id);
+  // Keep troops on the field when resuming an operation saved before the live cap.
+  for(const u of active.slice(this.roomBombCap())){
+   const fraction=clamp(u.hp/Math.max(1,u.maxHp),0,1);
+   u.type='ant';u.openingBombBug=false;u.bombFuse=null;
+   u.maxHp=this.stats(u).hp;u.hp=u.maxHp*fraction;
+  }
+  return true;
  },
  upgradeRoomEncounters(){
   if(!this.isRoomCampaign()||this.roomEncounterVersion===117)return false;
@@ -297,17 +299,22 @@ const methods={
  roomEnemyCount(type=null,opening=false){return this.units.filter(u=>u.hp>0&&u.team!==0&&!u.boss&&!u.fixedGuard&&!u.roomGarrison&&u.type!=='artillery'&&(!opening||!u.roadCaptain)&&(!type||u.type===type)).length;},
  roomWaveCap(){const boss=this.units.some(u=>u.boss&&!u.miniBoss&&!u.roadCaptain&&u.hp>0),base=this.time>=config.bossRush.from?config.bossRush.troops[boss?'boss':'between'].cap:this.roomPhase().cap;return base+(boss?0:this.evolutionPace().capExtra);},
  roomEnemyTypeCap(type){const row=config.openingCaps.find(r=>this.time<r.until);return Math.min(config.caps[type]??Infinity,row?.[type]??Infinity);},
+ roomBombCap(){const r=config.insects.bombSpawn;return this.time<r.earlyUntil?r.earlyCap:r.cap;},
  roomEnemyReady(type){
   if(type==='pirateCannon')return this.pirateReinforcementReady();
   if(type==='bubbleOctopus')return this.octopusReinforcementReady();
-  if(type==='bombBug')return this.time>=config.insects.bombFrom;
+  if(type==='bombBug'){
+   const next=this.roomCampaign?.insectNext?.bombBug||0;
+   return this.time+1e-8>=Math.max(config.insects.bombFrom,next)&&
+    this.units.filter(u=>u.team!==0&&u.type==='bombBug'&&u.hp>0).length<this.roomBombCap();
+  }
   if(this.time<(config.introductions[type]||0)||type==='sniper'&&this.enemySniperCount()>=2)return false;
   return !config.insects.intervals[type]||this.time>=Math.max(config.insects.from,this.roomCampaign?.insectNext?.[type]||0);
  },
  roomCanSpawn(type){return this.roomEnemyReady(type)&&this.roomEnemyCount()<this.roomWaveCap()&&this.roomEnemyCount(type)<this.roomEnemyTypeCap(type);},
  roomWavePlan(){
   const p=this.roomPhase(),beat=this.roomBeat(),s=this.roomCampaign,r=config.surges;
-  const batch=p.alternateBatch&&(s?.alternatingWaves||0)%2?p.alternateBatch:p.batch;
+  const batch=p.alternateBatch&&s?.phaseAt===p.at&&(s.alternatingWaves||0)%2?p.alternateBatch:p.batch;
   const surge=r.enabled&&this.time>=r.from&&beat.density>1;
   const portal=this.roomPortalAlive(),late=this.time>=config.lateWaves.from;
   const boss=this.units.some(u=>u.boss&&!u.miniBoss&&!u.roadCaptain&&u.hp>0),recovering=this.time<(s?.recoveryUntil||0);
@@ -346,7 +353,20 @@ const methods={
  },
  spawnRoomEnemy(type,lane=null,entry=null){
   const r=config.insects.opening,opening=entry?.openingAntPack&&this.time>=r.at&&this.time<r.until&&!this.roomCampaign.openingAntWave&&this.roomEnemyCount(null,true)<this.roomWaveCap();
-  if(!opening&&!this.roomCanSpawn(type))return null;const cursor=this.roomCampaign.entryCursor||0,p=entry||this.roomEntry(this.serial+1+(lane||0)*3,55,cursor%4);if(!p)return null;this.roomCampaign.entryCursor=Number.isInteger(p.entrySide)?p.entrySide+1:cursor+1;const team=['rifle','machinegun','sniper','crimsonAce','lucky','pirateCannon'].includes(type)?1:2,u=this.addUnit(team,type,p.x,p.y,true);if(type==='pirateCannon')this.markPirateReinforcement();if(type==='bubbleOctopus')this.markOctopusReinforcement();if(config.insects.intervals[type]){const next=this.roomCampaign.insectNext??={};next[type]=this.time+config.insects.intervals[type];}u.roomEntrySide=p.entrySide;u.assault=true;u.roomWave=true;this.stampEvolutionWave(u);if(opening&&type==='bombBug'){u.openingBombBug=true;u.hp=u.maxHp=this.stats(u).hp;}if(type==='blizzardMage')Object.assign(u,{mobileMage:true,activeStage:1,cooldown:1.2});return u;},
+  if(!(opening?this.roomEnemyReady(type):this.roomCanSpawn(type)))return null;
+  const cursor=this.roomCampaign.entryCursor||0,p=entry||this.roomEntry(this.serial+1+(lane||0)*3,55,cursor%4);
+  if(!p)return null;
+  this.roomCampaign.entryCursor=Number.isInteger(p.entrySide)?p.entrySide+1:cursor+1;
+  const team=['rifle','machinegun','sniper','crimsonAce','lucky','pirateCannon'].includes(type)?1:2,u=this.addUnit(team,type,p.x,p.y,true);
+  if(type==='pirateCannon')this.markPirateReinforcement();
+  if(type==='bubbleOctopus')this.markOctopusReinforcement();
+  const interval=type==='bombBug'?config.insects.bombSpawn.cooldown:config.insects.intervals[type];
+  if(interval){const next=this.roomCampaign.insectNext??={};next[type]=this.time+interval;}
+  u.roomEntrySide=p.entrySide;u.assault=true;u.roomWave=true;this.stampEvolutionWave(u);
+  if(opening&&type==='bombBug'){u.openingBombBug=true;u.hp=u.maxHp=this.stats(u).hp;}
+  if(type==='blizzardMage')Object.assign(u,{mobileMage:true,activeStage:1,cooldown:1.2});
+  return u;
+ },
  roomBombEscortPoint(bomb,slot,count){
   const c=this.commander(0),offset=(bomb.openingBombBug||bomb.openingAntPack)?Math.PI+(slot===0?-.66:.66):slot*Math.PI*2/count,angle=Math.atan2(c.y-bomb.y,c.x-bomb.x)+offset;
   return{x:bomb.x+Math.cos(angle)*70,y:bomb.y+Math.sin(angle)*70,entrySide:bomb.roomEntrySide??bomb.entrySide};
@@ -387,7 +407,7 @@ const methods={
  },
  followRoomEscort(u,dt,s){
   if(u.roomBombLeaderId){
-   const bomb=this.units.find(t=>t.id===u.roomBombLeaderId&&t.hp>0&&!t.bombDetonated);if(!bomb){delete u.roomBombLeaderId;return false;}
+   const bomb=this.units.find(t=>t.id===u.roomBombLeaderId&&t.type==='bombBug'&&t.hp>0&&!t.bombDetonated);if(!bomb){delete u.roomBombLeaderId;return false;}
    const goal=this.roomBombEscortPoint(bomb,u.roomBombSlot||0,u.roomBombCount||3);
    if(d(u,goal)>16)this.navigate(u,goal.x,goal.y,dt,Math.min(s.speed,this.stats(bomb).speed*1.15));return true;
   }
@@ -408,6 +428,7 @@ const methods={
   const beat=this.roomBeat();
   if(s.phaseAt!==p.at){
    s.phaseAt=p.at;
+   s.alternatingWaves=0;
    if(p.at===30||p.at===60)s.nextSpawnAt=Math.min(s.nextSpawnAt,this.time+plan.interval);
    this.notify('toast',p.name+' · '+beat.name);
   }
@@ -418,7 +439,7 @@ const methods={
   const opening=config.insects.opening,openingPending=!s.openingAntWave&&this.time<opening.until;
   if(openingPending&&this.time<opening.at)s.nextSpawnAt=Math.min(s.nextSpawnAt,opening.at);
   const refill=config.waveRefill,refillAt=this.time+refill.delay;
-  if(p.refill!==false&&s.nextSpawnAt>refillAt&&this.time>=(s.recoveryUntil||0)&&beat.name!=='보스 전투'){
+  if(this.time>=refill.from&&p.refill!==false&&s.nextSpawnAt>refillAt&&this.time>=(s.recoveryUntil||0)&&beat.name!=='보스 전투'){
    const cap=this.roomWaveCap();
    if(this.roomEnemyCount()<cap&&this.units.filter(u=>u.hp>0&&u.team!==0&&u.roomWave&&!u.boss&&!u.rareSupplyGuard).length<cap*refill.minimumFraction)s.nextSpawnAt=refillAt;
   }

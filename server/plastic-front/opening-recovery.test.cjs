@@ -24,29 +24,49 @@ test('warm-up uses ordinary cadence without refill in solo or cooperative play',
  }
 });
 
-test('the 30-second phase uses three ants per pulse and restores low-count refill',()=>{
+test('the 30-second phase uses three ants per wave and keeps rapid refill off before 90 seconds',()=>{
  const g=scene(),s=g.roomCampaign;g.roomEntry=()=>({x:1500,y:6800});
  g.time=29.99;g.updateRoomWaves();a.equal(g.roomWaveCap(),10);
  g.time=30;s.nextSpawnAt=33.19;g.updateRoomWaves();
- a.equal(g.roomWavePlan().count,3);a.equal(g.roomWavePlan().interval,2.4);a.equal(g.roomWaveCap(),16);
- a.equal(s.nextSpawnAt,30.5);a.equal(g.roomEnemyCount(),2);
- g.time=30.5;a.equal(g.updateRoomWaves(),3);a.ok(g.units.every(u=>u.type==='ant'));
- for(let i=0;i<5;i++)g.addUnit(2,'ant',1500,6800).roomWave=true;
- g.time=60;s.nextSpawnAt=64;g.updateRoomWaves();a.equal(s.nextSpawnAt,62.2);
+ a.equal(g.roomWavePlan().count,3);a.equal(g.roomWavePlan().interval,2.8);a.equal(g.roomWaveCap(),14);
+ a.equal(s.nextSpawnAt,32.8);a.equal(g.roomEnemyCount(),2);
+ g.time=32.8;a.equal(g.updateRoomWaves(),3);a.ok(g.units.every(u=>u.type==='ant'));
+ g.time=60;s.nextSpawnAt=64;g.updateRoomWaves();a.equal(s.nextSpawnAt,62.8);
+ g.units=[];g.time=89.99;s.nextSpawnAt=95;g.updateRoomWaves();a.equal(s.nextSpawnAt,95);
 });
 
-test('the one-minute phase alternates four and five on successful waves, including after save restore',()=>{
+test('refill starts at 90 seconds below 22% of the shared wave cap and waits 1.2 seconds',()=>{
+ for(const g of [scene(),new CoopGame()]){
+  g.start();g.units=g.units.filter(u=>u.team===0);g.time=90;
+  const state=g.roomCampaign;
+  state.phaseAt=60;state.nextSpawnAt=97;
+  const countAtThreshold=Math.ceil(g.roomWaveCap()*.22);
+  const ants=Array.from({length:countAtThreshold},()=>g.addUnit(2,'ant',1500,6800,true));
+  ants.forEach(u=>u.roomWave=true);
+  g.updateRoomWaves();a.equal(state.nextSpawnAt,97);
+  ants[0].hp=0;
+  g.updateRoomWaves();a.equal(state.nextSpawnAt,91.2);
+  state.nextSpawnAt=97;state.recoveryUntil=96;
+  g.updateRoomWaves();a.equal(state.nextSpawnAt,97);
+  state.recoveryUntil=0;
+  const boss=g.addUnit(2,'stagBeetle',1600,6800,true);boss.boss=true;
+  g.updateRoomWaves();a.equal(state.nextSpawnAt,97);
+ }
+});
+
+test('the early phases alternate their own batch sizes on successful waves across save restore',()=>{
  const g=scene(),s=g.roomCampaign,entry=()=>({x:1500,y:6800});g.roomEntry=entry;
  g.time=60;s.nextSpawnAt=60;g.random=()=>.99;
- a.equal(g.roomWaveCap(),26);a.equal(g.roomWavePlan().interval,2.2);
- a.equal(g.updateRoomWaves(),4);a.equal(g.roomWavePlan().count,5);
+ a.equal(g.roomWaveCap(),20);a.equal(g.roomWavePlan().interval,2.8);
+ a.equal(g.updateRoomWaves(),3);a.equal(g.roomWavePlan().count,4);
  a.ok(g.units.some(u=>u.roomWave&&u.type!=='ant'));
  g.time=s.nextSpawnAt;g.roomEntry=()=>null;
- a.equal(g.updateRoomWaves(),0);a.equal(g.roomWavePlan().count,5);
+ a.equal(g.updateRoomWaves(),0);a.equal(g.roomWavePlan().count,4);
  const restored=unpack(new FrontGame(),JSON.parse(JSON.stringify(pack(g))));
  restored.time=restored.roomCampaign.nextSpawnAt;restored.roomEntry=entry;
- a.equal(restored.updateRoomWaves(),5);a.equal(restored.roomWavePlan().count,4);
- for(const [at,count,interval,cap] of [[120,6,2,36],[180,10,5.4,44]]){
+ a.equal(restored.updateRoomWaves(),4);a.equal(restored.roomWavePlan().count,3);
+ restored.roomCampaign.alternatingWaves=1;
+ for(const [at,count,interval,cap] of [[120,4,2.8,26],[180,10,5.4,44]]){
   restored.time=at;
   a.equal(restored.roomWavePlan().count,count);a.equal(restored.roomWavePlan().interval,interval);a.equal(restored.roomWaveCap(),cap);
  }
@@ -56,14 +76,14 @@ test('uncleared opening waves respect their caps and co-op advances its 1.8x all
  for(const g of [scene(),new CoopGame()]){
   g.start();g.units=g.units.filter(u=>u.team===0);g.roomEntry=()=>({x:1500,y:6800});
   for(let tick=0;tick<2400;tick++){g.time=tick/20;g.updateRoomWaves();a.ok(g.roomEnemyCount()<=g.roomWaveCap());}
-  a.equal(g.roomEnemyCount(),g.coop?Math.ceil(26*1.8):26);
+  a.equal(g.roomEnemyCount(),g.coop?Math.ceil(20*1.8):20);
  }
  const g=new CoopGame();g.start();g.roomEntry=()=>({x:1500,y:6800});let count=0;
  for(let i=0;i<10;i++){
   g.time=i*10;g.roomCampaign.nextSpawnAt=g.time;g.units=g.units.filter(u=>u.team===0);
   count+=g.updateRoomWaves();
  }
- a.equal(count,59);a.ok(Math.abs(g.coopSpawnRemainder-.4)<1e-8);
+ a.equal(count,52);a.ok(Math.abs(g.coopSpawnRemainder-.2)<1e-8);
 });
 
 test('5:30 uses the denser quiet beat and the floor retries low living waves outside boss combat and recovery',()=>{
@@ -72,8 +92,8 @@ test('5:30 uses the denser quiet beat and the floor retries low living waves out
  a.ok(Math.abs(g.roomWavePlan().interval-3.84/.55*1.415)<1e-8);
  s.nextSpawnAt=340;
  for(let i=0;i<3;i++)Object.assign(g.addUnit(2,'rifle',1500,4000),{rareSupplyGuard:true});
- for(let i=0;i<12;i++)g.addUnit(2,'ant',1500,4000).roomWave=true;
- g.updateRoomWaves();a.equal(s.nextSpawnAt,330.5);
+ for(let i=0;i<8;i++)g.addUnit(2,'ant',1500,4000).roomWave=true;
+ g.updateRoomWaves();a.equal(s.nextSpawnAt,331.2);
  s.nextSpawnAt=340;s.recoveryUntil=334;
  g.updateRoomWaves();a.equal(s.nextSpawnAt,340);a.equal(g.roomBeat().density,.3);
  s.recoveryUntil=0;g.addUnit(2,'stagBeetle',1500,4000).boss=true;

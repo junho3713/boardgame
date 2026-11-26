@@ -911,15 +911,12 @@ function drawExperienceDrop(context,drop){
  context.restore();
 }
 function drawCombatDrop(drop,pulse,bob){
- const magnet=drop.combatDrop==='magnet',accent=magnet?'#b7ecff':'#ffc9bf';
+ const magnet=drop.combatDrop==='magnet';
  ctx.save();ctx.scale(1,.56);
  circle(ctx,2,2,16,'#281f2180');
  circle(ctx,0,0,18+pulse*2,null,magnet?'#84c9ee86':'#ff9a8786');
  ctx.restore();
- if(drawFieldPickupModel(ctx,magnet?2:3,bob)){
-  text(ctx,magnet?'전맵 자석':'회복템',0,-35+bob,13,accent);
-  return;
- }
+ if(drawFieldPickupModel(ctx,magnet?2:3,bob))return;
  ctx.save();ctx.translate(0,-16+bob);
  if(magnet){
   ctx.lineCap='round';ctx.lineJoin='round';
@@ -935,7 +932,6 @@ function drawCombatDrop(drop,pulse,bob){
   ctx.fillStyle='#e86871';ctx.fill();ctx.strokeStyle='#802e44';ctx.lineWidth=2;ctx.stroke();
  }
  ctx.restore();
- text(ctx,magnet?'전맵 자석':'회복템',0,-34+bob,13,accent);
 }
 function drawDestinyStar(context,x,y,r){
  const points=Array.from({length:10},(_,i)=>{

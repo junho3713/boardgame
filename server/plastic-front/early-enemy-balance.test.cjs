@@ -17,9 +17,9 @@ test('early bees and bayonets have bounded living counts and co-op scales the sa
 });
 test('the opening mixes delay wave rifles to three minutes with a low weight',()=>{
  const g=scene();
- g.time=60;a.deepEqual(g.roomPhase().mix,{ant:10,bladeGuard:1});a.equal(g.roomWaveCap(),26);
+ g.time=60;a.deepEqual(g.roomPhase().mix,{ant:10,bladeGuard:1});a.equal(g.roomWaveCap(),20);
  g.time=120;
- const plan=g.roomWavePlan();a.equal(plan.count,6);a.equal(plan.interval,2);a.equal(g.roomWaveCap(),36);
+ const plan=g.roomWavePlan();a.equal(plan.count,4);a.equal(plan.interval,2.8);a.equal(g.roomWaveCap(),26);
  a.deepEqual(g.roomPhase().mix,{ant:9,bladeGuard:2});
  a.deepEqual(config.surges.rosters.find(r=>r.at===120).types,['ant','bladeGuard']);
  g.roomBeat=()=>({density:1.3});
@@ -80,17 +80,17 @@ test('a resumed shield blade keeps its health fraction through the durability mi
  const g=scene();g.time=120;const u=g.addUnit(2,'bladeGuard',1500,6000,true),dead=g.addUnit(2,'bladeGuard',1600,6000,true);u.maxHp=156.24;u.hp=u.maxHp*.4;dead.hp=0;g.roomHealthVersion=141;g.refreshRoomEnemyHealth();near(u.maxHp,178.56);near(u.hp/u.maxHp,.4);a.equal(dead.hp,0);a.equal(g.refreshRoomEnemyHealth(),false);
 });
 
-test('pirate cannons enter early room waves with a 30-second interval and a shared two-alive limit',()=>{
+test('living-room pirate cannons start at 4:30 with a 30-second interval and a shared two-alive limit',()=>{
  for(const map of ['livingroom-star','livingroom-pixel','bedroom-star','livingroom','desktop','backyard','coop']){
   const g=map==='coop'?scene(true):new FrontGame({},undefined,{map});g.start();
   g.units=g.units.filter(u=>u.team===0);g.obstacles=[];
   g.roomEntry=g.desktopEntry=g.northernSpawn=()=>({x:1100,y:1900,entrySide:0});
   g.roomCanSpawnMageGroup=()=>false;
   const cannons=()=>g.units.filter(u=>u.type==='pirateCannon'&&u.hp>0);
-  const first=g.isRoomCampaign()?150:360,gap=g.isRoomCampaign()?30:55;
+  const first=g.isRoomCampaign()?270:360,gap=g.isRoomCampaign()?30:55;
   const wave=at=>{
    g.time=at;g.swarm.nextAt=at;g.units=g.units.filter(u=>u.team===0||u.type==='pirateCannon');
-   if(g.roomCampaign){g.roomCampaign.nextSpawnAt=at;g.roomCampaign.antWaveCursor=1;}
+   if(g.roomCampaign){g.roomCampaign.nextSpawnAt=at;g.roomCampaign.antWaveCursor=0;}
    g.updateSwarm();
   };
   wave(first-.01);a.equal(cannons().length,0,map);
@@ -100,5 +100,24 @@ test('pirate cannons enter early room waves with a 30-second interval and a shar
   wave(first+gap*2);a.equal(cannons().length,2,map);
   cannons()[0].hp=0;
   wave(first+gap*2+.5);a.equal(cannons().length,2,map);
+ }
+});
+
+test('ordinary early ants and shield blades recover their damage linearly through five minutes',()=>{
+ for(const coop of [false,true]){
+  const g=scene(coop);
+  for(const type of ['ant','bladeGuard']){
+   const ordinary=g.addUnit(2,type,1500,6000,true);
+   const elite={...ordinary,roadCaptain:true};
+   for(const [at,ratio] of [[0,.7],[179.95,.7],[180,.7],[210,.775],[240,.85],[270,.925],[300,1],[330,1]]){
+    g.time=at;
+    near(g.stats(ordinary).damage/g.stats(elite).damage,ratio);
+   }
+   g.time=0;
+   near(g.enemyDamageScale({...ordinary,boss:true}),config.combat.damageScale*config.combat.bossDamageScale);
+  }
+  const other=g.addUnit(2,'bayonet',1500,6000,true);
+  g.time=0;const opening=g.enemyDamageScale(other);
+  g.time=300;near(g.enemyDamageScale(other),opening);
  }
 });

@@ -5,7 +5,7 @@ const BATTLE_SYSTEMS=typeof module!=='undefined'&&module.exports?require('./batt
 const SWORD={damage:90,rate:.75,range:135,arc:110*Math.PI/180,windup:.14,recovery:.42,targets:3,finisherRange:180,finisherArc:150*Math.PI/180,finisherTargets:6,finisherDamage:2,ultimateRange:170,ultimateInterval:.5,ultimateDamage:2};
 const FLAME={damage:14.4,rate:.12,range:250,arc:50*Math.PI/180,armor:.65,ultimateRange:420,ultimateArc:70*Math.PI/180,ultimateDamage:2};
 const BALANCE_VERSION=72;
-const PIRATE_REINFORCEMENT={from:360,interval:55,roomFrom:150,roomUntil:720,roomInterval:30,cap:2};
+const PIRATE_REINFORCEMENT={from:360,interval:55,roomFrom:270,roomUntil:720,roomInterval:30,cap:2};
 const OCTOPUS_REINFORCEMENT={from:270,interval:65};
 const ROOM_ANT_HEALTH={scale:.5,restoreFrom:180,restoreAt:240};
 const TACTICAL_FEVER={duration:10,haste:1.4,heal:.3,magnetRadius:480};
@@ -555,7 +555,17 @@ class FrontGame{
  isFrontCommander(u){return this.isFlameCommander(u)||this.isSwordCommander(u);}
  isFlameCommander(u){return u?.team===0&&u.type==='leader'&&(u.appearance||this.commanderId)==='blaze';}
  // Balance multipliers apply when attacks are created, never again on impact.
- enemyDamageScale(u){if(!this.isRoomCampaign()||u?.team===0||u?.defenseKind==='laserTower')return 1;const r=ROOM_CAMPAIGN.config.combat,a=ROOM_CAMPAIGN.config.attrition,pressure=this.starExperiment&&this.starMax===2&&!this.coop&&this.time>=a.from&&u.roomWave&&!u.boss&&u.type!=='mortar'?(this.time>=a.lateAt?a.lateWaveDamage:a.soloTwoStarWaveDamage):1,mortar=u.type==='mortar'&&!u.boss?(this.time>=a.lateAt?a.lateMortarDamage:a.mortarDamage):1;const melee=!u.boss&&(MELEE.has(u.type)||TYPES[u.type]?.stab||TYPES[u.type]?.charge)?(r?.meleeDamageScale??1):1;return pressure*mortar*melee*(r?.damageScale??1)*(u?.type==='bikeRaider'?(r?.bikeDamageScale??1):1)*(u?.boss?(r?.bossDamageScale??1):1)*(this.bossPatternRules(u)?.damageMultiplier??1)*(u?.miniBoss?ROOM_CAMPAIGN.config.miniBoss.damage:1);}
+ enemyDamageScale(u){
+  if(!this.isRoomCampaign()||!u||u.team===0||u.defenseKind==='laserTower')return 1;
+  const r=ROOM_CAMPAIGN.config.combat,a=ROOM_CAMPAIGN.config.attrition,opening=r.openingDamage;
+  const pressure=this.starExperiment&&this.starMax===2&&!this.coop&&this.time>=a.from&&u.roomWave&&!u.boss&&u.type!=='mortar'?(this.time>=a.lateAt?a.lateWaveDamage:a.soloTwoStarWaveDamage):1;
+  const mortar=u.type==='mortar'&&!u.boss?(this.time>=a.lateAt?a.lateMortarDamage:a.mortarDamage):1;
+  const melee=!u.boss&&(MELEE.has(u.type)||TYPES[u.type]?.stab||TYPES[u.type]?.charge)?r.meleeDamageScale:1;
+  const recovery=clamp((this.time-opening.restoreFrom)/(opening.restoreAt-opening.restoreFrom),0,1);
+  const openingScale=!u.boss&&!u.roadCaptain&&opening.types.includes(u.type)?opening.scale+(1-opening.scale)*recovery:1;
+  return pressure*mortar*melee*openingScale*r.damageScale*(u.type==='bikeRaider'?r.bikeDamageScale:1)*
+   (u.boss?r.bossDamageScale:1)*(this.bossPatternRules(u)?.damageMultiplier??1)*(u.miniBoss?ROOM_CAMPAIGN.config.miniBoss.damage:1);
+ }
  enemyHealthScale(u){
   if(!this.isRoomCampaign()||u.team===0)return 1;
   const rules=ROOM_CAMPAIGN.config.combat,opening=rules.openingHp;
