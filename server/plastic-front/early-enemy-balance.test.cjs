@@ -17,13 +17,13 @@ test('early bees and bayonets have bounded living counts and co-op scales the sa
 });
 test('the opening mixes delay wave rifles to three minutes with a low weight',()=>{
  const g=scene();
- g.time=60;a.deepEqual(g.roomPhase().mix,{ant:10,bladeGuard:1});a.equal(g.roomWaveCap(),20);
+ g.time=60;a.deepEqual(g.roomPhase().mix,{ant:10,bladeGuard:1});a.equal(g.roomWaveCap(),15);
  g.time=120;
- const plan=g.roomWavePlan();a.equal(plan.count,4);a.equal(plan.interval,2.8);a.equal(g.roomWaveCap(),26);
+ const plan=g.roomWavePlan();a.equal(plan.count,4);a.equal(plan.interval,3.2);a.equal(g.roomWaveCap(),20);
  a.deepEqual(g.roomPhase().mix,{ant:9,bladeGuard:2});
  a.deepEqual(config.surges.rosters.find(r=>r.at===120).types,['ant','bladeGuard']);
  g.roomBeat=()=>({density:1.3});
- a.deepEqual(g.roomWavePlan().forced,['ant','bladeGuard']);
+ a.deepEqual(g.roomWavePlan().forced,[]);a.equal(g.roomWavePlan().interval,3.2);
  g.time=180;
  a.deepEqual(g.roomPhase().mix,{ant:8,bombBug:.45,acidBeetle:.55,bayonet:1,bladeGuard:2,rifle:1.2});
  a.ok(config.surges.rosters.filter(r=>r.at<360).every(r=>!r.types.includes('machinegun')));

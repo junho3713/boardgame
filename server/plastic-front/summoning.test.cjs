@@ -3,6 +3,7 @@ const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const {FrontGame,TYPES,ROSTER,ABILITIES}=require('./public/engine');
 const {rules,rollBox}=require('./public/summoning');
+const boxSlot=rules.slots+1;
 const {pack,unpack}=require('./public/autoplay');
 const {CoopGame:FrontCoopGame}=require('./public/coop-engine');
 
@@ -21,9 +22,15 @@ function upgrade(g,type){
 }
 test('slot order is committed once and round trips through saves with pending orders',()=>{
  const g=battle();
- for(const type of ['tank','medic','tank','rocket','lucky'])upgrade(g,type);
- assert.deepEqual(g.summonSlots,['rifle','tank','medic','rocket','lucky']);
+ for(const type of ['tank','medic','tank','rocket','lucky','mortar'])upgrade(g,type);
+ assert.deepEqual(g.summonSlots,['rifle','tank','medic','rocket','lucky','mortar']);
  assert.equal(g.nextSummonSlot('sniper'),null);
+ assert.equal(g.capacity(),22);
+ for(const [rank,cap] of [[1,23],[2,24],[3,26],[4,28],[5,31]]){
+  g.abilities.capacity=rank;assert.equal(g.capacity(),cap);
+ }
+ assert.equal(g.summonStatus(6).cost,125);
+ assert.equal(g.summonStatus(boxSlot).cost,220);
  const old=g.cash[0];assert(g.summon(1));assert.equal(g.cash[0],old-TYPES.rifle.cost);
  const restored=unpack(new FrontGame(),pack(g));
  assert.deepEqual(restored.summonSlots,g.summonSlots);
@@ -36,7 +43,7 @@ test('slot order is committed once and round trips through saves with pending or
 });
 test('full slots restrict level-ups, rerolls and restored choices to registered troops and stats',()=>{
  const g=battle();
- for(const type of ['rocket','tank','medic','lucky'])upgrade(g,type);
+ for(const type of ['rocket','tank','medic','lucky','machinegun'])upgrade(g,type);
  assert(g.summonSlotsLocked());g.tech[0].drone=2;
  g.time=90;g.mission.stage=2;g.level=6;g.phase='choice';g.turnChoice=null;
  const allowed=t=>g.summonSlots.includes(t)||t.startsWith('ability_');
@@ -150,7 +157,7 @@ test('a maxed co-op squad does not enter the choice round while its partner can 
 });
 test('normal action gates reject unaffordable or capped orders without charging; vehicle landing pushes enemies',()=>{
  const g=battle();
- assert.equal(g.cash[0],90);
+ assert.equal(g.cash[0],130);
  assert.equal(g.income(0),1.5);
  g.cash[0]=59;assert(!g.summon(1));assert.equal(g.cash[0],59);
  g.cash[0]=1000;g.capacity=()=>2;
@@ -162,19 +169,21 @@ test('normal action gates reject unaffordable or capped orders without charging;
 });
 const rng=(...values)=>()=>values.shift()??0;
 test('mystery box has five probability tiers and offers the full roster',()=>{
- assert.equal(rules.boxCost,180);
+ assert.equal(rules.boxCost,220);
  assert.equal(rules.boxReserve,1);
- assert.deepEqual(rollBox(ROSTER,rng(.249,.999)).units,[{type:'medic'}]);
- assert.equal(rollBox(ROSTER,rng(.249)).refund,50);
- assert.deepEqual(rollBox(ROSTER,rng(.25,.99,.65)).units,[{type:'drone'},{type:'tank'}]);
- assert.equal(rollBox(ROSTER,rng(.649)).units.length,2);
- assert.deepEqual(rollBox(ROSTER,rng(.65,.31)).units,[{type:'guntruck',star:2}]);
- assert.equal(rollBox(ROSTER,rng(.849)).units[0].star,2);
- assert.deepEqual(rollBox(ROSTER,rng(.85,.91)).units,[{type:'drone',star:2,summonEvolved:true}]);
- assert.equal(rollBox(ROSTER,rng(.959)).units[0].summonEvolved,true);
- assert.deepEqual(rollBox(ROSTER,rng(.96,.499)).units,[{type:'tank',goldenSummon:true}]);
- assert.deepEqual(rollBox(ROSTER,rng(.96,.5)).units,[{type:'lucky',goldenSummon:true,summonEvolved:true}]);
- for(const tier of [.25,.65,.85]){
+ assert.deepEqual(rollBox(ROSTER,rng(.299,.999)).units,[{type:'medic'}]);
+ assert.equal(rollBox(ROSTER,rng(.299)).refund,50);
+ assert.deepEqual(rollBox(ROSTER,rng(.30,.99,.65)).units,[{type:'drone'},{type:'tank'}]);
+ assert.equal(rollBox(ROSTER,rng(.739)).units.length,2);
+ assert.deepEqual(rollBox(ROSTER,rng(.74,.31)).units,[{type:'guntruck',star:2}]);
+ assert.equal(rollBox(ROSTER,rng(.909)).units[0].star,2);
+ assert.deepEqual(rollBox(ROSTER,rng(.91,.91),360).units,[{type:'drone',star:2,summonEvolved:true}]);
+ assert.equal(rollBox(ROSTER,rng(.969),360).units[0].summonEvolved,true);
+ assert.deepEqual(rollBox(ROSTER,rng(.97,.499)).units,[{type:'tank',goldenSummon:true}]);
+ assert.deepEqual(rollBox(ROSTER,rng(.97,.5)).units,[{type:'lucky',goldenSummon:true,summonEvolved:true}]);
+ assert.deepEqual(rollBox(ROSTER,rng(.91,.91),359.99).units,[{type:'drone',star:2}]);
+ assert.equal(rollBox(ROSTER,rng(.969),359.99).units[0].summonEvolved,undefined);
+ for(const tier of [.30,.74,.91]){
   const types=ROSTER.map((_,i)=>rollBox(ROSTER,rng(tier,(i+.5)/ROSTER.length)).units[0].type);
   assert.deepEqual(types,ROSTER);
  }
@@ -182,11 +191,11 @@ test('mystery box has five probability tiers and offers the full roster',()=>{
 test('one remaining troop slot reserves one box landing and retains mercenary level through a save',()=>{
  const g=battle();g.capacity=()=>2;g.cash[0]=500;
  upgrade(g,'medic');g.tech[0].rifle=4;
- g.random=rng(.25,.99,.65);
- assert(g.summon(6));assert.equal(g.cash[0],320);
+ g.random=rng(.30,.99,.65);
+ assert(g.summon(boxSlot));assert.equal(g.cash[0],280);
  assert.equal(g.dropPods.length,1);assert.equal(g.dropPods[0].type,'drone');
  assert.equal(g.dropPods[0].mercenaryLevel,3);
- assert.equal(g.summonStatus(6).fever,true);
+ assert.equal(g.summonStatus(boxSlot).fever,true);
  const restored=unpack(battle(),pack(g));
  restored.time=rules.fall;restored.updateDropPods();
  const drone=restored.alive(0).find(u=>u.type==='drone');
@@ -196,30 +205,36 @@ test('one remaining troop slot reserves one box landing and retains mercenary le
  assert(!restored.summonSlots.includes('drone'));
 });
 test('mystery refund is paid only after landing is planned and does not move profile gold',()=>{
- const g=battle();g.cash[0]=179;
+ const g=battle();g.cash[0]=219;
  const profileGold=g.profile.gold;
- g.random=rng(0,.999);assert(!g.summon(6));assert.equal(g.cash[0],179);
+ g.random=rng(0,.999);assert(!g.summon(boxSlot));assert.equal(g.cash[0],219);
  const plan=g.planSummonLandings;g.planSummonLandings=()=>null;
- g.cash[0]=180;assert(!g.summon(6));assert.equal(g.cash[0],180);
- g.planSummonLandings=plan;g.random=rng(0,.999);assert(g.summon(6));
+ g.cash[0]=220;assert(!g.summon(boxSlot));assert.equal(g.cash[0],220);
+ g.planSummonLandings=plan;g.random=rng(0,.999);assert(g.summon(boxSlot));
  assert.equal(g.dropPods[0].type,'medic');
  assert.equal(g.cash[0],50);assert.equal(g.profile.gold,profileGold);
 });
-test('a full squad spends the box price on fever without rolling or queueing a drop',()=>{
+test('a full squad spends 180 gold and cannot reuse tactical fever for 25 seconds',()=>{
  const g=battle();g.capacity=()=>1;g.cash[0]=179;g.time=5;
  g.random=()=>assert.fail('full-squad box must not roll the reward table');
- assert(!g.summon(6));
+ assert(!g.summon(boxSlot));
  assert.equal(g.tacticalFeverRemaining(),0);
- g.cash[0]=180;
- assert(g.summon(6));
- assert.equal(g.cash[0],0);
+ g.cash[0]=360;
+ assert(g.summon(boxSlot));
+ assert.equal(g.cash[0],180);
  assert.equal(g.tacticalFeverRemaining(),10);
+ assert.equal(g.summonStatus(boxSlot).cooldown,25);
+ assert(!g.summon(boxSlot));assert.equal(g.cash[0],180);
+ const restored=unpack(battle(),pack(g));restored.capacity=()=>1;
+ restored.time=15;assert.equal(restored.tacticalFeverRemaining(),0);
+ assert.equal(restored.summonStatus(boxSlot).cooldown,15);assert(!restored.summon(boxSlot));
+ restored.time=30;assert(restored.summon(boxSlot));assert.equal(restored.cash[0],0);
  assert.deepEqual(g.dropPods,[]);
 });
 test('either golden jackpot keeps its identity from order to landing and emits a celebration',()=>{
  for(const [variant,type] of [[.49,'tank'],[.51,'lucky']]){
-  const g=battle();g.cash[0]=180;g.random=rng(.96,variant);
-  assert(g.summon(6));
+  const g=battle();g.cash[0]=220;g.random=rng(.97,variant);
+  assert(g.summon(boxSlot));
   const [pod]=g.dropPods;
   assert.equal(pod.type,type);assert(pod.goldenSummon);assert(pod.mystery);
   g.time=pod.landAt;g.updateDropPods();
@@ -233,9 +248,9 @@ test('an unregistered evolved mercenary lands at the average level with real 2-s
  for(const map of ['livingroom-star','livingroom']){
   const g=landInitial(new FrontGame({},undefined,{map,realtimeSummons:true}));g.cash[0]=500;
   upgrade(g,'medic');g.tech[0].rifle=3;
-  g.random=rng(.85,.99);
-  assert(g.summon(6));assert.equal(g.cash[0],320);
-  g.time=rules.fall;g.updateDropPods();
+  g.time=360;g.random=rng(.91,.99);
+  assert(g.summon(boxSlot));assert.equal(g.cash[0],280);
+  g.time=g.dropPods[0].landAt;g.updateDropPods();
   const u=g.alive(0).find(u=>u.type==='drone');
   assert(u);assert.equal(u.star,2);assert.equal(u.mercenaryLevel,2);
   assert(g.evolutionEnabled(u));assert(!g.evolved.drone);
@@ -247,18 +262,18 @@ test('an unregistered evolved mercenary lands at the average level with real 2-s
 test('co-op mystery boxes reserve and bill only the purchasing squad',()=>{
  const g=landInitial(new FrontCoopGame({}, {realtimeSummons:true}));
  g.capacity=()=>2;
- const box=6;
+ const box=boxSlot;
  g.withOwner(0,()=>{
   g.coopChoosing[0]=false;
-  g.cash[0]=500;g.random=rng(.25,.99,.65);
+  g.cash[0]=500;g.random=rng(.30,.99,.65);
   assert(g.summon(box));assert.equal(g.summonStatus(box).openSquadSlots,0);
  });
  g.withOwner(1,()=>{
   g.phase='choice';g.currentOptions=['rifle'];assert(g.chooseInitialSupport('rifle'));
-  g.coopChoosing[1]=false;g.cash[0]=200;g.tech[0].rifle=4;
-  g.random=rng(.65,.11);assert(g.summon(box));assert.equal(g.cash[0],20);
+  g.coopChoosing[1]=false;g.cash[0]=240;g.tech[0].rifle=4;
+  g.random=rng(.74,.11);assert(g.summon(box));assert.equal(g.cash[0],20);
  });
- assert.equal(g.cash[0],320);
+ assert.equal(g.cash[0],280);
  assert.deepEqual(g.dropPods.filter(p=>p.mystery).map(p=>[p.coopOwner,p.type,p.mercenaryLevel]),[[0,'drone',1],[1,'machinegun',4]]);
  g.time=rules.fall;g.updateDropPods();
  assert(g.owned(0).some(u=>u.type==='drone'));
@@ -276,8 +291,8 @@ test('co-op owns each slot list, purchase, and deployed reinforcement separately
  assert.deepEqual([0,1].map(owner=>g.owned(owner).filter(u=>u.type==='rifle').length),[1,1]);
  g.withOwner(1,()=>upgrade(g,'medic'));
  assert.deepEqual(g.summonSlots,['rifle']);
- g.withOwner(1,()=>{assert.deepEqual(g.summonSlots,['rifle','medic']);assert(g.summon(2));assert.equal(g.cash[0],90-70);});
- assert.equal(g.cash[0],90);g.time=rules.fall;g.updateDropPods();
+ g.withOwner(1,()=>{assert.deepEqual(g.summonSlots,['rifle','medic']);assert(g.summon(2));assert.equal(g.cash[0],130-70);});
+ assert.equal(g.cash[0],130);g.time=rules.fall;g.updateDropPods();
  assert.equal(g.owned(1).filter(u=>u.type==='medic').length,1);
  assert.equal(g.owned(0).filter(u=>u.type==='medic').length,0);
 });

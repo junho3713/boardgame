@@ -20,7 +20,7 @@ function addTwos(g,type,count){
 const destiny=g=>g.pickups.find(p=>p.destinyStar);
 function defeat(g,boss){g.damage(boss,1e9,g.commander(0));assert.equal(boss.hp,0);}
 
-for(const map of ['livingroom-star','livingroom-pixel'])test(map+' drops a reachable star only when the 9-minute rhinoceros beetle mini is defeated',()=>{
+for(const map of ['livingroom-star','livingroom-pixel'])test(map+' drops separate stars from the 9-minute mini and the 14-minute boss',()=>{
  const g=game(map);g.time=539.99;g.roomCampaign.bossCursor=3;
  g.roomEntry=g.northernSpawn=()=>({x:1500,y:6000});
  g.updateRoomBosses();
@@ -38,7 +38,7 @@ for(const map of ['livingroom-star','livingroom-pixel'])test(map+' drops a reach
  g.time=720;g.updateRoomBosses();defeat(g,g.units.find(u=>u.type==='bikeRaider'&&u.boss&&!u.miniBoss));
  g.time=840;g.updateRoomBosses();defeat(g,g.units.find(u=>u.type==='hornet'&&u.boss&&!u.miniBoss));
  assert.equal(g.bossState.rewards,3);
- assert.equal(g.pickups.filter(p=>p.destinyStar).length,1);
+ assert.deepEqual(g.pickups.filter(p=>p.destinyStar).map(p=>p.destinySource),[540,840]);
 });
 
 test('the bedroom defense grants its first star at the 12-minute boss slot even after delay',()=>{
@@ -74,7 +74,7 @@ test('a resumed room past a blocked preview can still earn its first star from t
  defeat(restored,mini);assert.equal(destiny(restored).active,true);
 });
 
-test('a restored consumed star does not replay its preview or reward at the 14-minute boss',()=>{
+test('a restored consumed star stays consumed and the 14-minute boss grants its own star',()=>{
  const g=game();g.time=840;g.roomCampaign.bossCursor=5;
  const c=g.commander(0);g.pickups.push({x:c.x,y:c.y,destinyStar:true,active:false});
  const restored=unpack(game(),pack(g));
@@ -83,8 +83,13 @@ test('a restored consumed star does not replay its preview or reward at the 14-m
  assert.ok(!restored.units.some(u=>u.miniBossMinute===9));
  defeat(restored,restored.units.find(u=>u.type==='hornet'&&u.boss&&!u.miniBoss));
  assert.equal(restored.bossState.rewards,1);
- assert.equal(restored.pickups.filter(p=>p.destinyStar).length,1);
- assert.equal(destiny(restored).active,false);
+ const stars=restored.pickups.filter(p=>p.destinyStar);
+ assert.equal(stars.length,2);
+ assert.equal(stars[0].active,false);
+ assert.equal(stars[1].destinySource,840);
+ assert.equal(stars[1].active,true);
+ restored.dropDestinyStar(restored.units.find(u=>u.type==='hornet'&&u.boss&&!u.miniBoss));
+ assert.equal(restored.pickups.filter(p=>p.destinyStar).length,2);
 });
 
 test('legacy co-op checkpoints retain one living 9-minute boss and award one shared star on defeat',()=>{
@@ -102,13 +107,13 @@ test('legacy co-op checkpoints retain one living 9-minute boss and award one sha
  assert.equal(restored.units.filter(u=>u.miniBossMinute===9).length,1);
 });
 
-test('wave test can rewind to the preview and never attributes its pickup to a later boss',()=>{
+test('wave test can rewind between the two Destiny Star bosses',()=>{
  const g=wave.fork(game());
  g.roomEntry=g.northernSpawn=()=>({x:1500,y:6000});
  wave.seek(g,840);g.phase='playing';g.updateRoomBosses();
  assert.ok(!g.units.some(u=>u.miniBossMinute===9));
  defeat(g,g.units.find(u=>u.type==='hornet'&&u.boss&&!u.miniBoss));
- assert.equal(destiny(g),undefined);
+ assert.equal(destiny(g).destinySource,840);
  wave.seek(g,540);g.phase='playing';g.updateRoomBosses();
  defeat(g,g.units.find(u=>u.type==='rhinoBeetle'&&u.miniBoss));
  assert.equal(destiny(g).active,true);

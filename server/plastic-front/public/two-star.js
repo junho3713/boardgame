@@ -46,15 +46,20 @@ function mergeCopies(type,fromStar){
 }
 p.fuseUnit=function(type,fromStar=1){return fromStar===1?mergeCopies.call(this,type,1):null;};
 p.dropDestinyStar=function(boss){
- if(!this.starExperiment||this.mode!=='pve'||boss.team===0||boss.hp>0||boss.roadCaptain||boss.bossRushPair||boss.finalBoss||this.pickups.some(p=>p.destinyStar))return;
+ if(!this.starExperiment||this.mode!=='pve'||boss.team===0||boss.hp>0||boss.roadCaptain||boss.bossRushPair||boss.finalBoss)return;
+ let destinySource;
  if(this.isRoomCampaign()){
-  const {destinyStarMini,miniBoss}=root.FrontRoomCampaign.config;
-  if(!boss.miniBoss||boss.type!==destinyStarMini.type||boss.miniBossMinute*miniBoss.interval!==destinyStarMini.at)return;
+  const {destinyStarMini,destinyStarBoss,miniBoss,bosses}=root.FrontRoomCampaign.config;
+  const source=boss.miniBoss?destinyStarMini:destinyStarBoss;
+  const scheduledAt=boss.miniBoss?boss.miniBossMinute*miniBoss.interval:bosses[boss.bossScheduleIndex]?.at;
+  if(boss.type!==source.type||scheduledAt!==source.at)return;
+  destinySource=source.at;
+  if(this.pickups.some(p=>p.destinyStar&&(p.destinySource??destinyStarMini.at)===destinySource))return;
  }else if(this.isDesktopDefense()){
   const {firstAt,interval}=this.waveRules().boss,scheduledAt=firstAt+(boss.bossNumber-1)*interval;
-  if(boss.miniBoss||!Number.isFinite(scheduledAt)||scheduledAt<12*60)return;
+  if(boss.miniBoss||!Number.isFinite(scheduledAt)||scheduledAt<12*60||this.pickups.some(p=>p.destinyStar))return;
  }else return;
- const pickup={destinyStar:true,active:true,x:boss.x,y:boss.y};
+ const pickup={destinyStar:true,destinySource,active:true,x:boss.x,y:boss.y};
  this.resolvePosition(pickup,24);this.pickups.push(pickup);
  this.notify('toast','운명의 별이 떨어졌습니다 · 같은 병과 2성 3기를 모아 대장으로 획득');
 };

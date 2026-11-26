@@ -8,9 +8,9 @@ const BALANCE_VERSION=72;
 const PIRATE_REINFORCEMENT={from:360,interval:55,roomFrom:270,roomUntil:720,roomInterval:30,cap:2};
 const OCTOPUS_REINFORCEMENT={from:270,interval:65};
 const ROOM_ANT_HEALTH={scale:.5,restoreFrom:180,restoreAt:240};
-const TACTICAL_FEVER={duration:10,haste:1.4,heal:.3,magnetRadius:480};
-const ROOM_KILL_XP={ant:4,rifle:12,machinegun:14,sniper:14,mortar:14,bombBug:32,acidBeetle:32,pirateCannon:40,bubbleOctopus:42,blizzardMage:38};
-const ROOM_KILL_GOLD={ant:3,bombBug:18,pirateCannon:25,bubbleOctopus:30,blizzardMage:20};
+const TACTICAL_FEVER={duration:10,cooldown:25,haste:1.4,heal:.3,magnetRadius:480};
+const ROOM_KILL_XP={ant:7,rifle:12,machinegun:14,sniper:14,mortar:14,bombBug:32,acidBeetle:32,pirateCannon:40,bubbleOctopus:42,blizzardMage:38};
+const ROOM_KILL_GOLD={ant:5,bombBug:12,pirateCannon:16,bubbleOctopus:18,blizzardMage:14,rhinoBeetle:18};
 const ROOM_BOSS_GOLD={
  mini:{stagBeetle:40,bayonetCaptain:44,bladeGuard:48,rhinoBeetle:52,bikeRaider:56,hornet:60},
  main:{stagBeetle:80,bayonetCaptain:85,bladeGuard:90,rhinoBeetle:95,bikeRaider:100,hornet:110,crimsonAce:115,swordEmpress:120}
@@ -123,10 +123,12 @@ const TYPES={swordEmpress:{name:'사검의 군주',hp:140800,damage:0,rate:100,r
  rhinoBeetle:{name:'장수풍뎅이',icon:'⬟',hp:2200,damage:46,rate:1.8,range:40,speed:60,r:26,cost:0,role:'3분 이후 출현 · 큰 뿔 · 기계류와 동일한 장갑'},
  beetle:{name:'갑충',icon:'●',hp:420,damage:24,rate:1.4,range:30,speed:74.4,r:17,cost:0,role:'느리고 튼튼한 일반 생물'}
 };
-const ENEMY_REPLACED_TYPES={rifle:TYPES.rifle,guntruck:TYPES.guntruck,rocket:TYPES.rocket};
+const ENEMY_REPLACED_TYPES={rifle:TYPES.rifle,guntruck:TYPES.guntruck,rocket:TYPES.rocket,mortar:TYPES.mortar,tank:TYPES.tank};
 TYPES.rifle={...TYPES.rifle,name:'산탄총병',enemyName:TYPES.rifle.name,icon:'✦',hp:160,damage:22,rate:1,range:210,cost:60,role:'근거리 산탄 피해 최대 +65% · 5갈래 · 4발 후 재장전'};
 TYPES.guntruck={...TYPES.guntruck,name:'통신병',enemyName:TYPES.guntruck.name,icon:'⚄',hp:200,damage:38,rate:2.4,range:620,speed:133,r:13,role:'주사위 한 쌍 · 1–2 더블 기관포탑 / 3–4 소이탄 / 5–6 미사일 · 진화 6-6 전술 핵 · 2성 화력 ×3.4·범위 ×1.15 / 3성 화력 ×10.5·범위 ×1.30'};
 TYPES.rocket={...TYPES.rocket,name:'지뢰 설치병',enemyName:TYPES.rocket.name,rate:5,role:'발밑에 원형 지뢰 1개 매설 · 기본 5초 간격 · 지상 적이 밟으면 반경 88 폭발'};
+TYPES.mortar={...TYPES.mortar,cost:125,rate:3.1};
+TYPES.tank={...TYPES.tank,cost:220,damage:120};
 TYPES.drone={name:'지원 드론',icon:'✜',hp:130,damage:0,rate:6,range:260,speed:175,r:12,cost:125,flying:true,flightHeight:54,role:'서치라이트 피해 +25% · 아군 에너지 실드 · 경험치 결정 공중 회수'};
 const ROSTER=['rifle','machinegun','sniper','guntruck','rocket','mortar','tank','medic','lucky','drone'];
 const MELEE=new Set(['bladeGuard','bayonetCaptain','bayonet','honeybee','hornet','ant','soldierAnt','beetle','bruteBeetle','stagBeetle','rhinoBeetle']);
@@ -150,7 +152,7 @@ const PERMANENT={
  critChance:{name:'치명타 확률',icon:'✧',gain:2,unit:'%p',max:10,detail:'기본 확률 5% · 치명타 발생 확률'},
  critDamage:{name:'치명타 피해',icon:'✦',gain:10,unit:'%p',max:10,detail:'치명타 배율 · 기본 150%'},
  gold:{name:'골드 획득량',icon:'◈',gain:10,unit:'%',max:10,detail:'처치·보급품·승리 골드만 증가'},
- capacity:{name:'유닛 수',icon:'▥',gain:1,unit:'기',max:10,detail:'대장 제외 편성 한도 · 기본 20기'},
+ capacity:{name:'유닛 수',icon:'▥',gain:1,unit:'기',max:10,detail:'대장 제외 편성 한도 · 기본 22기'},
  defense:{name:'방어력',icon:'⬟',gain:3,unit:'',max:10,detail:'방어력이 높을수록 받는 피해 감소'},
  turretHp:{name:'포탑 체력 증가',icon:'▣',gain:10,unit:'%',max:10,detail:'기관총·미사일 포탑 최대 체력 · 단계당 +10%'},
  turretDamage:{name:'포탑 데미지 증가',icon:'✹',gain:5,unit:'%',max:10,detail:'기관총·미사일 포탑 공격력 · 단계당 +5%'},
@@ -193,10 +195,10 @@ class FrontGame{
  setMedicSkin(id){if(!['classic','rina'].includes(id)||this.phase!=='ready')return false;this.medicSkinId=id;for(const u of this.units)if(u.type==='medic'&&u.team===0)u.appearance=id;return true;}
  random(){return Math.random();}
  reset(mode=this.mode||'pve'){
-  this.manualAim=null;this.rerollCount=3;this.dropPods=[];this.experienceDrops=[];this.tacticalFeverUntil=[0,0];
+  this.manualAim=null;this.rerollCount=4;this.dropPods=[];this.experienceDrops=[];this.tacticalFeverUntil=[0,0];
   this.roomCampaign=null;this.bossIntro=null;this.roomHealthVersion=ROOM_CAMPAIGN.config.combat.healthVersion;this.roomHQAlarm=null;this.roomFenceVersion=0;this.roomEncounterVersion=0;this.enemyLuckySalvos=[];this.balanceVersion=BALANCE_VERSION;this.mode=['duel','crisis'].includes(mode)?mode:'pve';this.world={id:'backyard',width:1600,height:2800,scale:1};this.viewport=null;this.buildings=[];this.buildSerial=0;this.constructionLine=null;this.finalBattle={spawned:false,killed:false};this.roomEvents=0;
   this.mageShieldQuest=null;this.laserExposureQuest=null;this.roomGuardianVersion=0;this.roomFortificationVersion=0;this.roadCaptainVersion=0;this.guardianSiege=null;this.phase='ready';this.time=0;this.runGold=0;this.salvaged=0;this.nextRecoveryAt=0;this.stageSupplied=[];this.lastEnemyGrowth=-1;this.level=1;this.xp=0;this.kills=0;this.losses=[0,0];this.scouts=0;this.turnChoice=null;this.pendingChoice=null;this.navigationCache=new Map();this.cash=[135,135];this.trucks=[2,2];this.tech=[0,1].map(()=>Object.fromEntries(ROSTER.map(t=>[t,t==='rifle'?1:0])));
-  if(this.isRoomCampaign()&&this.usesSummoning?.())this.cash[0]=90;
+  if(this.isRoomCampaign()&&this.usesSummoning?.())this.cash[0]=130;
   this.summonSlots=this.usesSummoning?.()?[]:['rifle'];
   if(this.usesSummoning?.())this.tech[0].rifle=0;
   this.cardShownCounts={};this.choiceKind='level';this.abilities=Object.fromEntries(Object.keys(ABILITIES).map(k=>[k,0]));this.evolved=Object.fromEntries(ROSTER.map(k=>[k,false]));this.bossState={nextAt:this.waveRules().boss.firstAt,warned:false,spawned:0,killed:0,rewards:0,claimed:0};
@@ -510,12 +512,18 @@ class FrontGame{
   return STAR_COMBAT[rank===3?2:rank===2?1:0];
  }
  tacticalFeverRemaining(owner=this.coopOwner??0){return Math.max(0,(this.tacticalFeverUntil?.[owner]||0)-this.time);}
+ tacticalFeverCooldown(owner=this.coopOwner??0){
+  const until=this.tacticalFeverUntil?.[owner]||0;
+  if(!until)return 0;
+  const remaining=until+TACTICAL_FEVER.cooldown-TACTICAL_FEVER.duration-this.time;
+  return remaining>1e-8?remaining:0;
+ }
  tacticalFeverHaste(u){
   return u.team===0&&u.type!=='medic'&&this.tacticalFeverRemaining(u.coopOwner??this.coopOwner??0)>0?TACTICAL_FEVER.haste:1;
  }
  activateTacticalFever(){
   const c=this.commander(0),owner=this.coopOwner??0;
-  if(c?.type!=='leader'||c.hp<=0)return false;
+  if(c?.type!=='leader'||c.hp<=0||this.tacticalFeverCooldown(owner)>0)return false;
   (this.tacticalFeverUntil??=[0,0])[owner]=this.time+TACTICAL_FEVER.duration;
   for(const u of this.alive(0)){
    if(this.coop&&u.coopOwner!==owner||this.isSupportEntity?.(u))continue;
@@ -617,7 +625,7 @@ class FrontGame{
  recruitmentRemaining(type,team=0){return Math.max(0,this.unitTypeCap(team)-this.unitCount(type,team));}
  abilityBonus(key,level=this.abilities[key]||0){return (ABILITIES[key]?.gain||0)*level;}
  abilityStep(key,level){return this.abilityBonus(key,level)-this.abilityBonus(key,Math.max(0,level-1));}
- capacity(team=0){return 20+(team===0?this.profile.upgrades.capacity+this.abilityBonus('capacity'):0);}
+ capacity(team=0){return team===0?(this.mode==='pve'?22:20)+this.profile.upgrades.capacity+this.abilityBonus('capacity'):20;}
  awardGold(base){const amount=Math.round(base*(1+.1*this.profile.upgrades.gold)*100)/100;this.profile.gold=Math.round(Math.min(1e9,this.profile.gold+amount)*100)/100;this.runGold=Math.round((this.runGold+amount)*100)/100;this.notify('profile');return amount;}
  buyPermanent(key){
   this.lastPermanentAttempt=null;
@@ -796,7 +804,7 @@ class FrontGame{
  }
  addUnit(team,type,x,y,patrol=false){if(team!==0&&type==='sniper'&&this.enemySniperCount()>=2)type='rifle';const u={id:++this.serial,team,type,x,y,spawnedAt:this.time,face:team===0?-Math.PI/2:Math.PI/2,hp:1,maxHp:1,threat:team!==0&&type!=='leader'?this.pressure().tier:0,cooldown:this.random()*.4,deadUntil:0,patrol,homeX:x,homeY:y,walk:0,flash:0,recoil:0};u.hp=u.maxHp=this.stats(u).hp;if(u.type==='tank'||u.type==='crimsonAce'||u.type==='guntruck'||u.type==='lucky')u.moveFace=u.face;if(u.type==='tank'||u.type==='crimsonAce'||u.type==='guntruck')u.turretFace=u.face;this.resolvePosition(u);u.homeX=u.x;u.homeY=u.y;if(type==='lucky'&&team===0){u.nextLuckyAt=this.time+LUCKY.interval;u.luckyInterval=LUCKY.interval;}if(type==='leader'&&team===0){u.appearance=this.commanderId||'sarge';u.flameSkin=this.flameSkinId||'classic';}if(type==='sniper'&&team===0)u.appearance=this.sniperSkinId||'classic';if(type==='medic'&&team===0)u.appearance=this.medicSkinId||'classic';this.units.push(u);return u;}
  spawnPatrol(x,y){this.addUnit(2,'ant',x-24,y,true);this.addUnit(2,'ant',x+24,y+34,true);}
- queueCost(queue,team=0){let total=0;for(const [type,n]of Object.entries(queue)){if(!Number.isInteger(n)||n<0||n>30)return Infinity;if(type==='truck'){if(n>0)return Infinity;}else if(ROSTER.includes(type))total+=TYPES[type].cost*n;else return Infinity;}return total;}
+ queueCost(queue,team=0){let total=0;for(const [type,n]of Object.entries(queue)){if(!Number.isInteger(n)||n<0||n>30)return Infinity;if(type==='truck'){if(n>0)return Infinity;}else if(ROSTER.includes(type))total+=(team===0?TYPES[type]:ENEMY_REPLACED_TYPES[type]||TYPES[type]).cost*n;else return Infinity;}return total;}
  supportValid(queue,team=0){
   if(this.usesSummoning?.()||this.choiceKind==='boss'||this.phase!=='choice'||this.turnChoice||!queue||typeof queue!=='object')return false;
   if(this.mode==='pve'&&this.choiceKind==='level'&&this.pendingChoice?.type!=='support')return false;
@@ -838,8 +846,9 @@ class FrontGame{
  buy(type,team=0){
   if(!['playing','choice','resupply'].includes(this.phase))return false;
   if(type==='truck'||type==='drone'&&team!==0)return false;
-  if(!this.tech[team][type]||!TYPES[type]||this.recruitmentRemaining(type,team)<=0||this.cash[team]<TYPES[type].cost||this.units.filter(u=>u.team===team&&u.hp>0&&!u.patrol&&u.type!=='leader'&&(!this.coop||u.coopOwner===this.coopOwner)).length>=this.capacity(team))return false;
-  this.cash[team]-=(team===0?TYPES[type]:ENEMY_REPLACED_TYPES[type]||TYPES[type]).cost;const leader=this.commander(team);const a=this.serial*2.4;
+  const spec=team===0?TYPES[type]:ENEMY_REPLACED_TYPES[type]||TYPES[type];
+  if(!spec||!this.tech[team][type]||this.recruitmentRemaining(type,team)<=0||this.cash[team]<spec.cost||this.units.filter(u=>u.team===team&&u.hp>0&&!u.patrol&&u.type!=='leader'&&(!this.coop||u.coopOwner===this.coopOwner)).length>=this.capacity(team))return false;
+  this.cash[team]-=spec.cost;const leader=this.commander(team);const a=this.serial*2.4;
   const u=this.addUnit(team,type,leader.x+Math.cos(a)*65,leader.y+Math.sin(a)*65);u.x=clamp(u.x,55,this.bounds().width-55);u.y=clamp(u.y,90,this.bounds().height-90);
   if(team===0){Object.assign(u,this.formationPoint(u,leader));this.resolvePosition(u);}
   this.effects.push({kind:'drop',x:u.x,y:u.y,t:.8,max:.8,team});if(!team)this.notify('toast',`${TYPES[type].name} 합류 · −${TYPES[type].cost} 자원`);this.notify('change');return true;
@@ -893,7 +902,7 @@ class FrontGame{
  }
 
  gainXP(n){this.xp+=n*(1+this.abilityBonus('xpGain')/100);}
- experienceRadius(){return 85+this.abilityBonus('magnet');}
+ experienceRadius(){return 115+this.abilityBonus('magnet');}
  earnDefeatXP(target,amount,boss=false){
   if(this.mode!=='pve'){this.gainXP(amount);return;}
   const owner=this.coop?this.coopOwner:0,drops=this.experienceDrops;
@@ -1134,6 +1143,7 @@ class FrontGame{
     const xp=(room?ROOM_KILL_XP[target.type]:undefined)??originalXP[target.type]??9;
     const award=boss?xp*(target.miniBoss?2.5:4):Math.ceil(xp*(target.ambient?.22:1));
     this.earnDefeatXP(target,award,boss);this.rollCombatDrop(target);this.cash[0]+=Math.ceil(cash*(!boss&&target.ambient?.25:1));
+    if(boss)this.activateExperienceMagnet(target,this.coop?[0,1]:[0]);
    }
    if(target.finalBoss){this.finalBattle.killed=true;if(this.isRoomCampaign()){this.finish('win','finalBoss');return;}}
    if(target.miniBoss)this.notify('toast',target.bossName+' 격파');

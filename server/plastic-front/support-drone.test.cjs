@@ -126,7 +126,7 @@ test('air pickup collects the drone owner’s boss and ordinary crystals and ign
 
 test('ordinary defeat gold still credits immediately while a support drone lives',()=>{
  const g=scene(),c=g.commander(0),drone=spawn(g,0,'drone',180,0),enemy=spawn(g,2,'ant',180,0),cash=g.cash[0];
- g.damage(enemy,10000,c);a.equal(g.cash[0],cash+3);
+ g.damage(enemy,10000,c);a.equal(g.cash[0],cash+5);
  const drop=g.experienceDrops[0];tick(g,drone);
- a.equal(g.collectExperienceDrop(drop),false);a.equal(g.cash[0],cash+3);
+ a.equal(g.collectExperienceDrop(drop),false);a.equal(g.cash[0],cash+5);
 });

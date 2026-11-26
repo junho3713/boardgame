@@ -9,12 +9,12 @@ function scene(time=180,coop=false,map='livingroom-star'){
  g.visible=g.lineClear=()=>true;g.levelCheck=g.gainXP=()=>{};g.random=()=>.99;return g;
 }
 
-test('the two-minute tutorial packet fits the solo and cooperative wave budget and survives a save',()=>{
+test('the 2:30 tutorial packet fits the solo and cooperative wave budget and survives a save',()=>{
  for(const coop of [false,true]){
   const fresh=()=>coop?new CoopGame():new FrontGame({},undefined,{map:'livingroom-star'});
-  const g=scene(119.95,coop);g.random=()=>.44;g.roomCampaign.nextSpawnAt=119.95;g.updateRoomWaves();
+  const g=scene(149.95,coop);g.random=()=>.44;g.roomCampaign.nextSpawnAt=149.95;g.updateRoomWaves();
   a.ok(!g.units.some(u=>u.type==='bombBug'));
-  g.time=120;g.roomCampaign.nextSpawnAt=120;
+  g.time=150;g.roomCampaign.nextSpawnAt=150;
   const beforeIntro=g.roomEnemyCount(),introBudget=g.roomWavePlan().count;
   g.updateRoomWaves();
   const bombs=g.units.filter(u=>u.openingBombBug);
@@ -24,13 +24,13 @@ test('the two-minute tutorial packet fits the solo and cooperative wave budget a
   const ants=g.units.filter(u=>u.roomBombLeaderId===bomb.id);
   a.equal(ants.length,2);a.ok(ants.every(ant=>ant.type==='ant'&&Math.hypot(ant.x-bomb.x,ant.y-bomb.y)<140));
   a.equal(g.roomCanSpawn('bombBug'),false);
-  a.equal(g.roomCampaign.insectNext.bombBug,140);
+  a.equal(g.roomCampaign.insectNext.bombBug,170);
   const debt=g.roomCampaign.waveSpawnDebt;a.equal(debt,0);
 
   const restored=unpack(fresh(),JSON.parse(JSON.stringify(pack(g))));
   const savedBomb=restored.units.find(u=>u.id===bomb.id);
   a.ok(savedBomb.openingBombBug);a.equal(restored.roomCampaign.waveSpawnDebt,debt);
-  a.equal(restored.roomCampaign.insectNext.bombBug,140);
+  a.equal(restored.roomCampaign.insectNext.bombBug,170);
   const ally=restored.addUnit(0,'rifle',savedBomb.x+15,savedBomb.y,true);
   const oldHP=ally.hp,expected=(restored.stats(savedBomb).damage*.2+ally.maxHp*.25)*restored.defenseFactor(ally,{type:'bombBug',team:2});
   restored.damage(savedBomb,1e6,restored.commander(0));
@@ -59,18 +59,18 @@ test('ordinary three-wave rotation resumes after eleven minutes',()=>{
 });
 
 test('active mixed waves spend one packet and fill the rest of the wave with ordinary troops',()=>{
- for(const time of [180,300,420,780,1100]){const g=scene(time);g.roomBeat=()=>({density:1,name:'test'});g.upgradeRoomCampaign=()=>false;g.updateRoomScheduledTanks=()=>{};g.roomCampaign.nextSpawnAt=time;g.updateRoomWaves();const bombs=g.units.filter(u=>u.type==='bombBug');a.equal(bombs.length,1,String(time));a.ok(g.roomEnemyCount()>=10,String(time));a.ok(g.roomEnemyCount()<=g.roomWaveCap());}
+ for(const time of [180,300,420,780,1100]){const g=scene(time);g.roomBeat=()=>({density:1,name:'test'});g.upgradeRoomCampaign=()=>false;g.updateRoomScheduledTanks=()=>{};g.roomCampaign.nextSpawnAt=time;g.updateRoomWaves();const bombs=g.units.filter(u=>u.type==='bombBug');a.equal(bombs.length,1,String(time));a.ok(g.roomEnemyCount()>=(time<300?6:10),String(time));a.ok(g.roomEnemyCount()<=g.roomWaveCap());}
  const early=scene(120);a.ok(early.roomWavePlan().count<10);const rest=scene(350);rest.roomBeat=()=>({density:.3,name:'rest'});a.equal(rest.roomWavePlan().count,1);
 });
 
 test('the field has a shared bomb cap of one before four minutes and two after that in solo and co-op',()=>{
  for(const coop of [false,true]){
-  const g=scene(119.99,coop);
+  const g=scene(149.99,coop);
   a.equal(g.spawnRoomEnemy('bombBug'),null);
-  g.time=120;const first=g.spawnRoomEnemy('bombBug');a.ok(first);
+  g.time=150;const first=g.spawnRoomEnemy('bombBug');a.ok(first);
   first.hp=0;
-  g.time=139.99;a.equal(g.spawnRoomEnemy('bombBug'),null);
-  g.time=140;const second=g.spawnRoomEnemy('bombBug');a.ok(second);
+  g.time=169.99;a.equal(g.spawnRoomEnemy('bombBug'),null);
+  g.time=170;const second=g.spawnRoomEnemy('bombBug');a.ok(second);
   g.time=239.99;a.equal(g.spawnRoomEnemy('bombBug'),null);
   g.time=240;const third=g.spawnRoomEnemy('bombBug');a.ok(third);
   g.time=260;a.equal(g.spawnRoomEnemy('bombBug'),null);
@@ -102,10 +102,10 @@ test('old saves with excess bombs keep the opening bomb and convert the extras i
  }
 });
 test('each packet starts with one bomb and all escorts share its entry',()=>{
- const g=scene(119.99);a.deepEqual(g.spawnRoomAntGroup(),[]);g.time=120;const group=g.spawnRoomAntGroup();a.deepEqual(group.map(u=>u.type),['bombBug','ant','ant','ant']);
+ const g=scene(149.99);a.deepEqual(g.spawnRoomAntGroup(),[]);g.time=150;const group=g.spawnRoomAntGroup();a.deepEqual(group.map(u=>u.type),['bombBug','ant','ant','ant']);
  const b=group[0],view=g.spawnView();for(const ant of group.slice(1)){a.equal(ant.roomBombLeaderId,b.id);a.equal(ant.roomEntrySide,b.roomEntrySide);a.ok(Math.hypot(ant.x-b.x,ant.y-b.y)<125);a.ok(ant.x+TYPES.ant.r<view.left||ant.x-TYPES.ant.r>view.right||ant.y+TYPES.ant.r<view.top||ant.y-TYPES.ant.r>view.bottom);}
  a.deepEqual(g.spawnRoomAntGroup(),[]);
- a.equal(g.roomCampaign.insectNext.bombBug,140);
+ a.equal(g.roomCampaign.insectNext.bombBug,170);
 });
 test('midgame packets use up to six ants and never exceed the wave budget or living-enemy cap',()=>{
  const g=scene(300);a.equal(g.spawnRoomAntGroup(null,5).length,5);
@@ -118,22 +118,22 @@ test('midgame packets use up to six ants and never exceed the wave budget or liv
  const blocked=scene();blocked.roomEntry=()=>null;a.deepEqual(blocked.spawnRoomAntGroup(),[]);a.equal(blocked.units.length,1);
 });
 test('the normal scheduled wave spends existing slots on a bomb and ants without a second spawner',()=>{
- const early=scene(120);early.roomCampaign.nextSpawnAt=120;early.updateRoomWaves();
+ const early=scene(150);early.roomCampaign.nextSpawnAt=150;early.updateRoomWaves();
  const openingTypes=early.units.filter(u=>u.roomWave).map(u=>u.type);
  a.deepEqual(openingTypes.slice(0,3),['bombBug','ant','ant']);
  a.equal(openingTypes.length,4);
- a.equal(early.roomWavePlan().count,5);
+ a.equal(early.roomWavePlan().count,4);
  const g=scene(180);g.upgradeRoomCampaign=()=>false;g.updateRoomScheduledTanks=()=>{};g.roomCampaign.nextSpawnAt=g.time;g.roomCampaign.phaseAt=g.roomPhase().at;
- const before=g.roomCampaign.spawned;g.updateRoomWaves();const wave=g.units.filter(u=>u.roomWave);
+ const before=g.roomCampaign.spawned,budget=g.roomWavePlan().count;g.updateRoomWaves();const wave=g.units.filter(u=>u.roomWave);
  a.deepEqual(wave.slice(0,4).map(u=>u.type),['bombBug','ant','ant','ant']);
  a.ok(wave.slice(4).every(u=>!['bombBug','pirateCannon'].includes(u.type)));
- a.equal(g.roomCampaign.spawned-before,g.roomWavePlan().count);a.equal(g.roomEnemyCount(),g.roomWavePlan().count);
+ a.equal(g.roomCampaign.spawned-before,budget);a.equal(g.roomEnemyCount(),budget);
  const first=wave.length;g.updateRoomWaves();a.equal(g.roomEnemyCount(),first);
  const small=scene(190);small.upgradeRoomCampaign=()=>false;small.updateRoomScheduledTanks=()=>{};small.roomWavePlan=()=>({count:2,interval:5,forced:[],surge:false});small.roomCampaign.nextSpawnAt=190;small.random=()=>.15;small.updateRoomWaves();a.ok(small.units.every(u=>u.type!=='bombBug'));
 });
 test('the new opening caps preserve the composition weights',()=>{
- const g=scene(0);a.deepEqual(g.roomPhase().mix,{ant:1});a.equal(g.roomPhase().cap,10);
- g.time=30;a.deepEqual(g.roomPhase().mix,{ant:1});a.equal(g.roomPhase().cap,14);
+ const g=scene(0);a.deepEqual(g.roomPhase().mix,{ant:1});a.equal(g.roomPhase().cap,8);
+ g.time=30;a.deepEqual(g.roomPhase().mix,{ant:1});a.equal(g.roomPhase().cap,11);
  g.time=60;a.equal(g.roomPhase().mix.ant,10);g.time=120;a.equal(g.roomPhase().mix.ant,9);g.time=180;a.equal(g.roomPhase().mix.ant,8);g.time=480;a.equal(g.roomPhase().mix.ant,8);g.time=600;a.equal(g.roomPhase().mix.ant,6);
 });
 

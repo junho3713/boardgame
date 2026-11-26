@@ -19,10 +19,11 @@
    (spec[3]?'<path fill="var(--summon-accent)" d="'+spec[3]+'"/>':'')+'</svg>';
  }
  function create(panel,activate){
-  const slots=Array.from({length:6},(_,i)=>{
+  const last=root.FrontSummoning.rules.slots;
+  const slots=Array.from({length:last+1},(_,i)=>{
    const node=document.createElement('button');node.type='button';node.className='summon-slot';
    node.innerHTML='<span class="summon-key"></span><span class="summon-level"></span><span class="summon-icon"></span><span class="summon-caption"></span><span class="summon-cost"></span>';
-   node.firstElementChild.textContent=i===5?'F':i+1;
+   node.firstElementChild.textContent=i===last?'F':i+1;
    node.addEventListener('click',()=>activate(i+1));panel.append(node);return node;
   });
   const previous=[];
@@ -31,24 +32,27 @@
    document.documentElement.classList.toggle('summon-active',!panel.hidden);
    if(panel.hidden)return;
    slots.forEach((node,i)=>{
-    const type=i===5?'mystery':game.summonSlots[i],entry=art[type];
-    const status=game.summonStatus(i+1),level=type&&i<5?game.tech[0][type]:0,evolved=!!game.evolved[type];
+    const type=i===last?'mystery':game.summonSlots[i],entry=art[type];
+    const status=game.summonStatus(i+1),level=type&&i<last?game.tech[0][type]:0,evolved=!!game.evolved[type];
     const fever=type==='mystery'&&status.fever;
-    const feverSeconds=type==='mystery'?Math.ceil(game.tacticalFeverRemaining?.()||0):0;
+    const feverSeconds=type==='mystery'?Math.ceil(game.tacticalFeverRemaining?.()||0):0,cooldown=status.cooldown||0;
     const ratio=status.cost?Math.min(1,Math.max(0,game.cash[0]/status.cost)):0;
     node.style.setProperty('--charge',ratio*100+'%');
-    const key=[type,level,evolved,status.reason,status.cost,fever,feverSeconds].join('/');
+    const key=[type,level,evolved,status.reason,status.cost,fever,feverSeconds,cooldown].join('/');
     if(previous[i]===key)return;previous[i]=key;
     node.style.setProperty('--summon-accent',fever?'#816031':entry?.[1]||'#3c5045');
     node.classList.toggle('evolved',evolved);node.classList.toggle('affordable',!!entry&&!status.reason);
     node.classList.toggle('empty',!entry);node.disabled=!entry;
     node.setAttribute('aria-disabled',String(!!status.reason));
-    const name=(i===5?(fever?'전술 피버 상자':'미스터리 장난감 박스'):root.FrontTypes[type]?.name)||'빈 슬롯';
-    node.title=name+' · '+(status.reason||(fever?'공속 +40% · 10초 · 체력 30% 회복 · XP 자석':'소환 가능'));
-    node.setAttribute('aria-label',(i===5?'F 또는 6':i+1)+'번, '+name+(level?', 레벨 '+level:'')+(status.cost?', '+status.cost+' 골드':'')+(status.reason?', '+status.reason:''));
-    node.children[1].textContent=feverSeconds?feverSeconds+'초':level?'Lv.'+level:'';
+    const name=(i===last?(fever?'전술 피버':'미스터리 장난감 박스'):root.FrontTypes[type]?.name)||'빈 슬롯';
+    const detail=fever?'10초간 공속 +40% · 체력 30% 회복 · 480px XP 흡수 · 재사용 25초':
+     i===last?'보병 1기와 50G 환급 30% · 일반 2기 44% · 2성 17% · 진화 2성 6%(6분 전 일반 2성) · 황금 전차·레토나 각 1.5%':'';
+    const timers=[fever&&feverSeconds?`효과 ${feverSeconds}초`:null,cooldown?`재사용 ${cooldown}초`:null].filter(Boolean);
+    node.title=[name,status.cost?status.cost+'G':null,...timers,status.reason,detail].filter(Boolean).join(' · ');
+    node.setAttribute('aria-label',(i===last?'F':(i+1)+'번')+', '+name+(level?', 레벨 '+level:'')+(status.cost?', '+status.cost+' 골드':'')+(status.reason?', '+status.reason:''));
+    node.children[1].textContent=cooldown?'쿨 '+cooldown+'초':level?'Lv.'+level:'';
     node.children[2].innerHTML=icon(type);
-    node.children[3].textContent=fever?'전술 피버':entry?.[0]||'미등록';
+    node.children[3].textContent=fever?(feverSeconds?'피버 발동':'전술 피버'):entry?.[0]||'미등록';
     node.children[4].textContent=status.cost?status.cost+'G':'';
    });
   }};

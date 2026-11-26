@@ -1,17 +1,17 @@
 /* Shared realtime orders for the player and the authoritative co-op battle. */
 (function(root){'use strict';
- const rules={slots:5,skipGold:30,boxCost:180,boxReserve:1,fall:.58,height:200,chuteFade:.3};
+ const rules={slots:6,skipGold:30,boxCost:220,feverCost:180,boxReserve:1,boxEvolvedAt:360,fall:.58,height:200,chuteFade:.3};
  const vehicles=['tank','lucky'];
  const isVehicle=type=>vehicles.includes(type);
  const choose=(pool,random)=>pool[Math.min(pool.length-1,Math.floor(random()*pool.length))];
  const infantry=['rifle','machinegun','sniper','guntruck','rocket','mortar','medic'];
- function rollBox(roster,random){
+ function rollBox(roster,random,time=0){
   const roll=random();
-  if(roll<.25)return {name:'소소한 꽝',units:[{type:choose(infantry,random)}],refund:50};
+  if(roll<.30)return {name:'소소한 꽝',units:[{type:choose(infantry,random)}],refund:50};
   const draw=(flags={})=>({type:choose(roster,random),...flags});
-  if(roll<.65)return {name:'일반 분대',units:[draw(),draw()]};
-  if(roll<.85)return {name:'희귀 직구 · 2성',units:[draw({star:2})]};
-  if(roll<.96)return {name:'대박 용병 · 진화 2성',units:[draw({star:2,summonEvolved:true})]};
+  if(roll<.74)return {name:'일반 분대',units:[draw(),draw()]};
+  if(roll<.91||roll<.97&&time<rules.boxEvolvedAt)return {name:'희귀 직구 · 2성',units:[draw({star:2})]};
+  if(roll<.97)return {name:'대박 용병 · 진화 2성',units:[draw({star:2,summonEvolved:true})]};
   if(random()<.5)return {name:'잭팟 · 황금 전차',units:[{type:'tank',goldenSummon:true}]};
   return {name:'잭팟 · 황금 레토나',units:[{type:'lucky',goldenSummon:true,summonEvolved:true}]};
  }
@@ -103,15 +103,18 @@
   };
   p.summonStatus=function(slot){
    const mystery=slot===rules.slots+1,type=Number.isInteger(slot)&&slot>=1&&slot<=rules.slots?this.summonSlots[slot-1]:null;
-   const cost=mystery?rules.boxCost:TYPES[type]?.cost||0;
-   if(!cost)return {cost,reason:'빈 슬롯'};
-   if(!this.usesSummoning()||this.phase!=='playing'||this.bossIntro?.remaining>0||
-      this.commander(0).hp<=0||this.coopChoosing?.[this.coopOwner])return {cost,reason:'전투 중에 소환할 수 있어요'};
+   if(!mystery&&!type)return {cost:0,reason:'빈 슬롯'};
    const owned=u=>!this.coop||u.coopOwner===this.coopOwner;
    const live=this.units.filter(u=>owned(u)&&u.team===0&&u.hp>0&&!u.patrol&&u.type!=='leader');
    const pending=this.dropPods.filter(owned);
    const openSquadSlots=Math.max(0,this.capacity()-live.length-pending.length);
-   const status={cost,openSquadSlots,fever:mystery&&openSquadSlots<rules.boxReserve};
+   const fever=mystery&&openSquadSlots<rules.boxReserve;
+   const cost=fever?rules.feverCost:mystery?rules.boxCost:TYPES[type].cost;
+   const cooldown=fever?Math.ceil(this.tacticalFeverCooldown()):0;
+   const status={cost,openSquadSlots,fever,cooldown};
+   if(!this.usesSummoning()||this.phase!=='playing'||this.bossIntro?.remaining>0||
+      this.commander(0).hp<=0||this.coopChoosing?.[this.coopOwner])return {...status,reason:'전투 중에 소환할 수 있어요'};
+   if(cooldown)return {...status,reason:`전술 피버 재사용까지 ${cooldown}초`};
    const remainingCap=()=>this.recruitmentRemaining(type);
    if(!mystery&&!openSquadSlots)return {...status,reason:'병력 한도에 도달했어요'};
    if(!mystery&&(this.coop?this.scoped(remainingCap):remainingCap())<=pending.filter(u=>u.type===type).length)return {...status,reason:'이 병과의 충원 한도에 도달했어요'};
@@ -150,7 +153,7 @@
     this.notify('toast','전술 피버 · 10초간 공격속도 +40%');
     this.notify('change');return true;
    }
-   const order=mystery?rollBox(ROSTER,()=>this.random()):{name:TYPES[type].name,units:[{type}]};
+   const order=mystery?rollBox(ROSTER,()=>this.random(),this.time):{name:TYPES[type].name,units:[{type}]};
    // Reserve only available squad space, including orders that are still airborne.
    const units=order.units.slice(0,status.openSquadSlots).map(unit=>
     mystery&&!this.summonSlots.includes(unit.type)?{...unit,mercenaryLevel:this.mercenaryLevel()}:unit);

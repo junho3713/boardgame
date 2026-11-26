@@ -25,7 +25,8 @@ function install({FrontGame:Game,TYPES}){
  p.rollSupply=function(){const value=this.random();let sum=0;for(const [kind,chance]of Object.entries(config.odds)){sum+=chance;if(value<sum)return kind;}return'toyStunner';};
  p.rollCombatDrop=function(enemy){
   if(this.mode!=='pve')return;
-  const roll=this.random(),kind=roll<.006?'magnet':roll<.021?'heal':null;
+  const improved=this.isRoomCampaign()&&!enemy.boss;
+  const roll=this.random(),kind=roll<(improved?.01:.006)?'magnet':roll<(improved?.025:.021)?'heal':null;
   if(!kind)return;
   this.pickups.push({x:enemy.x,y:enemy.y,active:true,combatDrop:kind,owner:this.coop?this.coopOwner:0});
  };
@@ -34,18 +35,22 @@ function install({FrontGame:Game,TYPES}){
   if(pickup.combatDrop==='heal')return this.supplySquad().some(u=>u.hp<u.maxHp);
   return pickup.combatDrop==='magnet'&&this.experienceDrops.some(drop=>drop.owner===pickup.owner&&!drop.pulling);
  };
+ p.activateExperienceMagnet=function(at,owners){
+  for(const drop of this.experienceDrops)if(owners.includes(drop.owner))drop.pulling=true;
+  this.effects.push({kind:'drop',x:at.x,y:at.y,t:.6,max:.6,team:0});
+ };
  p.collectCombatDrop=function(pickup,leader){
   if(!this.canCollectCombatDrop(pickup,leader))return false;
   pickup.active=false;
   if(pickup.combatDrop==='magnet'){
-   for(const drop of this.experienceDrops)if(drop.owner===pickup.owner)drop.pulling=true;
+   this.activateExperienceMagnet(pickup,[pickup.owner]);
    this.notify('toast','전맵 자석 · 전장에 떨어진 경험치 결정을 끌어옵니다');
   }else{
    let healed=0;
    for(const unit of this.supplySquad())if(this.heal(unit,unit.maxHp*.25)>0)healed++;
    this.notify('toast',`회복템 · 분대원 ${healed}기 회복`);
+   this.effects.push({kind:'drop',x:pickup.x,y:pickup.y,t:.6,max:.6,team:0});
   }
-  this.effects.push({kind:'drop',x:pickup.x,y:pickup.y,t:.6,max:.6,team:0});
   this.notify('change');return true;
  };
  p.collectFieldSupply=function(pickup){

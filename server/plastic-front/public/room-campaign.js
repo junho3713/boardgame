@@ -1,5 +1,6 @@
 /* Living-room campaign only. Times are simulation seconds; weights replace enemies, never add a second spawner. */
 (function(root){'use strict';
+const armoredWaveMix={ant:4,bombBug:.45,acidBeetle:.55,bayonet:1.5,stagBeetle:2,sniper:1.5,honeybee:1,bladeGuard:2,rifle:2,butterfly:.6};
 const config={version:116,duration:1200,enemyLuckyInterval:5,recoverySeconds:16,
  combat:{healthVersion:143,hpScale:1.2,openingHp:{until:300,restoreAt:480,scale:.75},openingDamage:{types:['ant','bladeGuard'],scale:.7,restoreFrom:180,restoreAt:300},bossHpScale:1.485,bossHpExtra:{rhinoBeetle:1.3,hornet:1.3,crimsonAce:1.3},damageScale:1.25,meleeDamageScale:1.1,bossDamageScale:1.3,bossArmorPenetration:{hornet:.3,crimsonAce:.4},bikeDamageScale:1.05},
  weakReinforcements:{from:300,lateAt:600,mid:.15,late:.20,types:['ant','rifle']},
@@ -12,15 +13,16 @@ const config={version:116,duration:1200,enemyLuckyInterval:5,recoverySeconds:16,
  bossRush:{from:960,extraBosses:{crimsonAce:{type:'crimsonAce',name:'진홍 전차 에이스',pattern:'rearBarrage'}},pairs:[{at:960,types:['stagBeetle','bayonetCaptain']},{at:1020,types:['bladeGuard','rhinoBeetle']},{at:1080,types:['bikeRaider','hornet']},{at:1140,types:['crimsonAce','stagBeetle']}],troops:{boss:{openCount:3,closedCount:2,openInterval:3.6,closedInterval:4.2,cap:28},between:{openCount:5,closedCount:4,openInterval:3,closedInterval:3.6,cap:36}}},
  midgame:{from:660,bossDensity:.8,quietDensity:.8},
  rhythm:{lateAt:240,cycle:120,crisisAt:60,recoveryAt:90,recoveryEnd:115,quietDensity:.55},
- waveRefill:{from:90,minimumFraction:.22,delay:1.2},
+ waveRefill:{from:270,minimumFraction:.15,delay:2},
+ openingBalanceUntil:300,
  surges:{enabled:true,from:120,extra:4,maxBatch:9,growthFrom:360,growthUntil:600,growthMaxBatch:7,intervalScale:.8,lanes:[-1,0,1],frontWidth:420,rosters:[{at:120,types:['ant','bladeGuard']},{at:240,types:['stagBeetle','rifle','sniper','butterfly']},{at:360,types:['hornet','bikeRaider','machinegun','sniper']},{at:480,types:['rhinoBeetle','bikeRaider','butterfly','machinegun']},{at:600,types:['stagBeetle','machinegun','sniper','butterfly']},{at:720,types:['stagBeetle','hornet','sniper','machinegun']},{at:900,types:['rhinoBeetle','butterfly','machinegun','sniper']},{at:1080,types:['hornet','rhinoBeetle','bikeRaider','sniper']}]},
  layout:{version:6,oldWidth:2400,oldHeight:4200,width:3000,height:8400,extraProps:[{kind:'books',label:'쌓인 책',x:250,y:4321.071428571428,w:240,h:165,color:'#6c8582'},{kind:'plant',label:'화분',x:2760,y:6616.428571428572,w:210,h:210,color:'#a87350'},{kind:'plant',label:'화분',x:350,y:3187.8571428571427,w:210,h:210,color:'#a87350'},{kind:'blocks',label:'나무 블록',x:2280,y:2460.714285714286,w:210,h:150,color:'#b68b58'},{kind:'sofa',label:'시작 구역 소파',x:450,y:6850,w:900,h:420,color:'#727c72'},{kind:'blocks',label:'장난감 부품',x:1730,y:7070,w:210,h:150,color:'#b68b58'},{kind:'blocks',label:'장난감 블록',x:2120,y:7270,w:180,h:130,color:'#b68b58'},{kind:'books',label:'시작 구역 책',x:800,y:7510,w:240,h:165,color:'#6c8582'},{kind:'cushion',label:'소파 쿠션',x:2220,y:6680,w:250,h:170,color:'#bc8e70'},{kind:'plant',label:'거실 화분',x:2650,y:7130,w:210,h:210,color:'#a87350'}]},
  laser:{range:370,opacity:.3,color:'#ec443b'},
  opening:[{type:'ant',x:760,y:2240},{type:'ant',x:860,y:2240}],
  roadCaptains:[['road-soldier','bayonet','길목 장난감 병정',5600,1],['road-blade','bladeGuard','블랙 실드 검병 대장',3600,2],['road-bike','bikeRaider','바이크 돌격대장',2160,2]],
  mageEscort:{from:360,mortars:4,spacing:60,depth:80,interval:60},
- insects:{from:180,bombFrom:120,bombSpawn:{cooldown:20,earlyUntil:240,earlyCap:1,cap:2},intervals:{acidBeetle:14},
-  opening:{at:120,until:140,ants:2,hpScale:.26,allyDamageScale:.2},
+ insects:{from:180,bombFrom:150,bombSpawn:{cooldown:20,earlyUntil:240,earlyCap:1,cap:2},intervals:{acidBeetle:14},
+  opening:{at:150,until:170,ants:2,hpScale:.26,allyDamageScale:.2},
   earlyRotation:['mixed','troops','mixed'],
   midgame:{from:300,until:660,ants:6,rotation:['mixed','ants','mixed','troops','mixed']}
  },
@@ -32,12 +34,14 @@ const config={version:116,duration:1200,enemyLuckyInterval:5,recoverySeconds:16,
   lines:[{id:'first-patrol',y:6200,roster:['ant','ant','bayonet']},{id:'laser-approach',y:4800,roster:['ant','ant','bladeGuard']},{id:'laser-left',x:450,y:4300,roster:['bladeGuard','machinegun']},{id:'laser-right',x:2550,y:4300,roster:['bladeGuard','machinegun']},{id:'approach',y:5600,roster:['bladeGuard','bayonet','rifle']},{id:'laser',y:4200,roster:['bayonet','bladeGuard','machinegun','machinegun','sniper']},{id:'witch',y:2400,roster:['stagBeetle','bladeGuard','machinegun','sniper']},{id:'final',y:1600,roster:['stagBeetle','bladeGuard','bladeGuard','machinegun','machinegun','sniper']}],leash:600,engage:650},
  lessons:{laser:{field:'laserExposureQuest',unlock:'mortar',hits:1},mage:{field:'mageShieldQuest',unlock:'sniper',uses:2}},
  phases:[
- {at:0,name:'초반 워밍업',interval:3.2,batch:2,cap:10,antOnly:true,refill:false,mix:{ant:1}},
- {at:30,name:'물량 시작',interval:2.8,batch:3,cap:14,antOnly:true,mix:{ant:1}},
- {at:60,name:'분대 성장',interval:2.8,batch:3,alternateBatch:4,cap:20,mix:{ant:10,bladeGuard:1}},
- {at:120,name:'폭탄개미 합류',interval:2.8,batch:4,alternateBatch:5,cap:26,mix:{ant:9,bladeGuard:2}},
- {at:180,name:'투석 딱정벌레 합류',interval:4,batch:4,cap:44,mix:{ant:8,bombBug:.45,acidBeetle:.55,bayonet:1,bladeGuard:2,rifle:1.2}},
- {at:240,name:'장갑·저격 혼합',interval:3.84,batch:5,cap:38,mix:{ant:4,bombBug:.45,acidBeetle:.55,bayonet:1.5,stagBeetle:2,sniper:1.5,honeybee:1,bladeGuard:2,rifle:2,butterfly:.6}},
+ {at:0,name:'초반 워밍업',interval:3.8,batch:2,cap:8,antOnly:true,refill:false,mix:{ant:1}},
+ {at:30,name:'물량 시작',interval:3.4,batch:2,alternateBatch:3,cap:11,antOnly:true,mix:{ant:1}},
+ {at:60,name:'분대 성장',interval:3.2,batch:3,cap:15,mix:{ant:10,bladeGuard:1}},
+ {at:120,name:'분대 재정비',interval:3.2,batch:4,cap:20,mix:{ant:9,bladeGuard:2}},
+ {at:180,name:'투석 딱정벌레 합류',interval:4.8,batch:6,alternateBatch:7,cap:30,mix:{ant:8,bombBug:.45,acidBeetle:.55,bayonet:1,bladeGuard:2,rifle:1.2}},
+ {at:240,name:'장갑·저격 혼합',interval:4.8,batch:6,alternateBatch:7,cap:30,mix:armoredWaveMix},
+ {at:270,rhythmAt:240,name:'집중 공세 전 증원',interval:5.2,batch:9,alternateBatch:10,cap:38,mix:armoredWaveMix},
+ {at:300,rhythmAt:240,name:'장갑·저격 혼합',interval:3.84,batch:5,cap:38,mix:armoredWaveMix},
  {at:360,name:'기동·원거리 위기',interval:4,batch:5,cap:41,mix:{blizzardMage:.7,ant:4,bombBug:.45,acidBeetle:.55,bayonet:2,bladeGuard:3,hornet:1,bikeRaider:1,machinegun:2,sniper:1,honeybee:2}},
  {at:480,name:'돌진·치유 약화',interval:4.16,batch:5,cap:41,mix:{blizzardMage:.7,ant:8,bombBug:.45,acidBeetle:.55,bayonet:2,rhinoBeetle:1,butterfly:.8,bikeRaider:1,bladeGuard:1,honeybee:2}},
  {at:600,name:'재편성·혼합 공세',interval:3.9,batch:6,cap:46,mix:{blizzardMage:1.4,ant:6,bombBug:.45,acidBeetle:.55,bayonet:3,bladeGuard:2,honeybee:2,machinegun:1.5,stagBeetle:1,sniper:1,butterfly:.6}},
@@ -49,6 +53,7 @@ const config={version:116,duration:1200,enemyLuckyInterval:5,recoverySeconds:16,
  encirclement:{from:180,intervalScale:1.35,pressureFrom:300,pressureUntil:600,lateIntervalScale:2},
  miniBoss:{from:180,interval:60,until:960,hp:.3,damage:.3,spawnWindow:50},
  destinyStarMini:{at:540,type:'rhinoBeetle'},
+ destinyStarBoss:{at:840,type:'hornet'},
  bosses:[{at:240,type:'stagBeetle',name:'거대 사슴벌레',pattern:null},{at:360,type:'bayonetCaptain',name:'장난감 병정 보스',pattern:'soldierDash'},{at:480,type:'bladeGuard',name:'검병 대장',pattern:'wideSlash'},{at:600,type:'rhinoBeetle',name:'장수풍뎅이 보스',pattern:'rhinoCharge'},{at:720,type:'bikeRaider',name:'오토바이병 대장',pattern:'rapidBike'},{at:840,type:'hornet',name:'장수말벌',pattern:'venomDive'},{at:1200,type:'swordEmpress',name:'사검의 군주',pattern:'fourSwords'}],
  patterns:{soldierDash:{hpScale:1.75,every:2,duration:1,speed:2.2,damageMultiplier:3},wideSlash:{range:220,arc:1.9,windup:.7,damageMultiplier:2},rhinoCharge:{range:420,cooldown:8,windup:1,distance:360,speed:800,halfWidth:30,recovery:3,vulnerable:1.3,damageScale:.6,infantryHpDamage:.5},rapidBike:{cooldown:4.2},venomDive:{cooldown:8,rise:.25,warning:.6,descent:.1,recovery:2,height:145,lowHeight:24,damage:1.6,maxHpDamage:.5,poisonDuration:4,poisonRate:.25,poisonPerSecond:.12},rearBarrage:{cooldown:7,warning:1.5,radius:100,damage:1.35,bossDamageMultiplier:.85,range:650,shots:3,spacing:220}}
 };
@@ -144,7 +149,7 @@ function bombPacketMinimum(time){return time<config.insects.from?3:4;}
 const methods={
  isRoomCampaign(){return this.mode==='pve'&&(this.world?.id==='livingroom'||this.mapId==='livingroom');},
  roomPortalAlive(){return this.bases[1].hp>0;},
- roomPortalDestroyed(){const s=this.roomCampaign;if(s.portalRewarded)return;s.portalRewarded=true;s.portalDestroyedAt=this.time;this.cash[0]+=300;this.awardGold(100);this.bossState.rewards++;this.notify('toast','최전방 포탈 폐쇄 · +300자원 / +100골드 / 강화 보상 · 증원 감소');},
+ roomPortalDestroyed(){const s=this.roomCampaign;if(s.portalRewarded)return;s.portalRewarded=true;s.portalDestroyedAt=this.time;this.cash[0]+=300;this.gainXP(300);this.awardGold(100);this.bossState.rewards++;this.notify('toast','최전방 포탈 폐쇄 · +300 전투 골드 / +300 XP / +100 영구 골드 / 강화 보상 · 증원 감소');},
  roomPhase(){return config.phases.filter(p=>p.at<=this.time).at(-1)||config.phases[0];},
  evolutionPace(){
   const r=config.evolutionPacing,enabled=r.enabled&&this.mode==='pve'&&(this.isRoomCampaign()||this.isDesktopDefense()),after=this.time-r.expectedAt,progress=enabled?clamp((after-r.reliefSeconds)/r.rampSeconds,0,1):0;
@@ -156,7 +161,7 @@ const methods={
   const progress=this.evolutionPace().progress;if(progress<=0)return u;
   const ratio=u.hp/Math.max(1,u.maxHp);u.evolutionWaveHp=1+config.evolutionPacing.eliteHp*progress;u.maxHp=this.stats(u).hp;u.hp=u.maxHp*ratio;return u;
  },
- roomBeat(){const s=this.roomCampaign,p=this.roomPhase();if(this.time<(s?.recoveryUntil||0))return{name:'보스 격파 후 회복',density:.3};if(this.units.some(u=>u.boss&&!u.miniBoss&&!u.roadCaptain&&u.hp>0))return{name:'보스 전투',density:this.time>=config.midgame.from?config.midgame.bossDensity:.5};if(this.time<120)return{name:'초반 적응',density:1};if(this.time>=450&&this.time<510)return{name:'포병 특수 위기',density:.55};if(this.evolutionPace().relief)return{name:'전력 전환 · 돌파',density:config.evolutionPacing.reliefDensity};const r=config.rhythm,cycle=(this.time-p.at)%r.cycle,postBoss=s?.recoveryUntil>0&&this.time<s.recoveryUntil+30;if(this.time>=r.lateAt)return !postBoss&&cycle>=r.recoveryAt&&cycle<r.recoveryEnd?{name:'전진·재정비',density:this.time>=config.midgame.from?config.midgame.quietDensity:r.quietDensity}:cycle>=r.crisisAt&&cycle<r.recoveryAt?{name:'특수 혼합 공세',density:1.3}:{name:'일반 전투',density:1};return !postBoss&&cycle>=90&&cycle<110?{name:'재정비',density:.45}:cycle>=65&&cycle<90?{name:'특수 혼합 공세',density:1.3}:{name:'일반 전투',density:1};},
+ roomBeat(){const s=this.roomCampaign,p=this.roomPhase();if(this.time<(s?.recoveryUntil||0))return{name:'보스 격파 후 회복',density:.3};if(this.units.some(u=>u.boss&&!u.miniBoss&&!u.roadCaptain&&u.hp>0))return{name:'보스 전투',density:this.time>=config.midgame.from?config.midgame.bossDensity:.5};if(this.time<120)return{name:'초반 적응',density:1};if(this.time>=450&&this.time<510)return{name:'포병 특수 위기',density:.55};if(this.evolutionPace().relief)return{name:'전력 전환 · 돌파',density:config.evolutionPacing.reliefDensity};const r=config.rhythm,cycle=(this.time-(p.rhythmAt??p.at))%r.cycle,postBoss=s?.recoveryUntil>0&&this.time<s.recoveryUntil+30;if(this.time>=r.lateAt)return !postBoss&&cycle>=r.recoveryAt&&cycle<r.recoveryEnd?{name:'전진·재정비',density:this.time>=config.midgame.from?config.midgame.quietDensity:r.quietDensity}:cycle>=r.crisisAt&&cycle<r.recoveryAt?{name:'특수 혼합 공세',density:1.3}:{name:'일반 전투',density:1};return !postBoss&&cycle>=90&&cycle<110?{name:'재정비',density:.45}:cycle>=65&&cycle<90?{name:'특수 혼합 공세',density:1.3}:{name:'일반 전투',density:1};},
  roomPressure(){const p=this.roomPhase(),plan=this.roomWavePlan(),tier=Math.floor(this.time/60);return{tier,late:true,hp:1+.12*tier,damage:1.25*(1+.10*tier),defense:3*tier,combatCap:this.roomWaveCap(),soldierCap:this.roomWaveCap(),swarmCap:this.roomWaveCap(),postCap:0,baseCap:0,postBatch:0,baseBatch:0,postInterval:30,baseInterval:30,swarmBatch:plan.count,swarmInterval:plan.interval,assaultBatch:0,assaultInterval:30};},
  upgradeRoomCampaign(){
   if(!this.isRoomCampaign())return false;this.upgradeRoomMidBosses();if(this.roomCampaign&&!this.roomCampaign.endgame153){this.roomCampaign.endgame153=true;for(const u of this.units)if(u.finalBoss){u.finalBoss=false;}this.finalBattle={spawned:false,killed:false};this.roomCampaign.bossCursor=Math.min(this.roomCampaign.bossCursor,config.bosses.length-1);}let updated=this.setupRoomFences();if(this.upgradeRoomEncounters())updated=true;if(this.setupRoomFortifications())updated=true;if(this.roomCampaign?.version===config.version){this.upgradeRoomFinalBossPosition();if(this.refreshRoomEnemyHealth())updated=true;if(this.upgradeRoomBombSpawns())updated=true;return updated;}
@@ -315,14 +320,15 @@ const methods={
  roomWavePlan(){
   const p=this.roomPhase(),beat=this.roomBeat(),s=this.roomCampaign,r=config.surges;
   const batch=p.alternateBatch&&s?.phaseAt===p.at&&(s.alternatingWaves||0)%2?p.alternateBatch:p.batch;
-  const surge=r.enabled&&this.time>=r.from&&beat.density>1;
+  const opening=this.time<config.openingBalanceUntil,phaseStart=p.rhythmAt??p.at;
+  const surge=!opening&&r.enabled&&this.time>=r.from&&beat.density>1;
   const portal=this.roomPortalAlive(),late=this.time>=config.lateWaves.from;
   const boss=this.units.some(u=>u.boss&&!u.miniBoss&&!u.roadCaptain&&u.hp>0),recovering=this.time<(s?.recoveryUntil||0);
   const plan={
-   surge,count:Math.min(6,batch+(beat.density>1&&this.time>=config.rhythm.lateAt?1:0)),
-   interval:p.interval/beat.density*(surge?r.intervalScale:1),
+   surge,count:opening?batch:Math.min(6,batch+(beat.density>1&&this.time>=config.rhythm.lateAt?1:0)),
+   interval:p.interval/(opening&&beat.density>=1?1:beat.density)*(surge?r.intervalScale:1),
    forced:surge?(r.rosters.filter(row=>row.at<=this.time).at(-1)?.types||[]):[],
-   window:p.at+':'+Math.floor((this.time-p.at)/config.rhythm.cycle)
+   window:phaseStart+':'+Math.floor((this.time-phaseStart)/config.rhythm.cycle)
   };
   if(beat.density<.6)plan.count=1;
   else if(surge)plan.count=Math.min(this.time>=r.growthFrom&&this.time<r.growthUntil?r.growthMaxBatch:r.maxBatch,batch+r.extra);
@@ -338,7 +344,7 @@ const methods={
    plan.count=portal?row.openCount:row.closedCount;plan.interval=portal?row.openInterval:row.closedInterval;
    plan.surge=false;plan.forced=[];
   }
-  if(!boss){
+  if(!boss&&!opening){
    const e=config.encirclement;
    if(this.time>=e.from){
     const q=clamp((this.time-e.pressureFrom)/Math.max(1,e.pressureUntil-e.pressureFrom),0,1);
@@ -346,9 +352,7 @@ const methods={
    }
    if(beat.density>=1)plan.interval/=this.evolutionPace().spawnScale;
   }
-  if(this.time>=180&&beat.density>=.6&&!recovering){
-   const extra=this.time<300?6:7;plan.count+=portal?extra:Math.ceil(extra*.65);
-  }
+  if(!opening&&beat.density>=.6&&!recovering)plan.count+=portal?7:5;
   return plan;
  },
  spawnRoomEnemy(type,lane=null,entry=null){
@@ -429,7 +433,7 @@ const methods={
   if(s.phaseAt!==p.at){
    s.phaseAt=p.at;
    s.alternatingWaves=0;
-   if(p.at===30||p.at===60)s.nextSpawnAt=Math.min(s.nextSpawnAt,this.time+plan.interval);
+   if(p.at===30||p.at===60||p.at===270)s.nextSpawnAt=Math.min(s.nextSpawnAt,this.time+plan.interval);
    this.notify('toast',p.name+' · '+beat.name);
   }
   if(plan.surge&&s.surgeWindow!==plan.window){s.surgeWindow=plan.window;this.notify('toast','집중 공세 · 혼합 병력 접근');}

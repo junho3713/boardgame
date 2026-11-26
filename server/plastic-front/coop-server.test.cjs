@@ -1,6 +1,7 @@
 'use strict';
 const {test}=require('node:test'),assert=require('node:assert/strict'),http=require('node:http');
 const {createCoopHandler}=require('./coop-server.cjs');
+const {rules}=require('./public/summoning');
  async function selectOpening(get,token){
   const reply=await get('/state',null,token);
   const {round,game,choosing,phase}=reply.data;
@@ -32,7 +33,17 @@ test('legacy co-op reinforcement settings do not purchase at clock boundaries',a
   g.time=30;handler.step();g.time=60;handler.step();
   assert.equal(g.dropPods.length,0);
   for(const owner of [0,1])g.withOwner(owner,()=>assert.ok(g.cash[0]>=1000));
-  assert.equal((await call('/command',{action:'summon',slot:6},blue.token)).status,200);
+  const summon=slot=>call('/command',{action:'summon',slot},blue.token);
+  assert.equal((await summon(6)).status,409);
+  g.withOwner(1,()=>{g.summonSlots=['rifle','tank','rocket','lucky','medic','mortar'];g.tech[0].mortar=1;});
+  let cash=g.withOwner(1,()=>g.cash[0]);
+  assert.equal((await summon(6)).status,200);
+  assert.equal(g.dropPods[0].type,'mortar');
+  assert.equal(g.withOwner(1,()=>g.cash[0]),cash-125);
+  cash=g.withOwner(1,()=>g.cash[0]);
+  g.random=()=>.8;
+  assert.equal((await summon(rules.slots+1)).status,200);
+  assert.equal(g.withOwner(1,()=>g.cash[0]),cash-220);
   assert.ok(g.dropPods.length>0&&g.dropPods.every(p=>p.coopOwner===1));
  }finally{handler.close();await new Promise(r=>app.close(r));}
 });
@@ -48,7 +59,7 @@ test('two clients authenticate, grow independently without pausing, reconnect an
   const r=handler.rooms.get(a.state.code),g=r.game;
   const seed=(await call('/state',null,b.token)).data;
   assert.equal((await call('/command',{action:'skipLevelUpgrade',round:seed.round},b.token)).status,409);
-  const rolled=await call('/command',{action:'reroll',round:seed.round},b.token);assert.equal(rolled.status,200);assert.equal(rolled.data.game.fields.rerollCount,2);
+  const rolled=await call('/command',{action:'reroll',round:seed.round},b.token);assert.equal(rolled.status,200);assert.equal(rolled.data.game.fields.rerollCount,3);
   assert.equal((await call('/command',{action:'reroll',round:seed.round},b.token)).status,409);
   await selectOpening(call,a.token);handler.step();assert.equal(g.time,0);
   await selectOpening(call,b.token);assert.equal(g.phase,'playing');
@@ -74,7 +85,7 @@ test('two clients authenticate, grow independently without pausing, reconnect an
   assert.equal(applied.data.game.fields.pendingChoice,null);
   assert.equal((await call('/command',{action:'chooseUpgrade',round:nextRound,type:instant},a.token)).status,409);
   g.withOwner(0,()=>{
-   g.summonSlots=['rifle','tank','rocket','lucky','medic'];
+   g.summonSlots=['rifle','tank','rocket','lucky','medic','mortar'];
    for(const type of g.summonSlots)g.tech[0][type]=1;
   });
   for(const owner of [0,1])g.withOwner(owner,()=>{g.xp=g.neededXP();});g.levelCheck();

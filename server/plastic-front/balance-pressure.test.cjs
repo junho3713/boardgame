@@ -44,7 +44,7 @@ test('opening ants ramp out of their extra HP reduction before the general five-
 
 test('midgame and late ordinary wave pressure grows without increasing boss attack or removing opening limits',()=>{
  const g=scene();g.roomBeat=()=>({density:1.3,name:'test'});g.time=420;assert.equal(g.roomWavePlan().count,14);
- const r=config.encirclement,p=config.evolutionPacing,saved={...r};try{g.roomBeat=()=>({density:1,name:'test'});for(const at of [180,300,420,600,780,900]){g.time=at;const now=g.roomWavePlan().interval;r.intervalScale=2.25;const old=g.roomWavePlan().interval;Object.assign(r,saved);if(at<600)assert.ok(now<old);else near(now,old);}}
+ const r=config.encirclement,p=config.evolutionPacing,saved={...r};try{g.roomBeat=()=>({density:1,name:'test'});for(const at of [180,300,420,600,780,900]){g.time=at;const now=g.roomWavePlan().interval;r.intervalScale=2.25;const old=g.roomWavePlan().interval;Object.assign(r,saved);if(at>=300&&at<600)assert.ok(now<old);else near(now,old);}}
  finally{Object.assign(r,saved);}
  g.time=780;near(g.evolutionPace().spawnScale,1.7);assert.equal(g.evolutionPace().capExtra,10);const before=g.addUnit(2,'bladeGuard',1500,6000);g.stampEvolutionWave(before);near(before.evolutionWaveHp,1.45);
  const boss=g.addUnit(2,'crimsonAce',1500,6000);Object.assign(boss,{boss:true,bossPattern:'rearBarrage'});const attack=g.stats(boss).damage,old=p.enabled;p.enabled=false;try{near(g.stats(boss).damage,attack);}finally{p.enabled=old;}
