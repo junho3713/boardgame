@@ -738,6 +738,7 @@ function drawUnitRaw(u,mine=true){
  if(evolved){circle(ctx,0,0,types[u.type].r+9,null,'#e9c76b');}
  if(u.boss){circle(ctx,0,0,48,null,'#e5a251');ctx.setLineDash([5,5]);circle(ctx,0,0,54,null,'#e5a25188');ctx.setLineDash([]);}
  if(game.isSupplyTroop(u)){if(u.type==='titan')ctx.scale(1.2,1.2);ctx.filter=u.type==='spectre'?'saturate(.35) brightness(1.4)':u.type==='titan'?'sepia(.5) hue-rotate(150deg) saturate(1.6) brightness(1.05)':'grayscale(.8) brightness('+(0.7+(window.FrontHitFeedback.pose(u,game.time)?.flash||0)*.7)+') contrast(1.2)';}
+ if(u.droneShield)window.FrontSupportDroneView.shield(ctx,u,game.time,types[u.type].r,'ground');
  ctx.save();
  if(u.goldenSummon){if(u.type==='tank')ctx.scale(1.5,1.5);ctx.filter='sepia(.9) saturate(2.4) brightness(1.3)';}
  const landing=game.time-u.summonLandedAt;
@@ -793,6 +794,7 @@ function drawUnitRaw(u,mine=true){
  ctx.restore();
  ctx.filter='none';if(game.isSupplyTroop(u)){circle(ctx,0,-46,5,'#f2d88f','#33291a');text(ctx,'✦',0,-42,9,'#201e19');}
  if(u.bubbleShield)window.FrontBubbleOctopusView.shieldCast(ctx,u,game.time);
+ if(u.droneShield)window.FrontSupportDroneView.shield(ctx,u,game.time,types[u.type].r);
  if(u.type==='blizzardMage')window.FrontGuardianFX.shield(ctx,u,game.time);
  if(u.flash){ctx.globalAlpha=u.flash/.13*.65;circle(ctx,0,0,types[u.type].r+2,null,'#fff4c8');ctx.globalAlpha=1;}
  ctx.restore();
@@ -1003,6 +1005,7 @@ function draw(dt){
   else if(!worldModels.draw(ctx,'supply',0,-5+bob)){rr(ctx,-23,-31,46,31,4,'#678448');rr(ctx,-25,-34,50,7,2,'#90a467');text(ctx,'+',0,-13,18,'#eedc8c');}
   if(p.rareSupply){circle(ctx,0,0,44+pulse*6,null,'#cf9eff');const g=ctx.createLinearGradient(0,-200,0,0);g.addColorStop(0,'#ba72ff00');g.addColorStop(1,'#ba72ff65');ctx.fillStyle=g;ctx.fillRect(-22,-200,44,185);text(ctx,'✦',0,-66+bob,24,'#e9ceff');text(ctx,'희귀 보급 · '+Math.max(0,Math.ceil((p.expires-game.time)))+'초',0,43,13,'#eddbff');const guards=game.rareSupplyGuards(p).length;text(ctx,guards?'호위 '+guards+'기 · 접근해 획득':'확보 가능',0,61,12,guards?'#ffb0af':'#c6ffd4');}else{text(ctx,'◆',0,-53+bob,14,'#f6dc89');text(ctx,'보급',0,35,11,'#f5e5ab');}ctx.restore();
  }
+ window.FrontSupportDroneView.searchlights(ctx,game,fxVisible);
  window.FrontSummonHud.shadows(ctx,game);
  if(game.moveOrder){const p=game.moveOrder;circle(ctx,p.x,p.y,25,null,'#f7efb7');circle(ctx,p.x,p.y,5,'#f7efb7');text(ctx,'집결 지점',p.x,p.y+44,13,'#fff3bc');}
  for(const u of game.units)if(u.team===0&&u.type==='leader'&&u.hp>0&&u.ultimatePose?.active)battleFx.drawUltimateArea(ctx,u,u===player?game.ultimate:u.ultimatePose,game.time);
@@ -1028,7 +1031,7 @@ function draw(dt){
  window.FrontRosterArt?.field(ctx,game,fxVisible);
  for(const p of game.shots){if(!fxVisible(p))continue;battleFx.drawShot(ctx,p,game.evolutionEnabled(p.source));}
  for(const e of game.effects){
-  if(!fxVisible(e)||window.FrontSummonHud.impact(ctx,e)||window.FrontSupportToyView?.event(ctx,e,game)||battleFx.drawEvent(ctx,e))continue;
+  if(!fxVisible(e)||window.FrontSupportDroneView.event(ctx,e)||window.FrontSummonHud.impact(ctx,e)||window.FrontSupportToyView?.event(ctx,e,game)||battleFx.drawEvent(ctx,e))continue;
   const k=e.t/e.max;ctx.save();ctx.globalAlpha=k;
   if(e.kind==='critical')text(ctx,'치명타!',e.x,e.y-25*(1-k),15,'#ffe28c');
   else circle(ctx,e.x,e.y,45*(1-k),null,'#f5edc2');

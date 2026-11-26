@@ -110,18 +110,26 @@ function infantry(c,u,time,evolved,dice){
  }
 }
 function drone(c,u,time,evolved){
- const angle=u.aimFace??u.face??0,P=bodyProject(angle),hover=(u.visualFlightHeight??54)+Math.sin(time*5+(u.id||0))*1.6;
- ellipse(c,1,2,16,5,'#2137343a');c.translate(0,-hover);if(evolved)c.scale(1.3,1.3);
- const arms=[[-12,-11],[-12,11],[12,-11],[12,11]].map(([f,s],i)=>({p:P(f,s,2),i})).sort((a,b)=>a.p[1]-b.p[1]);
- for(const {p,i} of arms){rod(c,[0,2],p,4,'#344b49');rod(c,[0,1],p,1.4,'#94ad96');
-  ellipse(c,...p,10,4.9,'#344c4b');ellipse(c,p[0],p[1]-.5,8.6,3.7,'#96c6bb8c');
+ const angle=u.aimFace??u.face??0,hover=(u.visualFlightHeight??54)+Math.sin(time*5+(u.id||0))*1.6;
+ const P=(f,s,z=0)=>[Math.cos(angle)*f-Math.sin(angle)*s,(Math.sin(angle)*f+Math.cos(angle)*s)*.78-z];
+ ellipse(c,4,2,evolved?26:22,8,'#182b2339');c.translate(0,-hover);if(evolved)c.scale(1.2,1.2);
+ const arms=[[-23,0],[0,-23],[0,23],[23,0]].map(([f,s],i)=>({p:P(f,s,4),i})).sort((a,b)=>a.p[1]-b.p[1]);
+ for(const {p,i} of arms){
+  rod(c,[0,0],p,8,'#4b5833');rod(c,[0,-2],p,4,'#86905b');
+  ellipse(c,p[0],p[1]+1,10.6,8.2,'#425033');
+  c.beginPath();c.ellipse(p[0],p[1],9.8,7.4,0,0,TAU);c.strokeStyle='#51dcdf';c.lineWidth=1.8;c.stroke();
+  ellipse(c,...p,10.5,7.9,'#7d8958');ellipse(c,...p,8.2,5.9,'#3c4e2b');
   const a=time*42+i*1.7,dx=Math.cos(a)*7.8,dy=Math.sin(a)*3.4;
-  rod(c,[p[0]-dx,p[1]-dy],[p[0]+dx,p[1]+dy],1.7,'#d9ebe0');
-  ball(c,...p,2.2,2,'#fbefd0','#8b9d8a','#374d45');
+  rod(c,[p[0]-dx,p[1]-dy],[p[0]+dx,p[1]+dy],1.9,'#a3ac73');
+  ball(c,...p,2.2,2,'#d1d49c','#8e9969','#3f4a30');
  }
- ball(c,0,1,9.2,7,'#d2dac0','#6b8c79','#354f4d');const lens=P(6.5,0,0);
- ball(c,...lens,4.3,3.7,'#dbffec',evolved?'#38e8c9':'#71becd','#285759');
- for(const s of [-1,1]){const lamp=P(-7,s*9,2);ellipse(c,...lamp,1.5,1.1,s>0?'#f2a879':'#8bf5d2');}
+ ball(c,0,-3,10.2,9,'#c8ca92','#798552','#3b482b');
+ const lens=P(12,0,2);ball(c,...lens,4.1,3.7,'#fffce1','#ffeaa0','#86733f');
+ if(evolved){
+  const core=P(3,0,10),mount=P(-4,0,10),dish=P(-6,0,17);
+  ball(c,...core,4.8,2.8,'#edffff','#65e7f7','#226d79');
+  rod(c,mount,dish,3,'#646f46');ball(c,...dish,7,3.7,'#c1cb88','#7a8854','#3c4a37');
+ }
 }
 function paintModel(c,u,time,evolved){
  if(u.team!==0||!['rifle','guntruck','drone','rocket'].includes(u.type))return false;
@@ -155,14 +163,8 @@ function shotgunMuzzleOffset(angle,hot){
  return {x:7*co+forward*si,y:.8*(7*si-forward*co)-.6*49.4};
 }
 function shot(c,p){
- if(!['shotgunPellet','droneBullet'].includes(p.rosterKind))return false;
+ if(p.rosterKind!=='shotgunPellet')return false;
  const a=p.commandAngle??Math.atan2(p.target.y-p.y,p.target.x-p.x);
- if(p.rosterKind==='droneBullet'){
-  const span=Math.hypot(p.target.x-p.source.x,p.target.y-p.source.y),left=Math.min(1,Math.hypot(p.target.x-p.x,p.target.y-p.y)/Math.max(1,span));
-  const x=p.x,y=p.y-(30*left+12*(1-left)),dx=Math.cos(a)*12,dy=Math.sin(a)*12;
-  c.save();c.globalCompositeOperation='lighter';const g=c.createLinearGradient(x-dx,y-dy,x,y);
-  g.addColorStop(0,'#ffbe5400');g.addColorStop(.5,'#64eddc');g.addColorStop(1,'#d5fff9');rod(c,[x-dx,y-dy],[x,y],2,g);c.restore();return true;
- }
  const left=Math.min(1,Math.max(0,p.travelLeft/Math.max(1,p.target.range))),muzzle=shotgunMuzzleOffset(p.muzzleAngle??a,p.hot);
  const len=p.finisher?35:p.hot?31:27,w=p.finisher?4.8:p.hot?4.2:3.8;
  c.save();c.translate(p.x+muzzle.x*left,p.y-12+(muzzle.y+12)*left);c.rotate(a);
@@ -352,10 +354,6 @@ function field(c,game,visible=()=>true){
  for(const d of game.rosterDice||[]){
   if(!visible(d))continue;const t=Math.max(0,Math.min(1,(game.time-d.startedAt)/Math.max(.001,d.landAt-d.startedAt))),h=8+Math.sin(t*Math.PI)*(d.child?20:48)+(1-t)*17,r=d.child?6.5:10.5;
   ellipse(c,d.x,d.y,5+3*(1-t),2.4,'#443b292f');die(c,d.x,d.y-h,r,d.face,d.golden,Math.sin(Math.PI*t)*.85);
- }
- for(const l of game.rosterLasers||[]){
-  if(!visible(l))continue;const x=l.x,y=l.y-54,tx=l.x+Math.cos(l.angle)*l.range,ty=l.y+Math.sin(l.angle)*l.range-10;
-  c.save();c.globalCompositeOperation='lighter';rod(c,[x,y],[tx,ty],7,'#39ffcd42');rod(c,[x,y],[tx,ty],3.4,'#59f3dbb0');rod(c,[x,y],[tx,ty],1.3,'#d5fff0');ellipse(c,tx,ty,3,2,'#8affd8');c.restore();
  }
 }
 root.FrontRosterArt={model,shot,event,field,results,burning,prepareDiceEffects};

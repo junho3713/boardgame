@@ -127,7 +127,7 @@ const ENEMY_REPLACED_TYPES={rifle:TYPES.rifle,guntruck:TYPES.guntruck,rocket:TYP
 TYPES.rifle={...TYPES.rifle,name:'산탄총병',enemyName:TYPES.rifle.name,icon:'✦',hp:160,damage:22,rate:1,range:210,cost:60,role:'근거리 산탄 피해 최대 +65% · 5갈래 · 4발 후 재장전'};
 TYPES.guntruck={...TYPES.guntruck,name:'통신병',enemyName:TYPES.guntruck.name,icon:'⚄',hp:200,damage:38,rate:2.4,range:620,speed:133,r:13,role:'주사위 한 쌍 · 1–2 더블 기관포탑 / 3–4 소이탄 / 5–6 미사일 · 진화 6-6 전술 핵 · 2성 화력 ×3.4·범위 ×1.15 / 3성 화력 ×10.5·범위 ×1.30'};
 TYPES.rocket={...TYPES.rocket,name:'지뢰 설치병',enemyName:TYPES.rocket.name,rate:5,role:'발밑에 원형 지뢰 1개 매설 · 기본 5초 간격 · 지상 적이 밟으면 반경 88 폭발'};
-TYPES.drone={name:'미니 RC 드론',icon:'✜',hp:130,damage:9,rate:.20,range:330,speed:175,r:12,cost:125,flying:true,flightHeight:54,role:'부대 상공을 선회하며 가장 가까운 적에게 자동 연사'};
+TYPES.drone={name:'지원 드론',icon:'✜',hp:130,damage:0,rate:6,range:260,speed:175,r:12,cost:125,flying:true,flightHeight:54,role:'서치라이트 피해 +25% · 아군 에너지 실드 · 경험치 결정 공중 회수'};
 const ROSTER=['rifle','machinegun','sniper','guntruck','rocket','mortar','tank','medic','lucky','drone'];
 const MELEE=new Set(['bladeGuard','bayonetCaptain','bayonet','honeybee','hornet','ant','soldierAnt','beetle','bruteBeetle','stagBeetle','rhinoBeetle']);
 const MANUAL_AIM_TYPES=new Set(['rifle','machinegun','rocket','tank','guntruck']);
@@ -166,7 +166,7 @@ const EVOLUTIONS={
  machinegun:{name:'보급 기관총병',ability:'magnet',detail:'사격 속도 +33% · 공격력 +20% · 최대 체력 +20%'},
  mortar:{name:'중박격포 분대',ability:'capacity',detail:'공격력 +35% · 폭발 범위 +30 · 사거리 +70 · 낙탄 시간 2초 유지'},
  lucky:{name:'슈퍼 럭키 레토나',ability:'speed',detail:'꽝 40→30% · 스프레이 10→17% · 777 미사일 2→5% · 끈끈이 폭탄/혼란 섬광탄 확률 유지 · 섬광에 맞은 적은 서로 공격'},
- drone:{name:'레이저 쿼드콥터',ability:'xpGain',detail:'기체 확대 · 주기적으로 적을 향해 부채꼴 관통 레이저'},
+ drone:{name:'전술 관제 쿼드콥터',ability:'xpGain',detail:'스캔 피해 +35% · 최대 6기 실드 및 실드 파괴 넉백 · 회수 420px / 경험치 펄스'},
  medic:{name:'야전 의무관',ability:'defense',detail:'1초마다 최대 3명 치료 · 각 대상 치료량 +40% · 치료 범위 +60 · 방어력 +12 · 최대 체력 +20% · 10초마다 최대 5명의 빙결·치유 감소·둔화·중독 정화'}
 };
 const FIELD_CARDS={fieldSupply:{name:'현장 보급',icon:'▣',detail:'생산 자원 +90',kind:'supply'},fieldRepair:{name:'긴급 치료',icon:'✚',detail:'살아 있는 아군 최대 체력의 40% 회복',kind:'repair'},fieldGold:{name:'골드 상자',icon:'◈',detail:'기본 골드 +15 · 골드 획득량 보너스 적용',kind:'gold'}};
@@ -538,7 +538,7 @@ class FrontGame{
   const factor=previous/current;
   if(u.cooldown>0)u.cooldown*=factor;
   if(u.shotgunPumpUntil>this.time&&Number.isFinite(u.shotgunPumpStartedAt))u.shotgunPumpStartedAt=this.time+(u.shotgunPumpStartedAt-this.time)*factor;
-  for(const timer of ['shotgunPumpUntil','shotgunReloadUntil','nextDroneLaserAt']){
+  for(const timer of ['shotgunPumpUntil','shotgunReloadUntil']){
    if(u[timer]>this.time)u[timer]=this.time+(u[timer]-this.time)*factor;
   }
  }
@@ -908,6 +908,14 @@ class FrontGame{
   if(nearest&&(best<26||drops.length>=280)){nearest.amount+=amount;return;}
   drops.push({x:target.x,y:target.y,amount,owner,pulling:false});
  }
+ collectExperienceDrop(drop){
+  if(drop.owner!==(this.coop?this.coopOwner:0))return false;
+  const index=this.experienceDrops.indexOf(drop);
+  if(index<0)return false;
+  this.experienceDrops.splice(index,1);
+  this.gainXP(drop.amount);
+  return true;
+ }
  updateExperienceDrops(dt){
   if(!this.experienceDrops.length)return;
   const leader=this.commander(0);
@@ -1083,7 +1091,10 @@ class FrontGame{
   if(target===this.bases[0]&&amount>0&&source&&source.team!==0){target.recentAttackers=[...(target.recentAttackers||[]).filter(h=>h.source!==source&&this.time-h.at<8),{source,at:this.time}].slice(-64);}
   if(this.isRoomCampaign()&&target===this.bases[1]&&amount>0&&source?.team===0)this.roomHQAlarm={until:this.time+8,x:source.x,y:source.y};
   const previousHp=target.hp;let incoming=amount*this.defenseFactor(target,source);
-  if(target.bubbleShield&&incoming>0)incoming=this.absorbBubbleDamage(target,incoming);
+  const scan=source?.team===0&&target.team!==0?this.supportScanAt(target):null;
+  if(scan)incoming*=1+scan.vulnerability;
+  if(target.bubbleShield&&incoming>0)incoming=this.absorbBubbleDamage(target,incoming,scan?2:1);
+  if(target.droneShield&&incoming>0)incoming=this.absorbDroneShield(target,incoming);
   target.hp=Math.max(0,target.hp-incoming);
   if(this.isSwordCommander(source)&&source.hp>0&&target.team!==source.team&&target!==source)this.heal(source,Math.max(0,previousHp-target.hp)*.1);
   const dealt=previousHp-target.hp,heavy=['tank','crimsonAce','rocket','mortar','artillery','rhinoBeetle','pirateCannon'].includes(source?.type)||dealt>target.maxHp*.16;
@@ -1179,7 +1190,7 @@ class FrontGame{
  impact(p){
   if(p.team!==0){const screen=this.screeningUnit(p.source,p.target);if(screen)p.target=screen;}
   const center={x:p.target.x,y:p.target.y},type=p.source.type;
-  const hit=(u,falloff=1)=>this.damage(u,p.damage*multiplier(type,combatKind(u))*falloff,p.source);
+  const hit=(u,falloff=1)=>this.damage(u,p.damage*multiplier(type,combatKind(u))*falloff*this.droneSniperCriticalScale(p,u),p.source);
   hit(p.target);if(p.critical)this.effects.push({kind:'critical',x:center.x,y:center.y-25,t:.7,max:.7,team:p.team});
   if(p.splash){
    for(const u of [...this.units,...this.radioTurretTargets(),...this.structures,...this.defenses,...this.buildings,...this.bases]){
@@ -2101,6 +2112,7 @@ class FrontGame{
    if(u.type==='lucky'){if(u.team===0)this.updateLuckyUnit(u);else if(this.isRoomCampaign())this.updateEnemyLucky(u);}
    this.syncTacticalAttackTiming(u);
    u.flash=Math.max(0,u.flash-dt);u.recoil=Math.max(0,(u.recoil||0)-dt);const s=this.stats(u);u.cooldown-=dt;if(this.time<(u.toyStunUntil||0))continue;
+   if(u.team===0&&u.type==='drone'){this.updateSupportDrone(u,player,dt,s,combatCandidates);continue;}
    if(u.type==='bubbleOctopus'){this.updateBubbleOctopus(u,dt,s);continue;}
    if(u.type==='pirateCannon'){this.updatePirateCannon(u,dt,s);continue;}
    if(u.type==='blizzardMage'){this.updateBlizzard(u,dt);continue;}
@@ -2130,8 +2142,7 @@ class FrontGame{
     }else if(manualAngle!==null){
      if(!commandEngaged.has(player))commandEngaged.set(player,this.commandEnemyInView(player,combatCandidates));
      if(u.type==='rocket'||commandEngaged.get(player))target=this.commandFirePoint(u,s.range,manualAngle);
-    }else if(u.team===0&&u.type==='drone')target=this.droneTarget(u,s.range);
-    else if(u.team===0)target=this.selectCombatTarget(u,combatCandidates,combatThreats,s);else for(const a of hostileTargets){if(!this.canTarget(u,a))continue;const d=this.targetDistance(u,a),score=d/Math.max(.25,multiplier(u.type,combatKind(a)))+(a.radioTurret?18:0);if(d<s.range&&d>=(s.minRange||0)&&score<nearest){target=a;nearest=score;}}
+    }else if(u.team===0)target=this.selectCombatTarget(u,combatCandidates,combatThreats,s);else for(const a of hostileTargets){if(!this.canTarget(u,a))continue;const d=this.targetDistance(u,a),score=d/Math.max(.25,multiplier(u.type,combatKind(a)))+(a.radioTurret?18:0);if(d<s.range&&d>=(s.minRange||0)&&score<nearest){target=a;nearest=score;}}
     // A tank can finish tracking a target that just crossed the edge of its firing range.
     if(u.team!==0&&u.type==='tank'){
      const locked=hostileTargets.find(a=>a.id===u.tankAimTargetId);
@@ -2150,8 +2161,7 @@ class FrontGame{
     else if(target&&!channeling){u.face=Math.atan2(target.y-u.y,target.x-u.x);u.aimFace=u.face;let aligned=true;if(hasTurret){const delta=Math.atan2(Math.sin(u.aimFace-(u.turretFace??u.aimFace)),Math.cos(u.aimFace-(u.turretFace??u.aimFace)));u.turretFace=(u.turretFace??u.aimFace)+clamp(delta,-ROOM_RULES.turretSpeed*dt,ROOM_RULES.turretSpeed*dt);aligned=Math.abs(delta)<.13;if(u.team!==0&&u.type==='tank'&&u.cooldown<=0&&this.time-(u.tankReadyAimAt??this.time)>=.8){u.turretFace=u.aimFace;aligned=true;}}if(u.cooldown<=0&&aligned&&(u.type!=='sniper'||u.sniperAim&&this.time>=u.sniperAim.fireAt)){if(u.type==='sniper')u.sniperAim=null;const attack=this.attackRoll(u);u.cooldown=this.isFlameCommander(u)?Math.max(u.cooldown,-dt)+s.rate:s.rate;if(this.isSwordCommander(u)){this.beginSwordAttack(u,target,attack);}else if(this.isFlameCommander(u)){this.flamePulse(u,u.face);}else if(u.type==='mortar'){this.launchMortar(u,target,attack);u.recoil=.25;}else if(MELEE.has(u.type)){if(this.isFlying(u)){u.flightStrikeUntil=this.time+.22;u.recoil=.18;this.effects.push({kind:'sting',x:u.x,y:u.y,tx:target.x,ty:target.y,flightHeight:s.flightHeight,t:.2,max:.2,team:u.team});}this.damage(target,attack.damage,u);}else{this.fireUnitProjectiles(u,target,attack,s);u.recoil=(u.type==='tank'||u.type==='crimsonAce')?.24:u.type==='rocket'?.2:.16;if(u.team!==0||u.type!=='rocket'&&u.type!=='guntruck'){this.notify('fire',u);this.effects.push({kind:'muzzle',x:u.x,y:u.y,origin:true,t:.12,max:.12,team:u.team,weapon:u.appearance==='shino'?'shino':u.type,boss:!!u.boss,...(u.type==='sniper'&&['kayla','hayeon'].includes(u.appearance)?{appearance:u.appearance}:{}),angle:u.face});}if(u.type==='sniper')this.effects.push({kind:'tracer',x:u.x,y:u.y,tx:target.x,ty:target.y,t:.12,max:.12,team:u.team});}}}
    }
    if(TYPES[u.type]?.stab&&(u.bayonetAttack||this.time<(u.bayonetRecoverUntil||0)))continue;
-   if(u.team===0&&u.type==='drone'){const orbit=this.dronePatrolPoint(u,player);this.move(u,orbit.x-u.x,orbit.y-u.y,dt,s.speed);}
-   else if(u.team===0&&u.aiEvade&&u.aiEvade.until>this.time){const goal=u.aiEvade;if(dist(u,goal)>3)this.move(u,goal.x-u.x,goal.y-u.y,dt,s.speed);}
+   if(u.team===0&&u.aiEvade&&u.aiEvade.until>this.time){const goal=u.aiEvade;if(dist(u,goal)>3)this.move(u,goal.x-u.x,goal.y-u.y,dt,s.speed);}
    else if(u.team===0&&this.moveOrder){const goal=this.squadMovePoint(u,this.medicTreatmentPoint(u,this.formationPoint(u,this.squadMoveAnchor(u)),s));if(dist(u,goal)>8)this.navigate(u,goal.x,goal.y,dt,u.type==='leader'?this.commanderMoveSpeed(goal.x-u.x,goal.y-u.y):this.squadFollowSpeed(u,u.regroup?.goal||goal,s.speed));}
    else if(u.type==='leader'&&u.team===0){if(this.input.x||this.input.y)this.move(u,this.input.x*1000,this.input.y*1000,dt,this.commanderMoveSpeed(this.input.x,this.input.y));}
    else if(u.type==='leader'){
@@ -2172,6 +2182,6 @@ class FrontGame{
  finish(result,reason){if(this.phase==='ended')return;this.phase='ended';this.result=result;if(result==='win')this.awardGold(80);this.notify('end',{result,reason});}
 }
 Object.assign(FrontGame.prototype,ROOM_CAMPAIGN.methods);
-if(typeof module!=='undefined'&&module.exports){require('./evolution-combat.js')({FrontGame,TYPES,LUCKY,multiplier,EVOLUTIONS});require('./block-mines.js')({FrontGame,TYPES,multiplier});require('./roster-combat.js')({FrontGame,TYPES,multiplier});require('./lucky-flash.js')({FrontGame,TYPES});require('./pirate-cannon.js')({FrontGame});require('./bubble-octopus.js')({FrontGame});require('./field-supplies.js')({FrontGame,TYPES});require('./support-toys.js')({FrontGame,TYPES});require('./evolution-links.js')({FrontGame});require('./summoning.js')({FrontGame,TYPES,ROSTER});}
+if(typeof module!=='undefined'&&module.exports){require('./evolution-combat.js')({FrontGame,TYPES,LUCKY,multiplier,EVOLUTIONS});require('./block-mines.js')({FrontGame,TYPES,multiplier});require('./roster-combat.js')({FrontGame,TYPES,multiplier});require('./lucky-flash.js')({FrontGame,TYPES});require('./pirate-cannon.js')({FrontGame});require('./bubble-octopus.js')({FrontGame});require('./support-drone.js')({FrontGame});require('./field-supplies.js')({FrontGame,TYPES});require('./support-toys.js')({FrontGame,TYPES});require('./evolution-links.js')({FrontGame});require('./summoning.js')({FrontGame,TYPES,ROSTER});}
 root.FrontRoomCampaign=ROOM_CAMPAIGN;root.FrontButterfly=BUTTERFLY;root.FrontMedicCleanse=MEDIC_CLEANSE;root.FrontMedicHealing=MEDIC_HEALING;root.FrontGuardians=GUARDIANS;root.FrontBike=BIKE;root.FrontLucky=LUCKY;root.FrontDesktopItems={art:DESKTOP_ITEM_ART,sprite:desktopItemSprite,bodies:desktopItemBodies,floor:desktopItemFloor};root.FrontUnitTypeCap=UNIT_TYPE_CAP;root.FrontFlame=FLAME;root.FrontSword=SWORD;root.FrontWaveConfigs=WAVE_CONFIGS;root.FrontDesktopNotebook={art:DESKTOP_NOTEBOOK_ART,rect:desktopNotebookRect,bodies:desktopNotebookBodies};root.FrontDesktopProps={art:DESKTOP_PROP_ART,sprite:desktopPropSprite,bodies:desktopPropBodies};root.FrontDesktopCover={art:DESKTOP_COVER_ART,style:desktopCoverStyle,rect:desktopCoverRect};root.FrontRemoteShape=ROOM_REMOTE_SHAPE;root.FrontDesktopRules=DESKTOP_RULES;root.FrontFlyingWaves=FLYING_WAVES;root.FrontUltimate=ULTIMATE;root.FrontBuildings=BUILDINGS;root.FrontRoomRules=ROOM_RULES;root.FrontAbilities=ABILITIES;root.FrontEvolutions=EVOLUTIONS;root.FrontFieldCards=FIELD_CARDS;root.FrontProfile=FrontProfile;root.FrontPermanent=PERMANENT;root.FrontGame=FrontGame;root.FrontTypes=TYPES;root.FrontMultiplier=multiplier;root.FrontRoster=ROSTER;if(typeof module!=='undefined')module.exports={SWORD,BUTTERFLY,MEDIC_CLEANSE,MEDIC_HEALING,GUARDIANS,BIKE,LUCKY,DESKTOP_ITEM_ART,desktopItemSprite,desktopItemBodies,desktopItemFloor,UNIT_TYPE_CAP,FLAME,DESKTOP_NOTEBOOK_ART,desktopNotebookRect,desktopNotebookBodies,DESKTOP_PROP_ART,desktopPropSprite,desktopPropBodies,WAVE_CONFIGS,DESKTOP_COVER_ART,desktopCoverStyle,desktopCoverRect,ROOM_REMOTE_SHAPE,DESKTOP_RULES,FLYING_WAVES,ULTIMATE,BUILDINGS,ROOM_RULES,FrontGame,FrontProfile,PERMANENT,ABILITIES,EVOLUTIONS,FIELD_CARDS,TYPES,multiplier,ROSTER};
 })(typeof window==='undefined'?globalThis:window);

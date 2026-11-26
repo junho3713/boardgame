@@ -13,16 +13,16 @@ function mineImpact(g,u,t){
  g.impact(b);g.blockMines=g.blockMines.filter(mine=>mine!==m);return b;
 }
 
-test('seventeen distinct links include the three radio partnerships',()=>{
+test('sixteen distinct links include the three radio partnerships',()=>{
  const g=scene();for(const t of ROSTER)actor(g,t);
  const links=g.evolutionLinks();
  a.deepEqual(links.filter(l=>l.types.includes('guntruck')).map(l=>l.types.find(t=>t!=='guntruck')).sort(),['lucky','mortar','sniper']);
- a.equal(links.length,17);
- a.equal(links.filter(l=>l.active).length,17);
- a.equal(new Set(links.map(l=>[...l.types].sort().join('/'))).size,17);
+ a.equal(links.length,16);
+ a.equal(links.filter(l=>l.active).length,16);
+ a.equal(new Set(links.map(l=>[...l.types].sort().join('/'))).size,16);
  for(const t of ROSTER){
   const n=links.filter(l=>l.types.includes(t)).length;
-  a.ok(n>=3&&n<=5,t+': '+n);
+  a.ok(n>=(t==='drone'?2:3)&&n<=5,t+': '+n);
  }
  a.ok(links.every(l=>l.detail.length>10));
 });
@@ -129,30 +129,27 @@ test('mortar landings gain both radius and damage only in their own active radio
  zone.source=radio;near(land(),base*1.15);a.ok(edge.hp<edge.maxHp);
  zone.x+=100;near(land(),base);zone.x=shell.x;g.time=3.5;near(land(),base);
 });
-test('drone laser prioritizes the observed target, increases damage and honors mark expiration',()=>{
- const g=scene(),drone=actor(g,'drone'),s=actor(g,'sniper'),marked=enemy(g),nearest=enemy(g,'ant',1090);
- a.equal(g.droneTarget(drone,500),nearest);
- g.damage(marked,1,s);
- a.equal(g.droneTarget(drone,500),nearest);
- a.equal(g.droneLaserTarget(drone,500,nearest),marked);
- near(g.droneLaserDamage(drone,marked,100),120);
- near(g.droneLaserDamage(drone,nearest,100),100);
- g.time=4;
- a.equal(g.droneTarget(drone,500),nearest);
- near(g.droneLaserDamage(drone,marked,100),100);
+test('a support drone scan overrides the sniper priority and boosts only critical hits on the scanned target',()=>{
+ const g=scene(),drone=actor(g,'drone'),s=actor(g,'sniper'),lit=enemy(g,'ant',1190),tough=enemy(g,'ant',1430);
+ tough.hp=tough.maxHp=2e6;
+ a.equal(g.selectCombatTarget(s,[lit,tough]),tough);
+ drone.droneScan={x:lit.x,y:lit.y,targetId:lit.id,radius:76,vulnerability:.25,until:3.5};
+ a.equal(g.selectCombatTarget(s,[lit,tough]),lit);
+ near(g.droneSniperCriticalScale({source:s,critical:true},lit),1.2);
+ near(g.droneSniperCriticalScale({source:s,critical:false},lit),1);
+ near(g.droneSniperCriticalScale({source:s,critical:true},tough),1);
+ g.time=3.5;
+ a.equal(g.selectCombatTarget(s,[lit,tough]),tough);
+ near(g.droneSniperCriticalScale({source:s,critical:true},lit),1);
 });
-test('drone and Retona shorten their independent cycle timers while the linked partner qualifies',()=>{
- const g=scene(),drone=actor(g,'drone'),lucky=actor(g,'lucky'),mg=actor(g,'machinegun');
+test('Retona roulette shortens by half a second while an evolved support drone lives',()=>{
+ const g=scene(),drone=actor(g,'drone'),lucky=actor(g,'lucky');
  lucky.star=2;
- near(g.droneLaserPeriod(drone),6);
  near(g.luckyRouletteInterval(lucky),3.5);
  g.updateLuckyUnit(lucky);
  const interval=3.5/1.15;
  a.deepEqual(lucky.luckyChannels.map(slot=>slot.next),[interval,interval,interval]);
- mg.overheatUntil=2;
- near(g.droneLaserPeriod(drone),4.8);
  g.time=interval;
- near(g.droneLaserPeriod(drone),6);
  g.updateLuckyUnit(lucky);
  a.deepEqual(lucky.luckyChannels.map(slot=>slot.roll.startedAt),[interval,interval,interval]);
  a.deepEqual(lucky.luckyChannels.map(slot=>slot.next),[interval*2,interval*2,interval*2]);

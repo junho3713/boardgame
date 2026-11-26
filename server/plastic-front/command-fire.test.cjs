@@ -44,7 +44,8 @@ test('only the five manually controlled troop types use the held angle',()=>{
  troops.find(u=>u.type==='tank').turretFace=angle;
  const hp=wounded.hp;for(let i=0;i<40;i++)g.update(.025);
  for(const type of types.slice(0,5))assert.ok(Math.abs(received.get(type)?.angle-angle)<1e-12,type);
- for(const type of ['leader','drone','lucky','mortar'])assert.equal(received.get(type),near,type);
+ for(const type of ['leader','lucky','mortar'])assert.equal(received.get(type),near,type);
+ assert.equal(received.has('drone'),false);assert.ok(troops.find(u=>u.type==='drone').droneScan);
  assert.equal(received.get('sniper'),heavy);assert.ok(wounded.hp>hp);assert.equal(received.has(medic.type),false);
 });
 

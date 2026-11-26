@@ -127,13 +127,14 @@ test('ordinary rolls retain fair double faces and the evolved 25 percent chance 
   a.deepEqual(hits,Array(6).fill(evolved?15:10));
  }
 });
-test('an evolved drone circles its commander, shoots the nearest visible enemy and sweeps a piercing laser on a cooldown',()=>{
- const g=scene(),u=actor(g,'drone'),c=g.addUnit(0,'leader',1000,6100),behind=enemy(g,970,6000),a1=enemy(g,1120),a2=enemy(g,1220),off=enemy(g,1130,6150);
- const firstPoint=g.dronePatrolPoint(u,c);g.time=.3;a.notDeepEqual(g.dronePatrolPoint(u,c),firstPoint);
- a.equal(g.droneTarget(u,330),behind);behind.hp=0;a.equal(g.droneTarget(u,330),a1);
- const b=g.fireUnitProjectiles(u,a1,{damage:10},g.stats(u))[0];a.equal(b.rosterKind,'droneBullet');a.equal(b.target,a1);
- const until=g.rosterLasers[0].until;g.time=until;g.updateEvolutionCombat();a.ok(a1.hp<a1.maxHp&&a2.hp<a2.maxHp);a.equal(off.hp,off.maxHp);
- g.fireUnitProjectiles(u,a1,{damage:10},g.stats(u));a.equal(g.rosterLasers.length,0);g.time=u.nextDroneLaserAt;g.fireUnitProjectiles(u,a1,{damage:10},g.stats(u));a.equal(g.rosterLasers.length,1);
+test('a support drone flies during the battle update and never launches a projectile',()=>{
+ const g=scene(),u=actor(g,'drone'),c=g.addUnit(0,'leader',1000,6100),foe=enemy(g,1290);
+ c.cooldown=100;
+ const x=u.x,y=u.y;
+ g.updateBattleUnits(.05,g.commander(1));
+ a.ok(u.x!==x||u.y!==y);a.equal(g.isFlying(u),true);
+ a.deepEqual(g.fireUnitProjectiles(u,foe,{damage:10},g.stats(u)),[]);
+ a.equal(g.shots.length,0);a.equal(foe.hp,foe.maxHp);
 });
 test('siege explosions extend forward at .15/.30 seconds and never hit an enemy twice',()=>{
  const g=scene(),u=actor(g,'tank'),first=enemy(g,1200),overlap=enemy(g,1280),second=enemy(g,1305),third=enemy(g,1430),hits=[];g.damage=(t,d)=>hits.push([t.id,d]);
@@ -190,8 +191,9 @@ test('saved delayed attacks and siege groups restore exact source references, hi
  const g=scene(true),u=actor(g,'guntruck',1000,6000,1),t=enemy(g);g.diceFace=()=>5;g.fireUnitProjectiles(u,t,{damage:100},g.stats(u));const tank=actor(g,'tank',1000,6200,1),q=enemy(g,1200,6200);g.impact(g.fireUnitProjectiles(tank,q,{damage:100},g.stats(tank))[0]);
  const restored=unpack(scene(true),pack(g));const pending=restored.radioStrikes[0];a.equal(pending.source,restored.units.find(v=>v.id===u.id));a.equal(pending.source.coopOwner,1);a.ok(restored.evolutionBlasts[0].hitIds.includes(q.id));restored.time=.3;restored.updateEvolutionCombat();a.equal(restored.evolutionAttacks.length,0);
  const old=pack(scene());
- for(const key of ['evolutionAttacks','evolutionBlasts','radioStrikes','radioFireZones','rosterLasers'])delete old.fields[key];
- restored.rosterLasers=[{source:u}];unpack(restored,old);
- for(const key of ['evolutionAttacks','evolutionBlasts','radioStrikes','radioFireZones','rosterLasers'])a.deepEqual(restored[key],[]);
+ for(const key of ['evolutionAttacks','evolutionBlasts','radioStrikes','radioFireZones'])delete old.fields[key];
+ old.fields.rosterLasers=[{source:u.id}];old.fields.shots=[{rosterKind:'droneBullet'}];unpack(restored,old);
+ for(const key of ['evolutionAttacks','evolutionBlasts','radioStrikes','radioFireZones','shots'])a.deepEqual(restored[key],[]);
+ a.equal(restored.rosterLasers,undefined);
  a.equal(restored.rosterDice,undefined);
 });

@@ -15,10 +15,11 @@ test('forced support tiers retain production target counts and control resistanc
 test('the laboratory preserves turtle insect-only push and universal jackpot wave rules',()=>{
  for(const enemy of ['rhinoBeetle','crimsonAce'])for(const tier of [0,2]){const g=new Lab({mode:'support',toy:'toyTurtle',tier,enemy,count:1}),x=g.labTargets[0].x;g.cast();advance(g,2);a.equal(g.labTargets[0].x>x,enemy==='rhinoBeetle'||tier===2);}
 });
-test('every evolved troop runs its production special attack or healing without further unlocking',()=>{
+test('every evolved troop runs its production skill without further unlocking',()=>{
  for(const troop of Object.keys(EVOLUTIONS)){
   const g=new Lab({mode:'evolution',troop});a.equal(g.evolved[troop],true);a.equal(g.tech[0][troop],5);a.equal(g.cast(),true);
   if(troop==='rocket')Object.assign(g.labTargets[0],{x:g.actor.x,y:g.actor.y});
+  if(troop==='drone'){advance(g,.5);a.ok(g.actor.droneScan);a.ok(g.commander(0).droneShield);a.equal(g.result().damage,0);continue;}
   advance(g,12);a.ok(troop==='medic'?g.result().healing>0:g.result().damage>0,troop);
  }
 });

@@ -98,11 +98,15 @@ function install({FrontGame}){
   for(const t of this.units)if(t.bubbleShield?.sourceId===source.id)pop(this,t);
   source.foamWindup=null;
  };
- p.absorbBubbleDamage=function(t,damage){
-  const shield=t.bubbleShield,absorbed=Math.min(shield.hp,damage);
+ p.absorbShieldDamage=function(shield,damage,scale=1){
+  const absorbed=Math.min(shield.hp,damage*scale);
   shield.hp-=absorbed;
+  return Math.max(0,damage-absorbed/scale);
+ };
+ p.absorbBubbleDamage=function(t,damage,scale=1){
+  const shield=t.bubbleShield,remainder=this.absorbShieldDamage(shield,damage,scale);
   if(shield.hp<=1e-8)pop(this,t);
-  return damage-absorbed;
+  return remainder;
  };
  p.updateBubbleOctopus=function(u,dt,s){
   if(this.time+1e-8>=(u.nextBubbleShieldAt??0))castShield(this,u);

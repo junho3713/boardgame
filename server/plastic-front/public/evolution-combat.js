@@ -66,7 +66,7 @@ function install(api){
    const along=t=>(t.x-origin.x)*Math.cos(angle)+(t.y-origin.y)*Math.sin(angle),start=along(center);
    const extra=enemies.filter(t=>t!==b.target&&t.hp>0&&along(t)>start+3&&along(t)<=b.evoRange&&Math.abs((t.x-origin.x)*Math.sin(angle)-(t.y-origin.y)*Math.cos(angle))<Math.min(26,(TYPES[t.type]?.r||18)+7)&&(b.commandAngle===undefined||this.lineClear(origin,t,0,{fireTeam:b.team}))).sort((a,c)=>along(a)-along(c)).slice(0,2);
    let from=origin;for(const [i,t]of [b.target,...extra].entries()){
-    if(i)this.damage(t,b.damage*[1,.5,.25][i]*multiplier(b.source.type,kind(t)),b.source);
+    if(i)this.damage(t,b.damage*[1,.5,.25][i]*multiplier(b.source.type,kind(t))*this.droneSniperCriticalScale(b,t),b.source);
     this.effects.push({kind:'evoBeam',x:from.x,y:from.y,tx:t.x,ty:t.y,width:[6,3,1.5][i],style:b.evoStyle,t:.3,max:.3,team:0});from=t;
    }
   }else if(b.evoStyle==='ricochet'){

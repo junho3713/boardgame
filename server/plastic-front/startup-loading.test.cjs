@@ -19,7 +19,7 @@ test('startup loads four core models and no unselected skin atlases',async()=>{
 });
 test('specialist models load the correct friendly rank while enemy troops keep their own sprites',async()=>{
  const h=models(),m=h.create();await m.ready;
- for(const [type,base,elite] of [['rifle','shotgun','shotgunDragon'],['guntruck','radioOperator','radioOfficer'],['drone','droneScout','droneLaser'],['rocket','blockEngineer','blockEngineerElite']]){
+ for(const [type,base,elite] of [['rifle','shotgun','shotgunDragon'],['guntruck','radioOperator','radioOfficer'],['drone','droneSupport','droneControl'],['rocket','blockEngineer','blockEngineerElite']]){
   const ally={team:0,type,hp:10};
   assert.equal(m.visualFor(ally),base);assert.equal(m.visualFor(ally,true),elite);
   assert.equal(m.visualFor({...ally,team:1},true),type);

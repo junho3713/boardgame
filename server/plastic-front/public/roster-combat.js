@@ -1,4 +1,4 @@
-/* Allied shotgun, radio support and patrol drone. All timers use simulation seconds. */
+/* Allied shotgun, radio support. All timers use simulation seconds. */
 (function(root){'use strict';
 function install({FrontGame,TYPES,multiplier}){
  const p=FrontGame.prototype,fire=p.fireUnitProjectiles,impact=p.impact,advance=p.advanceCommandShot,update=p.updateEvolutionCombat,reset=p.reset;
@@ -9,27 +9,14 @@ function install({FrontGame,TYPES,multiplier}){
  const foes=(g,u)=>g.combatCandidates().filter(t=>t.team!==u.team&&t.hp>0&&!t.hidden&&!(t.base&&g.baseShielded())&&g.canTarget(u,t));
 
  p.reset=function(...args){
-  const result=reset.apply(this,args);this.radioStrikes=[];this.radioFireZones=[];this.radioTurrets=[];this.radioNextWhiteoutAt=0;this.rosterLasers=[];
+  const result=reset.apply(this,args);this.radioStrikes=[];this.radioFireZones=[];this.radioTurrets=[];this.radioNextWhiteoutAt=0;
   this.radioNextNukeAt=0;
   return result;
  };
  p.shotgunReloadTime=function(u,s=this.stats(u)){return 1.8*s.rate/TYPES.rifle.rate;};
  p.shotgunShotMultiplier=function(){return 1;};
- p.droneLaserDamage=function(u,t,amount){return amount;};
- p.droneLaserPeriod=function(u){return 6/this.rankCombat(u).attackSpeed/this.tacticalFeverHaste(u);};
- p.droneLaserTarget=function(u,range,target){return target;};
  p.diceFace=function(){
   return Math.min(6,1+Math.floor(this.random()*6));
- };
- p.dronePatrolPoint=function(u,c){
-  const phase=this.time*.85+u.id*2.4;
-  return {x:c.x+Math.cos(phase)*85,y:c.y+Math.sin(phase)*54};
- };
- p.droneTargetCandidates=function(u,range){
-  return foes(this,u).filter(t=>distance(u,t)<=range&&this.visible(t)&&this.lineClear(u,t,0,{fireTeam:u.team}));
- };
- p.droneTarget=function(u,range){
-  return this.droneTargetCandidates(u,range).sort((a,b)=>distance(u,a)-distance(u,b))[0]||null;
  };
  function push(g,t,angle,strength){
   if(!strength||t.hp<=0||t.base||t.structure||g.isStationary(t))return false;
@@ -413,44 +400,17 @@ function install({FrontGame,TYPES,multiplier}){
   return nearest;
  }
 
- function droneFire(g,u,t,attack,s){
-  const bullet={x:u.x,y:u.y,target:t,source:u,damage:attack.damage,critical:attack.critical,splash:0,speed:850,kind:u.type,team:u.team,life:1.5,rosterKind:'droneBullet'};
-  g.shots.push(bullet);
-  if(g.evolutionEnabled(u)&&g.time>=(u.nextDroneLaserAt||0)){
-   const laserTarget=g.droneLaserTarget(u,s.range,t),arc=Math.PI/3,angle=heading(u,laserTarget)-arc/2;
-   (g.rosterLasers??=[]).push({source:u,x:u.x,y:u.y,angle,startAngle:angle,arc,range:s.range,damage:attack.damage*3.2,startedAt:g.time,until:g.time+.72,hits:[]});
-   u.nextDroneLaserAt=g.time+g.droneLaserPeriod(u);
-  }
-  return [bullet];
- }
- function updateLasers(g){
-  g.rosterLasers=(g.rosterLasers||[]).filter(l=>{
-   if(l.source.hp<=0)return false;
-   const next=l.startAngle+l.arc*Math.min(1,(g.time-l.startedAt)/(l.until-l.startedAt));
-   const middle=(next+l.angle)/2,half=(next-l.angle)/2;
-   l.x=l.source.x;l.y=l.source.y;
-   for(const t of foes(g,l.source)){
-    if(l.hits.includes(t.id??t)||!g.lineClear(l,t,0,{fireTeam:0}))continue;
-    const d=distance(l,t),r=g.collisionRadius(t)-5;if(d>l.range+r)continue;
-    const a=heading(l,t)-middle;
-    if(Math.abs(Math.atan2(Math.sin(a),Math.cos(a)))>half+Math.asin(Math.min(1,r/Math.max(1,d))))continue;
-    l.hits.push(t.id??t);
-    g.damage(t,g.droneLaserDamage(l.source,t,l.damage)*multiplier('drone',targetKind(t)),l.source);
-   }
-   l.angle=next;return g.time<l.until;
-  });
- }
  p.fireUnitProjectiles=function(u,t,attack,s=this.stats(u)){
   if(u.team===0){
    if(u.type==='rifle')return shotgun(this,u,t,attack,s);
    if(u.type==='guntruck')return callRadio(this,u,t,attack);
-   if(u.type==='drone')return droneFire(this,u,t,attack,s);
+   if(u.type==='drone')return [];
   }
   return fire.call(this,u,t,attack,s);
  };
  p.updateEvolutionCombat=function(){
   update.call(this);
-  updateRadio(this);updateRadioTurrets(this);updateLasers(this);
+  updateRadio(this);updateRadioTurrets(this);
   for(const t of this.combatCandidates())if(t.shotgunBurns?.length){
    t.shotgunBurns=t.shotgunBurns.filter(b=>{
     while(t.hp>0&&b.next<=this.time+1e-8&&b.next<=b.until+1e-8){

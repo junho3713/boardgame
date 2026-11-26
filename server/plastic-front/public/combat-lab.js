@@ -32,6 +32,12 @@
     const t=this.addUnit(2,config.enemy,x,y,true);t.boss=BOSSES.has(config.enemy);t.cooldown=1e6;t.face=Math.PI;t.hp=t.maxHp=config.highHealth?1e6:this.stats(t).hp;this.labTargets.push(t);
    }
    if(config.mode==='evolution'&&config.troop==='medic')for(let i=0;i<3;i++){const t=this.addUnit(0,'rifle',this.actor.x+55+i*35,this.actor.y+90);t.hp=t.maxHp*.25;t.cooldown=1e6;t.poisonUntil=30;t.poisonDps=3;t.poisonNextAt=1;}
+   if(config.mode==='evolution'&&config.troop==='drone'){
+    for(const [type,dx,dy] of [['rifle',-78,36],['machinegun',80,54],['sniper',-62,-54]]){
+     const ally=this.addUnit(0,type,leader.x+dx,leader.y+dy);
+     ally.cooldown=1e6;
+    }
+   }
   }
   // Training contains no waves, economy, recruitment, campaign completion or profile persistence.
   updateMission(){} updateSwarm(){} updateBosses(){} updateArtillery(){} updateDefenses(){} updateBuildings(){} updateGuardianRespawns(){} updateMageQuest(){} updateLaserQuest(){} syncEnemyGrowth(){} gainXP(){} levelCheck(){} awardGold(){} updateLuckyUnit(){} updateEnemyLucky(){} separateCrowd(){} navigate(){} autoFuseUnits(){} income(){return 0;}
@@ -43,12 +49,14 @@
   useSupportToy(u){return this.labCasting?super.useSupportToy(u):false;}
   rollSupportToyTier(u){if(this.lab.tier<0)return super.rollSupportToyTier(u);const tier=this.lab.tier;u.toyProcTier=tier;u.toyHighlightUntil=this.time+(tier?1.6:0);return tier;}
   updateMedicHealing(u,...args){if(this.lab&&this.time>=(this.labHealingUntil||0))return;return super.updateMedicHealing(u,...args);}
+  updateSupportDrone(u,...args){if(this.labStats.casts>0)return super.updateSupportDrone(u,...args);}
   cast(){
    if(this.phase!=='playing')return false;const u=this.actor,c=this.lab;
    if(c.mode==='support'){u.toyNextAt=this.time;this.labCasting=true;try{if(!this.useSupportToy(u))return false;}finally{this.labCasting=false;}}
    else if(c.mode==='lucky'||c.mode==='evolution'&&c.troop==='lucky'){u.luckyChannels=[];for(let i=0;i<(c.stars>=2?3:1);i++){u.activeLuckyChannel=i;const kind=c.mode==='lucky'?c.outcome:'missiles',roll={kind,resolved:true,startedAt:this.time,endsAt:this.time,enhanced:!!this.evolved.lucky,bossKillerAvailable:kind==='bossKiller'};u.luckyRoll=roll;u.luckyChannels.push({roll});this.castLucky(u,kind);}delete u.activeLuckyChannel;}
    else if(c.mode==='ultimate'){this.ultimate={readyAt:this.time,activeUntil:0};if(!this.useUltimate())return false;}
    else if(c.troop==='medic'){this.labHealingUntil=this.time+12;u.cooldown=0;this.updateMedicHealing(u);}
+   else if(c.troop==='drone'){u.nextDroneScanAt=u.nextDroneShieldAt=this.time;delete u.droneScan;}
    else{const target=this.labTargets.find(t=>t.hp>0);if(!target)return false;const attack=this.attackRoll(u);if(c.troop==='mortar')this.launchMortar(u,target,attack);else this.fireUnitProjectiles(u,target,attack,this.stats(u));u.cooldown=this.stats(u).rate;this.labFireUntil=this.time+8;}
    this.labStats.casts++;return true;
   }

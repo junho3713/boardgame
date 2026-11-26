@@ -15,8 +15,7 @@ const links=[
  {id:'gamblers',types:['guntruck','lucky'],name:'행운의 핫라인',detail:'진화 레토나의 777·보스킬러 발동 시 5초간 강화 미사일 6발씩 발사 · 진화 통신병은 시작 시 핵 1발 (공용 대기 중 미사일 6발)'},
  {id:'chainBombard',types:['guntruck','mortar'],name:'초토화 포격',detail:'같은 분대의 통신병 화염 지대에 착탄한 박격포는 폭발 반경·피해 +15%'},
  {id:'radioPrecision',types:['guntruck','sniper'],name:'정밀 좌표 수신',detail:'미사일·핵은 저격 표식 적을 우선 조준하고 해당 적에게 피해 +20%'},
- {id:'airObserver',types:['drone','sniper'],name:'공중 관측',detail:'드론 레이저는 저격 표식 대상을 우선 조준하며 해당 대상 피해 +20%'},
- {id:'tacticalSupply',types:['drone','machinegun'],name:'전술 보급',detail:'기관총병 과열 중 드론 레이저 발사 주기 −20%'},
+ {id:'airObserver',types:['drone','sniper'],name:'공중 관측',detail:'저격병이 아군 지원 드론의 스캔 표적을 우선 조준 · 해당 표적 치명타 피해 +20%'},
  {id:'airSupport',types:['drone','lucky'],name:'공중 지원',detail:'진화 드론이 살아 있으면 럭키 레토나 룰렛 주기 4초 → 3.5초'}
 ];
 const byId=Object.fromEntries(links.map(l=>[l.id,l]));
@@ -24,21 +23,28 @@ function install({FrontGame:Game}){
  const p=Game.prototype;if(p.evolutionLinksVersion)return;p.evolutionLinksVersion=1;
  const reset=p.reset,damage=p.damage,impact=p.impact,select=p.selectCombatTarget,mortar=p.launchMortar,twin=p.evolutionMortar,missile=p.luckyMissileTarget,boss=p.bossKillerTarget,stats=p.stats,update=p.updateEvolutionCombat,heal=p.heal;
  const owner=u=>u?.coopOwner||0,dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
- const meetsEvolution=(link,type,evolved)=>evolved?.[type]||link.id==='gamblers'&&type==='guntruck';
- const {shotgunReloadTime,droneLaserPeriod,droneLaserTarget,droneLaserDamage,castLucky}=p;
+ const meetsEvolution=(link,unit,evolved)=>{
+  if(link.id==='airObserver'||link.id==='airSupport'&&unit.type==='lucky')return true;
+  if(link.id==='airSupport')return unit.summonEvolved===true||!!evolved?.drone;
+  return evolved?.[unit.type]||link.id==='gamblers'&&unit.type==='guntruck';
+ };
+ const {shotgunReloadTime,castLucky}=p;
  const overheated=(game,u,id)=>game.hasEvolutionLink(u,id)&&game.units.some(gunner=>
   gunner.type==='machinegun'&&gunner.team===0&&gunner.hp>0&&owner(gunner)===owner(u)&&gunner.overheatUntil>game.time
  );
  p.reset=function(){reset.call(this);this.evolutionLinkState={owners:[{ready:{},announced:{}},{ready:{},announced:{}}],bursts:[]};};
  p.linkState=function(id=0){const state=this.evolutionLinkState??={owners:[]};return state.owners[id]??={ready:{},announced:{}};};
  p.evolutionLinks=function(id=this.coopOwner||0){
-  const state=this.coop?this.coopStates?.[id]:this,evolved=this.coop&&id===this.coopOwner?this.evolved:state?.evolved||{},live=new Set(this.units.filter(u=>u.team===0&&u.hp>0&&(!this.coop||owner(u)===id)).map(u=>u.type));
-  return links.map(link=>({...link,active:link.types.every(t=>meetsEvolution(link,t,evolved)&&live.has(t)),progress:link.types.filter(t=>meetsEvolution(link,t,evolved)&&live.has(t)).length}));
+  const state=this.coop?this.coopStates?.[id]:this,evolved=this.coop&&id===this.coopOwner?this.evolved:state?.evolved||{},live=this.units.filter(u=>u.team===0&&u.hp>0&&owner(u)===id);
+  return links.map(link=>{
+   const progress=link.types.filter(type=>live.some(u=>u.type===type&&meetsEvolution(link,u,evolved))).length;
+   return {...link,active:progress===link.types.length,progress};
+  });
  };
  p.hasEvolutionLink=function(u,id){
   const l=byId[id];if(!l||u?.team!==0||u.hp<=0||!l.types.includes(u.type))return false;
   const idOwner=owner(u),evolved=this.coop&&idOwner!==this.coopOwner?this.coopStates?.[idOwner]?.evolved:this.evolved;
-  return l.types.every(type=>meetsEvolution(l,type,evolved)&&this.units.some(v=>v.team===0&&v.type===type&&v.hp>0&&(!this.coop||owner(v)===idOwner)));
+  return l.types.every(type=>this.units.some(v=>v.team===0&&v.type===type&&v.hp>0&&owner(v)===idOwner&&meetsEvolution(l,v,evolved)));
  };
  p.linkMark=function(target,u,key,duration=4){const marks=target.evolutionLinkMarks??={};(marks[owner(u)]??={})[key]=this.time+duration;};
  p.linkMarked=function(target,u,key){return this.time<(target?.evolutionLinkMarks?.[owner(u)]?.[key]||0);};
@@ -53,7 +59,7 @@ function install({FrontGame:Game}){
   const hp=target.hp,result=damage.call(this,target,amount,source);
   if(target.hp>=hp||source?.team!==0||!this.evolutionEnabled(source))return result;
   if(pursuit)this.linkCue(source,target,'pursuit');
-  if(source.type==='sniper'&&['precision','hunter','pursuit','airObserver','radioPrecision'].some(id=>this.hasEvolutionLink(source,id))){this.linkMark(target,source,'snipe');if(this.time>=(source.nextLinkCue||0)){this.linkCue(source,target,'mark');source.nextLinkCue=this.time+.5;}}
+  if(source.type==='sniper'&&['precision','hunter','pursuit','radioPrecision'].some(id=>this.hasEvolutionLink(source,id))){this.linkMark(target,source,'snipe');if(this.time>=(source.nextLinkCue||0)){this.linkCue(source,target,'mark');source.nextLinkCue=this.time+.5;}}
   if(source.type==='mortar'&&this.hasEvolutionLink(source,'barrage'))this.linkMark(target,source,'bombard',3);
   if(source.type==='tank'&&this.hasEvolutionLink(source,'breach'))this.linkMark(target,source,'armor');
   if(source.type==='machinegun'&&this.time<(source.overheatUntil||0)&&!target.boss&&this.hasEvolutionLink(source,'suppress'))this.linkMark(target,source,'suppress',2);
@@ -80,7 +86,12 @@ function install({FrontGame:Game}){
   return result;
  };
  p.selectCombatTarget=function(u,candidates,threats,s=this.stats(u)){
-  const normal=select.call(this,u,candidates,threats,s),linked=u.type==='mortar'&&this.hasEvolutionLink(u,'precision');if(!linked||normal?.defenseKind==='laserTower'||normal===this.focusTarget)return normal;
+  const normal=select.call(this,u,candidates,threats,s);
+  if(u.team===0&&u.type==='sniper'&&this.hasSupportDrone(owner(u))){
+   const lit=(candidates||this.combatCandidates()).filter(t=>t&&this.canTarget(u,t)&&this.visible(t)&&this.supportScanAt(t,owner(u))&&this.targetDistance(u,t)<s.range&&this.targetDistance(u,t)>=(s.minRange||0)&&this.lineClear(u,t,0,{fireTeam:0}));
+   if(lit.length)return lit.sort((a,b)=>(b.maxHp??b.hp)-(a.maxHp??a.hp)||dist(u,a)-dist(u,b))[0];
+  }
+  const linked=u.type==='mortar'&&this.hasEvolutionLink(u,'precision');if(!linked||normal?.defenseKind==='laserTower'||normal===this.focusTarget)return normal;
   return (candidates||this.combatCandidates()).filter(t=>this.linkMarked(t,u,'snipe')&&this.canTarget(u,t)&&this.visible(t)&&dist(u,t)<s.range&&dist(u,t)>=(s.minRange||0)&&this.lineClear(u,t,0,{fireTeam:0})).sort((a,b)=>Number(b.boss)-Number(a.boss)||dist(u,a)-dist(u,b))[0]||normal;
  };
  p.launchMortar=function(u,target,attack){const precise=this.hasEvolutionLink(u,'precision')&&this.linkMarked(target,u,'snipe');if(precise)this.linkCue(u,target,'precision');return mortar.call(this,u,target,precise?{...attack,linkPrecision:true}:attack);};
@@ -109,21 +120,10 @@ function install({FrontGame:Game}){
   if(!overlaps)return 1;
   this.linkCue(source,shell,'chainBombard');return 1.15;
  };
- p.droneLaserTarget=function(u,range,target){
-  if(this.hasEvolutionLink(u,'airObserver')){
-   const tagged=this.droneTargetCandidates(u,range).filter(target=>this.linkMarked(target,u,'snipe'));
-   tagged.sort((a,b)=>dist(u,a)-dist(u,b));
-   if(tagged.length)return tagged[0];
-  }
-  return droneLaserTarget.call(this,u,range,target);
- };
- p.droneLaserDamage=function(u,target,amount){
-  const damage=droneLaserDamage.call(this,u,target,amount);
-  if(!this.hasEvolutionLink(u,'airObserver')||!this.linkMarked(target,u,'snipe'))return damage;
-  this.linkCue(u,target,'airObserver');return damage*1.2;
- };
- p.droneLaserPeriod=function(u){
-  return droneLaserPeriod.call(this,u)*(overheated(this,u,'tacticalSupply')?.8:1);
+ p.droneSniperCriticalScale=function(b,target){
+  const u=b.source;
+  if(!b.critical||u?.team!==0||u.type!=='sniper'||!this.supportScanAt(target,owner(u)))return 1;
+  this.linkCue(u,target,'airObserver');return 1.2;
  };
  p.luckyRouletteInterval=function(u){
   return this.hasEvolutionLink(u,'airSupport')?3.5:4;
