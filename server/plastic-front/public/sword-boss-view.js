@@ -4,67 +4,36 @@ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 function ellipse(c,x,y,rx,ry,fill,stroke,width=1){c.beginPath();c.ellipse(x,y,Math.max(.1,rx),Math.max(.1,ry),0,0,TAU);if(fill){c.fillStyle=fill;c.fill();}if(stroke){c.strokeStyle=stroke;c.lineWidth=width;c.stroke();}}
 function star(c,x,y,r,color){c.fillStyle=color;c.beginPath();c.moveTo(x,y-r);c.quadraticCurveTo(x+r*.14,y-r*.14,x+r*.7,y);c.quadraticCurveTo(x+r*.14,y+r*.14,x,y+r);c.quadraticCurveTo(x-r*.14,y+r*.14,x-r*.7,y);c.quadraticCurveTo(x-r*.14,y-r*.14,x,y-r);c.fill();}
 function capsule(c,a){const d=Math.atan2(a.end.y-a.start.y,a.end.x-a.start.x),px=-Math.sin(d)*a.radius,py=Math.cos(d)*a.radius;c.beginPath();c.moveTo(a.start.x+px,a.start.y+py);c.lineTo(a.end.x+px,a.end.y+py);c.arc(a.end.x,a.end.y,a.radius,d+Math.PI/2,d-Math.PI/2,true);c.lineTo(a.start.x-px,a.start.y-py);c.arc(a.start.x,a.start.y,a.radius,d-Math.PI/2,d+Math.PI/2,true);c.closePath();}
-// Sections are [distance along the piece, half width, half thickness, optional offset].
-const steel=[172,187,204],silver=[201,172,122],grip=[103,46,51],ruby=[207,52,95];
-function makeSword(){
- const vertices=[],faces=[];
- function loft(sections,sides,metal,place=(x,y,z)=>[x,y,z],profile=null){
-  let last;
-  for(const [y,w,d,offset=0] of sections){
-   const ring=[];
-   for(let j=0;j<sides;j++){
-    const angle=j*TAU/sides;
-    const dx=profile?profile[j][0]:Math.cos(angle),dz=profile?profile[j][1]:Math.sin(angle);
-    ring.push(vertices.length);vertices.push(place(offset+w*dx,y,d*dz));
-   }
-   if(last)for(let j=0;j<sides;j++){
-    const k=(j+1)%sides;
-    faces.push({indices:[last[j],ring[j],ring[k],last[k]],metal});
-   }
-   last=ring;
-  }
+// Four columns keep the same sword identity through every stance. Rows contain
+// attack/guard faces, the recessed metal edge, the two inlays, and polished steel.
+const bladeWidth=224,bladeHeight=384;
+function drawSword(c,atlas,id,len,rotation,roll,pitch,guard,charge,time){
+ const yaw=clamp(roll,-1.1,1.1),cb=Math.cos(yaw),sb=Math.sin(yaw),ct=Math.cos(pitch),st=Math.sin(pitch);
+ const half=bladeWidth/2,top=-bladeHeight/2,sourceX=id*bladeWidth;
+ c.save();c.rotate(rotation);c.scale(len/(bladeHeight-8),len/(bladeHeight-8));
+ function layer(row,left,width,heightFromPlane,slope=0){
+  // Project a face whose height varies across its width. The two bevels meet at the raised spine.
+  c.save();
+  c.transform(cb+slope*sb,(sb-slope*cb)*st,0,ct,heightFromPlane*sb,-heightFromPlane*cb*st);
+  c.drawImage(atlas,sourceX+half+left,row*bladeHeight,width,bladeHeight,left,top,width,bladeHeight);
+  c.restore();
  }
- const bevels=[[1,0],[.29,1],[.13,.61],[-.13,.61],[-.29,1],[-1,0],[-.29,-1],[-.13,-.61],[.13,-.61],[.29,-1]];
- loft([[-50,0,0],[-37,5.5,2.2],[9,5.2,2.6],[13,6.3,2.8],[18,3,1.7]],bevels.length,steel,undefined,bevels);
- loft([[15,3.4,3],[22,3,2.8],[41,2.6,2.5],[44,3.1,2.7]],8,grip);
- for(const y of [23,28,33,38,42])loft([[y,2.7,2.7],[y+.8,3.35,3.35],[y+1.6,2.7,2.7]],8,silver);
- for(const side of [-1,1]){
-  loft([[0,3.9,3,18],[6,3.1,2.8,18],[11,2.6,2,16],[15,1.7,1.3,12],[16,0,0,8.5]],4,silver,(y,x,z)=>[side*x,y,z]);
+ for(let depth=-7;depth<=1;depth+=2)layer(2,-half,bladeWidth,depth);
+ for(const left of [-half,0]){
+  const slope=left<0?.075:-.075;
+  layer(guard?1:0,left,half,9,slope);
+  c.save();c.globalCompositeOperation='lighter';
+  c.globalAlpha=guard?.29+.20*charge:.19+.65*charge;
+  layer(guard?4:3,left,half,9,slope);
+  c.restore();
  }
- loft([[10,0,0],[15,5,3.9],[19,5.5,3.9],[23,0,0]],6,silver);
- loft([[13,0,0],[17,2.7,1.6],[21,0,0]],4,ruby,(x,y,z)=>[x,y,z+3.5]);
- loft([[42,2.6,2.4],[46,4.1,3.2],[50,0,0]],6,silver);
- return {vertices,faces};
-}
-const swordMesh=makeSword();
-function drawSword(c,len,rotation,roll,pitch,guard){
- const cr=Math.cos(rotation),sr=Math.sin(rotation),cb=Math.cos(roll),sb=Math.sin(roll),ct=Math.cos(pitch),st=Math.sin(pitch);
- const points=swordMesh.vertices.map(([x,y,z])=>{
-  const across=x*cb+z*sb,thickness=z*cb-x*sb,along=y*ct-thickness*st;
-  return [across*cr-along*sr,across*sr+along*cr,y*st+thickness*ct];
- });
- const faces=swordMesh.faces.map(face=>({face,depth:face.indices.reduce((v,i)=>v+points[i][2],0)}));
- faces.sort((a,b)=>a.depth-b.depth);
- c.save();c.scale(len/100,len/100);c.lineJoin='round';c.lineWidth=.24;
- for(const {face} of faces){
-  const [a,b,d,e]=face.indices.map(i=>points[i]);
-  // Diagonals give a usable normal even at the tip, where two vertices coincide.
-  const ux=d[0]-a[0],uy=d[1]-a[1],uz=d[2]-a[2],vx=e[0]-b[0],vy=e[1]-b[1],vz=e[2]-b[2];
-  let nx=uy*vz-uz*vy,ny=uz*vx-ux*vz,nz=ux*vy-uy*vx;
-  const norm=Math.hypot(nx,ny,nz);if(norm<.001)continue;
-  const sign=(nz<0?-1:1)/norm;nx*=sign;ny*=sign;nz*=sign;
-  const light=.42+.74*Math.max(0,-.60*nx-.49*ny+.63*nz);
-  const glint=80*Math.pow(Math.max(0,-.38*nx-.28*ny+.88*nz),16);
-  const metal=guard&&face.metal===ruby?[56,169,223]:face.metal;
-  const tint=(shade,shine)=>'rgb('+metal.map(v=>Math.min(255,Math.round(v*shade+shine))).join(',')+')';
-  c.fillStyle=c.strokeStyle=tint(light,glint);
-  if(face.metal===steel&&Math.hypot(b[0]-a[0],b[1]-a[1])>25){
-   const reflection=c.createLinearGradient(a[0],a[1],b[0],b[1]);
-   reflection.addColorStop(0,tint(light*.83,glint));reflection.addColorStop(.43,tint(light*.96,glint+7));
-   reflection.addColorStop(.54,tint(light,glint+31));reflection.addColorStop(.74,tint(light*.83,glint));reflection.addColorStop(1,tint(light*.67,glint));
-   c.fillStyle=reflection;
-  }
-  c.beginPath();c.moveTo(a[0],a[1]);c.lineTo(b[0],b[1]);c.lineTo(d[0],d[1]);c.lineTo(e[0],e[1]);c.closePath();c.fill();c.stroke();
+ // A narrow reflection sweeps across the metal facets; open slots stay transparent.
+ const sweep=((time*.38+id*.23)%1)*1.5-.25;
+ if(sweep>0&&sweep<1){
+  const y=top+bladeHeight*sweep*ct;
+  c.save();c.beginPath();c.moveTo(-half,y+18);c.lineTo(half,y-29);c.lineTo(half,y-18);c.lineTo(-half,y+29);c.closePath();c.clip();
+  c.globalCompositeOperation='lighter';c.globalAlpha=.42*Math.sin(Math.PI*sweep);
+  layer(5,-half,half,9,.075);layer(5,0,half,9,-.075);c.restore();
  }
  c.restore();
 }
@@ -76,9 +45,11 @@ function groundShadow(c,x,y,rx,ry,rotation,opacity){
 }
 class View{
  constructor(){
-  this.body=new Image();
-  this.ready=new Promise((yes,no)=>{this.body.onload=yes;this.body.onerror=no;});
-  this.body.src='assets/sword-boss/empress-figurine.webp';
+  this.body=new Image();this.blades=new Image();
+  const load=(image,file)=>new Promise((resolve,reject)=>{
+   image.onload=resolve;image.onerror=reject;image.src='assets/sword-boss/'+file;
+  });
+  this.ready=Promise.all([load(this.body,'empress-figurine.webp'),load(this.blades,'empress-royal-blades.webp')]);
  }
  healthBar(c,b,x,y,width){
   if(!b||b.hp<=0||!Number.isFinite(b.maxHp)||b.maxHp<=0)return;
@@ -187,7 +158,8 @@ class View{
    c.save();c.globalCompositeOperation='lighter';const q=c.createLinearGradient(x,y-240,x,y+len/2);q.addColorStop(0,'#ff437000');q.addColorStop(.75,'#ff356a99');q.addColorStop(1,'#fff1e8dd');c.fillStyle=q;c.beginPath();c.moveTo(x-12,y+len*.4);c.lineTo(x-3,y-240);c.lineTo(x+12,y+len*.4);c.closePath();c.fill();
    for(let j=-2;j<=2;j++){c.strokeStyle=j%2?'#fff1eaad':'#ff477c80';c.lineWidth=j?1:2;c.beginPath();c.moveTo(x+j*5,y-190-Math.abs(j)*12);c.lineTo(x+j*5,y+len*.4);c.stroke();}c.restore();
   }
-  c.save();c.translate(x,y);drawSword(c,len,aim,roll,tilt,guard);c.restore();
+  const charge=guard?clamp(1-(g.time-s.blockAt)/.35,0,1):a?.stage==='warn'?clamp(1-(a.fireAt-g.time)/.65,0,1):active?1:0;
+  c.save();c.translate(x,y);drawSword(c,this.blades,s.id,len,aim,roll,tilt,guard,charge,g.time);c.restore();
  }
  impact(c,a,g){
   const age=g.time-a.impactAt;if(!Number.isFinite(age)||age<0||age>.9)return;const t=age/.9,r=a.radius;
