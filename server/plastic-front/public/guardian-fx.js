@@ -44,10 +44,9 @@ function shield(c,u,time){
 }
 const reduceMotion=window.matchMedia?.('(prefers-reduced-motion: reduce)');
 function warningPulse(power){
- if(reduceMotion?.matches)return 1;
  const progress=power.progress;
- const cycles=progress*(2.5+1.5*progress);
- return cycles%1<.58?1:.12;
+ const cycles=reduceMotion?.matches?progress*2:progress*(2.5+1.5*progress);
+ return cycles%1<.58?1:(reduceMotion?.matches ? .35 : .12);
 }
 function powerCable(c,g){
  const battery=g.defenses.find(p=>p.defenseKind==='laserBattery');
