@@ -433,11 +433,17 @@ function ground(c,game,visible=()=>true) {
  for (const zone of game.radioFireZones || []) {
   if (visible(zone)) fireZone(c, zone, view);
  }
+ flyovers(c,game);
+ groundPasses(c,game,visible,view);
+}
+
+// Paint the solid turret after grease, landing splashes and other translucent effects.
+function turrets(c,game,visible=()=>true){
+ const view=displayFrames.get(c);
+ if(!view)return;
  for(const turret of game.radioTurrets||[]){
   if(turret.hp!==0&&view.time<turret.until&&visible(turret))turretBody(c,turret,view);
  }
- flyovers(c,game);
- groundPasses(c,game,visible,view);
 }
 
 function secondsToImpact(e,view){
@@ -731,6 +737,6 @@ function event(c,e,fx) {
  if(e.kind==='radioIncoming')incoming(c,e,fx);else impact(c,e,p,fx,view?.reduced??quiet());
  c.restore();return true;
 }
-root.FrontRadioArt={event,rolls,ground,flyovers};
+root.FrontRadioArt={event,rolls,ground,turrets,flyovers};
 })(typeof window==='undefined'?globalThis:window);
 

@@ -283,3 +283,26 @@ test('fixed garrisons follow lobby mode changes and old stacks shed residual rif
  assert.equal(restored.units.find(u=>u.id===existingBayonet.id).type,'bayonet');
  assert.equal(restored.shots.length,1);assert.equal(restored.shots[0].source.team,0);
 });
+
+test('allied troops stay in formation and keep attacking during final sword warnings in stack mode',()=>{
+ for(const stack of [false,true]){
+  const g=battle(stack),c=g.commander(0),ally=add(g,'machinegun');
+  g.move=g.navigate=()=>{};g.obstacles=[];g.lineClear=()=>true;
+  const boss=g.addUnit(2,'swordEmpress',c.x,c.y-160,true);boss.boss=boss.finalBoss=true;
+  g.time=480;assert(g.startSwordPattern('spin'));
+  const blade=boss.swords.blades.find(s=>s.action),action=blade.action;
+  g.time=action.cueAt+.01;g.updateSwordBoss(boss,.05);assert(g.swordHazards().length>0);
+  const order={x:ally.x+170,y:ally.y},heldAim={target:boss,fireAt:g.time+.4};
+  ally.route=order;ally.routeGoal=order;ally.trialDodge=order;ally.sniperAim=heldAim;
+  assert.equal(g.updateBossPattern(ally,.05),!stack);
+  if(!stack){assert(ally.trialDodge);continue;}
+  assert.equal(ally.trialDodge,null);assert.equal(ally.routeGoal,null);assert.equal(ally.sniperAim,heldAim);
+  ally.cooldown=0;c.cooldown=99;g.setManualAim({x:0,y:-1});g.updateBattleUnits(.05,g.commander(1));
+  assert(g.shots.some(shot=>shot.source===ally));
+  const health=ally.hp;
+  g.time=action.fireAt+action.duration+.001;g.updateSwordBoss(boss,.05);
+  assert(ally.hp<health,'commander collision still passes damage to the first stack line');
+  assert(c.hp<c.maxHp,'boss overkill can still carry to the next stack line');
+  assert(action.hits.includes(c.id));assert(!action.hits.includes(ally.id));
+ }
+});

@@ -1082,6 +1082,24 @@ function drawDestinyStar(context,x,y,r){
  }
  context.restore();
 }
+function drawDestinyPickup(p,portal){
+ const covered=portal?.hp<=0&&Math.abs(p.x-portal.x)<155&&p.y>=portal.y-165&&p.y<=portal.y+48;
+ const pulse=(Math.sin(game.time*2.2+p.x)+1)/2,bob=Math.sin(game.time*2+p.x)*4;
+ const height=covered?Math.max(25,p.y-portal.y+158):25;
+ ctx.save();ctx.translate(p.x,p.y);
+ ctx.save();ctx.scale(1,.45);circle(ctx,0,0,32+pulse*5,'#e5b84944','#ffe791');ctx.restore();
+ if(covered){
+  const beam=ctx.createLinearGradient(0,-height,0,0);
+  beam.addColorStop(0,'#fff2a841');beam.addColorStop(1,'#fff2a800');ctx.fillStyle=beam;ctx.fillRect(-2,-height,4,height);
+ }
+ ctx.translate(0,-height+bob);
+ const reach=54+pulse*5,glow=ctx.createRadialGradient(0,0,1,0,0,reach);
+ glow.addColorStop(0,'#ffed9eba');glow.addColorStop(1,'#ffd45e00');
+ ctx.fillStyle=glow;ctx.fillRect(-reach,-reach,reach*2,reach*2);
+ drawDestinyStar(ctx,0,0,23);
+ text(ctx,'운명의 별',0,-35,16,'#fff1ac');
+ text(ctx,'획득 시 3성 합성 해금',0,covered?38:56,12,'#fff3cc');ctx.restore();
+}
 function drawMini(){
  const sx=132/game.bounds().width,sy=175/game.bounds().height;mc.clearRect(0,0,132,175);mc.fillStyle=game.isDesktopDefense()?'#b9956e':game.bounds().id==='livingroom'?'#a08c70':'#4d6346';mc.fillRect(0,0,132,175);mc.fillStyle=game.bounds().id==='livingroom'?'#687e7b':'#7a8460';mc.fillRect(59,0,15,175);for(const o of game.obstacles){mc.fillStyle=game.bounds().id==='livingroom'?'#5d655c':'#889172';mc.fillRect(o.x*sx,o.y*sy,o.w*sx,o.h*sy);}mc.strokeStyle='#b7c09a22';mc.beginPath();mc.moveTo(0,88);mc.lineTo(132,88);mc.stroke();
  for(const b of game.bases.filter(b=>!b.hidden)){mc.fillStyle=b.team?'#d48c72':'#c5dda0';mc.fillRect(b.x*sx-5,b.y*sy-4,10,8);}
@@ -1123,19 +1141,10 @@ function draw(dt){
   }
  }
  for(const p of game.pickups){
-  if(!p.active||p.combatDrop&&p.owner!==experienceOwner)continue;
+  if(!p.active||p.destinyStar||p.combatDrop&&p.owner!==experienceOwner)continue;
   const pulse=(Math.sin(game.time*2.2+p.x)+1)/2,bob=Math.sin(game.time*2+p.x)*2;
   ctx.save();ctx.translate(p.x,p.y);
   if(p.combatDrop){drawCombatDrop(p,pulse,bob);ctx.restore();continue;}
-  if(p.destinyStar){
-   const glow=ctx.createRadialGradient(0,-17,1,0,-17,54+pulse*5);
-   glow.addColorStop(0,'#ffed9eba');glow.addColorStop(1,'#ffd45e00');
-   ctx.fillStyle=glow;ctx.fillRect(-60,-78,120,120);
-   ctx.save();ctx.scale(1,.45);circle(ctx,0,0,32+pulse*5,'#e5b84944','#ffe791');ctx.restore();
-   drawDestinyStar(ctx,0,-25+bob*2,23);
-   text(ctx,'운명의 별',0,-60+bob,16,'#fff1ac');
-   text(ctx,'획득 시 3성 합성 해금',0,31,12,'#fff3cc');ctx.restore();continue;
-  }
   ctx.save();ctx.scale(1,.72);circle(ctx,0,0,34+pulse*3,'#ddbd6320','#e8d28a80');circle(ctx,0,0,26,null,'#f4df9c50');ctx.restore();
   const beacon=ctx.createLinearGradient(0,-90,0,0);beacon.addColorStop(0,'#f8df8c00');beacon.addColorStop(1,'#f8df8c25');ctx.fillStyle=beacon;ctx.fillRect(-14,-90,28,82);
   if(!worldModels.draw(ctx,'supply',0,-5+bob)){rr(ctx,-23,-31,46,31,4,'#678448');rr(ctx,-25,-34,50,7,2,'#90a467');text(ctx,'+',0,-13,18,'#eedc8c');}
@@ -1175,9 +1184,14 @@ function draw(dt){
   ctx.restore();
  }
 
+ window.FrontRadioArt.turrets(ctx,game,fxVisible);
+
  // Launched enemies stay visible above the shark rather than appearing after it submerges.
  for(const u of game.units.filter(u=>window.FrontHitFeedback.airborne(u,game.time)).sort((a,b)=>a.y-b.y||a.id-b.id))drawUnit(u,true);
- battleFx.drawHealingStatuses(ctx,game,fxVisible);battleFx.drawParticles(ctx,fxVisible);window.FrontRosterArt?.results(ctx,game,fxVisible);battleFx.drawStunStatuses(ctx,game,u=>game.visible(u));swordView.health(ctx,game);if(game.isRoomCampaign())window.FrontPortal.health(ctx,game.bases[1]);drawFog();ctx.setTransform(DPR,0,0,DPR,0,0);if(game.captainStackHpMode)for(const leader of game.stackCaptains())drawCaptainStack(leader);
+ battleFx.drawHealingStatuses(ctx,game,fxVisible);battleFx.drawParticles(ctx,fxVisible);window.FrontRosterArt?.results(ctx,game,fxVisible);battleFx.drawStunStatuses(ctx,game,u=>game.visible(u));swordView.health(ctx,game);if(game.isRoomCampaign())window.FrontPortal.health(ctx,game.bases[1]);
+ const portal=game.isRoomCampaign()?game.bases[1]:null;
+ for(const p of game.pickups)if(p.active&&p.destinyStar)drawDestinyPickup(p,portal);
+ drawFog();ctx.setTransform(DPR,0,0,DPR,0,0);if(game.captainStackHpMode)for(const leader of game.stackCaptains())drawCaptainStack(leader);
  window.FrontHitFeedback.screenFlash(ctx,game);
  if(game.isRoomAssault()&&!reduceMotion.matches){
   const age=game.time-(game.roomCampaign?.portalDestroyedAt??-Infinity);

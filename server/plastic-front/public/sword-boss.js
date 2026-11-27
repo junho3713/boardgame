@@ -74,7 +74,7 @@ class Trial extends Game{
     const t=clamp((this.time-a.fireAt)/a.duration,0,1),old={x:s.x,y:s.y};s.x=mix(a.start.x,a.end.x,t);s.y=mix(a.start.y,a.end.y,t);s.z=['drop','rear'].includes(a.pattern)?260*(1-t*t*t):0;
     if(a.pattern==='spin')s.angle=Math.atan2(a.end.y-a.start.y,a.end.x-a.start.x)+(this.time-a.fireAt)*TAU*(cfg.spin.turnsPerSecond||6);
     const impact=!['drop','rear'].includes(a.pattern)||t>=1;
-    if(impact)for(const u of [...this.alive(0),...this.units.filter(t=>t.type==='toyDecoy'&&t.hp>0)]){if(a.hits.includes(u.id))continue;const r=a.radius+(Types[u.type]?.r||12),d=['drop','rear'].includes(a.pattern)?Math.hypot(u.x-a.end.x,u.y-a.end.y):segmentDistance(u,old,s);if(d<=r){a.hits.push(u.id);const counts=st.volleyHits||(st.volleyHits={}),hits=counts[u.id]||0;counts[u.id]=hits+1;const ratio=hits?cfg.overlapHitRatio:cfg.firstHitRatio;this.damage(u,u.maxHp*ratio*this.roomSpawnScaling(b).damage/Math.max(.0001,this.defenseFactor(u,b)),b);}}
+    if(impact)for(const u of this.captainStackHpMode?this.stackCaptains():[...this.alive(0),...this.units.filter(t=>t.type==='toyDecoy'&&t.hp>0)]){if(a.hits.includes(u.id))continue;const r=a.radius+(Types[u.type]?.r||12),d=['drop','rear'].includes(a.pattern)?Math.hypot(u.x-a.end.x,u.y-a.end.y):segmentDistance(u,old,s);if(d<=r){a.hits.push(u.id);const counts=st.volleyHits||(st.volleyHits={}),hits=counts[u.id]||0;counts[u.id]=hits+1;const ratio=hits?cfg.overlapHitRatio:cfg.firstHitRatio;this.damage(u,u.maxHp*ratio*this.roomSpawnScaling(b).damage/Math.max(.0001,this.defenseFactor(u,b)),b);}}
     if(t>=1){this.trialStats.attacks++;a.stage='hold';a.impactAt=this.time;a.holdUntil=this.time+(['drop','rear'].includes(a.pattern)?.48:.25);}
    }
    if(a.stage==='hold'&&this.time>=a.holdUntil){a.stage='return';a.started=this.time;a.from={x:s.x,y:s.y,z:s.z,angle:s.angle};a.duration=cfg.returnTime;}
@@ -102,8 +102,11 @@ class Trial extends Game{
   return points.filter(valid).filter(routeSafe).sort((a,b)=>(Math.hypot(a.x-u.x,a.y-u.y)+Math.hypot(a.x-c.x,a.y-c.y)*.12)-(Math.hypot(b.x-u.x,b.y-u.y)+Math.hypot(b.x-c.x,b.y-c.y)*.12))[0]||null;
  }
  updateSwordDodge(u,dt){
-  if(!this.trialConfig.dodge.enabled){if(u.trialDodge){u.trialDodge=null;u.route=null;}return false;}
   if(u.team!==0||u.type==='leader')return false;
+  if(this.captainStackHpMode||!this.trialConfig.dodge.enabled){
+   if(u.trialDodge){u.trialDodge=null;u.route=u.routeGoal=null;}
+   return false;
+  }
   const actions=this.swordHazards();if(!actions.length){if(u.trialDodge)u.route=null;u.trialDodge=null;return false;}
   let task=u.trialDodge;if(task&&!this.swordPointSafe(u,task,actions))task=null;
   const formation=task?null:super.formationPoint(u,this.commander(0));
@@ -117,7 +120,7 @@ class Trial extends Game{
   u.aimFace=null;return true;
  }
  separateCrowd(live){
-  if(!this.trialConfig.dodge.enabled)return super.separateCrowd(live);
+  if(this.captainStackHpMode||!this.trialConfig.dodge.enabled)return super.separateCrowd(live);
   const actions=this.swordHazards(),safe=actions.length?live.filter(u=>u.team===0&&u.trialDodge&&this.swordPointSafe(u,u,actions,4)).map(u=>({u,x:u.x,y:u.y})):[];
   super.separateCrowd(live);
   // Friendly separation cannot push an already escaped soldier back into a sword.
@@ -151,7 +154,7 @@ function install(){
  p.updateBossPattern=function(u,dt){if(this.mode!=='bosslab'){if(u.type==='swordEmpress'){ensure(this,u);this.updateSwordBoss(u,dt);return true;}if(this.trialBoss?.hp>0&&this.updateSwordDodge(u,dt))return true;}return native.updateBossPattern.call(this,u,dt);};
  p.impact=function(shot){if(this.mode==='bosslab')return native.impact.call(this,shot);this.trialIncoming={x:shot.x,y:shot.y};try{return native.impact.call(this,shot);}finally{this.trialIncoming=null;}};
  p.damage=function(target,amount,source){if(this.mode==='bosslab')return native.damage.call(this,target,amount,source);if(target?.type==='swordEmpress'){ensure(this,target);const blade=blockedBlade(target,this.trialIncoming||source,this.trialConfig);if(blade){this.trialStats.blocked++;blade.blockAt=this.time;return;}const before=target.hp;native.damage.call(this,target,amount,source);this.trialStats.dealt+=Math.max(0,before-target.hp);if(target.hp>0)this.checkSwordPhase(target);return;}return native.damage.call(this,target,amount,source);};
- p.separateCrowd=function(live){if(this.mode==='bosslab'||!(this.trialBoss?.hp>0))return native.separateCrowd.call(this,live);const actions=this.swordHazards(),safe=actions.length?live.filter(u=>u.team===0&&u.trialDodge&&this.swordPointSafe(u,u,actions,4)).map(u=>({u,x:u.x,y:u.y})):[];native.separateCrowd.call(this,live);for(const v of safe)if(!this.swordPointSafe(v.u,v.u,actions,4)){v.u.x=v.x;v.u.y=v.y;}};
+ p.separateCrowd=function(live){if(this.captainStackHpMode||this.mode==='bosslab'||!(this.trialBoss?.hp>0))return native.separateCrowd.call(this,live);const actions=this.swordHazards(),safe=actions.length?live.filter(u=>u.team===0&&u.trialDodge&&this.swordPointSafe(u,u,actions,4)).map(u=>({u,x:u.x,y:u.y})):[];native.separateCrowd.call(this,live);for(const v of safe)if(!this.swordPointSafe(v.u,v.u,actions,4)){v.u.x=v.x;v.u.y=v.y;}};
 }
 install();
 root.FrontSwordBoss={ensure,rebind,CONFIG,PATTERNS,LABELS,Trial,create,blockedBlade,idlePoint,segmentDistance,actionDistance};if(typeof module!=='undefined'&&module.exports)module.exports=root.FrontSwordBoss;
