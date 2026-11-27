@@ -45,7 +45,7 @@ test('portal destruction starts one rush and its bosses spawn on time even with 
  assert.equal(stars.length,1);
  assert.ok(Math.hypot(stars[0].x-portal.x,stars[0].y-portal.y)<100);
  assert.equal(game.experienceDrops.reduce((sum,p)=>sum+p.amount,0),360);
- assert.equal(game.pickups.filter(p=>p.combatDrop==='gold').reduce((sum,p)=>sum+p.amount,0),400);
+ assert.equal(game.pickups.filter(p=>p.combatDrop==='gold').reduce((sum,p)=>sum+p.amount,0),200);
  assert.equal(game.roomAssaultRemaining(),180);
  assert.equal(game.roomWaveCap(),64);
  tickBoss(game,529);
@@ -65,6 +65,25 @@ test('portal destruction starts one rush and its bosses spawn on time even with 
  assert.equal(game.resumeRoomEndless(),false);
  tickBoss(game,999);
  assert.equal(bosses(game).filter(type=>type==='swordEmpress').length,1);
+});
+
+test('the final boss lands an attack on a nearby commander despite repeated Retona flashes',()=>{
+ const game=fresh();game.time=100;game.startRoomAssault();game.roomCampaign.assaultRushCursor=3;
+ const commander=game.commander(0);
+ game.units=[commander];game.updateSwarm=()=>{};game.updateDefenses=()=>{};
+ game.updateRareSupplies=()=>{};game.levelCheck=()=>{};
+ tickBoss(game,280);
+ const boss=game.trialBoss,source={team:0,type:'lucky',x:commander.x,y:commander.y};
+ commander.x=boss.x;commander.y=boss.y+70;
+ const hp=commander.hp;
+ while(game.bossIntro.remaining>0)game.update(.05);
+ let flashes=0;
+ for(let i=0;i<130&&game.trialStats.attacks===0;i++){
+  if(i%16===0&&game.applyLuckyFlash(boss,{evolved:false,source}))flashes++;
+  game.update(.05);
+ }
+ assert.equal(flashes,1);
+ assert.equal(game.trialStats.attacks,1);assert.ok(commander.hp<hp);
 });
 
 test('the 12 minute overload drops the star near the commander and survives save/restore',()=>{
@@ -99,6 +118,6 @@ test('fever multiplies combat rewards and front-phase rare supplies spawn upfiel
  Object.assign(game.commander(0),{x:gold.x,y:gold.y});
  const before=game.cash[0];
  assert.equal(game.collectFieldSupply(gold),true);
- assert.equal(game.cash[0]-before,80);
+ assert.equal(game.cash[0]-before,40);
  assert.equal(game.collectFieldSupply(gold),false);
 });

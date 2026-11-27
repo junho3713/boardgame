@@ -59,10 +59,13 @@ function install({FrontGame,TYPES}){
  }
  p.applyLuckyFlash=function(u,flash){
   if(!eligible(this,u))return false;
+  const empress=u.finalBoss&&u.type==='swordEmpress';
+  if(empress&&this.time<(u.toyControlReadyAt||0))return false;
   const prior=u.luckyFlash,stillConfused=this.luckyFlashConfused(u);
   const until=this.time+rules.duration,confusedUntil=flash.evolved?until:stillConfused?prior.confusedUntil:0;
   interrupt(this,u);
   u.luckyFlash={until,confusedUntil,confused:confusedUntil>this.time,source:flash.evolved||!stillConfused?flash.source:prior.source};
+  if(empress)u.toyControlReadyAt=until+6;
   if(flash.evolved)u.cooldown=Math.min(u.cooldown||0,.2);
   return true;
  };

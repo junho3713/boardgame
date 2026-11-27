@@ -131,16 +131,31 @@ test('only collection promotes every eligible class, retains health and stats, a
  const resumed=unpack(new FrontGame(),pack(g));assert.equal(destiny(resumed).active,false);assert.equal(resumed.threeStarCount('medic'),1);
 });
 
-test('an unprepared or dead commander leaves the star on the ground; co-op never combines squads',()=>{
+test('a dead commander cannot collect a star and co-op never combines squads',()=>{
  const g=new CoopGame();g.start();
  const first=g.commander(0),second=g.withOwner(1,()=>g.commander(0));
  second.x=first.x+5;second.y=first.y;
  const p={active:true,destinyStar:true,x:first.x,y:first.y};g.pickups.push(p);
- addTwos(g,'tank',2);g.withOwner(1,()=>addTwos(g,'tank',1));g.coopCollectPickups();assert.ok(p.active);
- g.withOwner(1,()=>addTwos(g,'tank',2));second.hp=0;g.coopCollectPickups();assert.ok(p.active);
- second.hp=second.maxHp;g.coopCollectPickups();
- assert.equal(p.active,false);assert.equal(g.twoStarCount('tank'),2);
- assert.equal(g.threeStarCount('tank'),0);assert.equal(g.withOwner(1,()=>g.threeStarCount('tank')),1);
+ addTwos(g,'tank',2);g.withOwner(1,()=>addTwos(g,'tank',1));
+ first.hp=second.hp=0;g.coopCollectPickups();assert.ok(p.active);
+ first.hp=first.maxHp;g.coopCollectPickups();
+ assert.equal(p.active,false);assert.equal(g.hasDestinyFusion(),true);
+ assert.equal(g.withOwner(1,()=>g.hasDestinyFusion()),false);
+ assert.equal(g.threeStarCount('tank'),0);
+ addTwos(g,'tank',1);g.autoFuseUnits();
+ assert.equal(g.threeStarCount('tank'),1);assert.equal(g.withOwner(1,()=>g.twoStarCount('tank')),1);
+});
+
+test('an early Destiny Star unlock survives a checkpoint and later promotes three twos',()=>{
+ let g=game('livingroom-assault');g.phase='playing';g.time=720;g.updateRoomMission(0);
+ const p=destiny(g);Object.assign(g.commander(0),{x:p.x,y:p.y});
+ assert.equal(g.destinyStarTypes().length,0);
+ assert.equal(g.collectFieldSupply(p),true);
+ g=unpack(game(),pack(g));assert.equal(g.hasDestinyFusion(),true);
+ addTwos(g,'tank',2);g.autoFuseUnits();assert.equal(g.threeStarCount('tank'),0);
+ const leader=g.commander(0);
+ for(let i=0;i<3;i++)g.addUnit(0,'tank',leader.x,leader.y);
+ g.autoFuseUnits();assert.equal(g.threeStarCount('tank'),1);assert.equal(g.twoStarCount('tank'),0);
 });
 
 test('promoted snipers keep evolved parallel fire and lucky jeeps keep their three-star roulette',()=>{

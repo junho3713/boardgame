@@ -118,6 +118,7 @@ test('docking precedes fusion, same-rank pairs remain same rank, and multi-drone
  add(g,'drone',2);add(g,'combatDrone',2);g.autoFuseUnits();
  add(g,'multiDrone',2);
  const c=g.commander(0),star={x:c.x,y:c.y,active:true,destinyStar:true};
+ g.pickups.push(star);
  assert(g.collectFieldSupply(star));
  const three=g.alive(0).find(u=>u.type==='multiDrone');assert.equal(three.star,3);
  epsilon(g.stats(three).damage,10*.85*8);
@@ -127,6 +128,20 @@ test('docking precedes fusion, same-rank pairs remain same rank, and multi-drone
  const cash=g.cash[0];
  g.damage(three,1e9,{type:'ant',team:2});
  assert.equal(TYPES.multiDrone.cost,220);assert.equal(g.cash[0],cash+55);
+});
+test('a full multi-drone rank blocks additional docking and an old overflow keeps its health ratio at one star',()=>{
+ const g=battle();registerPair(g);
+ for(let i=0;i<3;i++)add(g,'multiDrone',2);
+ const a=add(g,'drone',2),b=add(g,'combatDrone',2);
+ assert.equal(g.dockDronePair(a,b),null);
+ assert.equal(g.summon(1),false);
+ const overflow=add(g,'multiDrone',2);overflow.hp*=.4;
+ g.autoFuseUnits();
+ assert.equal(g.twoStarCount('multiDrone'),3);assert.equal(overflow.star,1);epsilon(overflow.hp/overflow.maxHp,.4);
+ const c=g.commander(0),star={x:c.x,y:c.y,active:true,destinyStar:true};g.pickups.push(star);
+ assert(g.collectFieldSupply(star));
+ assert.equal(g.threeStarCount('multiDrone'),1);
+ assert.equal(g.dockDronePair(a,b),null);assert.equal(g.summon(1),false);
 });
 test('three attacks use independent timers, cluster targeting, piercing and evolution modifiers',()=>{
  for(const [type,evolved,radius,period,bossBonus] of [

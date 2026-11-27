@@ -61,34 +61,50 @@ p.dropDestinyStar=function(boss){
  }else return;
  const pickup={destinyStar:true,destinySource,active:true,x:boss.x,y:boss.y};
  this.resolvePosition(pickup,24);this.pickups.push(pickup);
- this.notify('toast','운명의 별이 떨어졌습니다 · 같은 병과 2성 3기를 모아 대장으로 획득');
+ this.notify('toast','운명의 별이 떨어졌습니다 · 획득 시 3성 합성 해금');
+};
+p.hasDestinyFusion=function(){
+ return this.starExperiment&&this.pickups.some(p=>p.destinyStar&&p.active===false&&
+  (!this.coop||this.isRoomAssault()||p.destinyOwner===this.coopOwner));
 };
 p.destinyStarTypes=function(){
  const counts=new Map(),promoted=new Set();
  for(const u of this.units){
-  if(u.team!==0||u.hp<=0||this.coop&&u.coopOwner!==this.coopOwner)continue;
+  if(u.team!==0||u.hp<=0||u.patrol||u.summonEvolved||u.goldenSummon||this.coop&&u.coopOwner!==this.coopOwner)continue;
   if(u.star===2)counts.set(u.type,(counts.get(u.type)||0)+1);
   if(u.star===3)promoted.add(u.type);
  }
  return fusionRoster.filter(type=>counts.get(type)>=RULES.copies&&!promoted.has(type));
 };
+function promoteDestinyUnits(game){
+ if(!game.hasDestinyFusion())return;
+ for(const type of game.destinyStarTypes()){
+  const u=mergeCopies.call(game,type,2);
+  if(u)game.effects.push({kind:'drop',x:u.x,y:u.y,t:1,max:1,team:0});
+ }
+}
 const collectSupply=p.collectFieldSupply;
 p.collectFieldSupply=function(pickup){
  if(!pickup?.destinyStar)return collectSupply.call(this,pickup);
  const commander=this.commander(0);
- if(!pickup.active||commander.hp<=0||Math.hypot(commander.x-pickup.x,commander.y-pickup.y)>=60)return false;
- const promoted=this.destinyStarTypes().map(type=>mergeCopies.call(this,type,2)).filter(Boolean);
- if(!promoted.length)return false;
+ if(!pickup.active||this.hasDestinyFusion()||commander.hp<=0||Math.hypot(commander.x-pickup.x,commander.y-pickup.y)>=60)return false;
  pickup.active=false;
- for(const u of promoted)this.effects.push({kind:'drop',x:u.x,y:u.y,t:1,max:1,team:0});
- this.notify('toast','운명의 별 · '+promoted.map(u=>this.stats(u).name).join(', ')+' ★★★ 합성');
+ pickup.destinyOwner=this.coop?this.coopOwner:0;
+ this.notify('toast','운명의 별 획득 · 같은 병과 2성 3기가 모이면 3성으로 자동 합성');
+ this.autoFuseUnits();
  this.notify('change');return true;
 };
 p.autoFuseUnits=function(){
+ if(!this.starExperiment||this.mode!=='pve'||!['playing','paused','choice','resupply'].includes(this.phase)){this.dockDrones();return;}
+ for(const u of this.fusionCandidates('multiDrone',2).slice(RULES.maxTwoStars)){
+  const ratio=u.hp/u.maxHp;
+  u.star=1;u.maxHp=this.stats(u).hp;u.hp=u.maxHp*ratio;
+ }
+ promoteDestinyUnits(this);
  this.dockDrones();
- if(!this.starExperiment||this.mode!=='pve'||!['playing','paused','choice','resupply'].includes(this.phase))return;
  const counts=new Map();for(const u of this.alive(0))if(fusionRoster.includes(u.type)&&(u.star||1)===1)counts.set(u.type,(counts.get(u.type)||0)+1);
  for(const [type,count] of counts)for(let i=0;i<Math.floor(count/RULES.copies);i++)if(!this.fuseUnit(type))break;
+ promoteDestinyUnits(this);
 };
 // The third recruit merges immediately, including while support is being confirmed.
 p.buy=function(type,team=0){const ok=buy.call(this,type,team);if(ok&&team===0)this.autoFuseUnits();return ok;};

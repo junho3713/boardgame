@@ -313,7 +313,7 @@ class FrontAutoPilot{
  }
 
  supplyThreats(){const g=this.game;return [...g.units.filter(u=>u.team!==0&&u.hp>0&&g.visible(u)),...g.activeDefenses().filter(u=>g.visible(u))].map(u=>{const s=u.type?g.stats(u):u.defenseKind?g.defenseStats(u):{range:280,damage:15,rate:1};return{x:u.x,y:u.y,radius:(s.range||30)+(T[u.type]?.r||20)+45,weight:clamp(s.damage/Math.max(.2,s.rate)/16,.6,3)};});}
- supplyCandidates(){const g=this.game,c=g.commander(0),threats=this.supplyThreats();return g.pickups.map((p,index)=>({p,index})).filter(({p})=>p.active&&(!p.combatDrop||g.canCollectCombatDrop(p,c))&&(!p.destinyStar||g.destinyStarTypes().length)&&p.y>=g.frontline()-15&&p.y<=this.guardRearLimit()&&dist(p,c)<1100&&this.dangerAt(p,threats)<1.2).sort((a,b)=>dist(a.p,c)-dist(b.p,c));}
+ supplyCandidates(){const g=this.game,c=g.commander(0),threats=this.supplyThreats();return g.pickups.map((p,index)=>({p,index})).filter(({p})=>p.active&&(!p.combatDrop||g.canCollectCombatDrop(p,c))&&(!p.destinyStar||!g.hasDestinyFusion())&&p.y>=g.frontline()-15&&p.y<=this.guardRearLimit()&&dist(p,c)<1100&&this.dangerAt(p,threats)<1.2).sort((a,b)=>dist(a.p,c)-dist(b.p,c));}
  supplyGoal(){return this.supplyCandidates().find(({p})=>{const route=this.route(p,this.supplyThreats(),40);return route.points.length&&route.cost<dist(this.game.commander(0),p)*2+140;})?.p;}
  collectExperience(enemies){
   const g=this.game,c=g.commander(0),radius=g.experienceRadius();
@@ -332,7 +332,7 @@ class FrontAutoPilot{
  }
  collectSupply(enemies){const g=this.game,c=g.commander(0),nearest=enemies[0],threats=this.supplyThreats();if(g.time<this.supplyPauseUntil)return false;
   let task=this.supply,pickup=task&&g.pickups[task.index];
-  if(task&&(!pickup?.active||(pickup.combatDrop&&!g.canCollectCombatDrop(pickup,c))||(pickup.destinyStar&&!g.destinyStarTypes().length)||g.time-task.started>18)){this.supply=null;task=null;}
+  if(task&&(!pickup?.active||(pickup.combatDrop&&!g.canCollectCombatDrop(pickup,c))||(pickup.destinyStar&&g.hasDestinyFusion())||g.time-task.started>18)){this.supply=null;task=null;}
   if(task&&(this.dangerAt(pickup,threats)>3||nearest&&dist(nearest,c)<105||g.time-task.progressAt>3)){
    this.supply=null;this.supplyPauseUntil=g.time+2;return false;
   }
@@ -388,7 +388,7 @@ class FrontAutoPilot{
   if(g.isSwordCommander(c)&&c.hp/c.maxHp>.6&&nearest&&dist(c,nearest)<330&&!nearest.fixedGuard&&(!nearest.boss||g.ultimateStatus().active)&&enemies.filter(e=>dist(e,c)<180).length<=3){const d=dist(c,nearest),reach=g.stats(c).range*.78;if(d>reach+8){const a=Math.atan2(c.y-nearest.y,c.x-nearest.x),goal={x:nearest.x+Math.cos(a)*reach,y:nearest.y+Math.sin(a)*reach};if(g.freePosition(goal.x,goal.y,g.collisionRadius(c))&&g.lineClear(c,goal,g.collisionRadius(c))){this.advanceStep(goal,'AI 시온 · 근접 베기 접근',nearest);return;}}else{g.moveOrder=null;this.action='AI 시온 · 근접 베기';return;}}
   if(!push&&this.engageLine(enemies,target))return;
   const advanceGuard=this.needsGuardAdvance();
-  if(!advanceGuard&&(!push||g.pickups.some(p=>p.active&&(!p.destinyStar||g.destinyStarTypes().length)&&dist(p,c)<140))&&this.collectSupply(enemies))return;
+  if(!advanceGuard&&(!push||g.pickups.some(p=>p.active&&(!p.destinyStar||!g.hasDestinyFusion())&&dist(p,c)<140))&&this.collectSupply(enemies))return;
   if(!advanceGuard&&!push&&this.collectExperience(enemies))return;
   if(advanceGuard&&this.advanceGuardLine())return;
   if((!nearest||dist(nearest,c)>300)&&g.alive(0).some(u=>u.type!=='leader'&&dist(u,g.formationPoint(u,c))>230)){g.moveOrder=null;this.action='AI 분대 재집결 · 후열 합류 대기';this.log(this.action);return;}

@@ -30,14 +30,15 @@ function install({FrontGame}){
  p.droneSummonStatus=function(live,pending){
   const owned=live.filter(u=>pair.includes(u.type)&&rank(u)===1&&!u.summonEvolved);
   const total=type=>owned.filter(u=>u.type===type).length+pending.filter(u=>u.type===type&&rank(u)===1&&!u.summonEvolved).length;
-  const difference=total(support)-total(combat);
+  const supportCount=total(support),combatCount=total(combat),difference=supportCount-combatCount;
   const type=difference>0?combat:difference<0?support:this.droneNextType??support;
   const partner=difference?owned.filter(u=>u.type===other(type))[total(type)]:null;
-  return {type,partner,waiting:difference!==0};
+  return {type,partner,waiting:difference!==0,needed:Math.min(supportCount,combatCount)+1};
  };
  p.dockDronePair=function(a,b){
   if(!this.droneDockingActive()||!a||!b||a.hp<=0||b.hp<=0||!sameOwner(this,a)||!sameOwner(this,b)||
    a.type!==support||b.type!==combat||rank(a)!==rank(b))return null;
+  if(this.starExperiment&&this.recruitmentRemaining(multi)<(rank(a)===2?3:1))return null;
   const ratio=(a.hp+b.hp)/Math.max(1,a.maxHp+b.maxHp);
   const from=[{x:a.x,y:a.y},{x:b.x,y:b.y}];
   a.x=(a.x+b.x)/2;a.y=(a.y+b.y)/2;

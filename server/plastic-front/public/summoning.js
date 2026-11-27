@@ -123,6 +123,7 @@
    if(cooldown)return {...status,reason:`전술 피버 재사용까지 ${cooldown}초`};
    const remainingCap=()=>this.recruitmentRemaining(type);
    if(!mystery&&!openSquadSlots&&!docking?.partner)return {...status,reason:'병력 한도에 도달했어요'};
+   if(docking&&this.starExperiment&&remainingCap()<docking.needed)return {...status,reason:'멀티드론 합성 한도에 도달했어요'};
    if(!mystery&&!docking&&(this.coop?this.scoped(remainingCap):remainingCap())<=pending.filter(u=>u.type===type).length)return {...status,reason:'이 병과의 충원 한도에 도달했어요'};
    if(this.cash[0]+1e-8<cost)return {...status,reason:'전투 골드가 부족해요'};
    return {...status,reason:''};

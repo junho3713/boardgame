@@ -325,8 +325,8 @@ function renderFusion(){
   '2성이 전사하면 같은 병과 1성 1기가 최대 체력으로 복귀합니다.'
  ];
  if(destiny)rules.push(
-  game.isRoomCampaign()?'9분 장수풍뎅이 미드 보스와 14분 정식 보스 장수말벌을 처치하면 각각 운명의 별이 떨어집니다.':'12분 이후 첫 정식 보스를 처치하면 운명의 별이 떨어집니다.',
-  '별을 주우면 같은 병과 2성 3기가 3성 1기로 합성됩니다.',
+  game.isRoomAssault()?'최전방 포탈 파괴 또는 12분 과부하 때 운명의 별이 나타납니다.':'9분 장수풍뎅이 미드 보스와 14분 정식 보스 장수말벌을 처치하면 각각 운명의 별이 떨어집니다.',
+  game.hasDestinyFusion()?'3성 합성 해금 완료. 같은 병과 2성 3기가 모이면 자동으로 합성됩니다.':'별을 획득하면 같은 병과 2성 3기가 모일 때마다 3성 1기로 자동 합성됩니다.',
   '3성 공격력 ×8 · 체력 ×5.5 · 공격속도와 공격 범위 +30% · 병과별 최대 1기'
  );
  $('fusionRules').innerHTML=rules.join('<br>');
@@ -1060,7 +1060,7 @@ function draw(dt){
    ctx.save();ctx.scale(1,.45);circle(ctx,0,0,32+pulse*5,'#e5b84944','#ffe791');ctx.restore();
    drawDestinyStar(ctx,0,-25+bob*2,23);
    text(ctx,'운명의 별',0,-60+bob,16,'#fff1ac');
-   text(ctx,'같은 병과 2성 3기',0,31,12,'#fff3cc');ctx.restore();continue;
+   text(ctx,'획득 시 3성 합성 해금',0,31,12,'#fff3cc');ctx.restore();continue;
   }
   ctx.save();ctx.scale(1,.72);circle(ctx,0,0,34+pulse*3,'#ddbd6320','#e8d28a80');circle(ctx,0,0,26,null,'#f4df9c50');ctx.restore();
   const beacon=ctx.createLinearGradient(0,-90,0,0);beacon.addColorStop(0,'#f8df8c00');beacon.addColorStop(1,'#f8df8c25');ctx.fillStyle=beacon;ctx.fillRect(-14,-90,28,82);

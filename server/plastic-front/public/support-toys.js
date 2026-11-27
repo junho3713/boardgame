@@ -112,7 +112,8 @@ function install({FrontGame:Game,TYPES}){
    t.toyKnockback={dx:x-t.x,dy:y-t.y,applied:0,startedAt:this.time,until:this.time+duration,recoverUntil:this.time+duration+rules.water.recovery,surf,popHeight:pop,popPeak};
    t.bayonetAttack=t.sniperAim=t.bikeAttack=null;t.bikeRecoverUntil=Math.max(t.bikeRecoverUntil||0,t.toyKnockback.recoverUntil);
   }else{t.x=x;t.y=y;if(t.bikeAttack?.origin){t.bikeAttack.origin.x=x;t.bikeAttack.origin.y=y;}}
-  t.hitReaction={at:this.time,angle:a,power:1,heavy:true};t.route=t.routeGoal=null;t.toyControlReadyAt=this.time+rules.controlResistance;return true;
+  t.hitReaction={at:this.time,angle:a,power:1,heavy:true};t.route=t.routeGoal=null;
+  t.toyControlReadyAt=t.finalBoss&&t.type==='swordEmpress'?(t.toyKnockback?.recoverUntil??this.time)+6:this.time+rules.controlResistance;return true;
  };
  p.updateSupportKnockback=function(u){
   const k=u.toyKnockback;if(!k)return false;if(u.hp<=0){delete u.toyKnockback;return false;}
@@ -248,7 +249,7 @@ function install({FrontGame:Game,TYPES}){
    const center=threats[0],targets=tier===2?this.toyThreats(center,rules.jackpot.radius).filter(t=>this.supportControlAllowed(t,'stun')):threats.slice(0,rules.electric.targets[tier]);let previous=u;
    u.face=Math.atan2(targets[0].y-u.y,targets[0].x-u.x);
    for(const [hop,t] of targets.entries()){
-    t.toyStunUntil=this.time+duration;t.toyControlReadyAt=t.toyStunUntil+rules.controlResistance;t.sniperAim=t.bayonetAttack=null;
+    t.toyStunUntil=this.time+duration;t.toyControlReadyAt=t.toyStunUntil+(t.finalBoss&&t.type==='swordEmpress'?6:rules.controlResistance);t.sniperAim=t.bayonetAttack=null;
     this.effects.push({kind:'bossGroggy',stun:true,target:t,x:t.x,y:t.y,t:duration,max:duration,team:0});
     this.effects.push({kind:'toyZap',x:previous.x,y:previous.y,from:previous,target:t,source:u,tier,hop,storm:tier===2,t:1,max:1,team:0});previous=t;
    }

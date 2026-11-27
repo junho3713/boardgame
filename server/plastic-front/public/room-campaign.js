@@ -200,7 +200,7 @@ const methods={
     this.experienceDrops.push({...point,amount:45,owner,pulling:false,boss:true});
     if(i<5){
      const gold=this.resolvePosition({x:point.x,y:point.y+20},12);
-     this.pickups.push({...gold,active:true,combatDrop:'gold',owner,amount:80});
+     this.pickups.push({...gold,active:true,combatDrop:'gold',owner,amount:40});
     }
    }
   }
@@ -591,7 +591,7 @@ const methods={
  upgradeRoomFinalBossPosition(point=null){
   const u=this.units.find(u=>u.type==='swordEmpress'&&u.finalBoss&&u.hp>0),r=config.finalBoss;if(!u||u.roomFinalPositionVersion===r.positionVersion)return false;
   const at=this.resolvePosition(point||{x:r.x,y:this.bases[1].y+r.offset},60),dx=at.x-u.x,dy=at.y-u.y;u.x=u.homeX=at.x;u.y=u.homeY=at.y;u.roomFinalPositionVersion=r.positionVersion;
-  if(u.swords){u.swords.pending=null;u.swords.nextAttackAt=this.time+2.5;for(const blade of u.swords.blades){blade.x+=dx;blade.y+=dy;blade.action=null;}}
+  if(u.swords){u.swords.pending=null;u.swords.nextAttackAt=this.time+(this.isRoomAssault()?.65:2.5);for(const blade of u.swords.blades){blade.x+=dx;blade.y+=dy;blade.action=null;}}
   this.bossIntro={bossId:u.id,name:u.bossName||'사검의 군주',x:u.x,y:u.y,from:{x:this.camera.x,y:this.camera.y},remaining:r.introSeconds,total:r.introSeconds};return true;
  },
  roomRushEntry(){const s=this.roomCampaign;if(this.finalBattle.spawned||this.units.some(u=>u.finalBoss)){s.rushCursor=config.bossRush.pairs.length;return null;}if(!Number.isInteger(s.rushCursor))s.rushCursor=0;return config.bossRush.pairs[s.rushCursor]||null;},
