@@ -41,6 +41,7 @@ function unpack(game,data){
  if(!Object.hasOwn(data.fields,'foamShots'))game.foamShots=[];
  const decode=v=>{if(v===null||typeof v!=='object')return v;if(v.$ref)return map.get(v.$ref)||null;if(v.$number)return v.$number==='Infinity'?Infinity:v.$number==='-Infinity'?-Infinity:0;if(Array.isArray(v))return v.map(decode);const out={};for(const [k,x]of Object.entries(v))if(!['__proto__','prototype','constructor'].includes(k))out[k]=decode(x);return out;};
  for(const [id,v]of data.nodes)Object.assign(map.get(id),decode(v));Object.assign(game,decode(data.fields));
+ game.captainStackHpMode=data.fields.captainStackHpMode===true;
  delete game.rosterLasers;
  game.shots=game.shots.filter(shot=>shot.rosterKind!=='droneBullet'&&!(shot.source?.team===0&&shot.source.type==='drone'));
  delete game.rosterDice;delete game.rosterThrowSerial;

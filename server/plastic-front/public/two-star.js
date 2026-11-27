@@ -25,8 +25,11 @@ p.upgradeBalance=function(){const changed=upgrade.call(this);return this.refresh
 p.fusionCandidates=function(type,star=1){return this.starExperiment&&this.mode==='pve'&&fusionRoster.includes(type)?this.alive(0).filter(u=>u.type===type&&!u.summonEvolved&&!u.goldenSummon&&(u.star||1)===star):[];};
 p.twoStarCount=function(type){return this.alive(0).filter(u=>u.type===type&&u.star===2).length;};
 p.recoverTwoStarLoss=function(u){
- if(!this.starExperiment||this.mode!=='pve'||u.team!==0||u.star!==2||u.hp>0||u.merged||u.recoveredAs||!fusionRoster.includes(u.type))return null;
- const recover=()=>{const survivor=this.addUnit(0,u.type,u.x,u.y);survivor.star=1;u.recoveredAs=survivor.id;this.effects.push({kind:'drop',x:survivor.x,y:survivor.y,t:1,max:1,team:0});return survivor;};
+ const stacked=this.captainStackHpMode&&!u.goldenSummon;
+ if((!this.starExperiment&&!stacked)||this.mode!=='pve'||u.team!==0||(u.star!==2&&!(stacked&&u.star===3))||u.hp>0||u.merged||u.recoveredAs||!fusionRoster.includes(u.type))return null;
+ const recover=()=>{const survivor=this.addUnit(0,u.type,u.x,u.y);survivor.star=u.star-1;
+ if(survivor.star>1)survivor.hp=survivor.maxHp=this.stats(survivor).hp;
+ u.recoveredAs=survivor.id;this.effects.push({kind:'drop',x:survivor.x,y:survivor.y,t:1,max:1,team:0});return survivor;};
  return this.coop?this.withOwner(u.coopOwner,recover):recover();
 };
 p.recruitmentRemaining=function(type,team=0){

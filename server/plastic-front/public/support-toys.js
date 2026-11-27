@@ -41,6 +41,7 @@ function install({FrontGame:Game,TYPES}){
   this.notify('toast',toys[u.type].name+' '+ '★'.repeat(this.supportToyStars(u))+(before<rules.duplicateMax?' · 쿨타임 −'+this.supportToyUpgrades(u)*10+'%':' · 최대 강화 / 완전 수리'));return before<rules.duplicateMax;
  };
  p.damage=function(target,amount,source){
+  if(this.captainStackHpMode&&target?.type==='toyDecoy')return;
   if(target?.type==='toyDecoy'&&target.hp>0&&this.time<target.toyExpires){
    if(amount>0&&this.time>=(target.toyArrivesAt||0)&&source?.team!==0&&(source?.boss||source?.roadCaptain||source?.finalBoss)){
     // Let an approaching boss spring the ambush before its hit consumes the bait.
@@ -96,7 +97,7 @@ function install({FrontGame:Game,TYPES}){
   const range=this.stats(u).range;
   return ![...this.alive(0),...this.buildings.filter(t=>t.hp>0)].some(t=>canTarget.call(this,u,t)&&this.lineClear(u,t,0,{fireTeam:u.team})&&(this.targetDistance(u,t)<=range||distance(u,t)<distance(u,bait)));
  };
- p.supportDecoyTarget=function(u){if(u.team===0||this.checkingSupportRoute)return null;return this.units.find(t=>t.type==='toyDecoy'&&t.toyLuredIds?.includes(u.id)&&this.supportDecoyOnRoute(u,t))||null;};
+ p.supportDecoyTarget=function(u){if(this.captainStackHpMode||u.team===0||this.checkingSupportRoute)return null;return this.units.find(t=>t.type==='toyDecoy'&&t.toyLuredIds?.includes(u.id)&&this.supportDecoyOnRoute(u,t))||null;};
  p.canTarget=function(u,t){if(t?.type==='toyDecoy'&&(this.checkingSupportRoute||!t.toyLuredIds?.includes(u.id)||!this.supportDecoyOnRoute(u,t)))return false;return canTarget.call(this,u,t);};
  p.pursuitTarget=function(u){return this.supportDecoyTarget(u)||pursuit.call(this,u);};
  p.supportControlAllowed=function(t,kind){

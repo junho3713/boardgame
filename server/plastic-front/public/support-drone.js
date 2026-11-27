@@ -131,7 +131,8 @@ function install({FrontGame}){
   const count=evolved?5:rules.shield.allies[rank];
   const allies=game.units.filter(u=>u.team===0&&u!==leader&&u.hp>0&&owner(u)===owner(drone)&&!game.isSupportEntity?.(u)&&distance(u,leader)<=range);
   allies.sort((a,b)=>a.hp/a.maxHp-b.hp/b.maxHp||distance(a,leader)-distance(b,leader)||a.id-b.id);
-  for(const ally of [leader,...allies.slice(0,count)]){
+  const recipients=game.captainStackHpMode?game.captainStack(leader).slice(0,1):[leader,...allies.slice(0,count)];
+  for(const ally of recipients){
    const hp=ally.maxHp*rules.shield.strength[rank]*power*(evolved&&drone.type==='multiDrone'?1.3:1),previous=ally.droneShield;
    if(previous?.until>game.time&&previous.hp>hp)continue;
    ally.droneShield={hp,maxHp:hp,until:game.time+rules.shield.duration,evolved:evolved||!!(previous?.until>game.time&&previous.evolved)};

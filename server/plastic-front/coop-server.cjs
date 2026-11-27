@@ -10,7 +10,7 @@ function createCoopHandler({now=Date.now,automatic=true}={}){
  function prune(){for(const [code,r]of rooms)if(now()-r.touched>10*60*1000){rooms.delete(code);for(const p of r.players)sessions.delete(p.token);}}
  function connected(p){return now()-p.seen<3500;}
  function publicRoom(r,p,includeGame=true){
-  const data={code:r.code,owner:p.owner,host:p.owner===0,phase:r.started?r.game.phase:'lobby',started:r.started,paused:r.paused,pauseReason:r.pauseReason,round:r.started?r.game.coopRounds[p.owner]:0,choosing:r.started&&r.game.coopChoosing[p.owner],invulnerable:r.started?Math.max(0,r.game.coopInvulnerable[p.owner]-r.game.time):0,players:r.players.map(q=>({owner:q.owner,name:q.name,color:q.owner?'blue':'green',connected:connected(q)})),events:r.events.filter(e=>e.owner===undefined||e.owner===p.owner).slice(-30)};
+  const data={code:r.code,captainStackHpMode:r.captainStackHpMode,owner:p.owner,host:p.owner===0,phase:r.started?r.game.phase:'lobby',started:r.started,paused:r.paused,pauseReason:r.pauseReason,round:r.started?r.game.coopRounds[p.owner]:0,choosing:r.started&&r.game.coopChoosing[p.owner],invulnerable:r.started?Math.max(0,r.game.coopInvulnerable[p.owner]-r.game.time):0,players:r.players.map(q=>({owner:q.owner,name:q.name,color:q.owner?'blue':'green',connected:connected(q)})),events:r.events.filter(e=>e.owner===undefined||e.owner===p.owner).slice(-30)};
   if(includeGame&&r.started){r.game.coopSelectOwner(p.owner);if(!r.cached||now()-r.cachedAt>=100){r.cached={};r.cachedAt=now();}if(!r.cached[p.owner])r.cached[p.owner]=pack(r.game);data.game=r.cached[p.owner];r.game.coopSelectOwner(0);}
   return data;
  }
@@ -49,7 +49,7 @@ function createCoopHandler({now=Date.now,automatic=true}={}){
      if(creation.size>1000)creation.clear();creation.set(ip,limit&&now()-limit.at<60000?{at:limit.at,n:limit.n+1}:{at:now(),n:1});
      if(rooms.size>=3)fail(503,'협동 시험방이 모두 사용 중입니다. 잠시 후 다시 시도해 주세요.');
      let code;do{code=crypto.randomBytes(3).toString('hex').toUpperCase();}while(rooms.has(code));
-     const r={code,players:[],touched:now(),started:false,paused:false,pauseReason:'',round:0,events:[],eventId:0,cached:null};const p=player(r,name,body.medicSkin);rooms.set(code,r);return json(req,res,201,{token:p.token,state:publicRoom(r,p)});
+     const r={code,captainStackHpMode:body.captainStackHpMode===true,players:[],touched:now(),started:false,paused:false,pauseReason:'',round:0,events:[],eventId:0,cached:null};const p=player(r,name,body.medicSkin);rooms.set(code,r);return json(req,res,201,{token:p.token,state:publicRoom(r,p)});
     }
     const r=rooms.get(String(body.code||'').trim().toUpperCase());if(!r)fail(404,'방 코드를 확인해 주세요.');if(r.started)fail(409,'이미 출격한 방입니다.');if(r.players.length>=2)fail(409,'2명이 모두 입장했습니다.');const p=player(r,name,body.medicSkin);r.touched=now();return json(req,res,200,{token:p.token,state:publicRoom(r,p)});
    }
@@ -65,7 +65,7 @@ function createCoopHandler({now=Date.now,automatic=true}={}){
    const action=body.action;
    if(action==='start'){
     if(p.owner!==0)fail(403,'초록 방장만 출격할 수 있습니다.');if(r.started)fail(409,'이미 출격했습니다.');if(r.players.length!==2||r.players.some(q=>!connected(q)))fail(409,'두 대장이 연결되면 출격할 수 있습니다.');
-    r.game=new CoopGame(events(r),{realtimeSummons:true,medicSkins:r.players.map(p=>p.medicSkinId)});r.started=true;r.game.start();
+    r.game=new CoopGame(events(r),{captainStackHpMode:r.captainStackHpMode,realtimeSummons:true,medicSkins:r.players.map(p=>p.medicSkinId)});r.started=true;r.game.start();
    }else{
     if(!r.started)fail(409,'아직 출격하지 않았습니다.');const g=r.game;
     if(action==='pause')pause(r,'대장이 작전을 일시정지했습니다.');

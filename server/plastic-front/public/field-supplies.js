@@ -33,7 +33,7 @@ function install({FrontGame:Game,TYPES}){
  p.canCollectCombatDrop=function(pickup,leader){
   if(!pickup?.active||leader.hp<=0||this.coop&&pickup.owner!==this.coopOwner)return false;
   if(pickup.combatDrop==='gold')return true;
-  if(pickup.combatDrop==='heal')return this.supplySquad().some(u=>u.hp<u.maxHp);
+  if(pickup.combatDrop==='heal')return (this.captainStackHpMode?this.captainStack(leader):this.supplySquad()).some(u=>u.hp<u.maxHp);
   return pickup.combatDrop==='magnet'&&this.experienceDrops.some(drop=>drop.owner===pickup.owner&&!drop.pulling);
  };
  p.activateExperienceMagnet=function(at,owners){
@@ -51,7 +51,9 @@ function install({FrontGame:Game,TYPES}){
    this.notify('toast','전맵 자석 · 전장에 떨어진 경험치 결정을 끌어옵니다');
   }else{
    let healed=0;
-   for(const unit of this.supplySquad())if(this.heal(unit,unit.maxHp*.25)>0)healed++;
+   if(this.captainStackHpMode){
+    for(const unit of this.captainStack(leader))if(unit.hp<unit.maxHp){unit.hp=Math.min(unit.maxHp,unit.hp+unit.maxHp*.25);healed++;}
+   }else for(const unit of this.supplySquad())if(this.heal(unit,unit.maxHp*.25)>0)healed++;
    this.notify('toast',`회복템 · 분대원 ${healed}기 회복`);
    this.effects.push({kind:'drop',x:pickup.x,y:pickup.y,t:.6,max:.6,team:0});
   }

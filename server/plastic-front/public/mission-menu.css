@@ -1,6 +1,11 @@
 #startOverlay {
   background: radial-gradient(ellipse at 52% 20%, #304535c9, #0b1614f5 80%);
 }
+.captain-mode-field{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;margin:8px 0 12px;font-weight:700}
+.captain-mode-field[hidden],.captain-mode-field small[hidden]{display:none}
+.captain-mode-field select{font:inherit;color:#20352a;background:#f5f4e9;border:1px solid #70846c;border-radius:5px;padding:5px 9px}
+.captain-mode-field small{font-weight:500;color:inherit}
+
 
 #startOverlay > .mission-menu {
   --menu-bg: #1b2621;

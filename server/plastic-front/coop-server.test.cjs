@@ -165,3 +165,25 @@ test('two clients authenticate, grow independently without pausing, reconnect an
   assert.equal((await call('/command',{action:'reroll',round},a.token)).status,409);
  }finally{handler.close();await new Promise(r=>app.close(r));}
 });
+
+test('host selects the room health rule; join and reconnect receive the same authoritative rule',async()=>{
+ const handler=createCoopHandler({automatic:false}),server=http.createServer(handler);
+ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+ const url='http://127.0.0.1:'+server.address().port+'/plastic-front/api/coop';
+ async function call(path,body,token){
+  const response=await fetch(url+path,{method:body?'POST':'GET',headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:body?JSON.stringify(body):undefined});
+  assert(response.ok);return response.json();
+ }
+ try{
+  for(const enabled of [false,true]){
+   const a=await call('/rooms',{name:'green',...(enabled?{captainStackHpMode:true}:{})});
+   const b=await call('/join',{name:'blue',code:a.state.code,captainStackHpMode:!enabled});
+   assert.equal(b.state.captainStackHpMode,enabled);
+   await call('/command',{action:'start'},a.token);
+   for(const token of [a.token,b.token]){
+    const state=await call('/state',null,token);
+    assert.equal(state.game.fields.captainStackHpMode,enabled);
+   }
+  }
+ }finally{handler.close();await new Promise(resolve=>server.close(resolve));}
+});

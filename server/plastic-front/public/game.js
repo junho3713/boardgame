@@ -66,7 +66,7 @@ function manualCheckpoint(report=false){if(selectedMode==='idle'||!['playing','p
 $('saveRunBtn').onclick=()=>manualCheckpoint(true);
 $('saveMenuBtn').onclick=()=>{if(manualCheckpoint(true))newGame(false);};
 $('manualContinue').onclick=async()=>{enableAudio(true);await gameAssetsReady;let latest;try{latest=window.FrontProfile.read(localStorage,profileKey);}catch{toast('개인 강화 저장을 읽지 못했습니다. 기존 저장은 유지합니다.');return;}directProfile.gold=latest.gold;Object.assign(directProfile.upgrades,latest.upgrades);const restored=runSave.load(gameEvents,directProfile);if(!restored){refreshManualSave();toast(runSave.error||'저장된 작전이 없습니다.');return;}
- if(selectedMode==='idle')autoSession.detach();selectedMode=restored.mode;autoPilot=null;game=restored.game;if(game.mode==='pve'&&!game.realtimeSummons)game.restoreSummoning(true);game.reconcileSummonChoices();if(game.phase==='playing')game.phase='paused';await unitModels.prepare(game);profile=directProfile;battlefield=game.battlefieldId();selectedCommander=game.commanderId||'sarge';selectedSniperSkin=game.sniperSkinId||'classic';selectedMedicSkin=game.medicSkinId||'classic';selectedFlameSkin=game.flameSkinId||'classic';document.body.classList.remove('auto-mode');for(const id of ['startOverlay','idleConfig','autoState','displayOverlay','resultOverlay','upgradeOverlay','pauseOverlay','helpOverlay','intelOverlay','supportOverlay','permanentOverlay','evolutionOverlay','fusionOverlay','battleSquadOverlay','battleMenuOverlay'])$(id).hidden=true;
+ if(selectedMode==='idle')autoSession.detach();selectedMode=restored.mode;autoPilot=null;game=restored.game;$('captainMode').value=game.captainStackHpMode?'stack':'basic';$('captainModeHint').hidden=!game.captainStackHpMode;if(game.mode==='pve'&&!game.realtimeSummons)game.restoreSummoning(true);game.reconcileSummonChoices();if(game.phase==='playing')game.phase='paused';await unitModels.prepare(game);profile=directProfile;battlefield=game.battlefieldId();selectedCommander=game.commanderId||'sarge';selectedSniperSkin=game.sniperSkinId||'classic';selectedMedicSkin=game.medicSkinId||'classic';selectedFlameSkin=game.flameSkinId||'classic';document.body.classList.remove('auto-mode');for(const id of ['startOverlay','idleConfig','autoState','displayOverlay','resultOverlay','upgradeOverlay','pauseOverlay','helpOverlay','intelOverlay','supportOverlay','permanentOverlay','evolutionOverlay','fusionOverlay','battleSquadOverlay','battleMenuOverlay'])$(id).hidden=true;
  cursorAimEnabled=false;clearInput();rosterKey='';queue=emptyQueue();renderCommanderChoice();renderSniperChoice();renderMedicChoice();renderBattlefieldChoice();buildTerrain();resize();updateIntel();if(game.phase==='choice'){showUpgrade(game.currentOptions||[]);if(game.pendingChoice?.type==='support'){queue={...emptyQueue(),...game.pendingChoice.queue};showSupportConfirmation();}else game.pendingChoice=null;}else $('pauseOverlay').hidden=false;refreshManualSave();updateUI();toast('저장된 작전 복구 · 준비되면 계속 진격하세요.');};
 setInterval(()=>{if(waveTestBackup)normalRunSave.claim();if(!COOP?.active&&selectedMode!=='idle'&&['playing','paused','choice','resupply'].includes(game.phase)&&!runSave.claim()){refreshManualSave();}},3000);
 
@@ -151,7 +151,7 @@ function renderIdlePlan(focus){const total=Object.values(idlePlan.counts).reduce
 }
 function legacyIdle(){try{const v=JSON.parse(localStorage.getItem('plastic-front-idle-v1')||'null');return v?.state?.started?v.state:null;}catch{return null;}}
 function idleProfileData(saved){const armory=autoSession.readArmory();if(armory&&(!saved||armory.savedAt>=saved.savedAt))return armory.profile;if(saved)return saved.snapshot.engine.profile;const legacy=legacyIdle(),data=new window.FrontAutoProfile().snapshot();if(legacy){data.gold=Number.isFinite(legacy.gold)?legacy.gold:0;for(const k of Object.keys(data.upgrades))data.upgrades[k]=Math.min(10,Math.max(0,Math.floor(legacy.ranks?.[k]||0)));}return data;}
-function selectMode(mode){if(waveTestBackup)stopWaveTest(false);runSave.release();renderCommanderChoice();renderSniperChoice();renderMedicChoice();if(selectedMode==='idle')autoSession.detach();selectedMode=mode;try{localStorage.setItem('plastic-front-mode',mode);}catch{}document.body.classList.toggle('auto-mode',mode==='idle');if(mode==='idle'){const saved=autoSession.read();profile=new window.FrontAutoProfile(idleProfileData(saved));game=new window.FrontGame(gameEvents,profile,{map:battlefield,commander:selectedCommander,sniperSkin:selectedSniperSkin,medicSkin:selectedMedicSkin,flameSkin:selectedFlameSkin});idlePlan=window.FrontAutoCleanPlan(saved?.snapshot.pilot.plan||legacyIdle()?.build||idlePlan);autoPilot=new window.FrontAutoPilot(game,idlePlan);autoPilot.prepare();renderIdlePlan();$('idleMigration').hidden=!!saved||!legacyIdle();}else{autoPilot=null;profile=directProfile;game=new window.FrontGame(gameEvents,profile,{map:battlefield,commander:selectedCommander,sniperSkin:selectedSniperSkin,medicSkin:selectedMedicSkin,flameSkin:selectedFlameSkin,realtimeSummons:true});game.reset(mode);}rosterKey='';if(mode!=='idle')$('idleContinue').hidden=true;$('idleConfig').hidden=mode!=='idle';$('autoState').hidden=mode!=='idle';resize();buildTerrain();updateUI();updateIntel();refreshManualSave();}
+function selectMode(mode){$('captainModeField').hidden=mode!=='pve';if(waveTestBackup)stopWaveTest(false);runSave.release();renderCommanderChoice();renderSniperChoice();renderMedicChoice();if(selectedMode==='idle')autoSession.detach();selectedMode=mode;try{localStorage.setItem('plastic-front-mode',mode);}catch{}document.body.classList.toggle('auto-mode',mode==='idle');if(mode==='idle'){const saved=autoSession.read();profile=new window.FrontAutoProfile(idleProfileData(saved));game=new window.FrontGame(gameEvents,profile,{map:battlefield,commander:selectedCommander,sniperSkin:selectedSniperSkin,medicSkin:selectedMedicSkin,flameSkin:selectedFlameSkin});idlePlan=window.FrontAutoCleanPlan(saved?.snapshot.pilot.plan||legacyIdle()?.build||idlePlan);autoPilot=new window.FrontAutoPilot(game,idlePlan);autoPilot.prepare();renderIdlePlan();$('idleMigration').hidden=!!saved||!legacyIdle();}else{autoPilot=null;profile=directProfile;game=new window.FrontGame(gameEvents,profile,{map:battlefield,commander:selectedCommander,sniperSkin:selectedSniperSkin,medicSkin:selectedMedicSkin,flameSkin:selectedFlameSkin,realtimeSummons:true,captainStackHpMode:mode==='pve'&&$('captainMode').value==='stack'});game.reset(mode);}rosterKey='';if(mode!=='idle')$('idleContinue').hidden=true;$('idleConfig').hidden=mode!=='idle';$('autoState').hidden=mode!=='idle';resize();buildTerrain();updateUI();updateIntel();refreshManualSave();}
 function renderBattlefieldChoice(){
  const locked=selectedMode==='duel'||selectedMode==='crisis',id=locked?'backyard':battlefield;
  const key=selectedMode+'/'+id;
@@ -543,6 +543,7 @@ $('endlessBtn').onclick=()=>{
 };
 async function newGame(start=true){if(COOP?.active)return;collapseObjective(true);if(waveTestBackup)stopWaveTest(false);if(start&&selectedMode!=='idle'&&!runSave.claim()){toast(runSave.error);return;}battleMusic.reset();if(start){enableAudio(true);await gameAssetsReady;}if(selectedMode==='idle')autoSession.detach();cursorAimEnabled=false;clearInput();for(const id of ['displayOverlay','resultOverlay','upgradeOverlay','pauseOverlay','helpOverlay','intelOverlay','supportOverlay','permanentOverlay','evolutionOverlay','fusionOverlay','battleSquadOverlay','battleMenuOverlay'])$(id).hidden=true;game.commanderId=selectedCommander;game.sniperSkinId=selectedSniperSkin;game.medicSkinId=selectedMedicSkin;game.flameSkinId=selectedFlameSkin;game.reset();if(start&&selectedMode!=='idle')runSave.begin(game);if(selectedMode==='idle'){if(start){if(!startAuto())return;}else{autoPilot=new window.FrontAutoPilot(game,idlePlan);autoPilot.prepare();renderIdlePlan();}}rosterKey='';updateIntel();buildTerrain();if(start){$('startOverlay').hidden=true;if(selectedMode!=='idle')game.start();toast(game.isDesktopDefense()?'20분 동안 버티세요 · 북쪽 공세':selectedMode==='idle'?'AI 지휘 시작 · 기존 돌파 작전 규칙으로 진행합니다.':game.mode==='crisis'?'15초 뒤 포병 도착 · 부대를 이동해 포격을 피하고 적 포병을 격파하세요.':(game.usesSummoning()?'1~6번으로 병력을 소환하고 F로 미스터리 박스를 열 수 있어요.':'채집 트럭 2대가 고정 수입을 생산합니다. 첫 병력 지원은 1분 뒤 제공됩니다.'));}else{$('startOverlay').hidden=false;runSave.release();}refreshManualSave();updateUI();}
  $('startBtn').onclick=async()=>{battleMusic.reset();enableAudio(true);await prepareGameAssets();if(selectedMode!=='idle'&&!runSave.begin(game)){toast(runSave.error);return;}if(selectedMode==='idle'&&!startAuto())return;$('startOverlay').hidden=true;if(selectedMode!=='idle')game.start();toast(game.isDesktopDefense()?'20분 동안 버티세요 · 북쪽 공세':selectedMode==='idle'?'AI 지휘 시작 · 기존 돌파 작전 규칙으로 진행합니다.':game.mode==='crisis'?'15초 뒤 포병 도착 · 부대를 이동해 포격을 피하고 포병을 파괴하세요.':game.isRoomAssault()?'포탈을 돌파하고 최후의 총공세를 버티세요.':game.isRoomCampaign()?'거실 전체 개방 · 20분 이후 최종 보스 처치로 승리 · 포탈 폐쇄 시 증원 감소':game.mode==='pve'?'목표 1/3 · 벌레 무리 8회를 처치하고 전방 구역을 개방하세요.':'1대1 훈련 · 상대 본진을 파괴하세요. 3분 후 체력으로 판정합니다.');refreshManualSave();updateUI();};
+ $('captainMode').onchange=()=>{game.captainStackHpMode=selectedMode==='pve'&&$('captainMode').value==='stack';$('captainModeHint').hidden=!game.captainStackHpMode;};
  for(const button of missionModeButtons)button.onclick=()=>selectMode(button.dataset.mode);
  $('toMenuBtn').onclick=()=>{if(waveTestBackup)stopWaveTest();else newGame(false);};
  $('againBtn').onclick=()=>{if(waveTestBackup){stopWaveTest(false);openWaveTest();}else newGame();};$('restartBtn').onclick=()=>{if(game.phase==='ready')return;openPause('restart');};
@@ -784,6 +785,10 @@ function drawUnitRaw(u,mine=true){
  const col=t===2?'#77543a':t?'#bd6e55':'#5f863e',light=t===2?'#a17b4d':t?'#d88c71':'#84a953',dark=t===2?'#493c2b':t?'#82472f':'#36592b';ctx.save();ctx.translate(u.x,u.y);window.FrontHitFeedback.transform(ctx,u,game.time);
  if(u.type==='drone'||u.type==='multiDrone')ctx.globalAlpha*=window.FrontSupportDroneView.cloakOpacity(u,game.time);
 
+ if(game.captainStackHpMode&&u.type==='leader'&&t===0){
+  ctx.save();ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(0,1,types.leader.r,types.leader.r*.72,0,0,Math.PI*2);
+  ctx.fillStyle='#ffe8b21c';ctx.fill();ctx.strokeStyle=game.time<(u.stackGuardUntil||0)?'#a9f6ff':'#ffe5a7bf';ctx.stroke();ctx.restore();
+ }
  if(u.type==='leader'&&t===0){circle(ctx,0,0,25,null,'#edf6cb99');ctx.setLineDash([3,7]);circle(ctx,0,0,30,null,'#edf6cb55');ctx.setLineDash([]);drawCommandHeading(ctx,u,mine);if(game.commanderReviveProtected(u)){circle(ctx,0,-26,43,'#83e8ff20','#9eefff');text(ctx,`부활 보호 ${Math.ceil(u.reviveProtectionUntil-game.time)}초`,0,-82,11,'#b8f4ff');}}
  if(evolved){circle(ctx,0,0,types[u.type].r+9,null,'#e9c76b');}
  if(u.boss){circle(ctx,0,0,48,null,'#e5a251');ctx.setLineDash([5,5]);circle(ctx,0,0,54,null,'#e5a25188');ctx.setLineDash([]);}
@@ -862,7 +867,9 @@ function drawUnitRaw(u,mine=true){
  if(!u.rareSupplyGuard&&(u.type==='stagBeetle'||u.type==='rhinoBeetle'))text(ctx,(u.boss?(u.miniBoss?'MID / ':'BOSS / ')+u.bossName.replace(/^(중간 보스|미드 보스) · /,''):types[u.type].name)+' · 장갑',u.x,u.y-(u.type==='rhinoBeetle'?91:78)*(u.boss?1.35:1),u.boss?13:11,'#f0d597');
  if(u.team!==0&&!u.rareSupplyGuard&&types[u.type].flying&&(u.boss||game.units.find(v=>v.type===u.type&&!v.boss&&v.hp>0&&game.visible(v))===u))text(ctx,(u.boss?(u.miniBoss?'MID / ':'BOSS / ')+u.bossName.replace(/^(중간 보스|미드 보스) · /,''):types[u.type].name)+(u.type==='hornet'?' · 중장갑':' · 경장갑'),u.x,u.y-((u.visualFlightHeight??types[u.type].flightHeight)+49)*(u.boss?1.35:1),u.boss?13:10,u.boss?'#ffc079':'#f2d694');
  const shieldHp=(u.bubbleShield?.hp||0)+window.FrontSupportDroneView.activeShieldHp(u,game.time);
- if(u.star>=2||u.boss||u.rareSupplyGuard||shieldHp>0||u.hp<u.maxHp||u.type==='leader'||u.type==='artillery'||u.type==='bayonetCaptain'||u.type==='bombBug'){
+ if(game.captainStackHpMode&&t===0){
+  if(u.star>=2)text(ctx,'★'.repeat(u.star),u.x,u.y-(types[u.type].flying?100:70),12,u.star===3?'#ffd36c':'#ffe4a0');
+ }else if(u.star>=2||u.boss||u.rareSupplyGuard||shieldHp>0||u.hp<u.maxHp||u.type==='leader'||u.type==='artillery'||u.type==='bayonetCaptain'||u.type==='bombBug'){
   const vehicle=(u.team!==0||u.type!=='guntruck')&&['tank','crimsonAce','guntruck','artillery','lucky','pirateCannon'].includes(u.type),human=roster.includes(u.type)&&!vehicle||u.type==='leader'||types[u.type].stab,w=u.boss?84:vehicle?48:u.type==='bombBug'?36:30;
   const rise=(u.type==='medic'&&u.team===0&&u.appearance==='rina'?78+(u.star>=2?8:0):types[u.type].flying?(u.visualFlightHeight??types[u.type].flightHeight)+42:u.type==='crimsonAce'?140:u.type==='rhinoBeetle'?88:u.type==='stagBeetle'?76:u.type==='pirateCannon'?94:u.type==='bubbleOctopus'?52:u.type==='bombBug'?57:vehicle?79:u.type==='bayonetCaptain'?90:types[u.type].stab?75:human?66:u.type==='bruteBeetle'?58:35)*(u.boss?1.35:1)-(u.star>=2?(vehicle?10:8):0),y=u.y-rise;
   const left=u.x-w/2,bar=window.FrontBubbleOctopusView.healthBarLayout(u.hp,u.maxHp,shieldHp);
@@ -872,6 +879,39 @@ function drawUnitRaw(u,mine=true){
  }
 
  const evolutionLabel=window.FrontUnitLabels.evolution(game,u,ctx);if(evolutionLabel)text(ctx,evolutionLabel.text,evolutionLabel.x,evolutionLabel.y,evolutionLabel.size,'#ffe3a0');
+}
+const stackBadgeState=new WeakMap();
+function stackColor(u){
+ if(!u)return '#23312c';
+ if(u.type==='leader')return '#dc5654';
+ if(u.star===3)return '#af81ed';
+ if(u.star===2)return '#69b7ea';
+ if(u.type==='tank'||u.type==='rifle')return '#c5aa55';
+ return '#79bd74';
+}
+function drawCaptainStack(leader){
+ const lines=game.captainStack(leader),top=lines[0];if(!top)return;
+ const time=game.time,prev=stackBadgeState.get(leader);
+ const addedAt=prev&&lines.length>prev.count?time:prev?.addedAt??-Infinity;
+ stackBadgeState.set(leader,{count:lines.length,addedAt});
+ const motion=!reduceMotion.matches,broken=time-(leader.stackBreakAt??-Infinity);
+ const shake=motion&&broken>=0&&broken<.35?Math.sin(broken*76)*(1-broken/.35)*4:0;
+ const pop=motion?Math.max(0,1-(time-addedAt)/.24):0;
+ const pos=point(leader);ctx.save();ctx.translate(pos.x+shake,pos.y+33*scale);
+ const label=(top.star>=2?'★'.repeat(top.star)+' ':'')+(types[top.type]?.name||'지휘관');
+ ctx.font='bold 11px sans-serif';
+ const w=Math.max(106,Math.ceil(ctx.measureText(label).width)+42),left=-w/2;
+ rr(ctx,left-3,-4,w+6,26,4,'#14211ff0');
+ rr(ctx,left,0,w,7,2,stackColor(lines[1]));rr(ctx,left,0,w,7,2,'#07141088');
+ const hp=w*clamp(top.hp/top.maxHp,0,1);
+ ctx.fillStyle=stackColor(top);ctx.fillRect(left,0,hp,7);
+ if(hp>0&&hp<w){ctx.fillStyle='#fff4d4';ctx.fillRect(left+hp-1,0,1,7);}
+ const shield=window.FrontSupportDroneView.activeShieldHp(top,time);
+ if(shield>0){ctx.fillStyle='#7ef9ee';ctx.fillRect(left,0,w*clamp(shield/top.maxHp,0,1),3);}
+ ctx.fillStyle='#f7f3dc';ctx.textAlign='left';ctx.fillText(label,left+32,18);
+ ctx.save();ctx.translate(left+15,15);ctx.scale(1+.23*pop,1+.23*pop);ctx.textAlign='center';ctx.fillStyle='#ffd988';ctx.fillText('×'+lines.length,0,3);ctx.restore();
+ if(motion&&broken>=0&&broken<.35){ctx.globalAlpha=1-broken/.35;ctx.fillStyle='#ffe6ac';for(const side of [-1,1])for(let i=1;i<=3;i++)ctx.fillRect(side*(w/2+i*broken*17),2-i*broken*10,2,3);}
+ ctx.restore();
 }
 function point(u){return{x:(u.x-game.camera.x)*scale+W/2,y:(u.y-game.camera.y)*scale+H/2};}
 function drawFog(){
@@ -1102,7 +1142,7 @@ function draw(dt){
 
  // Launched enemies stay visible above the shark rather than appearing after it submerges.
  for(const u of game.units.filter(u=>window.FrontHitFeedback.airborne(u,game.time)).sort((a,b)=>a.y-b.y||a.id-b.id))drawUnit(u,true);
- battleFx.drawHealingStatuses(ctx,game,fxVisible);battleFx.drawParticles(ctx,fxVisible);window.FrontRosterArt?.results(ctx,game,fxVisible);battleFx.drawStunStatuses(ctx,game,u=>game.visible(u));swordView.health(ctx,game);if(game.isRoomCampaign())window.FrontPortal.health(ctx,game.bases[1]);drawFog();ctx.setTransform(DPR,0,0,DPR,0,0);
+ battleFx.drawHealingStatuses(ctx,game,fxVisible);battleFx.drawParticles(ctx,fxVisible);window.FrontRosterArt?.results(ctx,game,fxVisible);battleFx.drawStunStatuses(ctx,game,u=>game.visible(u));swordView.health(ctx,game);if(game.isRoomCampaign())window.FrontPortal.health(ctx,game.bases[1]);drawFog();ctx.setTransform(DPR,0,0,DPR,0,0);if(game.captainStackHpMode)for(const leader of game.stackCaptains())drawCaptainStack(leader);
  window.FrontHitFeedback.screenFlash(ctx,game);
  if(game.isRoomAssault()&&!reduceMotion.matches){
   const age=game.time-(game.roomCampaign?.portalDestroyedAt??-Infinity);

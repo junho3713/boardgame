@@ -145,7 +145,7 @@ function install({FrontGame}){
  };
  p.updateFoamShots=function(dt){
   if(!this.foamShots?.length)return;
-  const allies=this.alive(0);
+  const allies=this.captainStackHpMode?this.stackCaptains():this.alive(0);
   this.foamShots=this.foamShots.filter(shot=>advanceShot(this,shot,Math.min(dt,this.time-shot.startedAt),allies));
  };
 }
