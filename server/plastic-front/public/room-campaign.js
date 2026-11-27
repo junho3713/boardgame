@@ -2,7 +2,7 @@
 (function(root){'use strict';
 const armoredWaveMix={ant:4,bombBug:.45,acidBeetle:.55,bayonet:1.5,stagBeetle:2,sniper:1.5,honeybee:1,bladeGuard:2,rifle:2,butterfly:.6};
 const config={version:116,duration:1200,enemyLuckyInterval:5,recoverySeconds:16,
- combat:{healthVersion:144,hpScale:1.2,openingHp:{until:300,restoreAt:480,scale:.75},openingDamage:{types:['ant','bladeGuard'],scale:.7,restoreFrom:180,restoreAt:300},bossHpScale:1.485,bossHpExtra:{rhinoBeetle:1.3,hornet:1.3,crimsonAce:1.3},damageScale:1.25,meleeDamageScale:1.1,bossDamageScale:1.3,bossArmorPenetration:{hornet:.3,crimsonAce:.4},bikeDamageScale:1.05,
+ combat:{healthVersion:145,hpScale:1.2,openingHp:{until:300,restoreAt:480,scale:.75},openingDamage:{types:['ant','bladeGuard'],scale:.7,restoreFrom:180,restoreAt:300},bossHpScale:1.485,bossHpExtra:{rhinoBeetle:1.3,hornet:1.3,crimsonAce:1.3},damageScale:1.25,meleeDamageScale:1.1,bossDamageScale:1.3,bossArmorPenetration:{hornet:.3,crimsonAce:.4},bikeDamageScale:1.05,
   spawnScaling:[{at:720,hp:1.4,damage:1.3},{at:480,hp:1.25,damage:1.2}]},
  rewards:{supplyGold:10,miniBossGold:15,bossGold:40},
  weakReinforcements:{from:300,lateAt:600,mid:.15,late:.20,types:['ant','rifle']},
@@ -13,7 +13,7 @@ const config={version:116,duration:1200,enemyLuckyInterval:5,recoverySeconds:16,
  attrition:{from:600,lateAt:900,soloTwoStarWaveDamage:1.2,lateWaveDamage:.85,mortarDamage:.6,lateMortarDamage:.45},
  lateWaves:{from:900,closedCount:.8,closedInterval:1.15,openExtra:2,openInterval:.8},
  bossRush:{from:960,extraBosses:{crimsonAce:{type:'crimsonAce',name:'진홍 전차 에이스',pattern:'rearBarrage'}},pairs:[{at:960,types:['stagBeetle','bayonetCaptain']},{at:1020,types:['bladeGuard','rhinoBeetle']},{at:1080,types:['bikeRaider','hornet']},{at:1140,types:['crimsonAce','stagBeetle']}],troops:{boss:{openCount:3,closedCount:2,openInterval:3.6,closedInterval:4.2,cap:28},between:{openCount:5,closedCount:4,openInterval:3,closedInterval:3.6,cap:36}}},
- assault:{overloadAt:720,duration:180,rewardMultiplier:1.6,cap:64,batch:12,interval:2.6,
+ assault:{overloadAt:720,duration:180,openingBossHpScale:.8,rewardMultiplier:1.6,cap:64,batch:12,interval:2.6,
   opening:[{at:180,type:'stagBeetle'},{at:330,type:'bayonetCaptain'},{at:480,type:'bladeGuard'}],
   rush:[{at:30,types:['rhinoBeetle']},{at:75,types:['bikeRaider','hornet']},{at:130,types:['crimsonAce']}]},
  midgame:{from:660,bossDensity:.8,quietDensity:.8},

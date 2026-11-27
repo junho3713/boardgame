@@ -23,7 +23,7 @@ const STAR_COMBAT=[
  {damage:8,hp:5.5,attackSpeed:1.3,range:1.3,heal:7.2}
 ];
 const COMMANDER_REVIVAL={delay:5,protection:3};
-const GUARDIANS={range:460,mageHp:560,mageRate:6,mageDamage:18,windup:.45,radius:145,root:2,laserHp:1500,laserDamage:40,laserTick:.2,respawnDelay:60,shieldNotice:.8,shieldRaise:.18,shieldHold:.35,lessonRange:650,lessonBannerTime:5,laserWindup:0,laserRate:0};
+const GUARDIANS={range:460,mageHp:560,mageRate:6,mageDamage:18,windup:2,radius:145,root:2,laserHp:1500,laserDamage:40,laserTick:.2,respawnDelay:60,shieldNotice:.8,shieldRaise:.18,shieldHold:.35,lessonRange:650,lessonBannerTime:5,laserWindup:0,laserRate:0};
 const INSECTS={bomb:{trigger:65,radius:140,windup:.9,maxHpDamage:.25},spray:{windup:.3,flight:.4,radius:34}};
 root.FrontBombBugRules=INSECTS.bomb;
 const BUTTERFLY={range:330,arc:80*Math.PI/180,windup:.65,flight:.8,reduction:.5,duration:6};
@@ -455,8 +455,12 @@ class FrontGame{
   if(u.cooldown>0)return;
   const candidates=this.alive(0).filter(valid);if(!candidates.length)return;
   candidates.sort((a,b)=>candidates.filter(v=>dist(v,b)<=GUARDIANS.radius).length-candidates.filter(v=>dist(v,a)<=GUARDIANS.radius).length||dist(a,u)-dist(b,u));
-  const target=candidates[0];u.face=u.aimFace=Math.atan2(target.y-u.y,target.x-u.x);u.cooldown=s.rate;u.recoil=.25;u.castUntil=this.time+1;
-  u.blizzardCast={x:target.x,y:target.y,hitAt:this.time+GUARDIANS.windup};
+  const target=candidates[0],hitAt=this.time+GUARDIANS.windup;
+  u.face=u.aimFace=Math.atan2(target.y-u.y,target.x-u.x);
+  u.cooldown=s.rate;
+  u.recoil=.25;
+  u.castUntil=hitAt;
+  u.blizzardCast={x:target.x,y:target.y,startedAt:this.time,hitAt};
  }
  updateLaser(p,dt){
   const power=this.roomLaserPower(p);
@@ -589,7 +593,12 @@ class FrontGame{
   if(!this.isRoomCampaign()||u.team===0)return 1;
   const rules=ROOM_CAMPAIGN.config.combat,opening=rules.openingHp;
   const spawnScale=u.finalBoss?1:this.roomSpawnScaling(u).hp;
-  if(u.boss)return (rules.bossHpScale??1)*(rules.bossHpExtra?.[u.type]??1)*(u.miniBoss?ROOM_CAMPAIGN.config.miniBoss.hp:1)*spawnScale;
+  if(u.boss){
+   const openingAssaultBoss=this.isRoomAssault()&&!u.miniBoss&&!u.roadCaptain&&
+    ROOM_CAMPAIGN.config.assault.opening.some(boss=>boss.type===u.type);
+   const openingBossScale=openingAssaultBoss?ROOM_CAMPAIGN.config.assault.openingBossHpScale:1;
+   return (rules.bossHpScale??1)*(rules.bossHpExtra?.[u.type]??1)*(u.miniBoss?ROOM_CAMPAIGN.config.miniBoss.hp:1)*spawnScale*openingBossScale;
+  }
   const spawnedAt=u.spawnedAt??this.time,fixed=u.fixedGuard||u.roomGarrison||u.roadCaptain;
   let openingScale=1;
   if(opening&&!fixed)openingScale=opening.scale+(1-opening.scale)*clamp((spawnedAt-opening.until)/(opening.restoreAt-opening.until),0,1);

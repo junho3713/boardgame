@@ -14,6 +14,23 @@ const fresh=()=>{
 const bosses=game=>game.units.filter(u=>u.boss&&!u.roadCaptain).map(u=>u.type);
 const tickBoss=(game,time)=>{game.time=time;game.updateRoomBosses();};
 
+test('the three opening bosses have 20 percent less health, including on an older checkpoint',()=>{
+ const game=fresh(),reference=new FrontGame({},undefined,{map:'livingroom-star'});
+ for(const at of [180,330,480])tickBoss(game,at);
+ const opening=game.units.filter(u=>u.boss&&!u.roadCaptain);
+ assert.equal(opening.length,3);
+ for(const boss of opening)assert.equal(boss.maxHp,reference.stats(boss).hp*.8);
+ game.startRoomAssault();tickBoss(game,510);
+ const rhino=game.units.find(u=>u.boss&&u.type==='rhinoBeetle');
+ assert.equal(rhino.maxHp,reference.stats(rhino).hp);
+ const boss=opening[0],newHp=boss.maxHp;
+ boss.maxHp=reference.stats(boss).hp;boss.hp=boss.maxHp*.35;
+ const saved=pack(game);saved.fields.roomHealthVersion--;
+ const restored=unpack(fresh(),saved).units.find(u=>u.id===boss.id);
+ assert.equal(restored.maxHp,newHp);
+ assert.ok(Math.abs(restored.hp/newHp-.35)<1e-10);
+});
+
 test('portal destruction starts one rush and its bosses spawn on time even with survivors',()=>{
  const game=fresh(),portal=game.bases[1];
  assert.equal(game.battlefieldId(),'livingroom-assault');

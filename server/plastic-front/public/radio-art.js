@@ -73,9 +73,14 @@ function face(c,x,y,n,rim,angle,gold) {
  }
  c.restore();
 }
-function drawRollPair(c,roll,rank,age,spinning,reduced,duration,grouped=false) {
- const popup=(age-duration)/.25, accented=roll.success&&popup>=0&&popup<1;
+const pairGap=2,pairTrayWidth=46;
+function rollPairPose(roll,popup,reduced){
+ const accented=roll.success&&popup>=0&&popup<1;
  const zoom=accented?1+(reduced?.09:.5)*Math.min(1,popup/.22,(1-popup)/.30):1;
+ return {roll,accented,zoom,width:(pairTrayWidth+(accented?2:1.2))*zoom};
+}
+function drawRollPair(c,pose,rank,age,spinning,reduced,duration,grouped) {
+ const {roll,accented,zoom}=pose;
  const golden=rank===3;
  const twist=spinning&&!reduced?.34*Math.sin(age*38):0;
  const jump=spinning&&!reduced?2.6*Math.sin(age/duration*Math.PI):0;
@@ -90,8 +95,7 @@ function drawRollPair(c,roll,rank,age,spinning,reduced,duration,grouped=false) {
  face(c,10.6,-jump*.55,spinning?0:roll.dice[1],rim,-twist+.035,golden);
  c.restore();
 }
-function rollLabel(c,label,roll,u,tr) {
- const top=-21;
+function rollLabel(c,label,roll,u,tr,top) {
  c.font='bold 12px sans-serif';
  c.textAlign='center';c.textBaseline='bottom';c.lineJoin='round';
  c.strokeStyle='#382115';c.lineWidth=3;c.strokeText(label,0,top);
@@ -135,7 +139,12 @@ function rolls(c,game,visible) {
   if(e.jackpot)label='TRIPLE JACKPOT!';
   const x=u.x*scale;
   let y=(u.y-57)*scale-10;
-  const width=grouped?83:label?48:35,top=label?41:19,bottom=19;
+  const poses=pairs.map(pair=>rollPairPose(pair,(age-duration)/.25,reduced));
+  const rowWidth=poses.reduce((span,pose)=>span+pose.width,0)+(poses.length-1)*pairGap;
+  const peak=Math.max(...poses.map(pose=>pose.zoom));
+  const labelY=grouped?-14*peak-7:-21;
+  const width=grouped?rowWidth/2:label?48:35,bottom=Math.max(19,14*peak);
+  const top=label?Math.max(41,15-labelY):bottom;
   let overlap;
   while((overlap=lanes.find(lane=>Math.abs(lane.x-x)<lane.width+width
    && y+bottom>lane.y-lane.top && y-top<lane.y+lane.bottom))){
@@ -153,13 +162,15 @@ function rolls(c,game,visible) {
    stroke(c,1.2,'#ffeab0',()=>c.arc(lampX,lampY,r+4,-1.5,-.22)); c.restore();
   }
   c.translate(x/scale,y/scale); c.scale(1/scale,1/scale);
-  for(const [index,pair] of pairs.entries()){
+  let left=-rowWidth/2;
+  for(const pose of poses){
    c.save();
-   if(grouped){c.translate((index-(pairs.length-1)/2)*54,0);c.scale(.73,.73);}
-   drawRollPair(c,pair,rank,age,spinning,reduced,duration,grouped);
+   if(grouped)c.translate(left+pose.width/2,0);
+   drawRollPair(c,pose,rank,age,spinning,reduced,duration,grouped);
    c.restore();
+   left+=pose.width+pairGap;
   }
-  if(label&&!spinning)rollLabel(c,label,e.sync||e.jackpot?{}:roll,u,tr);
+  if(label&&!spinning)rollLabel(c,label,e.sync||e.jackpot?{}:roll,u,tr,labelY);
   c.restore();
  }
 }

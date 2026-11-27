@@ -50,8 +50,13 @@ test('a five-unit escort group consumes future wave slots rather than multiplyin
 test('roaming ice mages approach, stop to cast, freeze targets and use the original mortar shield; fixed guards stay planted',()=>{
  const g=scene(),leader=g.addUnit(0,'leader',1500,6500),mage=g.addUnit(2,'blizzardMage',1500,5800),fixed=g.addUnit(1,'blizzardMage',1800,5800);Object.assign(mage,{mobileMage:true,activeStage:1,cooldown:0});fixed.fixedGuard=true;fixed.activeStage=1;
  const oldY=mage.y;g.updateBlizzard(mage,.1);a.ok(mage.y>oldY);const fixedY=fixed.y;g.move(fixed,0,100,.1,100);a.equal(fixed.y,fixedY);
- mage.y=leader.y-200;g.updateBlizzard(mage,.1);a.ok(mage.blizzardCast);const castY=mage.y;g.updateBlizzard(mage,.1);a.equal(mage.y,castY);g.time=1;g.updateBlizzard(mage,.1);a.ok(leader.rootedUntil>g.time);
- g.mortarShells=[{team:0,x:mage.x,y:mage.y,landAt:1.5,radius:100}];g.updateMageShields();a.ok(mage.iceShield);g.time=1.3;a.equal(g.blockMageMortar(mage,g.mortarShells[0]),true);
+ mage.y=leader.y-200;g.updateBlizzard(mage,.1);
+ a.equal(mage.blizzardCast.hitAt-mage.blizzardCast.startedAt,2);
+ a.equal(mage.castUntil,mage.blizzardCast.hitAt);
+ const castY=mage.y,hp=leader.hp;
+ g.time=1.99;g.updateBlizzard(mage,.1);a.equal(mage.y,castY);a.equal(leader.hp,hp);a.ok(!(leader.rootedUntil>g.time));
+ g.time=2;g.updateBlizzard(mage,.1);a.ok(leader.hp<hp&&leader.rootedUntil>g.time);
+ g.mortarShells=[{team:0,x:mage.x,y:mage.y,landAt:2.5,radius:100}];g.updateMageShields();a.ok(mage.iceShield);g.time=2.3;a.equal(g.blockMageMortar(mage,g.mortarShells[0]),true);
 });
 test('mobile mages enter only from six minutes onward, share the wave cap and never become respawning guardians',()=>{
  a.ok(room.phases.filter(p=>p.at<360).every(p=>!p.mix.blizzardMage));a.ok(room.phases.filter(p=>p.at>=360).every(p=>p.mix.blizzardMage>0));

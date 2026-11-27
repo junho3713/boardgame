@@ -13,7 +13,7 @@ function renderer(coop=false){
  const window={Image:Atlas,matchMedia:()=>({matches:true}),performance:{now:()=>now},
   FrontCoopClient:{active:coop},FrontRadioAirspace:{syncOrigins(){},scorch(){},aircraft(_ctx,e){planes.push(e.strike);},marker(_ctx,e){markers.push(e.strike);},shadow(){}}};
  vm.runInNewContext(fs.readFileSync(require.resolve('./public/radio-art.js'),'utf8'),{window});
- const cells=[],faces=[],labels=[],scales=[],paints=[],layers=[],stack=[];
+ const cells=[],faces=[],labels=[],scales=[],paints=[],layers=[],stack=[],groups=[];
  function addColorStop(offset,color){this.stops.push([offset,color]);}
  const makeGradient=radius=>({radius,stops:[],addColorStop});
  const c=new Proxy({
@@ -26,6 +26,7 @@ function renderer(coop=false){
   canvas:{width:800,height:600,clientWidth:800},getTransform:()=>({a:1,b:0,c:0,d:1,e:0,f:0}),
   fill(){
    paints.push(this.fillStyle);
+   if(this.fillStyle==='#25241ef0')groups.push({x:this.position[0],zoom:this.stretch[0]});
    if(this.fillStyle?.stops)layers.push({gradient:this.fillStyle,alpha:this.globalAlpha,blend:this.globalCompositeOperation,position:this.position,stretch:this.stretch});
    if(['#434543','#9e611e'].includes(this.fillStyle))faces.push(0);
    if(['#0e0e0e','#3f230d'].includes(this.fillStyle))faces[faces.length-1]++;
@@ -34,9 +35,9 @@ function renderer(coop=false){
   drawImage(img,sx,sy,sw,sh){if(sw===192)cells.push((sy/192%4)*6+sx/192);}
  },{get:(o,k)=>o[k]??(()=>{})});
  const game={time:0,phase:'playing',coop,effects:[],radioFireZones:[]};
- return {game,planes,markers,paint(t,ms,visible){layers.length=0;now=ms;game.time=t;window.FrontRadioArt.ground(c,game,visible);return [...layers];},cells,labels,scales,paints,
+ return {game,planes,markers,paint(t,ms,visible){layers.length=0;now=ms;game.time=t;window.FrontRadioArt.ground(c,game,visible);return [...layers];},cells,labels,scales,paints,groups,
   dice(e,age){
-   faces.length=0;labels.length=0;scales.length=0;paints.length=0;
+   faces.length=0;labels.length=0;scales.length=0;paints.length=0;groups.length=0;
    game.effects=[e].flat().map(roll=>({kind:'radioRoll',x:0,y:0,max:.85,t:.85-age,...roll}));
    window.FrontRadioArt.rolls(c,game,()=>true);return [...faces];},
   impact(at=0,strike='nuke'){return window.FrontRadioArt.event(c,{kind:'radioImpact',strike,at,x:0,y:0,radius:225,t:1,max:1});}};
@@ -73,6 +74,18 @@ test('sync highlights two separate groups and leaves a missed pair at its usual 
  assert.deepEqual(r.labels,['SYNC x2!']);
  assert.equal(r.scales.filter(x=>x>1.45).length,2);
  assert.equal(r.paints.filter(x=>x==='#ffbf33').length,6);
+});
+test('ranked groups retain full-size dice and about two pixels between their rims',()=>{
+ const r=renderer();r.game.reducedMotion=false;
+ const roll={rank:2,rolls:[{dice:[3,3],success:true},{dice:[1,2]},{dice:[4,6]}]};
+ for(const [age,widths,zoom] of [[.6,[47.2,47.2,47.2],1],[.29,[72,47.2,47.2],1.5]]){
+  r.dice(roll,age);
+  assert.deepEqual(r.groups.map(group=>group.zoom),[zoom,1,1]);
+  for(let i=1;i<r.groups.length;i++){
+   const gap=r.groups[i].x-r.groups[i-1].x-(widths[i]+widths[i-1])/2;
+   assert.ok(Math.abs(gap-2)<1e-9);
+  }
+ }
 });
 test('nuclear and hotline sixes have distinct labels over the same two dice',()=>{
  const r=renderer();
