@@ -17,7 +17,6 @@ class FrontModels{
  ensureRina(){if(!this.rina&&window.FrontMedicSkin)this.rina=new window.FrontMedicSkin();return this.rina?.ready||Promise.resolve();}
  async prepare(game){
   await this.ready;const jobs=[];
-  if(this.pixelMode&&game.pixelRoom){this.ensure('bayonet',1);this.ensure('bladeGuard',2);}
   for(const u of Array.isArray(game.units)?game.units:[])if(u.team===0&&u.hp>0){jobs.push(this.ensure(this.visualFor(u,game.evolutionEnabled?.(u)??game.evolved?.[u.type]),u.type==='bayonetCaptain'?1:u.team)?.loading);if(u.type==='medic'&&u.appearance==='rina')jobs.push(this.ensureRina());}
   if(game.medicSkinId==='rina')jobs.push(this.ensureRina());if(game.sniperSkinId==='kayla')jobs.push(this.ensure('sniperKayla',0)?.loading);
   const c=game.commander?.(0)||{type:'leader',team:0,appearance:game.commanderId||'sarge',flameSkin:game.flameSkinId||'classic'};jobs.push(this.ensure(this.visualFor(c),0)?.loading);if(c.ultimatePose?.active)jobs.push(this.ensure(this.visualFor({...c,ultimatePose:null}),0)?.loading);if(c&&game.level>=8&&['sarge','shino'].includes(c.appearance||'sarge'))jobs.push(this.ensure(c.appearance==='shino'?'commanderShinoUltimate':'commanderSargeUltimate',0)?.loading);
@@ -42,12 +41,12 @@ class FrontModels{
   // Enemy-only art is shared by both hostile simulation teams, including garrisons.
   const sharedEnemy=team!==0&&['pirateCannon','bombBug','acidBeetle','bladeGuard','bikeRaider','crimsonAce','lucky','ant','soldierAnt','beetle','bruteBeetle','stagBeetle','rhinoBeetle','honeybee','hornet','butterfly'].includes(type);
   // Roaming mages and their escorts share the hostile support atlases across both enemy teams.
-  let key=type+'-'+(['mortar','blizzardMage'].includes(type)&&team!==0?1:sharedEnemy?2:team);if(team!==0&&!this.manifest?.models[key]&&this.manifest?.models[type+'-1'])key=type+'-1';const pixel=!!this.pixelMode,cacheKey=pixel?'pixel:'+key:key;if(this.assets.has(cacheKey))return this.assets.get(cacheKey);
+  let key=type+'-'+(['mortar','blizzardMage'].includes(type)&&team!==0?1:sharedEnemy?2:team);if(team!==0&&!this.manifest?.models[key]&&this.manifest?.models[type+'-1'])key=type+'-1';if(this.assets.has(key))return this.assets.get(key);
   const data=this.manifest?.models[key];if(!data)return null;
   const layers=type==='blizzardMage'?{...data,walk:{...data.body,file:'blizzardMage-walk-v20261106.webp',frames:8,anchors:undefined,mirrorFrames:undefined,walkFrames:[0,1,2,3,4,5,6,7],walkStride:72}}:data;
-  let complete;const item={layers:{},ready:false,loading:new Promise(resolve=>{complete=resolve;})};this.assets.set(cacheKey,item);let count=0,failed=false;const settled=()=>{count++;if(count===Object.keys(layers).length){item.ready=!failed;if(item.ready)this.loaded++;complete();}};
+  let complete;const item={layers:{},ready:false,loading:new Promise(resolve=>{complete=resolve;})};this.assets.set(key,item);let count=0,failed=false;const settled=()=>{count++;if(count===Object.keys(layers).length){item.ready=!failed;if(item.ready)this.loaded++;complete();}};
   for(const [layer,spec]of Object.entries(layers)){
-   const image=new Image();item.layers[layer]={...spec,image,ready:false};image.onload=async()=>{let source=image;if(pixel&&(type==='blizzardMage'||spec.hairFlaps||spec.wingFlaps||spec.secondaryHair||spec.groundShadow)){await window.FrontPixelRoom.load();source=window.FrontPixelRoom.layeredSource(image);}const display=type==='blizzardMage'&&layer==='body'?this.mageAtlas(source,spec):source;item.layers[layer].image=display;item.layers[layer].ready=true;if(spec.hairFlaps)item.layers[layer].hairLayers=this.hairAtlases(display,spec);if(spec.secondaryHair)item.layers[layer].secondaryLayers=this.swordHairAtlases(display,spec);if(spec.wingFlaps)item.layers[layer].flightLayers=this.flightAtlases(display,spec);if(spec.groundShadow)item.layers[layer].shadow=this.groundAtlas(display);settled();};image.onerror=()=>{if(layer!=='walk')failed=true;this.failures++;settled();};image.src='assets/models/'+spec.file+'?v='+(layer==='walk'?'20261106':this.manifest.version);
+   const image=new Image();item.layers[layer]={...spec,image,ready:false};image.onload=()=>{const display=type==='blizzardMage'&&layer==='body'?this.mageAtlas(image,spec):image;item.layers[layer].image=display;item.layers[layer].ready=true;if(spec.hairFlaps)item.layers[layer].hairLayers=this.hairAtlases(display,spec);if(spec.secondaryHair)item.layers[layer].secondaryLayers=this.swordHairAtlases(display,spec);if(spec.wingFlaps)item.layers[layer].flightLayers=this.flightAtlases(display,spec);if(spec.groundShadow)item.layers[layer].shadow=this.groundAtlas(display);settled();};image.onerror=()=>{if(layer!=='walk')failed=true;this.failures++;settled();};image.src='assets/models/'+spec.file+'?v='+(layer==='walk'?'20261106':this.manifest.version);
   }
   return item;
  }
@@ -192,7 +191,6 @@ class FrontModels{
    const model=this.ensure(this.visualFor(u,evolved),u.team);
    if(!model?.ready)return !!window.FrontRosterArt?.model(ctx,u,time,evolved);
   }
-  if(this.pixelMode&&!attackDrone&&u.type!=='drone'&&window.FrontPixelInfantry?.draw(ctx,u,time,evolved))return true;
   if(u.team===0&&u.type==='medic'&&u.appearance==='rina'){this.ensureRina();if(this.rina?.loaded)return this.rina.draw(ctx,u,time);if(u.hp<=0)return true;}
   const ultimate=u.type==='leader'&&u.team===0&&u.ultimatePose?.active,captain=u.type==='bayonetCaptain';let visual=this.visualFor(u,evolved);let item=this.ensure(visual,visual==='bayonet'?1:u.team);if(!item?.ready&&visual!==u.type){const base=this.visualFor(u,false);if(base!==visual){item=this.ensure(base,u.team);visual=base;}if(!item?.ready&&u.team===0&&['rifle','guntruck','drone','rocket'].includes(u.type))return !!window.FrontRosterArt?.model(ctx,u,time,evolved);if(!item?.ready){item=this.ensure(u.type,u.team);visual=u.type;}}if(!item?.ready)return false;if(visual==='commanderShion')return this.drawSword(ctx,u,time,item);if(visual==='commanderHwarin')return this.drawHwarin(ctx,u,time,item);if(visual==='blizzardMage')return this.drawMage(ctx,u,time,item);
   const vehicle=!!item.layers.turret||!!item.layers.body.vehicle;

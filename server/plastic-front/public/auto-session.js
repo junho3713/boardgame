@@ -2,7 +2,7 @@
 (()=>{'use strict';
 class FrontAutoSession{
  constructor({events,apply,message,busy,key='plastic-front-auto-v2',storage=localStorage}){this.storage=storage;this.key=key;this.leaseKey=key+'-owner';this.profileKey=key+'-profile';this.id=Date.now().toString(36)+'-'+Math.random().toString(36).slice(2);this.events=events;this.apply=apply;this.message=message;this.busyUI=busy;this.pilot=null;this.owner=false;this.busy=false;this.at=Date.now();this.saved=0;this.error=false;}
- read(){try{const v=JSON.parse(this.storage.getItem(this.key)||'null');return v?.version===2&&v.snapshot?.version===2&&Number.isFinite(v.savedAt)?v:null;}catch{return null;}}
+ read(){try{const v=JSON.parse(this.storage.getItem(this.key)||'null');return v?.version===2&&v.snapshot?.version===2&&!window.FrontGame?.retiredBattlefieldSnapshot(v.snapshot.engine?.fields)&&Number.isFinite(v.savedAt)?v:null;}catch{return null;}}
  readArmory(){try{const v=JSON.parse(this.storage.getItem(this.profileKey)||'null');return v?.profile&&Number.isFinite(v.savedAt)?v:null;}catch{return null;}}
  storeArmory(profile,at){this.storage.setItem(this.profileKey,JSON.stringify({savedAt:at,profile}));}
  saveArmory(pilot){if(this.busy||!this.claim())return false;if(this.pilot?.active){this.save();return !this.error;}try{const profile=pilot.game.profile.snapshot(),v=this.read();if(v){v.snapshot.engine.profile=profile;Object.assign(v.snapshot.pilot,{fails:profile.fails,attempts:profile.attempts,successes:profile.successes});this.storage.setItem(this.key,JSON.stringify(v));}this.storeArmory(profile,Date.now());this.error=false;return true;}catch{this.error=true;return false;}finally{this.release();}}
@@ -32,7 +32,7 @@ class FrontAutoSession{
    };
    const watch=()=>{clearTimeout(job.watchdog);job.watchdog=setTimeout(fallback,8000);};
    if(show)this.busyUI(true,{processed:0,total:seconds});
-   try{job.worker=new Worker('autoplay-worker.js?v=20261127-portal-assault1');job.worker.onmessage=e=>{if(job.done)return;const data=e.data||{};publish(data);if(job.done)return;if(data.error){fallback();return;}if(data.type==='progress'){watch();return;}job.finish({});};job.worker.onerror=fallback;job.worker.onmessageerror=fallback;watch();job.worker.postMessage({snapshot:job.latest,seconds});}catch{fallback();}
+   try{job.worker=new Worker('autoplay-worker.js?v=20261127-retire-maps1');job.worker.onmessage=e=>{if(job.done)return;const data=e.data||{};publish(data);if(job.done)return;if(data.error){fallback();return;}if(data.type==='progress'){watch();return;}job.finish({});};job.worker.onerror=fallback;job.worker.onmessageerror=fallback;watch();job.worker.postMessage({snapshot:job.latest,seconds});}catch{fallback();}
   });
  }
  async tick(report=false){

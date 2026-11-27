@@ -6,7 +6,7 @@ const {pack,unpack}=require('./public/autoplay');
 const make=map=>new FrontGame({},undefined,{map,realtimeSummons:true});
 
 test('each new PvE map enters the starter choice with no preset troops, no registered slot and a stopped clock',()=>{
- for(const map of ['backyard','livingroom','livingroom-star','livingroom-pixel','desktop','bedroom-star']){
+ for(const map of ['backyard','livingroom','livingroom-star','livingroom-assault','desktop']){
   const g=make(map);g.start();g.update(.05);
   assert.equal(g.phase,'choice',map);assert.equal(g.time,0);assert.deepEqual(g.alive(0).map(u=>u.type),['leader']);
   assert.deepEqual(g.summonSlots,[]);assert.equal(g.rerollCount,4);assert.equal(g.currentOptions.length,3);

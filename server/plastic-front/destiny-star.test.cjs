@@ -20,7 +20,7 @@ function addTwos(g,type,count){
 const destiny=g=>g.pickups.find(p=>p.destinyStar);
 function defeat(g,boss){g.damage(boss,1e9,g.commander(0));assert.equal(boss.hp,0);}
 
-for(const map of ['livingroom-star','livingroom-pixel'])test(map+' drops separate stars from the 9-minute mini and the 14-minute boss',()=>{
+for(const map of ['livingroom-star'])test(map+' drops separate stars from the 9-minute mini and the 14-minute boss',()=>{
  const g=game(map);g.time=539.99;g.roomCampaign.bossCursor=3;
  g.roomEntry=g.northernSpawn=()=>({x:1500,y:6000});
  g.updateRoomBosses();
@@ -41,15 +41,7 @@ for(const map of ['livingroom-star','livingroom-pixel'])test(map+' drops separat
  assert.deepEqual(g.pickups.filter(p=>p.destinyStar).map(p=>p.destinySource),[540,840]);
 });
 
-test('the bedroom defense grants its first star at the 12-minute boss slot even after delay',()=>{
- const g=game('bedroom-star');
-  for(let ordinal=1;ordinal<=5;ordinal++){
-   g.time=g.bossState.nextAt+10;g.updateBosses();
-   const boss=g.units.find(u=>u.boss&&u.hp>0);
-   assert.equal(boss.bossNumber,ordinal);defeat(g,boss);
-   assert.equal(!!destiny(g),ordinal===5);
-  }
- assert.ok(g.time>720);
+test('the standard desk defense does not drop a room destiny star',()=>{
  const regular=game('desktop');regular.time=840;
  regular.bossState.spawned=6;regular.updateBosses();
  defeat(regular,regular.units.find(u=>u.boss&&u.hp>0));assert.equal(destiny(regular),undefined);

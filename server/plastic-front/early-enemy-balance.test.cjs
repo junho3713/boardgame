@@ -81,7 +81,7 @@ test('a resumed shield blade keeps its health fraction through the durability mi
 });
 
 test('living-room pirate cannons start at 4:30 with a 30-second interval and a shared two-alive limit',()=>{
- for(const map of ['livingroom-star','livingroom-pixel','bedroom-star','livingroom','desktop','backyard','coop']){
+ for(const map of ['livingroom-star','livingroom-assault','livingroom','desktop','backyard','coop']){
   const g=map==='coop'?scene(true):new FrontGame({},undefined,{map});g.start();
   g.units=g.units.filter(u=>u.team===0);g.obstacles=[];
   g.roomEntry=g.desktopEntry=g.northernSpawn=()=>({x:1100,y:1900,entrySide:0});

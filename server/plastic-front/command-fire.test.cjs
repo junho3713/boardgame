@@ -71,7 +71,7 @@ test('mouse aim converges from each soldier and hits the body beneath a raised e
 });
 
 test('manual squad fire waits for a visible hostile while the commander independently targets the nearest enemy',()=>{
- for(const map of ['livingroom-star','livingroom-pixel','bedroom-star']){
+ for(const map of ['livingroom-star','livingroom-assault']){
   const g=field(map),c=g.commander(0),gun=add(g,'machinegun',1080,1325);
   g.input={x:-1,y:0};g.setManualAim({x:1,y:0});g.update(.02);
   assert.equal(from(g,gun),undefined,map);
