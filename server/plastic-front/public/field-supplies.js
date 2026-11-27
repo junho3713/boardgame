@@ -144,7 +144,7 @@ function install({FrontGame:Game,TYPES}){
   const b=this.bounds(),taken=this.rareSupplyGuards(pickup),points=[];
   for(let i=0;i<120&&points.length<count;i++){const a=i*2.39996,r=110+i%3*35,q={x:pickup.x+Math.cos(a)*r,y:pickup.y+Math.sin(a)*r};if(q.x>55&&q.x<b.width-55&&q.y>75&&q.y<b.height-75&&this.freePosition(q.x,q.y,26)&&![...taken,...points].some(p=>Math.hypot(p.x-q.x,p.y-q.y)<57))points.push(q);}return points;
  };
- p.addSupplyGuards=function(pickup,types,positions){for(const [i,q]of positions.entries()){const u=this.addUnit(2,types[i%types.length],q.x,q.y,true);Object.assign(u,{rareSupplyGuard:true,supplyAnchorX:pickup.x,supplyAnchorY:pickup.y,homeX:u.x,homeY:u.y});this.stampEvolutionWave?.(u);pickup.guardIds.push(u.id);}};
+ p.addSupplyGuards=function(pickup,types,positions){for(const [i,q]of positions.entries()){const u=this.addUnit(2,types[i%types.length],q.x,q.y,true);if(!u)continue;Object.assign(u,{rareSupplyGuard:true,supplyAnchorX:pickup.x,supplyAnchorY:pickup.y,homeX:u.x,homeY:u.y});this.stampEvolutionWave?.(u);pickup.guardIds.push(u.id);}};
  p.upgradeRareSupplyGuards=function(){for(const pickup of this.pickups){
   const opening=openingSupply(pickup),version=opening?4:3;
   if(!pickup.active||!pickup.rareSupply||pickup.guardVersion>=version||!Array.isArray(pickup.guardIds))continue;
@@ -158,10 +158,11 @@ function install({FrontGame:Game,TYPES}){
   if(this.phase!=='playing')return;this.upgradeRareSupplyGuards();
   for(const pickup of this.pickups){if(!pickup.active||!pickup.rareSupply||!pickup.ambushPending)continue;
    const c=this.units.find(u=>u.team===0&&u.type==='leader'&&u.hp>0&&Math.hypot(u.x-pickup.x,u.y-pickup.y)<360);if(!c)continue;
-   const bounds=this.bounds(),positions=[],types=openingSupply(pickup)?['bladeGuard','rifle']:this.time<360?['bayonet','rifle','bayonet','rifle']:['bladeGuard','machinegun','bayonet','rifle'];
+   const bounds=this.bounds(),positions=[],roster=openingSupply(pickup)?['bladeGuard','rifle']:this.time<360?['bayonet','rifle','bayonet','rifle']:['bladeGuard','machinegun','bayonet','rifle'];
+   const types=roster.filter(type=>!this.captainStackExcludesEnemy(type));
    for(let i=0;i<48&&positions.length<types.length;i++){const a=Math.atan2(c.y-pickup.y,c.x-pickup.x)+Math.PI/2+(i%4)*Math.PI/2+Math.floor(i/4)*.17,r=205+Math.floor(i/16)*30,q={x:pickup.x+Math.cos(a)*r,y:pickup.y+Math.sin(a)*r};if(q.x>50&&q.y>70&&q.x<bounds.width-50&&q.y<bounds.height-70&&this.freePosition(q.x,q.y,26)&&!positions.some(p=>Math.hypot(p.x-q.x,p.y-q.y)<100))positions.push(q);}
    if(positions.length<types.length)continue;pickup.ambushPending=false;
-   for(const [i,q]of positions.entries()){const u=this.addUnit(2,types[i],q.x,q.y,true);u.rareSupplyGuard=true;u.supplyAnchorX=pickup.x;u.supplyAnchorY=pickup.y;u.cooldown=Math.max(.8,u.cooldown);u.homeX=u.x;u.homeY=u.y;this.stampEvolutionWave?.(u);pickup.guardIds.push(u.id);this.effects.push({kind:'drop',x:u.x,y:u.y,t:.8,max:.8,team:2});}
+   for(const [i,q]of positions.entries()){const u=this.addUnit(2,types[i],q.x,q.y,true);if(!u)continue;u.rareSupplyGuard=true;u.supplyAnchorX=pickup.x;u.supplyAnchorY=pickup.y;u.cooldown=Math.max(.8,u.cooldown);u.homeX=u.x;u.homeY=u.y;this.stampEvolutionWave?.(u);pickup.guardIds.push(u.id);this.effects.push({kind:'drop',x:u.x,y:u.y,t:.8,max:.8,team:2});}
    this.notify('toast','희귀 보급 경계 발동 · 주변 경계병 '+types.length+'기 합류');
   }
  };
@@ -190,12 +191,13 @@ function install({FrontGame:Game,TYPES}){
   }
   if(!point){this.nextRareSupply=this.time+5;return;}
   const pickup={...point,active:true,rareSupply:true,spawnedAt:this.time,expires:this.time+120,ambushPending:true,guardIds:[]},opening=openingSupply(pickup);
-  const guardTypes=opening?['bladeGuard','rifle','bubbleOctopus']:this.time<360?['bayonet','bayonet','bubbleOctopus','rifle','rifle','rifle']:this.time<720?['bladeGuard','bayonet','bubbleOctopus','machinegun','mortar','sniper']:['stagBeetle','bladeGuard','machinegun','mortar','bubbleOctopus','sniper'];
+  const roster=opening?['bladeGuard','rifle','bubbleOctopus']:this.time<360?['bayonet','bayonet','bubbleOctopus','rifle','rifle','rifle']:this.time<720?['bladeGuard','bayonet','bubbleOctopus','machinegun','mortar','sniper']:['stagBeetle','bladeGuard','machinegun','mortar','bubbleOctopus','sniper'];
+  const guardTypes=roster.filter(type=>!this.captainStackExcludesEnemy(type));
   pickup.guardVersion=opening?4:3;
   const positions=this.supplyGuardPositions(pickup,guardTypes.length);
   if(positions.length<guardTypes.length){this.nextRareSupply=this.time+5;return;}
   this.addSupplyGuards(pickup,guardTypes,positions);
-  this.pickups.push(pickup);this.notify('toast','희귀 보급 도착 · 보급 옆 호위 '+guardTypes.length+'기 · 처치 없이 접근 획득 · 접근 시 '+(opening?2:4)+'기 추가 출동 · 보라색 신호를 확인하세요');this.effects.push({kind:'fieldSupply',...point,reward:'airdrop',t:1.2,max:1.2,team:0});
+  this.pickups.push(pickup);this.notify('toast','희귀 보급 도착 · 보급 옆 호위 '+pickup.guardIds.length+'기 · 처치 없이 접근 획득 · '+(this.captainStackHpMode?'접근 시 경계병 추가 출동':'접근 시 '+(opening?2:4)+'기 추가 출동')+' · 보라색 신호를 확인하세요');this.effects.push({kind:'fieldSupply',...point,reward:'airdrop',t:1.2,max:1.2,team:0});
  };
  root.FrontFieldSupplies={config,specialTypes};return {config,specialTypes};
 }

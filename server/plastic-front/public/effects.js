@@ -326,7 +326,14 @@ class FrontEffects{
    ctx.globalAlpha=k*.5;ctx.strokeStyle='#fff4db';ctx.lineWidth=1;ctx.beginPath();ctx.arc(0,0,r*.62,start-span*.85,start-.08);ctx.stroke();
   }else if(e.kind==='bossSlashWarn'||e.kind==='bossDiveWarn'||e.kind==='bossBarrageWarn'){
    if(e.source?.hp<=0){ctx.restore();return true;}ctx.strokeStyle='#ff514b';ctx.fillStyle='#ed302c30';ctx.lineWidth=2.5;ctx.globalAlpha=.65+.25*Math.sin(p*12);
-   if(e.kind==='bossSlashWarn'){ctx.translate(e.x,e.y);ctx.rotate(e.angle);ctx.beginPath();ctx.moveTo(0,0);ctx.arc(0,0,e.range,-e.arc/2,e.arc/2);ctx.closePath();ctx.fill();ctx.stroke();}
+   if(e.barrageShot){
+    ctx.globalAlpha=1;ctx.lineWidth=e.t<=.55?4:2;
+    ctx.strokeStyle=e.t<=.55?'#ffe4ab':'#ff7b67';ctx.fillStyle=e.t<=.55?'#b72d3059':'#ab30302f';
+    ctx.beginPath();ctx.arc(e.x,e.y,e.radius,0,TAU);ctx.fill();ctx.stroke();
+    ctx.fillStyle='#4b2430ec';ctx.beginPath();ctx.roundRect(e.x-28,e.y-13,56,26,8);ctx.fill();
+    ctx.font='bold 13px sans-serif';ctx.textAlign='center';ctx.fillStyle='#fff4db';
+    ctx.fillText(e.barrageShot+' · '+Math.max(0,e.t).toFixed(1)+'초',e.x,e.y+5);
+   }else if(e.kind==='bossSlashWarn'){ctx.translate(e.x,e.y);ctx.rotate(e.angle);ctx.beginPath();ctx.moveTo(0,0);ctx.arc(0,0,e.range,-e.arc/2,e.arc/2);ctx.closePath();ctx.fill();ctx.stroke();}
    else{ctx.beginPath();ctx.ellipse(e.x,e.y,e.radius,e.radius*.8,0,0,TAU);ctx.fill();ctx.stroke();ctx.beginPath();ctx.ellipse(e.x,e.y,e.radius*p,e.radius*.8*p,0,0,TAU);ctx.stroke();ctx.fillStyle='#ffddd1';ctx.font='700 12px sans-serif';ctx.textAlign='center';ctx.fillText(e.kind==='bossDiveWarn'?'맹독 급강하':'후열 포격',e.x,e.y-e.radius-9);}
   }else if(e.kind==='bossGroggy'){
    const u=e.target;

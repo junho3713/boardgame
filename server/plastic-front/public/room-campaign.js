@@ -388,7 +388,7 @@ const methods={
    for(let i=0;i<line.roster.length;i++){
     const id='room-garrison-'+line.id+'-'+i;if(this.units.some(u=>u.guardianId===id))continue;
     const x=(line.x??config.layout.width/2)+(i-(line.roster.length-1)/2)*125,y=line.y+(i<2?130:-100);
-    const u=this.addUnit(1,line.roster[i],x,y,true);Object.assign(u,{guardianId:id,roomGarrison:true,missionStage:1,homeX:u.x,homeY:u.y});u.hp=u.maxHp=this.stats(u).hp;
+    const u=this.addUnit(1,line.roster[i],x,y,true);if(!u)continue;Object.assign(u,{guardianId:id,roomGarrison:true,missionStage:1,homeX:u.x,homeY:u.y});u.hp=u.maxHp=this.stats(u).hp;
    }
   }
   for(const u of this.units)if(u.guardianId==='room-garrison-approach-2'&&u.type==='machinegun'){const ratio=u.hp/Math.max(1,u.maxHp);u.type='rifle';u.maxHp=this.stats(u).hp;u.hp=u.maxHp*ratio;}
@@ -414,6 +414,7 @@ const methods={
  roomEnemyTypeCap(type){const row=config.openingCaps.find(r=>this.time<r.until);return Math.min(config.caps[type]??Infinity,row?.[type]??Infinity);},
  roomBombCap(){const r=config.insects.bombSpawn;return this.time<r.earlyUntil?r.earlyCap:r.cap;},
  roomEnemyReady(type){
+  if(this.captainStackExcludesEnemy(type))return false;
   if(type==='pirateCannon')return this.pirateReinforcementReady();
   if(type==='bubbleOctopus')return this.octopusReinforcementReady();
   if(type==='bombBug'){
@@ -584,7 +585,9 @@ const methods={
   const s=this.roomCampaign,r=config.weakReinforcements;if(this.time<r.from||spawned<=0)return;
   const credit=(s.weakWaveCredit||0)+spawned*(this.time>=r.lateAt?r.late:r.mid),extra=Math.floor(credit+1e-9);s.weakWaveCredit=credit-extra;
   for(let i=0;i<extra;i++){
-   const cursor=s.weakWaveCursor||0,type=antOnly?'ant':r.types[cursor%r.types.length],u=this.spawnRoomEnemy(type);if(!u)break;
+   const cursor=s.weakWaveCursor||0,type=antOnly?'ant':r.types[cursor%r.types.length];
+   if(this.captainStackExcludesEnemy(type)){s.weakWaveCursor=cursor+1;continue;}
+   const u=this.spawnRoomEnemy(type);if(!u)break;
    u.weakReinforcement=true;s.weakWaveCursor=cursor+1;s.spawned++;
   }
  },
@@ -736,21 +739,39 @@ const methods={
  updatePoisons(){for(const u of [...this.alive(0),...this.buildings.filter(b=>b.kind==='repairBot'&&b.hp>0)]){const end=u.poisonUntil||0;if(!end)continue;if(u.hp<=0||this.time>end+1e-8){u.poisonUntil=0;u.poisonDps=0;u.poisonSource=null;continue;}if(this.time+1e-8>=(u.poisonNextAt||0)){u.poisonNextAt=this.time+.25;this.damage(u,u.poisonDps*.25,u.poisonSource||{team:2,type:'hornet'});}}},
  updateBossBarrage(u,p){
   const a=u.bossBarrage;
+  if(a?.shotInterval){
+   const next=a.nextShot,launchAt=a.hitAt+a.shotInterval*next;
+   if(u.hp<=0||this.time+1e-8<launchAt)return;
+   const target=a.targets[next];
+   this.mortarShells.push({kind:'bossShell',damageType:'tank',x:target.x,y:target.y,fromX:u.x,fromY:u.y,radius:p.radius,
+    landAt:launchAt+.25,delay:.25,source:u,team:u.team,damage:this.stats(u).damage*p.damage*(p.bossDamageMultiplier??1),critical:false,barrageShot:next+1});
+   u.recoil=.3;this.notify('fire',u);
+   if(++a.nextShot>=a.targets.length)u.bossBarrage=null;
+   return;
+  }
   if(a){if(this.time<a.hitAt)return;u.bossBarrage=null;if(u.hp<=0)return;
    for(const target of a.targets||[a])this.mortarShells.push({kind:'bossShell',damageType:'tank',x:target.x,y:target.y,fromX:u.x,fromY:u.y,radius:p.radius,landAt:this.time+.25,delay:.25,source:u,team:u.team,damage:this.stats(u).damage*p.damage*(u.boss?(p.bossDamageMultiplier??1):1),critical:false});u.recoil=.3;this.notify('fire',u);return;
   }
   if(this.time<(u.nextBossSkillAt||0))return;
-  const candidates=(this.supportDecoyTarget?.(u)?[this.supportDecoyTarget(u)]:this.alive(0)).filter(t=>this.canTarget(u,t)&&d(u,t)<=p.range);if(!candidates.length)return;
-  candidates.sort((a,b)=>Number(['medic','sniper','mortar'].includes(b.type))-Number(['medic','sniper','mortar'].includes(a.type))||d(u,b)-d(u,a));const t=candidates[0],targets=[{x:t.x,y:t.y}],spacing=p.spacing||p.radius*2+20,count=p.shots||1;
+  const triple=this.captainStackHpMode&&u.boss&&u.type==='crimsonAce';
+  const bait=!triple&&this.supportDecoyTarget?.(u);
+  const candidates=(triple?this.stackCaptains():bait?[bait]:this.alive(0)).filter(t=>this.canTarget(u,t)&&d(u,t)<=p.range);if(!candidates.length)return;
+  candidates.sort((a,b)=>Number(['medic','sniper','mortar'].includes(b.type))-Number(['medic','sniper','mortar'].includes(a.type))||d(u,b)-d(u,a));const t=candidates[0],targets=[{x:t.x,y:t.y}],spacing=triple?p.radius+14:p.spacing||p.radius*2+20,count=triple?3:p.shots||1;
   const add=point=>{if(targets.length<count&&targets.every(v=>d(v,point)>=spacing-1e-6))targets.push({x:point.x,y:point.y});};
-  for(const candidate of candidates.slice(1))add(candidate);
+  if(!triple)for(const candidate of candidates.slice(1))add(candidate);
   // If rear troops are bunched together, spread the remaining shells across their rear line.
-  const angle=Math.atan2(t.y-u.y,t.x-u.x)+Math.PI/2,margin=p.radius+45;
+  const angle=Math.atan2(t.y-u.y,t.x-u.x)+Math.PI/2,margin=triple?70:p.radius+45;
   for(const radius of [spacing,spacing*2])for(const offset of [0,Math.PI,Math.PI/2,-Math.PI/2,Math.PI/4,-Math.PI/4,3*Math.PI/4,-3*Math.PI/4]){
    if(targets.length>=count)break;add({x:clamp(t.x+Math.cos(angle+offset)*radius,margin,this.bounds().width-margin),y:clamp(t.y+Math.sin(angle+offset)*radius,margin,this.bounds().height-margin)});
   }
   u.nextBossSkillAt=this.time+p.cooldown;u.bossBarrage={x:t.x,y:t.y,targets,hitAt:this.time+p.warning};
-  for(const point of targets)this.effects.push({kind:'bossBarrageWarn',source:u,x:point.x,y:point.y,radius:p.radius,t:p.warning+.25,max:p.warning+.25,team:u.team});
+  const interval=.55;
+  if(triple)Object.assign(u.bossBarrage,{shotInterval:interval,nextShot:0});
+  for(const [i,point] of targets.entries()){
+   const duration=p.warning+.25+(triple?i*interval:0);
+   this.effects.push({kind:'bossBarrageWarn',source:u,x:point.x,y:point.y,radius:p.radius,t:duration,max:duration,team:u.team,
+    ...(triple?{barrageShot:i+1,visualUntil:this.time+duration}: {})});
+  }
  },
  updateEnemyLucky(u){
   if(u.hp<=0||u.team===0)return;u.nextLuckyAt??=this.time+config.enemyLuckyInterval;
@@ -777,7 +798,7 @@ const methods={
   const v=shell.enemyJackpot,spent=v.spent[target.id]||0,budget=Math.max(0,target.maxHp*.5-spent),damage=Math.max(0,Math.min(raw*this.defenseFactor(target),budget));if(!damage)return;
   const before=target.hp;this.damage(target,damage/this.defenseFactor(target),shell.source);v.spent[target.id]=spent+Math.max(0,before-target.hp);
  },
- bossHazards(){const result=[];for(const u of this.units){if(u.hp<=0)continue;if(u.bombFuse)result.push({x:u.x,y:u.y,radius:root.FrontBombBugRules.radius,landAt:u.bombFuse.explodeAt});if(!u.boss&&!u.bossBarrage)continue;if(u.bossBarrage)for(const point of u.bossBarrage.targets||[u.bossBarrage])result.push({x:point.x,y:point.y,radius:config.patterns.rearBarrage.radius,landAt:u.bossBarrage.hitAt+.25});const a=u.bossAction;if(u.bossPattern==='venomDive'&&a&&a.phase!=='low')result.push({x:a.x,y:a.y,radius:55,landAt:a.until});if(u.bossPattern==='wideSlash'&&a)result.push({x:u.x+Math.cos(a.angle)*70,y:u.y+Math.sin(a.angle)*70,radius:85,landAt:a.hitAt});}return result;}
+ bossHazards(){const result=[];for(const u of this.units){if(u.hp<=0)continue;if(u.bombFuse)result.push({x:u.x,y:u.y,radius:root.FrontBombBugRules.radius,landAt:u.bombFuse.explodeAt});if(!u.boss&&!u.bossBarrage)continue;if(u.bossBarrage){const a=u.bossBarrage;for(const [i,point] of (a.targets||[a]).entries())if(i>=(a.nextShot||0))result.push({x:point.x,y:point.y,radius:config.patterns.rearBarrage.radius,landAt:a.hitAt+.25+i*(a.shotInterval||0)});}const a=u.bossAction;if(u.bossPattern==='venomDive'&&a&&a.phase!=='low')result.push({x:a.x,y:a.y,radius:55,landAt:a.until});if(u.bossPattern==='wideSlash'&&a)result.push({x:u.x+Math.cos(a.angle)*70,y:u.y+Math.sin(a.angle)*70,radius:85,landAt:a.hitAt});}return result;}
 };
 root.FrontRoomCampaign={config,methods};if(typeof module!=='undefined')module.exports={config,methods};
 })(typeof window!=='undefined'?window:globalThis);

@@ -2,7 +2,7 @@
 (function(root){'use strict';
 function install({FrontGame}){
  const p=FrontGame.prototype,reset=p.reset,stationary=p.isStationary,damage=p.damage,mortars=p.updateMortars,hazards=p.bossHazards;
- const windup=2,flight=.32,radius=170,healthDamage=.30;
+ const windup=2,flight=.32,radius=170,healthDamage=.30,stackImpactDelay=2;
  const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
  function targets(g,u){
   const bodies=[...g.alive(0),...g.buildings,g.bases[0]];
@@ -39,7 +39,7 @@ function install({FrontGame}){
    u.face=u.aimFace=fuse.angle;
    if(this.time+1e-8<fuse.fireAt)return;
    (this.pirateShells??=[]).push({source:u,x:fuse.x,y:fuse.y,fromX:u.x,fromY:u.y,radius:fuse.radius,angle:fuse.angle,
-    team:u.team,startedAt:this.time,landAt:this.time+flight,damage:s.damage});
+    team:u.team,startedAt:this.time,landAt:fuse.landAt??this.time+flight,damage:s.damage,...(fuse.landAt==null?{}:{warningAt:fuse.startedAt})});
    u.pirateFuse=null;u.pirateFiredAt=this.time;u.cooldown=s.rate;u.recoil=.32;
    this.effects.push({kind:'pirateMuzzle',source:u,x:u.x,y:u.y,angle:fuse.angle,team:u.team,t:.36,max:.36});
    this.notify('fire',u);return;
@@ -58,7 +58,8 @@ function install({FrontGame}){
   u.face=u.aimFace=angle;
   if(u.cooldown>0)return;
   u.route=u.routeGoal=null;
-  u.pirateFuse={x:target.x,y:target.y,angle,radius,startedAt:this.time,fireAt:this.time+windup};
+  const landAt=this.captainStackHpMode?this.time+stackImpactDelay:undefined;
+  u.pirateFuse={x:target.x,y:target.y,angle,radius,startedAt:this.time,fireAt:landAt==null?this.time+windup:landAt-flight,...(landAt==null?{}:{landAt})};
  };
  p.updatePirateShells=function(){
   for(const u of this.units)if(u.pirateFuse&&(u.hp<=0||this.luckyFlashActive?.(u)||this.time<(u.toyStunUntil||0)))cancel(u);
@@ -82,7 +83,7 @@ function install({FrontGame}){
  p.bossHazards=function(){
   const active=hazards.call(this);
   for(const u of this.units)if(u.hp>0&&u.pirateFuse){
-   const f=u.pirateFuse;active.push({x:f.x,y:f.y,radius:f.radius,landAt:f.fireAt+flight});
+   const f=u.pirateFuse;active.push({x:f.x,y:f.y,radius:f.radius,landAt:f.landAt??f.fireAt+flight});
   }
   return active.concat(this.pirateShells||[]);
  };

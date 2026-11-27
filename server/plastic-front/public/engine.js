@@ -23,6 +23,7 @@ const STAR_COMBAT=[
  {damage:8,hp:5.5,attackSpeed:1.3,range:1.3,heal:7.2}
 ];
 const CAPTAIN_STACK={troopHealth:.6,medicHealing:.6,droneShield:.7,breakProtection:.15,heavyCarry:.7};
+const CAPTAIN_STACK_SNIPER={track:.3,dodge:1};
 const COMMANDER_REVIVAL={delay:5,protection:3};
 const GUARDIANS={range:460,mageHp:560,mageRate:6,mageDamage:18,windup:2,radius:145,root:2,laserHp:1500,laserDamage:40,laserTick:.2,respawnDelay:60,shieldNotice:.8,shieldRaise:.18,shieldHold:.35,lessonRange:650,lessonBannerTime:5,laserWindup:0,laserRate:0};
 const INSECTS={bomb:{trigger:65,radius:140,windup:.9,maxHpDamage:.25},spray:{windup:.3,flight:.4,radius:34}};
@@ -238,7 +239,7 @@ class FrontGame{
   if(this.mode==='duel'){
    this.addUnit(1,'leader',800,450);this.addUnit(1,'rifle',755,380);this.addUnit(1,'rifle',845,380);
    this.spawnPatrol(790,2080);this.spawnPatrol(490,1880);this.spawnPatrol(1130,1740);this.spawnPatrol(650,1370);this.spawnPatrol(1050,1030);
-  }else if(this.mode==='pve'&&this.mapId!=='desktop'){for(const entry of this.waveRules().opening){const u=this.addUnit(2,entry.type,entry.x,entry.y,true);u.missionStage=1;u.assault=true;}}
+  }else if(this.mode==='pve'&&this.mapId!=='desktop'){for(const entry of this.waveRules().opening){const u=this.addUnit(2,entry.type,entry.x,entry.y,true);if(!u)continue;u.missionStage=1;u.assault=true;}}
   if(this.mode==='crisis'){
    this.units=[];this.structures=[];this.pickups=[];this.mission.stage=3;this.cash=[0,0];this.level=8;
    for(const t of ROSTER)this.tech[0][t]=1;
@@ -246,7 +247,7 @@ class FrontGame{
    ['rifle','rifle','sniper','guntruck','rocket','rocket','tank','medic'].forEach((type,i)=>{const a=i*2.39996;this.addUnit(0,type,800+Math.cos(a)*85,2370+Math.sin(a)*85);});
   }
   if(this.mode==='pve'&&this.mapId==='livingroom')this.setupLivingRoom();
-  if(this.mode==='pve'&&this.mapId==='desktop'){this.setupDesktop();for(const entry of this.waveRules().opening){const u=this.addUnit(2,entry.type,entry.x,entry.y,true);u.assault=true;}}
+  if(this.mode==='pve'&&this.mapId==='desktop'){this.setupDesktop();for(const entry of this.waveRules().opening){const u=this.addUnit(2,entry.type,entry.x,entry.y,true);if(!u)continue;u.assault=true;}}
   this.units.filter(u=>u.team===0&&u.type!=='leader').forEach(u=>{Object.assign(u,this.formationPoint(u,this.commander(0)));this.resolvePosition(u);});
   this.setupRoadCaptains();this.upgradeRoomCampaign();
   this.notify('reset');
@@ -763,7 +764,9 @@ class FrontGame{
  setCaptainStackHpMode(enabled){
   if(this.captainStackHpMode===enabled)return;
   this.captainStackHpMode=enabled;
+  if(this.phase==='ready'){this.reset(this.mode);return;}
   this.refreshCaptainStackCapacity();
+  this.refreshCaptainStackEnemyRoster();
  }
  refreshCaptainStackCapacity(legacy=false){
   for(const u of this.units){
@@ -876,8 +879,27 @@ class FrontGame{
   }
   return best;
  }
+ captainStackExcludesEnemy(type){return this.captainStackHpMode&&(type==='rifle'||type==='machinegun');}
+ removeEnemyUnits(units){
+  if(!units.length)return;
+  const removed=new Set(units),ids=new Set(units.map(u=>u.id));
+  for(const u of units)u.hp=0;
+  this.units=this.units.filter(u=>!removed.has(u));
+  this.shots=this.shots.filter(shot=>!removed.has(shot.source)&&!removed.has(shot.target));
+  this.effects=this.effects.filter(effect=>!removed.has(effect.source)&&!removed.has(effect.target));
+  for(const pickup of this.pickups)if(pickup.guardIds)pickup.guardIds=pickup.guardIds.filter(id=>!ids.has(id));
+ }
+ refreshCaptainStackEnemyRoster(){
+  if(!this.captainStackHpMode)return;
+  this.removeEnemyUnits(this.units.filter(u=>u.team!==0&&this.captainStackExcludesEnemy(u.stackEnemyOriginalType??u.type)));
+  this.shots=this.shots.filter(shot=>shot.team===0||!this.captainStackExcludesEnemy(shot.kind)&&!this.captainStackExcludesEnemy(shot.source?.type));
+  this.effects=this.effects.filter(effect=>effect.team===0||effect.kind!=='muzzle'||!this.captainStackExcludesEnemy(effect.weapon));
+ }
  enemySniperCount(){return this.units.filter(u=>u.team!==0&&u.type==='sniper'&&u.hp>0).length;}
  enforceEnemySniperLimit(){
+  if(this.captainStackHpMode&&this.enemySniperCount()>2){
+   this.removeEnemyUnits(this.units.filter(u=>u.team!==0&&u.type==='sniper'&&u.hp>0).slice(2));return;
+  }
   let count=0;for(const u of this.units){if(u.team===0||u.type!=='sniper'||u.hp<=0||++count<=2)continue;
    const ratio=Math.min(1,u.hp/Math.max(1,u.maxHp));u.type='rifle';u.sniperAim=null;u.maxHp=this.stats(u).hp;u.hp=u.maxHp*ratio;
   }
@@ -887,7 +909,7 @@ class FrontGame{
   const tier=this.pressure().tier;if(tier===this.lastEnemyGrowth)return;this.lastEnemyGrowth=tier;
   for(const u of this.units){if(u.team===0||u.hp<=0||tier<=(u.threat||0))continue;const ratio=u.hp/u.maxHp;u.threat=tier;u.maxHp=this.stats(u).hp;u.hp=u.maxHp*ratio;}
  }
- addUnit(team,type,x,y,patrol=false){if(team!==0&&type==='sniper'&&this.enemySniperCount()>=2)type='rifle';const u={id:++this.serial,team,type,x,y,spawnedAt:this.time,face:team===0?-Math.PI/2:Math.PI/2,hp:1,maxHp:1,threat:team!==0&&type!=='leader'?this.pressure().tier:0,cooldown:this.random()*.4,deadUntil:0,patrol,homeX:x,homeY:y,walk:0,flash:0,recoil:0};u.hp=u.maxHp=this.stats(u).hp;if(u.type==='tank'||u.type==='crimsonAce'||u.type==='guntruck'||u.type==='lucky')u.moveFace=u.face;if(u.type==='tank'||u.type==='crimsonAce'||u.type==='guntruck')u.turretFace=u.face;this.resolvePosition(u);u.homeX=u.x;u.homeY=u.y;if(type==='lucky'&&team===0){u.nextLuckyAt=this.time+LUCKY.interval;u.luckyInterval=LUCKY.interval;}if(type==='leader'&&team===0){u.appearance=this.commanderId||'sarge';u.flameSkin=this.flameSkinId||'classic';}if(type==='sniper'&&team===0)u.appearance=this.sniperSkinId||'classic';if(type==='medic'&&team===0)u.appearance=this.medicSkinId||'classic';this.units.push(u);return u;}
+ addUnit(team,type,x,y,patrol=false){if(team!==0&&type==='sniper'&&this.enemySniperCount()>=2)type='rifle';if(team!==0&&this.captainStackExcludesEnemy(type))return null;const u={id:++this.serial,team,type,x,y,spawnedAt:this.time,face:team===0?-Math.PI/2:Math.PI/2,hp:1,maxHp:1,threat:team!==0&&type!=='leader'?this.pressure().tier:0,cooldown:this.random()*.4,deadUntil:0,patrol,homeX:x,homeY:y,walk:0,flash:0,recoil:0};u.hp=u.maxHp=this.stats(u).hp;if(u.type==='tank'||u.type==='crimsonAce'||u.type==='guntruck'||u.type==='lucky')u.moveFace=u.face;if(u.type==='tank'||u.type==='crimsonAce'||u.type==='guntruck')u.turretFace=u.face;this.resolvePosition(u);u.homeX=u.x;u.homeY=u.y;if(type==='lucky'&&team===0){u.nextLuckyAt=this.time+LUCKY.interval;u.luckyInterval=LUCKY.interval;}if(type==='leader'&&team===0){u.appearance=this.commanderId||'sarge';u.flameSkin=this.flameSkinId||'classic';}if(type==='sniper'&&team===0)u.appearance=this.sniperSkinId||'classic';if(type==='medic'&&team===0)u.appearance=this.medicSkinId||'classic';this.units.push(u);return u;}
  spawnPatrol(x,y){this.addUnit(2,'ant',x-24,y,true);this.addUnit(2,'ant',x+24,y+34,true);}
  queueCost(queue,team=0){let total=0;for(const [type,n]of Object.entries(queue)){if(!Number.isInteger(n)||n<0||n>30)return Infinity;if(type==='truck'){if(n>0)return Infinity;}else if(ROSTER.includes(type))total+=(team===0?TYPES[type]:ENEMY_REPLACED_TYPES[type]||TYPES[type]).cost*n;else return Infinity;}return total;}
  supportValid(queue,team=0){
@@ -933,8 +955,9 @@ class FrontGame{
   if(type==='truck'||['drone','combatDrone','multiDrone'].includes(type)&&team!==0)return false;
   const spec=team===0?TYPES[type]:ENEMY_REPLACED_TYPES[type]||TYPES[type];
   if(!spec||!this.tech[team][type]||this.recruitmentRemaining(type,team)<=0||this.cash[team]<spec.cost||this.units.filter(u=>u.team===team&&u.hp>0&&!u.patrol&&u.type!=='leader'&&(!this.coop||u.coopOwner===this.coopOwner)).length>=this.capacity(team))return false;
-  this.cash[team]-=spec.cost;const leader=this.commander(team);const a=this.serial*2.4;
-  const u=this.addUnit(team,type,leader.x+Math.cos(a)*65,leader.y+Math.sin(a)*65);u.x=clamp(u.x,55,this.bounds().width-55);u.y=clamp(u.y,90,this.bounds().height-90);
+  const leader=this.commander(team),a=this.serial*2.4;
+  const u=this.addUnit(team,type,leader.x+Math.cos(a)*65,leader.y+Math.sin(a)*65);if(!u)return false;
+  this.cash[team]-=spec.cost;u.x=clamp(u.x,55,this.bounds().width-55);u.y=clamp(u.y,90,this.bounds().height-90);
   if(team===0){Object.assign(u,this.formationPoint(u,leader));this.resolvePosition(u);}
   this.effects.push({kind:'drop',x:u.x,y:u.y,t:.8,max:.8,team});if(!team)this.notify('toast',`${TYPES[type].name} 합류 · −${TYPES[type].cost} 자원`);this.notify('change');return true;
  }
@@ -1160,7 +1183,7 @@ class FrontGame{
   u.navVX=(u.x-oldX)/dt;u.navVY=(u.y-oldY)/dt;
  }
 
- isStationary(u){return !!u.radioTurret||!!TYPES[u.type]?.stationary&&!u.mobileMage;}
+ isStationary(u){return !!u.sniperAim?.locked||!!u.radioTurret||!!TYPES[u.type]?.stationary&&!u.mobileMage;}
  move(u,dx,dy,dt,speed){
   if(this.time<(u.rootedUntil||0)||this.time<(u.toyStunUntil||0)||this.time<(u.toyKnockback?.recoverUntil||0)||this.isStationary(u))return;
   if(this.time<(u.slowUntil||0))speed*=1-clamp(u.slowAmount||.3,0,.9);
@@ -1793,7 +1816,7 @@ class FrontGame{
    this.effects.push({kind:'drop',x:u.x,y:u.y,t:1,max:1,team:1});
   }
   // An escort creates a decision: shoot the screen or push through to the guns.
-  c.battery.forEach(u=>{for(let i=0;i<(this.mode==='crisis'?2:3);i++){if(this.pressure().late&&this.enemySpawnRoom(1)<=0)break;const guard=this.addUnit(1,'rifle',u.x+(i-1)*43,u.y+115+(i%2)*35,true);guard.crisisEscort=true;}});
+  c.battery.forEach(u=>{for(let i=0;i<(this.mode==='crisis'?2:3);i++){if(this.pressure().late&&this.enemySpawnRoom(1)<=0)break;const guard=this.addUnit(1,'rifle',u.x+(i-1)*43,u.y+115+(i%2)*35,true);if(guard)guard.crisisEscort=true;}});
   this.notify('toast','포병 도착! 붉은 범위에서 부대 전체를 이동시키고 포병 2기를 파괴하세요.');
  }
  checkCrisisClear(){
@@ -1819,7 +1842,7 @@ class FrontGame{
   if(this.time>=c.nextEscort){
    c.nextEscort=this.time+14;
    const guards=this.units.filter(u=>u.crisisEscort&&u.hp>0);
-   const room=(this.mode==='crisis'?6:10)-guards.length,count=Math.min(room,guns.length*2,this.pressure().late?this.enemySpawnRoom(1):Infinity);for(let i=0;i<count;i++){const gun=guns[i%guns.length],u=this.addUnit(1,i%4===3?'rocket':'rifle',gun.x+(i%2?35:-35),gun.y+110,true);u.crisisEscort=true;}
+   const room=(this.mode==='crisis'?6:10)-guards.length,count=Math.min(room,guns.length*2,this.pressure().late?this.enemySpawnRoom(1):Infinity);for(let i=0;i<count;i++){const gun=guns[i%guns.length],u=this.addUnit(1,i%4===3?'rocket':'rifle',gun.x+(i%2?35:-35),gun.y+110,true);if(u)u.crisisEscort=true;}
   }
   const landed=this.barrages.filter(b=>b.landAt<=this.time);this.barrages=this.barrages.filter(b=>b.landAt>this.time);
   for(const b of landed){
@@ -2031,7 +2054,7 @@ class FrontGame{
   this.mission.wave++;const player=this.commander(0),wave=this.mission.wave,tier=p.tier,count=Math.max(0,Math.min(waveValue(rules.batch,tier,wave),room));
   for(let i=0;i<count;i++){
    const angle=this.formationFacing+((i+.5)/count-.5)*2.3,radius=350+(i%3)*35,type=this.waveType(rules,i,wave,count);
-   const spawn=this.northernSpawn(this.serial+1,50);if(!spawn)break;const u=this.addUnit(2,type,spawn.x,spawn.y,true);u.missionStage=1;u.assault=true;
+   const spawn=this.northernSpawn(this.serial+1,50);if(!spawn)break;const u=this.addUnit(2,type,spawn.x,spawn.y,true);if(!u)continue;u.missionStage=1;u.assault=true;
   }
   this.notify('toast',`벌레 무리 ${wave}/${this.mission.totalWaves} · 이동하며 거리를 유지하세요`);
  }
@@ -2079,7 +2102,7 @@ class FrontGame{
    const n=this.swarm.spawned+1,angle=this.formationFacing+((n%7)-3)*.3,radius=380+(n%3)*30;
    let type=this.waveType(this.waveRules().swarm,n);
    if(i===0){if(this.pirateReinforcementReady())type='pirateCannon';else if(this.octopusReinforcementReady())type='bubbleOctopus';}
-   const spawn=this.isDesktopDefense()?this.desktopEntry():this.northernSpawn(this.serial+1,50);if(!spawn){this.swarm.nextAt=this.time+this.waveRules().retrySeconds;break;}this.swarm.spawned++;const u=this.addUnit(type==='pirateCannon'?1:2,type,spawn.x,spawn.y,true);u.assault=true;u.ambient=type!=='pirateCannon'&&type!=='bubbleOctopus';if(type==='pirateCannon')this.markPirateReinforcement();if(type==='bubbleOctopus')this.markOctopusReinforcement();this.stampEvolutionWave(u);
+   const spawn=this.isDesktopDefense()?this.desktopEntry():this.northernSpawn(this.serial+1,50);if(!spawn){this.swarm.nextAt=this.time+this.waveRules().retrySeconds;break;}this.swarm.spawned++;const u=this.addUnit(type==='pirateCannon'?1:2,type,spawn.x,spawn.y,true);if(!u)continue;u.assault=true;u.ambient=type!=='pirateCannon'&&type!=='bubbleOctopus';if(type==='pirateCannon')this.markPirateReinforcement();if(type==='bubbleOctopus')this.markOctopusReinforcement();this.stampEvolutionWave(u);
   }
  }
  enterStage(stage){
@@ -2102,7 +2125,7 @@ class FrontGame{
  }
  spawnGuard(post,type='rifle'){
   if(this.pressure().late&&this.enemySpawnRoom(1)<=0)return null;
-  const angle=this.serial*2.4,spawn=this.northernSpawn(this.serial+1,50,{x:post.x+Math.cos(angle)*115,y:post.y+Math.sin(angle)*115});if(!spawn)return null;const u=this.addUnit(1,type,spawn.x,spawn.y,true);u.guardId=post.id||'final';u.guardArrival=this.resolvePosition({x:post.x+Math.cos(angle)*115,y:post.y+Math.sin(angle)*115},this.collisionRadius(u));u.homeX=u.guardArrival.x;u.homeY=u.guardArrival.y;u.missionStage=this.mission.stage;return u;
+  const angle=this.serial*2.4,spawn=this.northernSpawn(this.serial+1,50,{x:post.x+Math.cos(angle)*115,y:post.y+Math.sin(angle)*115});if(!spawn)return null;const u=this.addUnit(1,type,spawn.x,spawn.y,true);if(!u)return null;u.guardId=post.id||'final';u.guardArrival=this.resolvePosition({x:post.x+Math.cos(angle)*115,y:post.y+Math.sin(angle)*115},this.collisionRadius(u));u.homeX=u.guardArrival.x;u.homeY=u.guardArrival.y;u.missionStage=this.mission.stage;return u;
  }
  fireDefense(post,dt){
   if(post.hp<=0)return;post.cooldown-=dt;
@@ -2120,7 +2143,7 @@ class FrontGame{
  spawnAssault(){
   const rules=this.waveRules().assault;if(!rules.enabled)return;const p=this.pressure(),types=waveRoster(rules.rosters,this.time);if(!types.length)return;
   const count=Math.max(0,Math.min(p.assaultBatch,this.enemySpawnRoom(1)));if(!count)return;
-  let spawned=0;for(let i=0;i<count;i++){const spawn=this.isDesktopDefense()?this.desktopEntry():this.northernSpawn(this.serial+1,50);if(!spawn)break;spawned++;const u=this.addUnit(1,types[i%types.length],spawn.x,spawn.y,true);u.assault=true;this.stampEvolutionWave(u);}
+  let spawned=0;for(let i=0;i<count;i++){const spawn=this.isDesktopDefense()?this.desktopEntry():this.northernSpawn(this.serial+1,50);if(!spawn)break;const u=this.addUnit(1,types[i%types.length],spawn.x,spawn.y,true);if(!u)continue;spawned++;u.assault=true;this.stampEvolutionWave(u);}
   if(spawned)this.notify('toast',`적 돌격대 ${spawned}기 접근 · 시간이 지날수록 증원 규모와 중장갑 비중이 늘어납니다.`);
  }
  updateMission(dt){
@@ -2246,6 +2269,32 @@ class FrontGame{
   this.effects.push({kind:'bayonetWarn',x:u.x,y:u.y,angle:u.face,range:s.range,slash:!!s.slash,team:u.team,t:s.windup,max:s.windup});
  }
  update(dt){return BATTLE_SYSTEMS.update(this,dt);}
+ updateStackSniperAim(u,target,s){
+  const previous=u.sniperAim;
+  let aim=previous?.stack?previous:null;
+  if(!aim){
+   if(previous)u.sniperAim=null;
+   const {track,dodge}=CAPTAIN_STACK_SNIPER;
+   if(!target||u.cooldown>track+dodge)return false;
+   aim=u.sniperAim={stack:true,target,started:this.time,lockAt:this.time+track,fireAt:this.time+track+dodge};
+  }
+  if(!aim.locked){
+   if(!this.canTarget(u,aim.target)||!this.lineClear(u,aim.target,0,{fireTeam:u.team})){u.sniperAim=null;u.cooldown=Math.max(u.cooldown,.3);return false;}
+   const {x,y}=aim.target;
+   aim.angle=Math.atan2(y-u.y,x-u.x);
+   const distance=Math.min(s.range,Math.hypot(x-u.x,y-u.y)+60);
+   aim.point=this.commandFirePoint(u,distance,aim.angle);
+   aim.locked=this.time+1e-8>=aim.lockAt;
+  }
+  if(aim.locked&&!Number.isFinite(aim.lockedAt)){aim.lockedAt=this.time;aim.fireAt=this.time+CAPTAIN_STACK_SNIPER.dodge;}
+  u.face=u.aimFace=aim.angle;
+  if(this.time+1e-8<aim.fireAt)return true;
+  u.sniperAim=null;u.cooldown=s.rate;u.recoil=.16;
+  this.fireUnitProjectiles(u,aim.point,this.attackRoll(u),s);
+  this.notify('fire',u);
+  this.effects.push({kind:'muzzle',x:u.x,y:u.y,origin:true,t:.12,max:.12,team:u.team,weapon:'sniper',angle:u.face});
+  return true;
+ }
  updateBattleUnits(dt,enemy){
   const combatThreats=this.attackingEnemies(),combatCandidates=this.combatCandidates(),commandEngaged=new Map(),commandPoints=new Map();
   const hostileTargets=[...this.units,...this.radioTurretTargets(),...this.buildings.filter(b=>b.hp>0)];
@@ -2311,7 +2360,13 @@ class FrontGame{
     if(target&&target.type!=='toyDecoy'&&u.team!==0&&u.type!=='mortar'&&!tankLocked){const screen=this.screeningUnit(u,target);if(screen&&dist(u,screen)<s.range)target=screen;}
     const b=(u.team===1||u.team!==0&&(this.isDesktopDefense()||TYPES[u.type]?.stab))?this.bases[0]:null;if(!target&&b&&this.canTarget(u,b)&&(TYPES[u.type]?.stab||this.isDesktopDefense()&&MELEE.has(u.type)?this.targetDistance(u,b)<s.range:dist(u,b)>=(s.minRange||0)&&dist(u,b)<s.range+45))target=b;
     if(u.team!==0&&u.type==='tank'){u.tankAimTargetId=target?.id??null;if(!target||u.cooldown>0)u.tankReadyAimAt=null;else u.tankReadyAimAt??=this.time;}
-    if(u.type==='sniper'){const windup=Math.min(ROOM_RULES.sniperAim,s.rate*.7);if(!target)u.sniperAim=null;else if(u.sniperAim&&target.commandShot)u.sniperAim.target=target;else if(u.cooldown<=windup&&(!u.sniperAim||u.sniperAim.target!==target)){u.sniperAim={target,started:this.time,fireAt:this.time+windup};u.cooldown=Math.max(u.cooldown,windup);}}
+    const stackSniper=this.captainStackHpMode&&u.team!==0&&u.type==='sniper';
+    if(stackSniper){
+     if(target&&!this.lineClear(u,target,0,{fireTeam:u.team}))target=null;
+     if(this.updateStackSniperAim(u,target,s))continue;
+     if(target){u.face=u.aimFace=Math.atan2(target.y-u.y,target.x-u.x);continue;}
+    }
+    if(u.type==='sniper'&&!stackSniper){const windup=Math.min(ROOM_RULES.sniperAim,s.rate*.7);if(!target)u.sniperAim=null;else if(u.sniperAim&&target.commandShot)u.sniperAim.target=target;else if(u.cooldown<=windup&&(!u.sniperAim||u.sniperAim.target!==target)){u.sniperAim={target,started:this.time,fireAt:this.time+windup};u.cooldown=Math.max(u.cooldown,windup);}}
     if(TYPES[u.type]?.stab){if(u.bossPattern!=='wideSlash')this.updateBayonet(u,target,s);}
     else if(target&&!channeling){u.face=Math.atan2(target.y-u.y,target.x-u.x);u.aimFace=u.face;let aligned=true;if(hasTurret){const delta=Math.atan2(Math.sin(u.aimFace-(u.turretFace??u.aimFace)),Math.cos(u.aimFace-(u.turretFace??u.aimFace)));u.turretFace=(u.turretFace??u.aimFace)+clamp(delta,-ROOM_RULES.turretSpeed*dt,ROOM_RULES.turretSpeed*dt);aligned=Math.abs(delta)<.13;if(u.team!==0&&u.type==='tank'&&u.cooldown<=0&&this.time-(u.tankReadyAimAt??this.time)>=.8){u.turretFace=u.aimFace;aligned=true;}}if(u.cooldown<=0&&aligned&&(u.type!=='sniper'||u.sniperAim&&this.time>=u.sniperAim.fireAt)){if(u.type==='sniper')u.sniperAim=null;const attack=this.attackRoll(u);u.cooldown=this.isFlameCommander(u)?Math.max(u.cooldown,-dt)+s.rate:s.rate;if(this.isSwordCommander(u)){this.beginSwordAttack(u,target,attack);}else if(this.isFlameCommander(u)){this.flamePulse(u,u.face);}else if(u.type==='mortar'){this.launchMortar(u,target,attack);u.recoil=.25;}else if(MELEE.has(u.type)){if(this.isFlying(u)){u.flightStrikeUntil=this.time+.22;u.recoil=.18;this.effects.push({kind:'sting',x:u.x,y:u.y,tx:target.x,ty:target.y,flightHeight:s.flightHeight,t:.2,max:.2,team:u.team});}this.damage(target,attack.damage,u);}else{this.fireUnitProjectiles(u,target,attack,s);u.recoil=(u.type==='tank'||u.type==='crimsonAce')?.24:u.type==='rocket'?.2:.16;if(u.team!==0||u.type!=='rocket'&&u.type!=='guntruck'){this.notify('fire',u);this.effects.push({kind:'muzzle',x:u.x,y:u.y,origin:true,t:.12,max:.12,team:u.team,weapon:u.appearance==='shino'?'shino':u.type,boss:!!u.boss,...(u.type==='sniper'&&['kayla','hayeon'].includes(u.appearance)?{appearance:u.appearance}:{}),angle:u.face});}if(u.type==='sniper')this.effects.push({kind:'tracer',x:u.x,y:u.y,tx:target.x,ty:target.y,t:.12,max:.12,team:u.team});}}}
    }

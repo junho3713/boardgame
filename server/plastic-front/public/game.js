@@ -752,7 +752,37 @@ function drawDefense(p){
  if(alive){rr(ctx,-38,73,76,5,2,'#363d2d');rr(ctx,-38,73,76*p.hp/p.maxHp,5,2,'#dfad74');}
  ctx.restore();
 }
+function drawStackSniperWarning(u){
+ const aim=u.sniperAim,point=aim.point;
+ if(!point||game.time>=aim.fireAt)return;
+ const left=aim.fireAt-game.time,urgent=left<=.2;
+ ctx.save();ctx.lineCap='round';
+ ctx.strokeStyle=aim.locked?'#df35514d':'#ffb26033';ctx.lineWidth=types.leader.r*2;
+ ctx.beginPath();ctx.moveTo(u.x,u.y);ctx.lineTo(point.x,point.y);ctx.stroke();
+ ctx.strokeStyle=aim.locked?urgent?'#ffeab9':'#ff635d':'#ffbd71';ctx.lineWidth=aim.locked?2.8:1.8;
+ if(!aim.locked)ctx.setLineDash([8,6]);
+ ctx.beginPath();ctx.moveTo(u.x,u.y);ctx.lineTo(point.x,point.y);ctx.stroke();
+ ctx.setLineDash([]);
+ if(aim.locked){
+  const x=point.x-Math.cos(aim.angle)*Math.min(60,point.range),y=point.y-Math.sin(aim.angle)*Math.min(60,point.range);
+  circle(ctx,x,y,9,'#3b1427b0','#ffce97');
+  text(ctx,left.toFixed(1)+'초',x,y-15,12,'#ffe3b6');
+ }
+ ctx.restore();
+}
 function drawMortarShell(p){
+ if(p.barrageShot&&p.source?.hp>0)return;
+ if(game.captainStackHpMode&&p.team!==0&&game.isMortarShell(p)&&(p.source?.type==='mortar'||p.source?.defenseKind==='mortarPit')){
+  const left=Math.max(0,p.landAt-game.time),urgent=left<=.55,color=urgent?'#fff0bb':'#ffc074';
+  ctx.save();
+  ctx.lineWidth=urgent?4:3;
+  circle(ctx,p.x,p.y,p.radius,urgent?'#ac351f65':'#a53f281f',color);
+  ctx.beginPath();ctx.strokeStyle=color;ctx.lineWidth=3;
+  ctx.arc(p.x,p.y,p.radius+5,-Math.PI/2,-Math.PI/2+Math.PI*2*clamp(left/p.delay,0,1));ctx.stroke();
+  circle(ctx,p.x,p.y,16,'#3e211de0',color);
+  text(ctx,left.toFixed(1),p.x,p.y,14,'#fff1da');
+  ctx.restore();return;
+ }
  const k=clamp(1-(p.landAt-game.time)/p.delay,0,1),friendly=p.team===0,color=friendly?'#91efa0':'#ff9e72';
  circle(ctx,p.x,p.y,p.radius,friendly?'#57bf6c28':'#d6523330',color);ctx.lineWidth=2;circle(ctx,p.x,p.y,p.radius*k,null,color);
  ctx.setLineDash([6,5]);circle(ctx,p.x,p.y,p.radius+4,null,color);ctx.setLineDash([]);
@@ -1074,6 +1104,7 @@ function draw(dt){
   ctx.fillRect(0,0,game.bounds().width,game.bounds().height);
  }
  window.FrontAssassinView.ground(ctx,game);window.FrontGuardianFX.ground(ctx,game);battleFx.ground(ctx,fxVisible);battleFx.luckyGround(ctx,game,fxVisible);
+ for(const u of game.units)if(u.hp>0&&u.sniperAim?.stack)drawStackSniperWarning(u);
  for(const u of game.units)if(u.type==='bikeRaider'||u.bossPattern==='rhinoCharge')battleFx.drawBikeWarning(ctx,u,game.time);
  if(game.isRoomCampaign())window.FrontPortal.ground(ctx,game.bases[1],game.time);
  for(const b of game.bases)drawBase(b);
@@ -1128,7 +1159,7 @@ function draw(dt){
  }
  window.FrontSummonHud.airborne(ctx,game,(pod,evolved)=>unitModels.draw(ctx,pod,game.time,evolved),reduceMotion.matches);
  for(const u of game.units.filter(u=>types[u.type].flying).sort((a,b)=>a.y-b.y))drawUnit(u);
- for(const u of game.units.filter(u=>u.hp>0&&u.type==='sniper'&&game.visible(u)&&u.sniperAim&&(u.sniperAim.target.commandShot||game.visible(u.sniperAim.target))).slice(0,12))battleFx.drawLaser(ctx,u,game.time,{crouched:unitModels.crouched(u),muzzle:unitModels.weaponPoint(u)});
+ for(const u of game.units.filter(u=>u.hp>0&&u.type==='sniper'&&game.visible(u)&&u.sniperAim&&!u.sniperAim.stack&&(u.sniperAim.target.commandShot||game.visible(u.sniperAim.target))).slice(0,12))battleFx.drawLaser(ctx,u,game.time,{crouched:unitModels.crouched(u),muzzle:unitModels.weaponPoint(u)});
  window.FrontGuardianFX.air(ctx,game);battleFx.drawLuckySprays(ctx,game,fxVisible);
  for(const p of game.mortarShells){const pose=battleFx.mortarPose(p,game.time);if(fxVisible(pose))battleFx.drawMortar(ctx,p,game.time); }
  window.FrontRosterArt?.field(ctx,game,fxVisible);

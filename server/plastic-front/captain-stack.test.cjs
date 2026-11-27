@@ -181,3 +181,105 @@ test('co-op boss overflow and protection stay with the struck captain',()=>{
  assert.equal(blue.hp,blue.maxHp);assert.equal(greenTroop.hp,greenTroop.maxHp);
  assert(!green.stackGuardUntil);g.damage(green,10,ant);assert(greenTroop.hp<greenTroop.maxHp);
 });
+
+test('stack sniper warns along a fixed line and its shot can be dodged after locking',()=>{
+ for(const dodge of [false,true])for(const coop of [false,true]){
+  const g=battle(true,coop),c=coop?g.withOwner(1,()=>g.commander(0)):g.commander(0);
+  g.lineClear=()=>true;
+  const u=g.addUnit(1,'sniper',c.x-220,c.y,true);
+  // Keep the partner outside the line once the sniper picks its target.
+  if(coop){const partner=g.commander(0);partner.x=c.x+280;partner.y=c.y+110;}
+  u.x=c.x-220;u.y=c.y;u.cooldown=0;
+  g.updateBattleUnits(0,g.commander(1));const aim=u.sniperAim;
+  assert(aim?.stack);assert.equal(aim.target,c);assert.equal(aim.lockAt,40.30);assert.equal(aim.fireAt,41.3);
+  g.time=aim.lockAt+.02;g.updateBattleUnits(0,g.commander(1));assert(aim.locked);assert.equal(aim.fireAt,g.time+1);
+  const locked=aim.point;
+  if(dodge){
+   g.freePosition=()=>true;c.slowUntil=42;c.slowAmount=.5;
+   for(let i=0;i<7;i++){g.time=aim.lockedAt+.65+i*.05;g.move(c,0,100,.05,g.stats(c).speed);}
+  }
+  g.time=41.31;g.updateBattleUnits(0,g.commander(1));assert.equal(aim.point,locked);assert.equal(g.shots.length,0);
+  g.time=aim.fireAt;g.updateBattleUnits(0,g.commander(1));assert.equal(g.shots.length,1);assert.equal(g.shots[0].commandAngle,aim.angle);
+  for(let i=0;i<7;i++){
+   g.updateBattleProjectiles(.05,g.combatCandidates());g.shots=g.shots.filter(p=>p.life>0);
+  }
+  assert.equal(c.hp===c.maxHp,dodge);
+ }
+ const g=battle(false),c=g.commander(0),u=g.addUnit(1,'sniper',c.x-180,c.y,true);
+ g.lineClear=()=>true;u.cooldown=0;g.updateBattleUnits(0,g.commander(1));assert.equal(u.sniperAim.target,c);assert.equal(u.sniperAim.fireAt,40.5);assert(!u.sniperAim.stack);
+});
+
+test('stack parrot shell lands on the two-second warning deadline',()=>{
+ for(const stack of [true,false]){
+  const g=battle(stack),c=g.commander(0);
+  g.obstacles=[];g.viewport={width:900,height:720};g.camera={x:c.x,y:c.y};g.lineClear=()=>true;
+  const cannon=g.addUnit(1,'pirateCannon',c.x-230,c.y,true);cannon.cooldown=0;
+  g.updatePirateCannon(cannon,0);const f=cannon.pirateFuse;assert(f);
+  const deadline=stack?42:42.32;
+  assert(Math.abs(g.bossHazards().find(h=>h.x===f.x&&h.y===f.y).landAt-deadline)<1e-8);
+  g.time=f.fireAt;g.updatePirateCannon(cannon,0);
+  const shot=g.pirateShells[0];assert(Math.abs(shot.landAt-deadline)<1e-8);
+  assert.equal(shot.x,c.x);assert.equal(shot.y,c.y);
+  c.y+=200;g.time=deadline+.001;g.updatePirateShells();assert.equal(c.hp,c.maxHp);
+  assert.equal(g.pirateShells.length,0);
+ }
+});
+test('stack Crimson Ace aims near the nearest captain and launches three timed, fixed strikes',()=>{
+ const g=battle(true,true),green=g.commander(0),blue=g.withOwner(1,()=>g.commander(0));
+ green.x=1100;green.y=6000;blue.x=1700;blue.y=6000;
+ const boss=g.addUnit(2,'crimsonAce',2000,6000,true);boss.x=2000;boss.y=6000;
+ boss.boss=true;boss.bossPattern='rearBarrage';const pattern=g.bossPatternRules(boss);
+ g.updateBossBarrage(boss,pattern);const a=boss.bossBarrage;
+ assert.deepEqual(a.targets[0],{x:blue.x,y:blue.y});assert.equal(a.targets.length,3);
+ for(const point of a.targets.slice(1))assert(Math.hypot(point.x-blue.x,point.y-blue.y)<150);
+ assert.deepEqual(g.effects.filter(e=>e.barrageShot).map(e=>e.barrageShot),[1,2,3]);
+ blue.y+=450;
+ for(let i=0;i<3;i++){
+  g.time=a.hitAt+.55*i;g.updateBossBarrage(boss,pattern);
+  assert.equal(g.mortarShells.length,i+1);
+  const shot=g.mortarShells[i];assert.equal(shot.barrageShot,i+1);
+  assert.deepEqual({x:shot.x,y:shot.y},a.targets[i]);assert.equal(shot.landAt,g.time+.25);
+ }
+ assert.equal(boss.bossBarrage,null);
+});
+
+test('captain stack filters rifle and machine gun waves but still spawns enemy snipers',()=>{
+ for(const coop of [false,true]){
+  const g=battle(true,coop);g.time=600;
+  g.roomEntry=()=>({x:1500,y:6200,entrySide:0});
+  assert.equal(g.spawnRoomEnemy('rifle'),null);
+  assert.equal(g.spawnRoomEnemy('machinegun'),null);
+  assert.equal(g.spawnRoomEnemy('sniper').type,'sniper');
+  g.addRoomWeakReinforcements(20);
+  assert(g.units.some(u=>u.weakReinforcement));
+  assert(g.units.filter(u=>u.weakReinforcement).every(u=>u.type==='ant'));
+  const pickup={x:1500,y:6000,guardIds:[]};
+  g.addSupplyGuards(pickup,['rifle','bayonet','machinegun'],[{x:1500,y:5910},{x:1600,y:5900},{x:1700,y:5900}]);
+  assert.deepEqual(g.rareSupplyGuards(pickup).map(u=>u.type),['bayonet']);
+  const ally=g.addUnit(0,'machinegun',1600,6000);assert.equal(ally.type,'machinegun');
+  g.addUnit(1,'sniper',1650,5900);assert.equal(g.addUnit(1,'sniper',1670,5880),null);
+ }
+ const g=battle(false);g.time=600;g.roomEntry=()=>({x:1500,y:6200,entrySide:0});
+ assert.equal(g.spawnRoomEnemy('rifle').type,'rifle');
+ assert.equal(g.spawnRoomEnemy('machinegun').type,'machinegun');
+});
+test('fixed garrisons follow lobby mode changes and old stacks shed residual rifle and machine gun fire',()=>{
+ const make=stack=>new FrontGame({},undefined,{map:'livingroom-star',captainStackHpMode:stack});
+ const roster=g=>g.units.filter(u=>u.roomGarrison).map(u=>[u.guardianId,u.type]);
+ const ready=make(false),standard=roster(ready);
+ assert(standard.some(([,type])=>type==='rifle'||type==='machinegun'));
+ ready.setCaptainStackHpMode(true);assert.deepEqual(roster(ready),standard.filter(([,type])=>type!=='rifle'&&type!=='machinegun'));
+ assert.deepEqual(roster(ready),roster(make(true)));
+ ready.setCaptainStackHpMode(false);assert.deepEqual(roster(ready),standard);
+ const old=battle(false),c=old.commander(0),machinegun=old.addUnit(1,'machinegun',c.x-120,c.y);
+ const previousReplacement=old.addUnit(1,'bayonet',c.x-140,c.y);previousReplacement.stackEnemyOriginalType='rifle';
+ const existingBayonet=old.addUnit(1,'bayonet',c.x-220,c.y);
+ old.fireUnitProjectiles(machinegun,c,{damage:1});
+ old.fireUnitProjectiles(c,existingBayonet,{damage:1});
+ old.fireUnitProjectiles(c,machinegun,{damage:1});
+ const snapshot=pack(old);snapshot.fields.captainStackHpMode=true;
+ const restored=unpack(battle(true),snapshot);
+ assert(!restored.units.some(u=>[machinegun.id,previousReplacement.id].includes(u.id)));
+ assert.equal(restored.units.find(u=>u.id===existingBayonet.id).type,'bayonet');
+ assert.equal(restored.shots.length,1);assert.equal(restored.shots[0].source.team,0);
+});
