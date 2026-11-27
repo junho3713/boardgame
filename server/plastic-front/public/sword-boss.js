@@ -3,6 +3,7 @@
 const api=typeof module!=='undefined'&&module.exports?require('./engine.js'):root,Game=api.FrontGame,Types=api.TYPES||api.FrontTypes,Profile=api.FrontProfile;
 const TAU=Math.PI*2,clamp=(x,a,b)=>Math.max(a,Math.min(b,x)),mix=(a,b,t)=>a+(b-a)*t,delta=(a,b)=>Math.atan2(Math.sin(a-b),Math.cos(a-b));
 const CONFIG={name:'사검의 군주',hp:140800,healthVersion:167,defense:28,damage:85,firstHitRatio:.5,overlapHitRatio:.1,shieldHalfAngle:Math.PI/4,orbit:108,modeWarning:1.5,phaseWarning:2,interval:2.4,phase2Interval:1.4,returnTime:.7,dodge:{enabled:true,patterns:['spin','vertical','horizontal'],margin:18,sprint:1.6,hold:.3},drop:{warn:1.4,duration:.16,radius:50,damage:1},rear:{warn:1.35,duration:.12,radius:43,damage:1.2},spin:{turnsPerSecond:6,rest:1.6,phase2Rest:.95,warn:2.1,duration:1,radius:62,damage:1.05,length:620,spacing:240},vertical:{withdraw:0,rest:1.6,phase2Rest:.95,warn:1.175,duration:.28,radius:40,damage:1.15,length:720,spacing:220},horizontal:{withdraw:0,rest:1.6,phase2Rest:.95,warn:1.175,duration:.28,radius:40,damage:1.15,length:720,spacing:220}};
+const STACK_FINAL_HP_MULTIPLIER=1.5,RECALL={warn:1,duration:.45,radius:23,hitRatio:.20,cadence:3};
 const PATTERNS=['drop','rear','spin','vertical','horizontal'],LABELS={drop:'무작위 낙검',rear:'후열 급습',spin:'회전 비검',vertical:'세로 대열 돌진',horizontal:'가로 대열 돌진'};
 Types.swordEmpress={name:CONFIG.name,hp:CONFIG.hp,damage:0,rate:100,range:0,speed:0,r:28,cost:0,role:'검4개를 조종하는 공중 보스',stationary:true};
 function segmentDistance(p,a,b){const dx=b.x-a.x,dy=b.y-a.y,t=clamp(((p.x-a.x)*dx+(p.y-a.y)*dy)/(dx*dx+dy*dy||1),0,1);return Math.hypot(p.x-a.x-dx*t,p.y-a.y-dy*t);}
@@ -47,13 +48,18 @@ class Trial extends Game{
   const red=st.blades.filter(s=>s.mode==='attack'&&!s.action);if(!red.length)return false;
   const cfg=this.trialConfig[name],rear=[...allies].sort((a,c)=>Number(['medic','sniper','mortar'].includes(c.type))-Number(['medic','sniper','mortar'].includes(a.type))||Math.hypot(c.x-b.x,c.y-b.y)-Math.hypot(a.x-b.x,a.y-b.y));
   const leader=this.captainStackHpMode?this.nearestStackCaptain(b):this.commander(0),center=this.captainStackHpMode?{x:leader.x,y:leader.y}:{x:allies.reduce((n,u)=>n+u.x,0)/allies.length,y:allies.reduce((n,u)=>n+u.y,0)/allies.length};const v=this.trialViewport||{left:center.x-900,right:center.x+900,top:center.y-650,bottom:center.y+650};st.currentPattern=name;st.commandAt=this.time;st.commandFireAt=this.time+cfg.warn;st.volleyHits={};st.volleySerial=(st.volleySerial||0)+1;st.patternsUsed[name]=(st.patternsUsed[name]||0)+1;
+  const recallEligible=this.captainStackHpMode&&st.phase===2&&(name==='vertical'||name==='horizontal');
+  if(recallEligible)st.recallRushes=(st.recallRushes??0)+1;
+  const useRecall=recallEligible&&st.recallRushes%RECALL.cadence===1;
+  if(useRecall)st.recallHits=[];
+  const centerBlade=Math.floor((red.length-1)/2);
   red.forEach((s,i)=>{
    const target=name==='rear'?rear[i%rear.length]:allies[Math.floor(this.random()*allies.length)],safe=p=>({x:clamp(p.x,120,this.bounds().width-120),y:clamp(p.y,120,this.bounds().height-120)});let start,end;
    if(name==='drop'||name==='rear'){end=safe({x:target.x+(i?Math.cos(i*2.4)*42:0),y:target.y+(i?Math.sin(i*2.4)*42:0)});if(!this.isRoomAssault()&&Math.hypot(end.x-b.x,end.y-b.y)<170){const a=Math.atan2(end.y-b.y,end.x-b.x);end=safe({x:b.x+Math.cos(a)*170,y:b.y+Math.sin(a)*170});}start={...end};}
    else if(name==='vertical'){const sign=center.x>=b.x?1:-1;start={x:clamp(center.x-sign*350,v.left+80,v.right-80),y:clamp(formationCenter(center.y,v.top,v.bottom,(red.length-1)*cfg.spacing),160+(red.length-1)*cfg.spacing/2,this.bounds().height-160-(red.length-1)*cfg.spacing/2)+(i-(red.length-1)/2)*cfg.spacing};end={x:start.x+sign*cfg.length,y:start.y};}
    else if(name==='horizontal'){const sign=center.y>=b.y?1:-1;start={x:clamp(formationCenter(center.x,v.left,v.right,(red.length-1)*cfg.spacing),160+(red.length-1)*cfg.spacing/2,this.bounds().width-160-(red.length-1)*cfg.spacing/2)+(i-(red.length-1)/2)*cfg.spacing,y:clamp(center.y-sign*350,v.top+100,v.bottom-100)};end={x:start.x,y:start.y+sign*cfg.length};}
    else{const angle=Math.atan2(center.y-b.y,center.x-b.x),dx=Math.cos(angle),dy=Math.sin(angle),lane=(i-(red.length-1)/2)*cfg.spacing;start={x:b.x+dx*95-dy*lane,y:b.y+dy*95+dx*lane};end={x:start.x+dx*cfg.length,y:start.y+dy*cfg.length};}
-   const cueAt=this.time+(cfg.withdraw||0);s.action={pattern:name,stage:cfg.withdraw?'withdraw':'warn',started:this.time,cueAt,lockedAt:cueAt+.25,fireAt:cueAt+cfg.warn,from:{x:s.x,y:s.y,angle:s.angle},start,end,radius:cfg.radius,duration:cfg.duration,damage:cfg.damage,hits:[]};
+   const cueAt=this.time+(cfg.withdraw||0);s.action={pattern:name,stage:cfg.withdraw?'withdraw':'warn',started:this.time,cueAt,lockedAt:cueAt+.25,fireAt:cueAt+cfg.warn,from:{x:s.x,y:s.y,angle:s.angle},start,end,radius:cfg.radius,duration:cfg.duration,damage:cfg.damage,hits:[],...(useRecall&&i>=centerBlade&&i<centerBlade+2?{recallOnReturn:true}:{})};
   });return true;
  }
  updateBossPattern(b,dt){if(b.type!=='swordEmpress'){if(this.updateSwordDodge(b,dt))return true;return super.updateBossPattern(b,dt);}this.updateSwordBoss(b,dt);return true;}
@@ -75,7 +81,29 @@ class Trial extends Game{
     if(a.pattern==='spin')s.angle=Math.atan2(a.end.y-a.start.y,a.end.x-a.start.x)+(this.time-a.fireAt)*TAU*(cfg.spin.turnsPerSecond||6);
     const impact=!['drop','rear'].includes(a.pattern)||t>=1;
     if(impact)for(const u of this.captainStackHpMode?this.stackCaptains():[...this.alive(0),...this.units.filter(t=>t.type==='toyDecoy'&&t.hp>0)]){if(a.hits.includes(u.id))continue;const r=a.radius+(Types[u.type]?.r||12),d=['drop','rear'].includes(a.pattern)?Math.hypot(u.x-a.end.x,u.y-a.end.y):segmentDistance(u,old,s);if(d<=r){a.hits.push(u.id);const counts=st.volleyHits||(st.volleyHits={}),hits=counts[u.id]||0;counts[u.id]=hits+1;const ratio=hits?cfg.overlapHitRatio:cfg.firstHitRatio;this.damage(u,u.maxHp*ratio*this.roomSpawnScaling(b).damage/Math.max(.0001,this.defenseFactor(u,b)),b);}}
-    if(t>=1){this.trialStats.attacks++;a.stage='hold';a.impactAt=this.time;a.holdUntil=this.time+(['drop','rear'].includes(a.pattern)?.48:.25);}
+    if(t>=1){
+     this.trialStats.attacks++;a.stage='hold';a.impactAt=this.time;a.holdUntil=this.time+(['drop','rear'].includes(a.pattern)?.48:.25);
+     if(a.recallOnReturn){
+      a.stage='recallWarn';
+      a.recall={pattern:'recall',start:{x:s.x,y:s.y},end:{x:p.x,y:p.y},radius:RECALL.radius,fireAt:this.time+RECALL.warn,duration:RECALL.duration};
+      s.z=0;
+     }
+    }
+   }
+   if(a.stage==='recallWarn'||a.stage==='recallActive'){
+    const r=a.recall;
+    if(this.time+1e-8<r.fireAt)continue;
+    a.stage='recallActive';
+    const progress=clamp((this.time-r.fireAt)/r.duration,0,1),previous={x:s.x,y:s.y};
+    s.x=mix(r.start.x,r.end.x,progress);s.y=mix(r.start.y,r.end.y,progress);
+    s.z=Math.sin(progress*Math.PI)*14;s.angle=Math.atan2(r.end.y-r.start.y,r.end.x-r.start.x);
+    for(const captain of this.stackCaptains()){
+     if(st.recallHits.includes(captain.id)||segmentDistance(captain,previous,s)>r.radius+Types.leader.r)continue;
+     st.recallHits.push(captain.id);
+     this.damage(captain,captain.maxHp*RECALL.hitRatio*this.roomSpawnScaling(b).damage,b);
+    }
+    if(progress>=1){s.action=null;s.z=0;this.trialStats.attacks++;}
+    continue;
    }
    if(a.stage==='hold'&&this.time>=a.holdUntil){a.stage='return';a.started=this.time;a.from={x:s.x,y:s.y,z:s.z,angle:s.angle};a.duration=cfg.returnTime;}
    if(a.stage==='return'){const t=clamp((this.time-a.started)/a.duration,0,1),e=t*t*(3-2*t);s.x=mix(a.from.x,p.x,e);s.y=mix(a.from.y,p.y,e);const drop=['drop','rear'].includes(a.pattern),turn=drop?clamp((t-.35)/.65,0,1):e;s.z=(a.from.z||0)*(1-e)+Math.sin(t*Math.PI)*(drop?155:55);s.angle=drop?Math.PI/2+delta(s.dir,Math.PI/2)*turn:(a.from.angle||0)+delta(s.dir,a.from.angle||0)*e;if(t>=1){s.action=null;s.z=0;}}
@@ -137,9 +165,19 @@ function create(settings={},events={}){
 }
 
 // Campaign integration retains native waves, rewards, profiles, death and victory rules.
+function campaignBossHp(g){return CONFIG.hp*(g.captainStackHpMode?STACK_FINAL_HP_MULTIPLIER:1);}
 function ensure(g,b){
  if(!b||b.type!=='swordEmpress')return null;
- g.trialConfig??=JSON.parse(JSON.stringify(CONFIG));if(g.mode!=='bosslab'&&(g.trialConfig.healthVersion||0)<CONFIG.healthVersion){const ratio=b.hp>0?b.hp/Math.max(1,b.maxHp):0;g.trialConfig.hp=CONFIG.hp;g.trialConfig.healthVersion=CONFIG.healthVersion;b.maxHp=g.trialConfig.hp;b.hp=b.maxHp*ratio;}g.trialStats??={dealt:0,received:0,blocked:0,attacks:0,dodges:0,byPattern:{}};g.trialPattern??='all';
+ g.trialConfig??=JSON.parse(JSON.stringify(CONFIG));
+ if(g.mode!=='bosslab'){
+  const hp=campaignBossHp(g);
+  if(g.trialConfig.hp!==hp||b.maxHp!==hp||g.trialConfig.healthVersion!==CONFIG.healthVersion){
+   const ratio=b.hp>0?clamp(b.hp/Math.max(1,b.maxHp),0,1):0;
+   g.trialConfig.hp=hp;g.trialConfig.healthVersion=CONFIG.healthVersion;
+   b.maxHp=hp;b.hp=hp*ratio;
+  }
+ }
+ g.trialStats??={dealt:0,received:0,blocked:0,attacks:0,dodges:0,byPattern:{}};g.trialPattern??='all';
  g.trialConfig.firstHitRatio=CONFIG.firstHitRatio;g.trialConfig.overlapHitRatio=CONFIG.overlapHitRatio;
  if(!b.swords)b.swords={phase:1,phaseChanges:0,phaseAt:-100,modeIndex:0,patternIndex:0,lastModeAt:-1,nextAttackAt:g.time+2,patternsUsed:{},pending:null,blades:Array.from({length:4},(_,i)=>{const dir=-Math.PI/2+i*Math.PI/2;return{id:i,dir,mode:i===2?'attack':'defend',x:b.x+Math.cos(dir)*CONFIG.orbit,y:b.y+Math.sin(dir)*CONFIG.orbit,z:0,angle:dir,action:null,blockAt:-100};})};
  g.trialBoss=b;return b;
@@ -148,7 +186,7 @@ function rebind(g){const b=g.units.find(u=>u.type==='swordEmpress'&&u.hp>0);if(b
 function install(){
  const p=Game.prototype,native=Object.fromEntries(['stats','addUnit','updateBossPattern','damage','impact','separateCrowd','reset'].map(k=>[k,p[k]]));
  for(const k of ['checkSwordPhase','setSwordModes','startSwordPattern','updateSwordBoss','swordHazards','swordPointSafe','safeSwordPoint','updateSwordDodge'])p[k]=Trial.prototype[k];
- p.stats=function(u){if(u.type==='swordEmpress')return{...Types.swordEmpress,hp:this.trialConfig?.hp||CONFIG.hp,defense:this.trialConfig?.defense??CONFIG.defense,critChance:0,critDamage:1.5,heal:0,splash:0};return native.stats.call(this,u);};
+ p.stats=function(u){if(u.type==='swordEmpress')return{...Types.swordEmpress,hp:this.trialConfig?.hp||campaignBossHp(this),defense:this.trialConfig?.defense??CONFIG.defense,critChance:0,critDamage:1.5,heal:0,splash:0};return native.stats.call(this,u);};
  p.addUnit=function(...args){const u=native.addUnit.apply(this,args);if(this.mode!=='bosslab'&&u?.type==='swordEmpress')ensure(this,u);return u;};
  p.reset=function(...args){this.trialBoss=null;this.trialConfig=null;this.trialStats=null;this.trialPattern=null;return native.reset.apply(this,args);};
  p.updateBossPattern=function(u,dt){if(this.mode!=='bosslab'){if(u.type==='swordEmpress'){ensure(this,u);this.updateSwordBoss(u,dt);return true;}if(this.trialBoss?.hp>0&&this.updateSwordDodge(u,dt))return true;}return native.updateBossPattern.call(this,u,dt);};
