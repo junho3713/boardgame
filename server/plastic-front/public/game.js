@@ -698,9 +698,41 @@ function buildTerrain(){
 }
 function drawBase(b){if(b.hidden)return;if(b.team===1&&game.isRoomCampaign())return;if(window.FrontLivingRoom.field(ctx,'hq-'+b.team,b.x,b.y)||worldModels.draw(ctx,'hq-'+b.team,b.x,b.y)){text(ctx,b.team?'CORAL HQ':game.hasInvulnerableHQ()?'GREEN HQ · 공격 불가':'GREEN HQ',b.x,b.y+100,12,b.team?'#f0b39b':'#e3edbf');return;}const t=b.team,col=t?'#ba6958':'#68874e',dark=t?'#8f4d40':'#48633a';ctx.save();ctx.translate(b.x,b.y);circle(ctx,0,0,115,null,t?'#a65e4933':'#4e754133');rr(ctx,-75,-54,160,130,9,'#354e3433');rr(ctx,-83,-65,160,130,8,dark);rr(ctx,-83,-71,160,123,8,col);rr(ctx,-62,-54,118,82,5,t?'#c77b68':'#7f9a64');rr(ctx,-26,-23,45,41,3,dark);ctx.fillStyle='#dce5bc';ctx.fillRect(-7,-35,7,28);ctx.fillRect(-18,-24,29,7);ctx.fillStyle='#ddd9b8';ctx.fillRect(60,-118,3,97);ctx.beginPath();ctx.moveTo(63,-117);ctx.lineTo(103,-104);ctx.lineTo(63,-92);ctx.fillStyle=t?'#c46d5a':'#66884d';ctx.fill();text(ctx,t?'CORAL HQ':game.hasInvulnerableHQ()?'GREEN HQ · 공격 불가':'GREEN HQ',-3,93,12,t?'#f0b39b':'#e3edbf');ctx.restore();}
 function drawPost(p){if(worldModels.draw(ctx,p.hp>0?'post':'post-ruin',p.x,p.y)){text(ctx,p.hp>0?p.name:'전초기지 파괴됨',p.x,p.y+79,12,p.hp>0?'#f1ddb7':'#c9c8aa');if(p.hp>0){rr(ctx,p.x-56,p.y+91,112,6,2,'#3f4436');rr(ctx,p.x-56,p.y+91,112*p.hp/p.maxHp,6,2,'#d7a27b');}return;}ctx.save();ctx.translate(p.x,p.y);const alive=p.hp>0;rr(ctx,-62,-43,136,110,8,'#2d402b35');rr(ctx,-68,-55,136,105,8,alive?'#875846':'#77755c');rr(ctx,-61,-63,122,101,6,alive?'#b48665':'#9c9b80');if(alive){rr(ctx,-33,-37,66,55,7,'#966b4f');rr(ctx,-7,-73,14,51,3,'#6e5140');rr(ctx,-5,-73,10,39,2,'#c39c78');circle(ctx,0,-9,16,'#8b654b');}else{ctx.strokeStyle='#68694f';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(-38,-40);ctx.lineTo(5,10);ctx.lineTo(37,-35);ctx.stroke();}text(ctx,alive?p.name:'전초기지 파괴됨',0,79,12,alive?'#f1ddb7':'#c9c8aa');if(alive){rr(ctx,-56,91,112,6,2,'#3f4436');rr(ctx,-56,91,112*p.hp/p.maxHp,6,2,'#d7a27b');}ctx.restore();}
+function drawLaserBattery(p){
+ if(!game.visible(p))return;
+ const live=p.hp>0;
+ ctx.save();ctx.translate(p.x,p.y);
+ ctx.fillStyle='#33271980';ctx.beginPath();ctx.ellipse(1,7,32,13,0,0,Math.PI*2);ctx.fill();
+ rr(ctx,-27,-24,54,34,6,live?'#5b492e':'#413b32','#342d22',1);
+ const brass=ctx.createLinearGradient(0,-27,0,6);
+ brass.addColorStop(0,live?'#ffd587':'#7a7162');
+ brass.addColorStop(.42,live?'#ae783a':'#615748');
+ brass.addColorStop(1,live?'#8a592c':'#4d4138');
+ rr(ctx,-27,-28,54,29,6,brass);
+ rr(ctx,-21,-26,40,15,4,live?'#393d32':'#3c372f');
+ rr(ctx,20,-23,12,9,2,'#463d2d','#90775a',1);
+ if(live){
+  rr(ctx,-17,-22,20,7,2,'#6a8e58','#acb891',1);
+  rr(ctx,-17,-22,20*p.hp/p.maxHp,7,1,'#cde787');
+  circle(ctx,13,-18,3,'#ff993f');
+  text(ctx,'전원 배터리',0,-45,12,'#fff0c4');
+  rr(ctx,-25,15,50,5,2,'#3c2929');
+  rr(ctx,-25,15,50*p.hp/p.maxHp,5,2,'#eeb76a');
+ }else{
+  ctx.strokeStyle='#221c19';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-10,-27);ctx.lineTo(-3,-18);ctx.lineTo(-7,-14);ctx.lineTo(5,-3);ctx.stroke();
+ }
+ ctx.restore();
+}
 function drawDefense(p){
+ if(p.defenseKind==='laserBattery'){drawLaserBattery(p);return;}
  if(p.fencePost){window.FrontRoomFenceArt.post(ctx,p,game);return;}
- if(p.defenseKind==='laserTower'){if(!game.visible(p))return;ctx.save();ctx.translate(p.x,p.y);if(p.hp>0)unitModels.draw(ctx,p,game.time);else{window.FrontGuardianFX.wreck(ctx,p,game.time);text(ctx,'레이저 포탑 잔해'+(Number.isFinite(p.respawnAt)?' · 재조립 '+Math.max(0,Math.ceil(p.respawnAt-game.time))+'초':''),0,55,10,'#b8a59d');}ctx.restore();if(p.hp>0){text(ctx,p.name+' · 사거리 '+game.defenseStats(p).range,p.x,p.y+24,11,'#ffc2b7');rr(ctx,p.x-38,p.y+34,76,5,2,'#3c2929');rr(ctx,p.x-38,p.y+34,76*p.hp/p.maxHp,5,2,'#fa887d');}return;}
+ if(p.defenseKind==='laserTower'){if(!game.visible(p))return;ctx.save();ctx.translate(p.x,p.y);if(p.hp>0){
+  const power=game.roomLaserPower(p);
+  unitModels.draw(ctx,p,game.time);
+  if(power)circle(ctx,Math.cos(p.face)*13,-52+Math.sin(p.face)*8,4,power.phase==='off'?'#594841':power.phase==='warning'?'#ffbd58':'#ff4c37');
+ }else{window.FrontGuardianFX.wreck(ctx,p,game.time);text(ctx,'레이저 포탑 잔해'+(Number.isFinite(p.respawnAt)?' · 재조립 '+Math.max(0,Math.ceil(p.respawnAt-game.time))+'초':''),0,55,10,'#b8a59d');}ctx.restore();if(p.hp>0){const power=game.roomLaserPower(p);
+ const label=power?{off:'전원 차단',warning:'발사 예고',fire:'레이저 발사'}[power.phase]+' · '+Math.ceil(power.remaining)+'초':p.name+' · 사거리 '+game.defenseStats(p).range;
+ text(ctx,label,p.x,p.y+24,11,power?.phase==='off'?'#e8e1cf':power?.phase==='warning'?'#ffd581':'#ffc2b7');rr(ctx,p.x-38,p.y+34,76,5,2,'#3c2929');rr(ctx,p.x-38,p.y+34,76*p.hp/p.maxHp,5,2,'#fa887d');}return;}
 
  if(p.defenseKind==='missileTower'&&p.hp<=0){window.FrontLivingRoom.missileWreck(ctx,p);return;}
  if(p.defenseKind==='missileTower'&&p.hp>0&&window.FrontLivingRoom.field(ctx,'missileTower',p.x,p.y,p.face||0)){text(ctx,p.name,p.x,p.y+64,11,'#f0c9a3');rr(ctx,p.x-38,p.y+73,76,5,2,'#363d2d');rr(ctx,p.x-38,p.y+73,76*p.hp/p.maxHp,5,2,'#e5a279');return;}

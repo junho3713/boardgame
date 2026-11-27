@@ -42,20 +42,74 @@ function shield(c,u,time){
  if(hit){c.globalAlpha*=hit;c.strokeStyle='#fff';c.lineWidth=2;c.beginPath();c.moveTo(0,-48);c.lineTo(-13,-61);c.lineTo(-10,-83);c.moveTo(-13,-61);c.lineTo(-33,-66);c.moveTo(0,-48);c.lineTo(18,-40);c.lineTo(30,-21);c.moveTo(18,-40);c.lineTo(37,-52);c.stroke();}
  c.restore();c.strokeStyle='#d4f8ff';c.lineWidth=1.4;snow(c,0,-46,12,time*.2);c.restore();
 }
+const reduceMotion=window.matchMedia?.('(prefers-reduced-motion: reduce)');
+function powerCable(c,g){
+ const battery=g.defenses.find(p=>p.defenseKind==='laserBattery');
+ if(!battery)return;
+ const tower=g.defenses.find(p=>p.id===battery.linkedTowerId);
+ if(!tower||!g.visible(battery)&&!g.visible(tower))return;
+ const linked=battery.hp>0&&tower.hp>0,power=g.roomLaserPower(tower);
+ const from={x:battery.x+22,y:battery.y-10},to={x:tower.x+20,y:tower.y+2};
+ c.save();c.lineJoin='round';c.lineCap='round';
+ c.beginPath();c.moveTo(from.x,from.y);
+ c.bezierCurveTo(from.x+48,from.y-96,to.x+53,to.y+90,to.x,to.y);
+ c.strokeStyle='#352a23c9';c.lineWidth=7;c.stroke();
+ c.strokeStyle=linked?'#5e644e':'#4a4541';c.lineWidth=4;c.stroke();
+ c.strokeStyle=linked?'#dfbc6d90':'#b5764f80';c.lineWidth=1.15;c.stroke();
+ if(tower.hp>0&&power){
+  const x=from.x+2,y=from.y-4;
+  const age=g.time-tower.laserFaultAt;
+  const sparkAge=age<.32?age:(g.time*.93)%1;
+  if(sparkAge<.25||power.phase==='warning'){
+   const charge=power.phase==='warning'?power.progress:0;
+   c.translate(x,y);c.globalAlpha=power.phase==='warning'?.52+.35*charge:Math.max(0,1-sparkAge*4);
+   c.strokeStyle='#ffbd61';c.lineWidth=2;
+   for(let i=0;i<5;i++){
+    const a=i*2.4+g.time*12,r=7+(i%3)*4+charge*10;
+    c.beginPath();c.moveTo(0,0);c.lineTo(Math.cos(a)*r*.4,Math.sin(a)*r*.4-7);c.lineTo(Math.cos(a+.6)*r*.75,Math.sin(a+.6)*r*.6-4);c.lineTo(Math.cos(a)*r,Math.sin(a)*r-10);c.stroke();
+   }
+   c.fillStyle='#fff3cd';c.fillRect(-2,-3,4,3);
+  }
+ }
+ c.restore();
+}
+function laserPath(c,g,p){
+ const power=g.roomLaserPower?.(p);
+ if(power?.phase==='off'||!g.visible(p))return;
+ const target=p.laserAttack?.target,warning=power?.phase==='warning';
+ if(!(target?.hp>0)&&!warning)return;
+ const x=p.x+Math.cos(p.face)*25,y=p.y-52+Math.sin(p.face)*18;
+ const range=g.defenseStats(p).range;
+ const tx=target?.hp>0?target.x:p.x+Math.cos(p.face)*range;
+ const ty=target?.hp>0?target.y-22:p.y+Math.sin(p.face)*range-16;
+ c.save();c.lineCap='round';
+ const line=()=>{c.beginPath();c.moveTo(x,y);c.lineTo(tx,ty);c.stroke();};
+ if(warning){
+  const progress=power.progress;
+  const pulse=reduceMotion?.matches?1:.38+.62*(.5+.5*Math.sin((progress*2+progress*progress*2.6)*TAU));
+  c.strokeStyle='#ffae43';c.lineWidth=2.1;c.globalAlpha=pulse;c.setLineDash([8,5]);line();
+  c.setLineDash([]);c.lineWidth=1.5;ring(c,tx,ty,9+9*(1-progress),'#ffbf69','#ff9e3030');
+ }else{
+  c.strokeStyle='#ff3c28';c.lineWidth=7;c.globalAlpha=.65;line();
+  c.globalAlpha=1;c.strokeStyle='#fff3d9';c.lineWidth=2;line();
+  ring(c,tx,ty,8+Math.sin(g.time*60)*3,'#fff4c9','#ff6b3355');
+ }
+ c.restore();
+}
 window.FrontGuardianFX={portal,shield,wreck(c,p,time){
  if(wreckImage.complete&&wreckImage.naturalWidth)c.drawImage(wreckImage,-76,-99,152,152);
  else{c.fillStyle='#3d3432';c.beginPath();c.ellipse(0,0,47,24,0,0,TAU);c.fill();c.fillStyle='#8b5147';c.fillRect(-27,-30,48,27);c.strokeStyle='#26232a';c.lineWidth=5;c.beginPath();c.moveTo(-24,-30);c.lineTo(5,-11);c.lineTo(24,-32);c.stroke();}
  const age=time-(p.diedAt??time);if(age<8){c.save();c.globalAlpha=Math.max(0,1-age/8)*.35;for(let i=0;i<4;i++){const t=(age*.5+i*.24)%1;c.fillStyle='#555860';c.beginPath();c.ellipse(7+Math.sin(i+time)*6,-34-t*43,5+t*11,6+t*8,0,0,TAU);c.fill();}c.restore();}
-},ground(c,g){c.save();
+},ground(c,g){c.save();powerCable(c,g);
  for(const u of g.units)if(u.guardianRespawn&&u.type==='blizzardMage'&&g.mission.stage>=3&&g.visible(u))portal(c,u,g.time);
  for(const u of [...g.units.filter(u=>u.fixedGuard),...g.activeDefenses().filter(u=>u.defenseKind==='laserTower')]){if(u.hp<=0||!g.visible(u)||g.mission.stage<(u.activeStage||2))continue;const radius=u.defenseKind==='laserTower'?(g.defenseStats?.(u)?.range??window.FrontGuardians.range):(g.stats?.(u)?.range??window.FrontGuardians.range);c.lineWidth=1;
- if(u.defenseKind==='laserTower'){c.save();c.globalAlpha*=window.FrontRoomCampaign?.config.laser.opacity??.3;c.fillStyle=window.FrontRoomCampaign?.config.laser.color??'#ec443b';c.beginPath();c.arc(u.x,u.y,radius,0,TAU);c.fill();c.restore();c.strokeStyle='#eb534bad';c.lineWidth=1.5;c.beginPath();c.arc(u.x,u.y,radius,0,TAU);c.stroke();}
+ if(u.defenseKind==='laserTower'){const phase=g.roomLaserPower?.(u)?.phase;if(phase==='off')continue;const warning=phase==='warning';c.save();c.globalAlpha*=warning?.12:(window.FrontRoomCampaign?.config.laser.opacity??.3);c.fillStyle=warning?'#ffae43':(window.FrontRoomCampaign?.config.laser.color??'#ec443b');c.beginPath();c.arc(u.x,u.y,radius,0,TAU);c.fill();c.restore();c.strokeStyle=warning?'#ffae437d':'#eb534bad';c.lineWidth=1.5;c.beginPath();c.arc(u.x,u.y,radius,0,TAU);c.stroke();}
  else{c.setLineDash([5,12]);ring(c,u.x,u.y,radius,'#9ddfff38');c.setLineDash([]);}
  if(u.blizzardCast){const z=u.blizzardCast,k=Math.max(0,Math.min(1,1-(z.hitAt-g.time)/window.FrontGuardians.windup));c.lineWidth=2;ring(c,z.x,z.y,145,'#d4f6ff','#71cfff35');ring(c,z.x,z.y,145*k,'#aceaff');c.strokeStyle='#e5faff';snow(c,z.x,z.y,24,g.time);}
  }
  for(const u of g.alive(0)){if((u.rootedUntil||0)<=g.time)continue;c.lineWidth=2;ring(c,u.x,u.y,19,'#d7f9ff','#7fcfff66');c.fillStyle='#91dafa9c';c.strokeStyle='#e4faff';for(let i=0;i<5;i++){const a=i*TAU/5,x=u.x+Math.cos(a)*15,y=u.y+Math.sin(a)*9;c.beginPath();c.moveTo(x-5,y+3);c.lineTo(x,y-16);c.lineTo(x+5,y+3);c.closePath();c.fill();c.stroke();}}
  c.restore();},air(c,g){c.save();
- for(const p of g.activeDefenses()){const b=p.laserAttack;if(p.defenseKind!=='laserTower'||!b?.target||!g.visible(p))continue;const a=b.target;if(a.hp<=0)continue;const x=p.x+Math.cos(p.face)*25,y=p.y-52+Math.sin(p.face)*18,tx=a.x,ty=a.y-22;c.strokeStyle=g.time<b.fireAt?'#ff8273':'#ff3c28';c.lineWidth=g.time<b.fireAt?1:7;c.setLineDash(g.time<b.fireAt?[5,6]:[]);c.globalAlpha=g.time<b.fireAt?.7:.65;c.beginPath();c.moveTo(x,y);c.lineTo(tx,ty);c.stroke();if(g.time>=b.fireAt){c.globalAlpha=1;c.strokeStyle='#fff3d9';c.lineWidth=2;c.beginPath();c.moveTo(x,y);c.lineTo(tx,ty);c.stroke();ring(c,tx,ty,8+Math.sin(g.time*60)*3,'#fff4c9','#ff6b3355');}c.globalAlpha=1;c.setLineDash([]);}
+ for(const p of g.activeDefenses())if(p.defenseKind==='laserTower')laserPath(c,g,p);
  for(const e of g.effects){if(e.kind==='iceShieldBlock'){const age=Math.max(0,Math.min(1,1-e.t/e.max));c.save();c.translate(e.x,e.y);c.globalAlpha=Math.max(0,1-age);c.strokeStyle='#dbffff';c.lineWidth=2;ring(c,0,0,12+age*39,'#c5faff');for(let i=0;i<12;i++){const a=i*2.39996,x=Math.cos(a)*(12+age*64),y=Math.sin(a)*(9+age*40)-Math.sin(age*Math.PI)*18;c.save();c.translate(x,y);c.rotate(a+age*3);c.fillStyle=i%2?'#e6ffff':'#6ecbff';c.beginPath();c.moveTo(0,-7*(1-age));c.lineTo(4*(1-age),0);c.lineTo(0,9*(1-age));c.lineTo(-3*(1-age),0);c.closePath();c.fill();c.stroke();c.restore();}c.restore();continue;}if(e.kind!=='blizzard')continue;const age=1-e.t/e.max;c.globalAlpha=Math.min(1,e.t*2);c.lineWidth=2;ring(c,e.x,e.y,e.radius*(.7+age*.3),'#c9f3ff','#79cfff22');c.strokeStyle='#e5fbff';for(let i=0;i<30;i++){const a=i*2.39996+age*2,r=e.radius*Math.sqrt((i+.5)/30),x=e.x+Math.cos(a)*r,y=e.y+Math.sin(a)*r-age*30;snow(c,x,y,3+i%5,age+i);}}
  c.restore();}};
 })();

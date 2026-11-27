@@ -9,6 +9,7 @@ const PIRATE_REINFORCEMENT={from:360,interval:55,roomFrom:270,roomUntil:720,room
 const OCTOPUS_REINFORCEMENT={from:270,interval:65};
 const ROOM_ANT_HEALTH={scale:.5,restoreFrom:180,restoreAt:240};
 const TACTICAL_FEVER={duration:10,cooldown:25,haste:1.4,heal:.3,magnetRadius:480};
+const ALLIED_MORTAR_DAMAGE=90,ALLIED_MORTAR_STRUCTURE_DAMAGE=2.25;
 const ROOM_KILL_XP={ant:7,rifle:12,machinegun:14,sniper:14,mortar:14,bombBug:32,acidBeetle:32,pirateCannon:40,bubbleOctopus:42,blizzardMage:38};
 const ROOM_KILL_GOLD={ant:5,bombBug:12,pirateCannon:16,bubbleOctopus:18,blizzardMage:14,rhinoBeetle:18};
 const ROOM_BOSS_GOLD={
@@ -102,7 +103,7 @@ const TYPES={swordEmpress:{name:'사검의 군주',hp:140800,damage:0,rate:100,r
  lucky:{name:'럭키 레토나',icon:'🍀',hp:135,damage:8,rate:.95,range:285,speed:140,r:20,cost:160,role:'네잎클로버 군용 지프 · 4초마다 슬롯 추첨 / 꽝 40% · 끈끈이 폭탄/섬광탄/퇴치 스프레이/777 미사일(방어력 35% 무시) · 레토나 Lv.5 + 이동속도 Lv.5 진화 시 꽝 감소·희귀 확률 증가'},
  rifle:{name:'소총병',icon:'▥',hp:140,damage:12,rate:.63,range:245,speed:144,r:11,cost:45,role:'범용 소총 · 경장갑 ×1 / 장갑 ×0.8'},
  machinegun:{name:'기관총병',icon:'≋',hp:160,damage:9,rate:.2,range:280,speed:126,r:12,cost:95,role:'빠른 연사 · 경장갑 ×1 / 장갑 ×0.8'},
- mortar:{name:'박격포병',icon:'◉',hp:90,damage:64,rate:3.6,range:700,minRange:135,speed:116,r:12,cost:140,splash:70,role:'레이저 포탑 우선 · 고정 낙탄 2초 · 건물 ×1.2 · 사거리 135~700'},
+ mortar:{name:'박격포병',icon:'◉',hp:90,damage:64,rate:3.6,range:700,minRange:135,speed:116,r:12,cost:140,splash:70,role:'레이저 포탑 우선 · 고정 낙탄 2초 · 건물 ×2.25 · 사거리 135~700'},
  rocket:{name:'바주카병',icon:'⌁',hp:120,damage:80,rate:1.85,range:295,speed:128,r:12,cost:120,splash:38,role:'로켓을 발사해 착탄 지점 주변에 폭발 피해'},
  sniper:{name:'저격병',icon:'⌖',hp:100,damage:100,rate:2.35,range:560,speed:137,r:11,cost:110,role:'사거리 안에서 최대 체력이 가장 높은 적 자동 조준 · 경장갑 ×1 / 장갑 ×0.5'},
  guntruck:{name:'전투트럭',icon:'▱',hp:280,damage:12,rate:.22,range:265,speed:150,r:22,cost:150,role:'기동 연사 · 경장갑 ×1 / 장갑 ×0.8'},
@@ -208,7 +209,7 @@ class FrontGame{
  random(){return Math.random();}
  reset(mode=this.mode||'pve'){
   this.manualAim=null;this.rerollCount=4;this.droneNextType='drone';this.dropPods=[];this.experienceDrops=[];this.tacticalFeverUntil=[0,0];
-  this.roomCampaign=null;this.bossIntro=null;this.roomHealthVersion=ROOM_CAMPAIGN.config.combat.healthVersion;this.roomHQAlarm=null;this.roomFenceVersion=0;this.roomEncounterVersion=0;this.enemyLuckySalvos=[];this.balanceVersion=BALANCE_VERSION;this.mode=['duel','crisis'].includes(mode)?mode:'pve';this.world={id:'backyard',width:1600,height:2800,scale:1};this.viewport=null;this.buildings=[];this.buildSerial=0;this.constructionLine=null;this.finalBattle={spawned:false,killed:false};this.roomEvents=0;
+  this.roomCampaign=null;this.roomAssaultDefenseVersion=0;this.bossIntro=null;this.roomHealthVersion=ROOM_CAMPAIGN.config.combat.healthVersion;this.roomHQAlarm=null;this.roomFenceVersion=0;this.roomEncounterVersion=0;this.enemyLuckySalvos=[];this.balanceVersion=BALANCE_VERSION;this.mode=['duel','crisis'].includes(mode)?mode:'pve';this.world={id:'backyard',width:1600,height:2800,scale:1};this.viewport=null;this.buildings=[];this.buildSerial=0;this.constructionLine=null;this.finalBattle={spawned:false,killed:false};this.roomEvents=0;
   this.mageShieldQuest=null;this.laserExposureQuest=null;this.roomGuardianVersion=0;this.roomFortificationVersion=0;this.roadCaptainVersion=0;this.guardianSiege=null;this.phase='ready';this.time=0;this.runGold=0;this.salvaged=0;this.nextRecoveryAt=0;this.stageSupplied=[];this.lastEnemyGrowth=-1;this.level=1;this.xp=0;this.kills=0;this.losses=[0,0];this.scouts=0;this.turnChoice=null;this.pendingChoice=null;this.navigationCache=new Map();this.cash=[135,135];this.trucks=[2,2];this.tech=[0,1].map(()=>Object.fromEntries(ROSTER.map(t=>[t,t==='rifle'?1:0])));
   if(this.isRoomCampaign()&&this.usesSummoning?.())this.cash[0]=120;
   this.summonSlots=this.usesSummoning?.()?[]:['rifle'];
@@ -458,6 +459,12 @@ class FrontGame{
   u.blizzardCast={x:target.x,y:target.y,hitAt:this.time+GUARDIANS.windup};
  }
  updateLaser(p,dt){
+  const power=this.roomLaserPower(p);
+  if(power?.phase==='off'){
+   p.laserAttack=null;
+   p.laserNextTick=0;
+   return;
+  }
   const s=this.defenseStats(p),valid=a=>a&&this.canTarget(p,a)&&dist(p,a)<=s.range&&this.lineClear(p,a,0,{fireTeam:1});
   let beam=p.laserAttack;
   if(!valid(beam?.target)){
@@ -465,8 +472,12 @@ class FrontGame{
    if(!target){p.laserAttack=null;p.cooldown=0;return;}
    beam=p.laserAttack={target,fireAt:this.time,nextTick:Math.max(this.time,p.laserNextTick||0)};
   }
-  // A continuous single-target beam: no windup or burst downtime, including old saves.
-  const a=beam.target;p.face=Math.atan2(a.y-p.y,a.x-p.x);p.cooldown=0;beam.fireAt=this.time;
+  const a=beam.target;p.face=Math.atan2(a.y-p.y,a.x-p.x);p.cooldown=0;
+  if(power?.phase==='warning'){
+   beam.fireAt=this.time+power.remaining;
+   return;
+  }
+  beam.fireAt=this.time;
   if(this.time+1e-8>=(p.laserNextTick??this.time)){
    p.laserNextTick=this.time+GUARDIANS.laserTick;beam.nextTick=p.laserNextTick;
    this.recordLaserExposure(p,a,dt);this.damage(a,s.damage,p);this.effects.push({kind:'laserBeam',x:p.x,y:p.y,tx:a.x,ty:a.y,t:.22,max:.22,team:1});
@@ -598,7 +609,7 @@ class FrontGame{
   const level=ally&&u.type==='leader'?this.commanderLevel(u):TROOP_TYPES.includes(u.type)?summonLevel:1;
   // Each chassis contributes half the base HP. Weapons use the combat branch.
   const healthLevel=merged?(troopLevel+Math.max(1,this.tech[0].drone||1))/2:level;
-  const baseDamage=merged&&e?TYPES.combatDrone.damage:b.damage;
+  const baseDamage=ally&&u.type==='mortar'?ALLIED_MORTAR_DAMAGE:merged&&e?TYPES.combatDrone.damage:b.damage;
   const enemyPower=(this.mode==='pve'&&u.team===1&&ROSTER.includes(u.type)?(u.type==='sniper'?.6:.85):1.25)*(!ally?this.enemyDamageScale(u):1);
   const hpBonus=(e==='tank'||e==='medic'||e==='machinegun'?1.2:e==='rifle'?1.15:e==='guntruck'?1.1:1)*(this.isRoomCampaign()?(this.bossPatternRules(u)?.hpScale||1):1)*(fort?.hp||1)*(ally?1:u.evolutionWaveHp||1);
   const damageBonus=e==='tank'||e==='mortar'?1.35:e==='machinegun'?1.2:e==='rifle'?1.3:e==='rocket'?1.25:e==='guntruck'?1.15:1;
@@ -1124,7 +1135,7 @@ class FrontGame{
   if(this.mode==='crisis'&&target.base&&target.team===1)return;
   if(this.mode==='pve'&&target.team===1){
    if((target.base&&this.baseShielded())||(target.structure&&this.mission.stage<(target.activeStage||2)))return;
-   if((target.base||target.structure)&&target.defenseKind!=='laserTower'&&!target.fencePost)amount*=this.isFlameCommander(source)?.8:source.type==='mortar'?1:source.type==='machinegun'?.2:source.type==='sniper'?.2:source.type==='guntruck'?.3:source.type==='rifle'||source.type==='leader'?.3:.9;
+   if((target.base||target.structure)&&target.defenseKind!=='laserTower'&&target.defenseKind!=='laserBattery'&&!target.fencePost)amount*=this.isFlameCommander(source)?.8:source.type==='mortar'?1:source.type==='machinegun'?.2:source.type==='sniper'?.2:source.type==='guntruck'?.3:source.type==='rifle'||source.type==='leader'?.3:.9;
   }
   if(target.hp<=0||this.commanderReviveProtected(target)||this.bossInvulnerable(target))return;
   if(this.time<(target.groggyUntil||0))amount*=this.bossPatternRules(target)?.vulnerable||1;
@@ -1160,6 +1171,7 @@ class FrontGame{
    this.effects.push({kind:'burst',x:target.x,y:target.y-(target.visualFlightHeight??TYPES[target.type]?.flightHeight??0),t:.5,max:.5,team:target.team});
    if(target.base){if(this.isRoomCampaign()&&target===this.bases[1]){this.roomPortalDestroyed();return;}this.finish(source.team===0?'win':'lose','base');return;}
    if(target.built){this.navigationCache.clear();return;}
+   if(target.defenseKind==='laserBattery'){this.cutRoomLaserPower(target);return;}
    if(target.structure){if(target.fencePost)this.navigationCache.clear();if(source.team===0){const small=!!target.defenseKind;this.earnDefeatXP(target,small?25:60);this.cash[0]+=small?45:100;this.awardGold(small?10:20);this.notify('toast',`${target.name} 파괴 · +${small?45:100} 자원 / ${small?25:60} XP${this.mode==='pve'?' 결정':' 획득'}`);}return;}
    if(target.type==='artillery'){this.earnDefeatXP(target,60);this.cash[0]+=70;}
    if(source.team===0&&target.team!==0){
@@ -1496,7 +1508,9 @@ class FrontGame{
     if(this.blockMageMortar(u,p))continue;
     const jackpot=p.kind==='missile'&&p.source?.type==='lucky',alliedJackpot=jackpot&&p.team===0;
     const edge=alliedJackpot?LUCKY.alliedMissileEdge:jackpot?LUCKY.missileEdge:.45;
-    const affinity=alliedJackpot&&!ARMORED.has(kind)?LUCKY.alliedMissileLight:multiplier(p.damageType||'mortar',kind);
+    const structuralMortar=p.team===0&&p.source?.type==='mortar'&&(kind==='structure'||kind==='base');
+    const affinity=structuralMortar?ALLIED_MORTAR_STRUCTURE_DAMAGE:
+     alliedJackpot&&!ARMORED.has(kind)?LUCKY.alliedMissileLight:multiplier(p.damageType||'mortar',kind);
     let amount=p.damage*linkScale*affinity*(1-(1-edge)*d/p.radius);if(alliedJackpot){const defense=this.defenseFactor(u,p.source),pierced=1/(1+(1/defense-1)*(1-LUCKY.alliedMissileArmorIgnore));amount*=pierced/defense;}if(p.enemyJackpot)this.damageEnemyJackpot(u,amount,p);else this.damage(u,amount,p.source);
    }
    this.effects.push({kind:'explosion',x:p.x,y:p.y,radius:p.radius,t:.7,max:.7,team:p.team,visualKind:p.kind==='missile'&&p.source?.type==='lucky'?'jackpot':p.evoStyle||p.kind});
@@ -1505,10 +1519,10 @@ class FrontGame{
    this.notify('explosion',{x:p.x,y:p.y,kind:['toyBall','acid'].includes(p.kind)?'impact':p.kind==='missile'?'rocket':'mortar',team:p.team});
   }
  }
- defenseStats(p){if(p.fencePost)return{range:0,rate:1,damage:0,minRange:0};if(p.defenseKind==='laserTower')return{range:this.isRoomCampaign()?ROOM_CAMPAIGN.config.laser.range:GUARDIANS.range,rate:GUARDIANS.laserTick,damage:GUARDIANS.laserDamage*(1+.10*this.pressure().tier),minRange:0};const missile=p.defenseKind==='missileTower',mortar=p.defenseKind==='mortarPit';return{range:missile?ENEMY_MISSILE.range:mortar?530:355,rate:missile?ENEMY_MISSILE.rate:mortar?4.8:.5,damage:(missile?ENEMY_MISSILE.damage:mortar?32:5)*(1+.10*this.pressure().tier)*(this.roomDefenseRules(p)?.damage||1)*this.enemyDamageScale(p),minRange:0};}
+ defenseStats(p){if(p.fencePost||p.defenseKind==='laserBattery')return{range:0,rate:1,damage:0,minRange:0};if(p.defenseKind==='laserTower')return{range:this.isRoomCampaign()?ROOM_CAMPAIGN.config.laser.range:GUARDIANS.range,rate:GUARDIANS.laserTick,damage:GUARDIANS.laserDamage*(1+.10*this.pressure().tier),minRange:0};const missile=p.defenseKind==='missileTower',mortar=p.defenseKind==='mortarPit';return{range:missile?ENEMY_MISSILE.range:mortar?530:355,rate:missile?ENEMY_MISSILE.rate:mortar?4.8:.5,damage:(missile?ENEMY_MISSILE.damage:mortar?32:5)*(1+.10*this.pressure().tier)*(this.roomDefenseRules(p)?.damage||1)*this.enemyDamageScale(p),minRange:0};}
  updateDefenses(dt){
   for(const p of this.activeDefenses()){
-   if(p.fencePost)continue;
+   if(p.fencePost||p.defenseKind==='laserBattery')continue;
    if(p.defenseKind==='laserTower'){this.updateLaser(p,dt);continue;}
    p.cooldown-=dt;if(p.cooldown>0)continue;
    const spec=this.defenseStats(p),missile=p.defenseKind==='missileTower',candidates=[...this.alive(0),...this.radioTurretTargets(),...(missile?this.buildings.filter(b=>b.hp>0&&b.buildUntil<=this.time):[])];

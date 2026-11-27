@@ -23,6 +23,7 @@ const config={version:116,duration:1200,enemyLuckyInterval:5,recoverySeconds:16,
  surges:{enabled:true,from:120,extra:4,maxBatch:9,growthFrom:360,growthUntil:600,growthMaxBatch:7,intervalScale:.8,lanes:[-1,0,1],frontWidth:420,rosters:[{at:120,types:['ant','bladeGuard']},{at:240,types:['stagBeetle','rifle','sniper','butterfly']},{at:360,types:['hornet','bikeRaider','machinegun','sniper']},{at:480,types:['rhinoBeetle','bikeRaider','butterfly','machinegun']},{at:600,types:['stagBeetle','machinegun','sniper','butterfly']},{at:720,types:['stagBeetle','hornet','sniper','machinegun']},{at:900,types:['rhinoBeetle','butterfly','machinegun','sniper']},{at:1080,types:['hornet','rhinoBeetle','bikeRaider','sniper']}]},
  layout:{version:6,oldWidth:2400,oldHeight:4200,width:3000,height:8400,extraProps:[{kind:'books',label:'쌓인 책',x:250,y:4321.071428571428,w:240,h:165,color:'#6c8582'},{kind:'plant',label:'화분',x:2760,y:6616.428571428572,w:210,h:210,color:'#a87350'},{kind:'plant',label:'화분',x:350,y:3187.8571428571427,w:210,h:210,color:'#a87350'},{kind:'blocks',label:'나무 블록',x:2280,y:2460.714285714286,w:210,h:150,color:'#b68b58'},{kind:'sofa',label:'시작 구역 소파',x:450,y:6850,w:900,h:420,color:'#727c72'},{kind:'blocks',label:'장난감 부품',x:1730,y:7070,w:210,h:150,color:'#b68b58'},{kind:'blocks',label:'장난감 블록',x:2120,y:7270,w:180,h:130,color:'#b68b58'},{kind:'books',label:'시작 구역 책',x:800,y:7510,w:240,h:165,color:'#6c8582'},{kind:'cushion',label:'소파 쿠션',x:2220,y:6680,w:250,h:170,color:'#bc8e70'},{kind:'plant',label:'거실 화분',x:2650,y:7130,w:210,h:210,color:'#a87350'}]},
  laser:{range:370,opacity:.3,color:'#ec443b'},
+ laserBattery:{version:1,id:'room-laser-battery',hp:440,y:4730,fenceHp:6000,off:3,warning:1.2,fire:2},
  opening:[{type:'ant',x:760,y:2240},{type:'ant',x:860,y:2240}],
  roadCaptains:[['road-soldier','bayonet','길목 장난감 병정',5600,1],['road-blade','bladeGuard','블랙 실드 검병 대장',3600,2],['road-bike','bikeRaider','바이크 돌격대장',2160,2]],
  mageEscort:{from:360,mortars:4,spacing:60,depth:80,interval:60},
@@ -235,7 +236,7 @@ const methods={
  roomBeat(){const s=this.roomCampaign,p=this.roomPhase();if(this.time<(s?.recoveryUntil||0))return{name:'보스 격파 후 회복',density:.3};if(this.units.some(u=>u.boss&&!u.miniBoss&&!u.roadCaptain&&u.hp>0))return{name:'보스 전투',density:this.time>=config.midgame.from?config.midgame.bossDensity:.5};if(this.time<120)return{name:'초반 적응',density:1};if(this.time>=450&&this.time<510)return{name:'포병 특수 위기',density:.55};if(this.evolutionPace().relief)return{name:'전력 전환 · 돌파',density:config.evolutionPacing.reliefDensity,waveInterval:config.evolutionPacing.reliefInterval};const r=config.rhythm,cycle=(this.time-(p.rhythmAt??p.at))%r.cycle,postBoss=s?.recoveryUntil>0&&this.time<s.recoveryUntil+30;if(this.time>=r.lateAt)return !postBoss&&cycle>=r.recoveryAt&&cycle<r.recoveryEnd?{name:'전진·재정비',density:this.time>=config.midgame.from?config.midgame.quietDensity:r.quietDensity}:cycle>=r.crisisAt&&cycle<r.recoveryAt?{name:'특수 혼합 공세',density:1.3}:{name:'일반 전투',density:1};return !postBoss&&cycle>=90&&cycle<110?{name:'재정비',density:.45}:cycle>=65&&cycle<90?{name:'특수 혼합 공세',density:1.3}:{name:'일반 전투',density:1};},
  roomPressure(){const p=this.roomPhase(),plan=this.roomWavePlan(),tier=Math.floor(this.time/60);return{tier,late:true,hp:1+.12*tier,damage:1.25*(1+.10*tier),defense:3*tier,combatCap:this.roomWaveCap(),soldierCap:this.roomWaveCap(),swarmCap:this.roomWaveCap(),postCap:0,baseCap:0,postBatch:0,baseBatch:0,postInterval:30,baseInterval:30,swarmBatch:plan.count,swarmInterval:plan.interval,assaultBatch:0,assaultInterval:30};},
  upgradeRoomCampaign(){
-  if(!this.isRoomCampaign())return false;this.upgradeRoomMidBosses();if(this.roomCampaign&&!this.roomCampaign.endgame153){this.roomCampaign.endgame153=true;for(const u of this.units)if(u.finalBoss){u.finalBoss=false;}this.finalBattle={spawned:false,killed:false};this.roomCampaign.bossCursor=Math.min(this.roomCampaign.bossCursor,config.bosses.length-1);}let updated=this.setupRoomFences();if(this.upgradeRoomEncounters())updated=true;if(this.setupRoomFortifications())updated=true;if(this.roomCampaign?.version===config.version){this.upgradeRoomFinalBossPosition();if(this.refreshRoomEnemyHealth())updated=true;if(this.upgradeRoomBombSpawns())updated=true;return updated;}
+  if(!this.isRoomCampaign())return false;this.upgradeRoomMidBosses();if(this.roomCampaign&&!this.roomCampaign.endgame153){this.roomCampaign.endgame153=true;for(const u of this.units)if(u.finalBoss){u.finalBoss=false;}this.finalBattle={spawned:false,killed:false};this.roomCampaign.bossCursor=Math.min(this.roomCampaign.bossCursor,config.bosses.length-1);}let updated=this.setupRoomFences();if(this.upgradeRoomEncounters())updated=true;if(this.setupRoomFortifications())updated=true;if(this.setupRoomAssaultDefenses())updated=true;if(this.roomCampaign?.version===config.version){this.upgradeRoomFinalBossPosition();if(this.refreshRoomEnemyHealth())updated=true;if(this.upgradeRoomBombSpawns())updated=true;return updated;}
   const old=this.time>0,cursor=old?config.bosses.findIndex(b=>b.at>=this.time):0;
   this.roomCampaign={endgame153:true,version:config.version,nextSpawnAt:this.time+4,spawned:0,miniScheduleVersion:2,miniMinute:Math.floor(this.time/60),bossCursor:cursor<0?config.bosses.length:cursor,recoveryUntil:0,bossReadyAt:this.time,tanksDone:config.tanks.map(at=>old&&at<this.time),tankSpawned:0,phaseAt:this.roomPhase().at};
   this.mission.stage=3;this.mission.nextAssault=Infinity;this.mission.nextWave=Infinity;
@@ -319,6 +320,40 @@ const methods={
   for(const u of this.units)if(u.hp>0&&!this.isFlying(u))this.resolvePosition(u);
   for(const p of this.pickups)if(p.active)this.resolvePosition(p,24);
   return true;
+ },
+ setupRoomAssaultDefenses(){
+  const rules=config.laserBattery;
+  if(!this.isRoomAssault()||this.roomAssaultDefenseVersion===rules.version)return false;
+  const tower=this.defenses.find(p=>p.id===config.guardians.midLaser.id);
+  if(!tower)return false;
+  for(const post of this.defenses.filter(p=>p.fencePost)){
+   post.hp=rules.fenceHp*clamp(post.hp/post.maxHp,0,1);
+   post.maxHp=rules.fenceHp;
+  }
+  if(tower.hp>0&&!this.defenses.some(p=>p.id===rules.id)){
+   const point=this.resolvePosition({x:tower.x,y:rules.y},30);
+   this.defenses.push({...point,id:rules.id,name:'레이저 전원 배터리',team:1,structure:true,
+    defenseKind:'laserBattery',linkedTowerId:tower.id,activeStage:1,hp:rules.hp,maxHp:rules.hp,r:27});
+  }
+  this.roomAssaultDefenseVersion=rules.version;
+  return true;
+ },
+ cutRoomLaserPower(battery){
+  const tower=this.defenses.find(p=>p.id===battery.linkedTowerId);
+  if(!tower||tower.hp<=0)return;
+  tower.laserFaultAt=this.time;
+  tower.laserAttack=null;
+  tower.laserNextTick=0;
+  this.notify('toast','배터리 파괴 · 레이저 전원 차단 · 3초 동안 통과 가능');
+ },
+ roomLaserPower(tower){
+  if(!Number.isFinite(tower.laserFaultAt))return null;
+  const {off,warning,fire}=config.laserBattery,duration=off+warning+fire;
+  const elapsed=Math.max(0,this.time-tower.laserFaultAt);
+  const cycle=(elapsed+1e-8)%duration;
+  if(cycle<off)return {phase:'off',remaining:off-cycle};
+  if(cycle<off+warning)return {phase:'warning',remaining:off+warning-cycle,progress:(cycle-off)/warning};
+  return {phase:'fire',remaining:duration-cycle};
  },
  roomFenceLinks(){
   if(!this.isRoomCampaign())return [];
