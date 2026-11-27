@@ -6,7 +6,7 @@ const RULES={copies:3,maxTwoStars:3,capacityGains:[1,1,2,2,3],roulettes:3,
  three:{sniperShots:2,lucky:{normal:{glue:.44,mine:.20,spray:.24,missiles:.06,blank:.06},evolved:{glue:.29,mine:.13,spray:.41,missiles:.14,blank:.03}}}};
 const p=Game.prototype,stats=p.stats,upgrade=p.upgradeBalance,buy=p.buy,bonus=p.abilityBonus,remaining=p.recruitmentRemaining,lucky=p.updateLuckyUnit,scale=p.luckyScale,odds=p.luckyOdds,projectiles=p.fireUnitProjectiles;
 p.isThreeStarExperiment=function(){return false;}; // Legacy callers checking for the retired battlefield.
-p.battlefieldId=function(){return this.bedroomStar?'bedroom-star':this.pixelRoom?'livingroom-pixel':this.starExperiment?'livingroom-star':this.bounds().id;};
+p.battlefieldId=function(){return this.bedroomStar?'bedroom-star':this.roomFinalAssault?'livingroom-assault':this.pixelRoom?'livingroom-pixel':this.starExperiment?'livingroom-star':this.bounds().id;};
 p.starCount=function(type,star){return this.alive(0).filter(u=>u.type===type&&!u.summonEvolved&&!u.goldenSummon&&(u.star||1)===star).length;};
 p.threeStarCount=function(type){return this.starCount(type,3);};
 p.starRosterLabel=function(type){const three=this.threeStarCount(type);return three?`★★★ ${three}기`:`1성 ${this.fusionCandidates(type).length} · ★★ ${this.twoStarCount(type)}/3`;};
@@ -50,6 +50,7 @@ p.fuseUnit=function(type,fromStar=1){return fromStar===1?mergeCopies.call(this,t
 p.dropDestinyStar=function(boss){
  if(!this.starExperiment||this.mode!=='pve'||boss.team===0||boss.hp>0||boss.roadCaptain||boss.bossRushPair||boss.finalBoss)return;
  let destinySource;
+ if(this.isRoomAssault())return;
  if(this.isRoomCampaign()){
   const {destinyStarMini,destinyStarBoss,miniBoss,bosses}=root.FrontRoomCampaign.config;
   const source=boss.miniBoss?destinyStarMini:destinyStarBoss;

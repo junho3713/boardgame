@@ -193,7 +193,7 @@ class FrontProfile{
 }
 class FrontGame{
  static normalizeBattlefield(id){return id==='desktop-star'?'livingroom-pixel':id==='livingroom-star3'?'livingroom-star':id==='factory-star'?'bedroom-star':id;}
- constructor(events={},profile=new FrontProfile(),settings={}){const map=FrontGame.normalizeBattlefield(settings.map);this.bedroomStar=map==='bedroom-star';this.pixelRoom=map==='livingroom-pixel';this.starExperiment=['livingroom-star','livingroom-pixel','bedroom-star'].includes(map);this.starMax=2;this.mapId=this.bedroomStar?'bedroom':this.starExperiment?'livingroom':['livingroom','desktop'].includes(map)?map:'backyard';this.commanderId=['shino','blaze','shion'].includes(settings.commander)?settings.commander:'sarge';this.flameSkinId=settings.flameSkin==='hwarin'?'hwarin':'classic';this.sniperSkinId=['kayla','hayeon'].includes(settings.sniperSkin)?'kayla':'classic';this.medicSkinId=settings.medicSkin==='rina'?'rina':'classic';this.realtimeSummons=settings.realtimeSummons===true;this.events=events;this.profile=profile instanceof FrontProfile?profile:new FrontProfile(profile);this.reset();}
+ constructor(events={},profile=new FrontProfile(),settings={}){const map=FrontGame.normalizeBattlefield(settings.map);this.bedroomStar=map==='bedroom-star';this.pixelRoom=map==='livingroom-pixel';this.roomFinalAssault=map==='livingroom-assault';this.starExperiment=['livingroom-assault','livingroom-star','livingroom-pixel','bedroom-star'].includes(map);this.starMax=2;this.mapId=this.bedroomStar?'bedroom':this.starExperiment?'livingroom':['livingroom','desktop'].includes(map)?map:'backyard';this.commanderId=['shino','blaze','shion'].includes(settings.commander)?settings.commander:'sarge';this.flameSkinId=settings.flameSkin==='hwarin'?'hwarin':'classic';this.sniperSkinId=['kayla','hayeon'].includes(settings.sniperSkin)?'kayla':'classic';this.medicSkinId=settings.medicSkin==='rina'?'rina':'classic';this.realtimeSummons=settings.realtimeSummons===true;this.events=events;this.profile=profile instanceof FrontProfile?profile:new FrontProfile(profile);this.reset();}
  setCommander(id){if(!['sarge','shino','blaze','shion'].includes(id)||this.phase!=='ready')return false;this.commanderId=id;const c=this.commander(0);if(c){c.appearance=id;c.flameSkin=this.flameSkinId;this.refreshCommanderHealth();for(const u of this.alive(0).filter(u=>u.type!=='leader')){Object.assign(u,this.formationPoint(u,c));this.resolvePosition(u);}}return true;}
  setFlameSkin(id){if(!['classic','hwarin'].includes(id)||this.phase!=='ready')return false;this.flameSkinId=id;const c=this.commander(0);if(c?.type==='leader')c.flameSkin=id;return true;}
  setSniperSkin(id){if(id==='hayeon')id='kayla';if(!['classic','kayla'].includes(id)||this.phase!=='ready')return false;this.sniperSkinId=id;for(const u of this.units)if(u.type==='sniper'&&u.team===0)u.appearance=id;return true;}
@@ -991,7 +991,7 @@ class FrontGame{
   if(this.skipEmptyLevelUpgrade?.())return;
   this.input={x:0,y:0};this.notify('level',this.currentOptions);
  }
- activeBoss(){if(this.isRoomCampaign())return this.units.find(u=>u.boss&&!u.miniBoss&&!u.roadCaptain&&u.hp>0)||this.units.find(u=>u.miniBoss&&u.hp>0)||null;return this.units.find(u=>u.boss&&!u.roadCaptain&&u.hp>0)||this.units.find(u=>u.roadCaptain&&u.hp>0&&this.mission.stage>=u.roadStage&&dist(this.commander(0),u)<800)||null;}
+ activeBoss(){if(this.isRoomAssault()&&this.trialBoss?.hp>0)return this.trialBoss;if(this.isRoomCampaign())return this.units.find(u=>u.boss&&!u.miniBoss&&!u.roadCaptain&&u.hp>0)||this.units.find(u=>u.miniBoss&&u.hp>0)||null;return this.units.find(u=>u.boss&&!u.roadCaptain&&u.hp>0)||this.units.find(u=>u.roadCaptain&&u.hp>0&&this.mission.stage>=u.roadStage&&dist(this.commander(0),u)<800)||null;}
  updateBosses(){
   if(this.mode!=='pve'||this.phase!=='playing')return;
   if(this.isRoomCampaign()){this.updateRoomBosses();return;}
@@ -1177,8 +1177,9 @@ class FrontGame{
     let cash=(room?ROOM_KILL_GOLD[target.type]:undefined)??(this.mode==='pve'?pveCash:originalCash)[target.type]??8;
     if(boss)cash=target.miniBoss?(ROOM_BOSS_GOLD.mini[target.type]??50):(ROOM_BOSS_GOLD.main[target.type]??100);
     const xp=(room?ROOM_KILL_XP[target.type]:undefined)??originalXP[target.type]??9;
-    const award=boss?xp*(target.miniBoss?2.5:4):Math.ceil(xp*(target.ambient?.22:1));
-    this.earnDefeatXP(target,award,boss);this.rollCombatDrop(target);this.cash[0]+=Math.ceil(cash*(!boss&&target.ambient?.25:1));
+    const fever=this.roomFever()?ROOM_CAMPAIGN.config.assault.rewardMultiplier:1;
+    const award=(boss?xp*(target.miniBoss?2.5:4):Math.ceil(xp*(target.ambient?.22:1)))*fever;
+    this.earnDefeatXP(target,award,boss);this.rollCombatDrop(target);this.cash[0]+=Math.ceil(cash*(!boss&&target.ambient?.25:1))*fever;
     if(boss)this.activateExperienceMagnet(target,this.coop?[0,1]:[0]);
    }
    if(target.finalBoss){this.finalBattle.killed=true;if(this.isRoomCampaign()){this.finish('win','finalBoss');return;}}

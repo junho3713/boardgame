@@ -35,12 +35,12 @@ test('retired outpost links select the pixel room; existing defense saves retain
  assert.equal(restored.buildings[0].hp,123);assert.equal(restored.alive(0).length,defense.alive(0).length);
  assert.equal(restored.waveRules(),defense.waveRules());assert.deepEqual(restored.obstacles,defense.obstacles);
 });
-test('the current picker serves independent classic and pixel room previews and closes the outpost',()=>{
+test('the map picker replaces the pixel room with the final assault campaign',()=>{
  const dir=path.join(__dirname,'public'),html=fs.readFileSync(path.join(dir,'index.html'),'utf8');
  assert.match(html,/name="battlefield" value="livingroom-star"/);
- assert.match(html,/name="battlefield" value="livingroom-pixel"/);assert.doesNotMatch(html,/value="desktop-star"/);
+ assert.match(html,/name="battlefield" value="livingroom-assault"/);
+ assert.doesNotMatch(html,/name="battlefield" value="(?:livingroom-pixel|desktop-star)"/);
  assert.match(html,/name="battlefield" value="desktop"/);
- assert.ok(fs.existsSync(path.join(dir,'assets/previews/start-livingroom-pixel.png')));
 });
 
 test('the pixel infantry override is reserved for player troops; hostile melee retain their authored poses',()=>{

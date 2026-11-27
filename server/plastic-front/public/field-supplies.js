@@ -32,6 +32,7 @@ function install({FrontGame:Game,TYPES}){
  };
  p.canCollectCombatDrop=function(pickup,leader){
   if(!pickup?.active||leader.hp<=0||this.coop&&pickup.owner!==this.coopOwner)return false;
+  if(pickup.combatDrop==='gold')return true;
   if(pickup.combatDrop==='heal')return this.supplySquad().some(u=>u.hp<u.maxHp);
   return pickup.combatDrop==='magnet'&&this.experienceDrops.some(drop=>drop.owner===pickup.owner&&!drop.pulling);
  };
@@ -42,7 +43,10 @@ function install({FrontGame:Game,TYPES}){
  p.collectCombatDrop=function(pickup,leader){
   if(!this.canCollectCombatDrop(pickup,leader))return false;
   pickup.active=false;
-  if(pickup.combatDrop==='magnet'){
+  if(pickup.combatDrop==='gold'){
+   this.cash[0]+=pickup.amount;
+   this.effects.push({kind:'drop',x:pickup.x,y:pickup.y,t:.4,max:.4,team:0});
+  }else if(pickup.combatDrop==='magnet'){
    this.activateExperienceMagnet(pickup,[pickup.owner]);
    this.notify('toast','전맵 자석 · 전장에 떨어진 경험치 결정을 끌어옵니다');
   }else{
@@ -166,7 +170,22 @@ function install({FrontGame:Game,TYPES}){
   this.pickups=this.pickups.filter(p=>!p.rareSupply||p.active&&this.time<(p.expires||Infinity));
   const leaders=this.units.filter(u=>u.team===0&&u.type==='leader'&&u.hp>0);if(!leaders.length)return;
   const c=leaders[Math.floor(this.time/120-1)%leaders.length],bounds=this.bounds();let point=null;
-  for(let i=0;i<36;i++){const a=-Math.PI/2+((i%12)-5.5)*.22,r=700+(i%3)*75,candidate={x:Math.max(65,Math.min(bounds.width-65,c.x+Math.cos(a)*r)),y:Math.max(this.frontline()+100,Math.min(bounds.height-100,c.y+Math.sin(a)*r))};if(Math.hypot(candidate.x-c.x,candidate.y-c.y)>=550&&this.freePosition(candidate.x,candidate.y,26)&&!this.pickups.some(p=>p.active&&Math.hypot(p.x-candidate.x,p.y-candidate.y)<90)){point=candidate;break;}}
+  const forward=this.isRoomAssault()&&this.roomPortalAlive();
+  const arcs=Array.from({length:12},(_,i)=>((i%12)-5.5)*.22);
+  const distances=[700,775,850],front=this.frontline()+100;
+  const safe=(p)=>this.freePosition(p.x,p.y,26)&&!this.pickups.some(s=>s.active&&Math.hypot(s.x-p.x,s.y-p.y)<90);
+  const offset=(a,r)=>({x:Math.max(65,Math.min(bounds.width-65,c.x+Math.cos(a)*r)),y:Math.max(front,Math.min(bounds.height-100,c.y+Math.sin(a)*r))});
+  if(forward){
+   arcs.sort((a,b)=>Math.abs(a)-Math.abs(b));
+   for(const r of [...distances,480,280]){
+    point=arcs.map(a=>offset(a-Math.PI/2,r)).find(p=>p.y<c.y-100&&Math.hypot(p.x-c.x,p.y-c.y)>=r*.72&&safe(p));
+    if(point)break;
+   }
+  }
+  if(!point)for(let i=0;i<36;i++){
+   const a=-Math.PI/2+((i%12)-5.5)*.22,r=distances[i%3],candidate=offset(a,r);
+   if(Math.hypot(candidate.x-c.x,candidate.y-c.y)>=550&&safe(candidate)){point=candidate;break;}
+  }
   if(!point){this.nextRareSupply=this.time+5;return;}
   const pickup={...point,active:true,rareSupply:true,spawnedAt:this.time,expires:this.time+120,ambushPending:true,guardIds:[]},opening=openingSupply(pickup);
   const guardTypes=opening?['bladeGuard','rifle','bubbleOctopus']:this.time<360?['bayonet','bayonet','bubbleOctopus','rifle','rifle','rifle']:this.time<720?['bladeGuard','bayonet','bubbleOctopus','machinegun','mortar','sniper']:['stagBeetle','bladeGuard','machinegun','mortar','bubbleOctopus','sniper'];

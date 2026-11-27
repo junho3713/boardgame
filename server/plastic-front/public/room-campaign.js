@@ -13,6 +13,9 @@ const config={version:116,duration:1200,enemyLuckyInterval:5,recoverySeconds:16,
  attrition:{from:600,lateAt:900,soloTwoStarWaveDamage:1.2,lateWaveDamage:.85,mortarDamage:.6,lateMortarDamage:.45},
  lateWaves:{from:900,closedCount:.8,closedInterval:1.15,openExtra:2,openInterval:.8},
  bossRush:{from:960,extraBosses:{crimsonAce:{type:'crimsonAce',name:'진홍 전차 에이스',pattern:'rearBarrage'}},pairs:[{at:960,types:['stagBeetle','bayonetCaptain']},{at:1020,types:['bladeGuard','rhinoBeetle']},{at:1080,types:['bikeRaider','hornet']},{at:1140,types:['crimsonAce','stagBeetle']}],troops:{boss:{openCount:3,closedCount:2,openInterval:3.6,closedInterval:4.2,cap:28},between:{openCount:5,closedCount:4,openInterval:3,closedInterval:3.6,cap:36}}},
+ assault:{overloadAt:720,duration:180,rewardMultiplier:1.6,cap:64,batch:12,interval:2.6,
+  opening:[{at:180,type:'stagBeetle'},{at:330,type:'bayonetCaptain'},{at:480,type:'bladeGuard'}],
+  rush:[{at:30,types:['rhinoBeetle']},{at:75,types:['bikeRaider','hornet']},{at:130,types:['crimsonAce']}]},
  midgame:{from:660,bossDensity:.8,quietDensity:.8},
  rhythm:{lateAt:240,cycle:120,crisisAt:60,recoveryAt:90,recoveryEnd:115,quietDensity:.55},
  waveRefill:{from:270,minimumFraction:.15,delay:2},
@@ -151,8 +154,68 @@ function bombPacketMinimum(time){return time<config.insects.from?3:4;}
 
 const methods={
  isRoomCampaign(){return this.mode==='pve'&&(this.world?.id==='livingroom'||this.mapId==='livingroom');},
+ isRoomAssault(){return this.roomFinalAssault===true&&this.isRoomCampaign();},
  roomPortalAlive(){return this.bases[1].hp>0;},
- roomPortalDestroyed(){const s=this.roomCampaign;if(s.portalRewarded)return;s.portalRewarded=true;s.portalDestroyedAt=this.time;this.cash[0]+=300;this.gainXP(300);this.awardGold(100);this.bossState.rewards++;this.notify('toast','최전방 포탈 폐쇄 · +300 전투 골드 / +300 XP / +100 영구 골드 / 강화 보상 · 증원 감소');},
+ roomPortalDestroyed(){if(this.isRoomAssault()){this.startRoomAssault();return;}const s=this.roomCampaign;if(s.portalRewarded)return;s.portalRewarded=true;s.portalDestroyedAt=this.time;this.cash[0]+=300;this.gainXP(300);this.awardGold(100);this.bossState.rewards++;this.notify('toast','최전방 포탈 폐쇄 · +300 전투 골드 / +300 XP / +100 영구 골드 / 강화 보상 · 증원 감소');},
+
+ roomAssaultRemaining(){
+  const start=this.roomCampaign?.assaultAt;
+  return start==null?null:Math.max(0,config.assault.duration-(this.time-start));
+ },
+ roomFever(){return this.isRoomAssault()&&(this.roomAssaultRemaining()??0)>1e-8;},
+ roomAssaultObjective(){
+  if(this.roomCampaign?.endless)return '무한 모드 · 최후의 총공세 생존';
+  const remaining=this.roomAssaultRemaining();
+  if(remaining===null)return '목표: 최전방 포탈 파괴 (3성 해금)';
+  if(remaining<=1e-8)return '목표: 사검의 군주 처치';
+  const seconds=Math.ceil(remaining-1e-8);
+  return '최후의 총공세 · 여검제 강림까지 '+String(Math.floor(seconds/60)).padStart(2,'0')+':'+String(seconds%60).padStart(2,'0');
+ },
+ startRoomAssault(overload=false){
+  const state=this.roomCampaign;
+  if(state.assaultAt!=null)return false;
+  const portal=this.bases[1], origin=overload?this.commander(0):portal;
+  state.assaultAt=overload?config.assault.overloadAt:this.time;
+  state.portalRewarded=true;
+  state.portalDestroyedAt=this.time;
+  state.portalOverloaded=overload;
+  state.assaultRushCursor=0;
+  state.recoveryUntil=0;
+  state.waveSpawnDebt=0;
+  state.waveEntryRetryAt=0;
+  state.nextSpawnAt=this.time+.35;
+  portal.hp=0;
+  portal.diedAt=this.time;
+  this.navigationCache.clear();
+  this.bossState.warned=false;
+  this.bossState.nextAt=this.roomNextBossAt();
+  const star={x:origin.x,y:origin.y,active:true,destinyStar:true,destinySource:'portal'};
+  this.resolvePosition(star,24);
+  this.pickups.push(star);
+  for(const owner of this.coop?[0,1]:[0]){
+   for(let i=0;i<8;i++){
+    const angle=(i+owner*.5)*Math.PI/4,radius=i%2?62:96;
+    const point=this.resolvePosition({x:origin.x+Math.cos(angle)*radius,y:origin.y+Math.sin(angle)*radius},12);
+    this.experienceDrops.push({...point,amount:45,owner,pulling:false,boss:true});
+    if(i<5){
+     const gold=this.resolvePosition({x:point.x,y:point.y+20},12);
+     this.pickups.push({...gold,active:true,combatDrop:'gold',owner,amount:80});
+    }
+   }
+  }
+  this.effects.push({kind:'explosion',x:portal.x,y:portal.y,radius:310,t:1.2,max:1.2,team:2});
+  this.notify('explosion',{x:portal.x,y:portal.y,kind:'artillery',team:2});
+  this.notify('change');
+  return true;
+ },
+ resumeRoomEndless(){
+  if(!this.isRoomAssault()||this.phase!=='ended'||this.result!=='win'||!this.finalBattle.killed||this.roomCampaign.endless)return false;
+  this.roomCampaign.endless=true;
+  this.result=null;
+  this.phase='playing';
+  this.notify('change');
+  return true;
+ },
  roomPhase(){return config.phases.filter(p=>p.at<=this.time).at(-1)||config.phases[0];},
  roomSpawnScaling(u){
   if(!u||u.team===0||!this.isRoomCampaign())return baseEnemyScaling;
@@ -178,7 +241,7 @@ const methods={
   this.mission.stage=3;this.mission.nextAssault=Infinity;this.mission.nextWave=Infinity;
   // Road encounters keep their IDs and positions, but are local elites, not extra scheduled bosses.
   for(const u of this.units)if(u.roadCaptain){u.boss=false;u.roadStage=1;u.missionStage=1;}
-  this.bossState.nextAt=config.bosses[this.roomCampaign.bossCursor]?.at??Infinity;this.bossState.warned=false;
+  this.bossState.nextAt=this.roomNextBossAt();this.bossState.warned=false;
   for(const u of this.units)if(u.boss&&!u.roadCaptain){const b=config.bosses.find(b=>b.type===u.type);if(b)u.bossPattern=b.pattern;}
   this.finalBattle=this.finalBattle||{spawned:false,killed:false};this.refreshRoomEnemyHealth();this.upgradeRoomBombSpawns();return true;
  },
@@ -310,7 +373,7 @@ const methods={
   this.roomHealthVersion=config.combat.healthVersion;return true;
  },
  roomEnemyCount(type=null,opening=false){return this.units.filter(u=>u.hp>0&&u.team!==0&&!u.boss&&!u.fixedGuard&&!u.roomGarrison&&u.type!=='artillery'&&(!opening||!u.roadCaptain)&&(!type||u.type===type)).length;},
- roomWaveCap(){const boss=this.units.some(u=>u.boss&&!u.miniBoss&&!u.roadCaptain&&u.hp>0),base=this.time>=config.bossRush.from?config.bossRush.troops[boss?'boss':'between'].cap:this.roomPhase().cap;return base+(boss?0:this.evolutionPace().capExtra);},
+ roomWaveCap(){if(this.roomFever()||this.roomCampaign?.endless)return config.assault.cap;const boss=this.units.some(u=>u.boss&&!u.miniBoss&&!u.roadCaptain&&u.hp>0),base=this.time>=config.bossRush.from?config.bossRush.troops[boss?'boss':'between'].cap:this.roomPhase().cap;return base+(boss?0:this.evolutionPace().capExtra);},
  roomEnemyTypeCap(type){const row=config.openingCaps.find(r=>this.time<r.until);return Math.min(config.caps[type]??Infinity,row?.[type]??Infinity);},
  roomBombCap(){const r=config.insects.bombSpawn;return this.time<r.earlyUntil?r.earlyCap:r.cap;},
  roomEnemyReady(type){
@@ -326,6 +389,7 @@ const methods={
  },
  roomCanSpawn(type){return this.roomEnemyReady(type)&&this.roomEnemyCount()<this.roomWaveCap()&&this.roomEnemyCount(type)<this.roomEnemyTypeCap(type);},
  roomWavePlan(){
+  if(this.roomFever()||this.roomCampaign?.endless)return {count:config.assault.batch,interval:config.assault.interval,surge:false,forced:[]};
   const p=this.roomPhase(),beat=this.roomBeat(),s=this.roomCampaign,r=config.surges;
   const batch=p.alternateBatch&&s?.phaseAt===p.at&&(s.alternatingWaves||0)%2?p.alternateBatch:p.batch;
   const opening=this.time<config.openingBalanceUntil,phaseStart=p.rhythmAt??p.at;
@@ -436,19 +500,21 @@ const methods={
   u.roomTankSlot=slot;s.tanksDone[slot]=true;s.tankSpawned++;this.notify('toast',`적 전차 증원 ${s.tankSpawned}/${config.tanks.length} · 화면 밖에서 접근`);
  },
  updateRoomWaves(){
-  if(this.phase!=='playing')return;this.upgradeRoomCampaign();const s=this.roomCampaign,p=this.roomPhase(),plan=this.roomWavePlan();
+  if(this.phase!=='playing')return;this.upgradeRoomCampaign();const s=this.roomCampaign,plan=this.roomWavePlan();
+  const sustained=this.roomFever()||s.endless;
+  const p=sustained?config.phases.at(-1):this.roomPhase();
   const beat=this.roomBeat();
   if(s.phaseAt!==p.at){
    s.phaseAt=p.at;
    s.alternatingWaves=0;
    if(p.at===30||p.at===60||p.at===270)s.nextSpawnAt=Math.min(s.nextSpawnAt,this.time+plan.interval);
-   this.notify('toast',p.name+' · '+beat.name);
+   if(!sustained)this.notify('toast',p.name+' · '+beat.name);
   }
   if(plan.surge&&s.surgeWindow!==plan.window){s.surgeWindow=plan.window;this.notify('toast','집중 공세 · 혼합 병력 접근');}
-  this.updateRoomScheduledTanks();
+  if(!this.isRoomAssault())this.updateRoomScheduledTanks();
   if(this.time<(s.waveEntryRetryAt||0))return;
   if(this.time>=config.midgame.from||beat.waveInterval!==undefined)s.nextSpawnAt=Math.min(s.nextSpawnAt,this.time+plan.interval);
-  const opening=config.insects.opening,openingPending=!s.openingAntWave&&this.time<opening.until;
+  const opening=config.insects.opening,openingPending=!sustained&&!s.openingAntWave&&this.time<opening.until;
   if(openingPending&&this.time<opening.at)s.nextSpawnAt=Math.min(s.nextSpawnAt,opening.at);
   const refill=config.waveRefill,refillAt=this.time+refill.delay;
   if(this.time>=refill.from&&p.refill!==false&&s.nextSpawnAt>refillAt&&this.time>=(s.recoveryUntil||0)&&beat.name!=='보스 전투'){
@@ -485,14 +551,21 @@ const methods={
    u.weakReinforcement=true;s.weakWaveCursor=cursor+1;s.spawned++;
   }
  },
- upgradeRoomFinalBossPosition(){
+ upgradeRoomFinalBossPosition(point=null){
   const u=this.units.find(u=>u.type==='swordEmpress'&&u.finalBoss&&u.hp>0),r=config.finalBoss;if(!u||u.roomFinalPositionVersion===r.positionVersion)return false;
-  const at=this.resolvePosition({x:r.x,y:this.bases[1].y+r.offset},60),dx=at.x-u.x,dy=at.y-u.y;u.x=u.homeX=at.x;u.y=u.homeY=at.y;u.roomFinalPositionVersion=r.positionVersion;
+  const at=this.resolvePosition(point||{x:r.x,y:this.bases[1].y+r.offset},60),dx=at.x-u.x,dy=at.y-u.y;u.x=u.homeX=at.x;u.y=u.homeY=at.y;u.roomFinalPositionVersion=r.positionVersion;
   if(u.swords){u.swords.pending=null;u.swords.nextAttackAt=this.time+2.5;for(const blade of u.swords.blades){blade.x+=dx;blade.y+=dy;blade.action=null;}}
   this.bossIntro={bossId:u.id,name:u.bossName||'사검의 군주',x:u.x,y:u.y,from:{x:this.camera.x,y:this.camera.y},remaining:r.introSeconds,total:r.introSeconds};return true;
  },
  roomRushEntry(){const s=this.roomCampaign;if(this.finalBattle.spawned||this.units.some(u=>u.finalBoss)){s.rushCursor=config.bossRush.pairs.length;return null;}if(!Number.isInteger(s.rushCursor))s.rushCursor=0;return config.bossRush.pairs[s.rushCursor]||null;},
- roomNextBossAt(){const b=config.bosses[this.roomCampaign.bossCursor],rush=this.roomRushEntry();return b?.type==='swordEmpress'&&rush?rush.at:b?.at??Infinity;},
+ roomNextBossAt(){
+  if(this.isRoomAssault()){
+   const state=this.roomCampaign;
+   if(state.assaultAt==null)return config.assault.opening[state.bossCursor]?.at??config.assault.overloadAt+config.assault.rush[0].at;
+   if(this.finalBattle.spawned)return Infinity;
+   return state.assaultAt+(config.assault.rush[state.assaultRushCursor]?.at??config.assault.duration);
+  }
+  const b=config.bosses[this.roomCampaign.bossCursor],rush=this.roomRushEntry();return b?.type==='swordEmpress'&&rush?rush.at:b?.at??Infinity;},
  updateRoomBossRush(){
   const s=this.roomCampaign,r=this.roomRushEntry();if(!r)return false;this.bossState.nextAt=Math.max(r.at,s.bossReadyAt||0);
   if(this.units.some(u=>u.boss&&!u.miniBoss&&!u.roadCaptain&&u.hp>0)||this.time<(s.bossReadyAt||0))return true;
@@ -532,7 +605,40 @@ const methods={
   if(starPending)s.destinyMiniSpawned=true;
   s.miniMinute=minute;this.notify('toast',u.bossName+' 접근 · '+(starPending?'처치 시 운명의 별':'체력·공격력 30%'));
  },
+
+ spawnRoomAssaultBoss(type,group){
+  const entry=config.bosses.find(b=>b.type===type)||config.bossRush.extraBosses[type];
+  const commander=this.commander(0),portal=this.bases[1],final=type==='swordEmpress';
+  const near={x:commander.x,y:commander.y-485};
+  const finalPoint=Math.hypot(commander.x-portal.x,commander.y-portal.y)<1250?{x:config.finalBoss.x,y:portal.y+config.finalBoss.offset}:near;
+  const point=final?finalPoint:this.northernSpawn(this.serial+1,55)||this.resolvePosition(near,55);
+  const unit=this.addUnit(2,type,point.x,point.y,true);
+  Object.assign(unit,{boss:true,bossName:entry.name,bossPattern:entry.pattern,assault:true,finalBoss:final,bossRushPair:group,bossNumber:++this.bossState.spawned});
+  unit.hp=unit.maxHp=this.stats(unit).hp;
+  unit.homeX=unit.x;
+  unit.homeY=unit.y;
+  if(final){
+   this.finalBattle.spawned=true;
+   this.upgradeRoomFinalBossPosition(point);
+  }
+  return entry.name;
+ },
+ updateRoomAssaultBosses(){
+  const state=this.roomCampaign,{opening,rush}=config.assault;
+  const before=state.assaultAt==null;
+  const event=before?opening[state.bossCursor]:rush[state.assaultRushCursor];
+  if(event&&this.time+1e-8>=(before?0:state.assaultAt)+event.at){
+   const index=before?state.bossCursor++:state.assaultRushCursor++;
+   const types=before?[event.type]:event.types;
+   const names=types.map(type=>this.spawnRoomAssaultBoss(type,before?undefined:'assault-'+index));
+   this.notify('toast',names.join(' + ')+' 출현 · 처치 시 추가 강화');
+  }
+  if(!before&&!this.finalBattle.spawned&&this.roomAssaultRemaining()<=1e-8)
+   this.notify('toast',this.spawnRoomAssaultBoss('swordEmpress')+' 강림');
+  this.bossState.nextAt=this.roomNextBossAt();
+ },
  updateRoomBosses(){
+  if(this.isRoomAssault()){this.updateRoomAssaultBosses();return;}
   this.upgradeRoomCampaign();this.updateRoomMiniBosses();const s=this.roomCampaign,b=config.bosses[s.bossCursor];if(!b)return;if(b.type==='swordEmpress'&&this.roomRushEntry()){this.updateRoomBossRush();return;}
   this.bossState.nextAt=Math.max(b.at,s.bossReadyAt||0);
   // Every scheduled group waits for the previous group; finale cannot start before 20:00.
@@ -543,8 +649,15 @@ const methods={
   if(u.finalBoss){this.finalBattle.spawned=true;this.upgradeRoomFinalBossPosition();}s.bossCursor++;this.bossState.warned=false;this.bossState.nextAt=this.roomNextBossAt();this.notify('toast',u.bossName+' 출현 · 처치 시 추가 강화');
  },
  roomBossKilled(u){if(!this.isRoomCampaign()||!u.boss||u.miniBoss||u.roadCaptain)return;if(u.bossRushPair&&this.units.some(v=>v!==u&&v.hp>0&&v.bossRushPair===u.bossRushPair))return;const s=this.roomCampaign;s.recoveryUntil=this.time+config.recoverySeconds;s.bossReadyAt=s.recoveryUntil;this.bossState.nextAt=Math.max(this.roomNextBossAt(),s.bossReadyAt);},
- updateRoomMission(dt){this.upgradeRoomCampaign();this.bases[1].name='최전방 포탈';if(this.time>=900&&this.roomPortalAlive()&&!this.roomCampaign.portalWarned){this.roomCampaign.portalWarned=true;this.notify('toast','최전방 포탈 폭주 · 후반 증원 대폭 증가! 포탈을 파괴하세요.');}for(const p of [...this.structures,this.bases[1]])this.fireDefense(p,dt);},
- roomObjective(){const b=this.bases[1],boss=this.units.find(u=>u.finalBoss&&u.hp>0);return{title:'거실 생존 / 최종 보스 처치',progress:`${this.time<1200?'20분 이후 최종 보스 · '+Math.ceil(1200-this.time)+'초':this.roomRushEntry()?'보스 연전 완료 후 최종 보스':'최종 보스 처치'} · 최전방 포탈 ${b.hp>0?'가동 중'+(this.time>=900?' · 증원 폭주':' · 15분부터 폭주'):'폐쇄 · 증원 감소'}`,target:boss||(b.hp>0?b:this.commander(0)),targetName:boss?boss.bossName:b.hp>0?'최전방 포탈':'20분 최종 보스 대비'};},
+ updateRoomMission(dt){this.upgradeRoomCampaign();this.bases[1].name='최전방 포탈';if(this.isRoomAssault()){
+  if(this.roomPortalAlive()&&this.time+1e-8>=config.assault.overloadAt)this.startRoomAssault(true);
+ }else if(this.time>=900&&this.roomPortalAlive()&&!this.roomCampaign.portalWarned){this.roomCampaign.portalWarned=true;this.notify('toast','최전방 포탈 폭주 · 후반 증원 대폭 증가! 포탈을 파괴하세요.');}for(const p of [...this.structures,this.bases[1]])this.fireDefense(p,dt);},
+ roomObjective(){const b=this.bases[1],boss=this.units.find(u=>u.finalBoss&&u.hp>0);
+  if(this.isRoomAssault()){
+   const target=boss||(this.roomPortalAlive()?b:this.commander(0));
+   return {title:this.roomAssaultObjective(),progress:'',target,targetName:boss?.bossName||'최전방 포탈',showMarker:!!boss||this.roomPortalAlive()};
+  }
+  return{title:'거실 생존 / 최종 보스 처치',progress:`${this.time<1200?'20분 이후 최종 보스 · '+Math.ceil(1200-this.time)+'초':this.roomRushEntry()?'보스 연전 완료 후 최종 보스':'최종 보스 처치'} · 최전방 포탈 ${b.hp>0?'가동 중'+(this.time>=900?' · 증원 폭주':' · 15분부터 폭주'):'폐쇄 · 증원 감소'}`,target:boss||(b.hp>0?b:this.commander(0)),targetName:boss?boss.bossName:b.hp>0?'최전방 포탈':'20분 최종 보스 대비'};},
  bossPatternRules(u){const p=u.boss&&u.bossPattern?config.patterns[u.bossPattern]:null;if(!p||!u.miniBoss)return p;return{...p,...(p.infantryHpDamage===undefined?{}:{infantryHpDamage:p.infantryHpDamage*config.miniBoss.damage}),...(p.maxHpDamage===undefined?{}:{maxHpDamage:p.maxHpDamage*config.miniBoss.damage})};},
  bossFlightHeight(u){const p=this.bossPatternRules(u),a=u.bossAction;if(u.bossPattern!=='venomDive'||!p)return null;if(!a)return 48;if(a.phase==='rise')return 48+(p.height-48)*clamp((this.time-a.started)/p.rise,0,1);if(a.phase==='high')return p.height;if(a.phase==='dive')return p.height+(p.lowHeight-p.height)*clamp((this.time-a.started)/p.descent,0,1);return p.lowHeight;},
  bossInvulnerable(u){return u.hp>0&&u.bossPattern==='venomDive'&&u.bossAction?.phase==='high';},

@@ -1,4 +1,14 @@
 /* The viewport is the game. Essential HUD stays on the field; detail opens on demand. */
+.hud-assault-objective{border-left:1px solid #8da28a55;margin:0 0 0 10px;padding:0 0 0 12px;color:#fff1cf;font-size:12px;font-weight:650;white-space:nowrap;font-variant-numeric:tabular-nums}
+html.game-hud .battle-frame>#assaultAlert{top:16%;padding:10px 14px;width:max-content;max-width:calc(100% - 32px);background:#53262a;border-color:#e18776;color:#fff2e2;text-align:center}
+@media(max-width:740px){
+ html.game-hud .room-assault>.battle-hud{flex-wrap:wrap;row-gap:4px}
+ .hud-assault-objective{flex:0 0 100%;text-align:center;border:0;padding:0;margin:0;font-size:11px}
+ html.game-hud .room-assault>.hud-left-rail{top:80px}
+}
+@media not (any-pointer:coarse){
+ html.game-hud .battle-frame>#joystick{display:none}
+}
 html.game-hud,html.game-hud body{height:100%;overflow:hidden;background:#182d28}
 html.game-hud .app{height:var(--ui-height,100dvh);min-height:0;padding:0;overflow:hidden}
 html.game-hud .topbar{display:none}
