@@ -132,9 +132,11 @@ function install(api){
    if(a.kind==='mortar')this.evolutionMortar(a.source,a.target,a.attack,a.radius,2);
    else if(a.target.commandShot){
     const fire=()=>{
-     const c=this.commander(0),candidates=this.combatCandidates(),angle=this.manualAimAngle();
+     const candidates=this.combatCandidates(),point=this.manualAim?.point;
+     const aimPoint=point?this.commandCursorPoint(this.commander(0),point,candidates):null;
+     const angle=this.manualAimAngle(a.source,aimPoint);
      const target=angle===null?this.selectCombatTarget(a.source,candidates,null,a.spec)
-      :this.commandEnemyInView(c,candidates)&&this.commandFirePoint(a.source,a.spec.range,angle);
+      :this.commandFirePoint(a.source,a.spec.range,angle);
      if(!target)return;
      this.evolutionBullet(a.source,target,a.attack,a.spec,a.style);
      this.notify('fire',a.source);

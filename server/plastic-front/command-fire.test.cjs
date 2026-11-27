@@ -31,7 +31,7 @@ test('manual aim accepts arbitrary finite vectors, keeps its last valid value, a
  g.setManualAim({x:1,y:1});g.setManualAim(null);assert.equal(g.manualAim,null);assert.equal(c.manualAimAngle,null);
 });
 
-test('only the five manually controlled troop types use the held angle',()=>{
+test('aimed weapons follow the held angle while autonomous units keep their roles',()=>{
  const g=field(),c=g.commander(0),angle=Math.atan2(1,3),received=new Map();
  const types=['rifle','machinegun','rocket','tank','guntruck','sniper','mortar','drone','lucky','medic'];
  const troops=types.map((type,i)=>add(g,type,1100+i*2,1310));
@@ -44,9 +44,10 @@ test('only the five manually controlled troop types use the held angle',()=>{
  troops.find(u=>u.type==='tank').turretFace=angle;
  const hp=wounded.hp;for(let i=0;i<40;i++)g.update(.025);
  for(const type of types.slice(0,5))assert.ok(Math.abs(received.get(type)?.angle-angle)<1e-12,type);
- for(const type of ['leader','lucky','mortar'])assert.equal(received.get(type),near,type);
+ for(const type of ['leader','mortar','sniper'])assert.ok(Math.abs(received.get(type)?.angle-angle)<1e-12,type);
+ assert.equal(received.get('lucky'),near);
  assert.equal(received.has('drone'),false);assert.ok(troops.find(u=>u.type==='drone').droneScan);
- assert.equal(received.get('sniper'),heavy);assert.ok(wounded.hp>hp);assert.equal(received.has(medic.type),false);
+ assert.ok(wounded.hp>hp);assert.equal(received.has(medic.type),false);
 });
 
 test('mouse aim converges from each soldier and hits the body beneath a raised enemy sprite',()=>{
@@ -70,18 +71,18 @@ test('mouse aim converges from each soldier and hits the body beneath a raised e
  assert.ok(Math.abs(from(g,left).commandAngle-Math.atan2(empty.y-left.y,empty.x-left.x))<1e-12);
 });
 
-test('manual squad fire waits for a visible hostile while the commander independently targets the nearest enemy',()=>{
+test('commander and squad fire at empty ground; dropping manual aim restores automatic targets',()=>{
  for(const map of ['livingroom-star','livingroom-assault']){
   const g=field(map),c=g.commander(0),gun=add(g,'machinegun',1080,1325);
+  g.move=g.navigate=g.separateCrowd=()=>{};c.cooldown=0;
   g.input={x:-1,y:0};g.setManualAim({x:1,y:0});g.update(.02);
-  assert.equal(from(g,gun),undefined,map);
-  const enemy=add(g,'rifle',1100,200,1);
-  g.update(.02);assert.equal(from(g,gun),undefined,map);
-  g.input={x:0,y:0};Object.assign(enemy,{x:985,y:1300});g.setFocus(enemy);c.cooldown=0;g.update(.02);
-  const shot=from(g,gun);assert.equal(shot?.commandAngle,0,map);assert.ok(shot.x<shot.target.x);
-  assert.equal(from(g,c)?.target,enemy);
-  g.setManualAim(null);g.shots=[];gun.cooldown=0;g.update(.02);
-  assert.equal(from(g,gun)?.target,enemy,map);
+  for(const u of [c,gun])assert.equal(from(g,u)?.commandAngle,0,map);
+  g.shots=[];c.cooldown=gun.cooldown=0;
+  const mark={x:1170,y:1420};g.setManualAim({x:0,y:1,point:mark});g.update(.02);
+  for(const u of [c,gun])assert.ok(Math.abs(from(g,u).commandAngle-Math.atan2(mark.y-u.y,mark.x-u.x))<1e-12);
+  const enemy=add(g,'rifle',980,1310,1);
+  g.setManualAim(null);g.shots=[];c.cooldown=gun.cooldown=0;g.update(.02);
+  for(const u of [c,gun])assert.equal(from(g,u)?.target,enemy,map);
  }
 });
 
@@ -98,9 +99,9 @@ test('swept contact selects the first body along the ray and honors movement, ra
  g.advanceCommandShot(covered,.2,[front]);assert.equal(covered.life,0);assert.equal(front.hp,hp);
 });
 
-test('mortars and snipers independently target enemies behind the squad through windup and firing',()=>{
+test('mortars and snipers independently target enemies after manual aim is cleared',()=>{
  const g=field(),mortar=add(g,'mortar',1100,1300),sniper=add(g,'sniper',1100,1340),enemy=add(g,'rifle',850,1300,1);
- g.setManualAim({x:1,y:0});g.moveOrder={x:1400,y:1300,facing:0};g.update(.02);
+ g.setManualAim({x:1,y:0});g.setManualAim(null);g.moveOrder={x:1400,y:1300,facing:0};g.update(.02);
  assert.ok(g.mortarShells.some(s=>s.source===mortar&&Math.abs(s.x-enemy.x)<5));
  assert.equal(sniper.sniperAim.target,enemy);
  const fireAt=sniper.sniperAim.fireAt;
@@ -121,14 +122,14 @@ test('each cooperative squad uses its own commander, with straight flight surviv
  assert.equal(restored.travelLeft,from(g,b).travelLeft);
 });
 
-test('a distant cooperative squad reacts to its own play area with the other camera left behind',()=>{
+test('distant cooperative squads each fire even when targets are outside their camera',()=>{
  const g=field('coop'),first=add(g,'rifle',1090,1330),second=g.withOwner(1,()=>{
   Object.assign(g.commander(0),{x:1100,y:5500});
   return add(g,'rifle',1090,5530);
  });
  for(const owner of [0,1])g.withOwner(owner,()=>g.setManualAim({x:1,y:0}));
  add(g,'rifle',1100,5420,1);g.update(.02);
- assert.equal(from(g,first),undefined);assert.ok(from(g,second)?.target.commandShot);
+ assert.ok(from(g,first)?.target.commandShot);assert.ok(from(g,second)?.target.commandShot);
 });
 
 test('shotgun and radio alternate between automatic targeting and a held manual angle on ordinary and star maps',()=>{
@@ -192,4 +193,28 @@ test('an automatic missile salvo selects the packed group and attack speed short
  const base=g.stats(radio).rate;g.abilities.haste=5;
  g.update(.01);assert.ok(radio.cooldown<base);
  const first=g.radioStrikes[0];assert.equal(first.strike,'missile');assert.equal(first.x,cluster.x);
+});
+
+test('sniper tracks a changed reticle through windup; mortar and drone hit the directed position or ray',()=>{
+ const g=field(),sniper=add(g,'sniper',1100,1300),mortar=add(g,'mortar',1100,1340),drone=add(g,'combatDrone',1080,1360);
+ g.move=g.navigate=g.separateCrowd=()=>{};g.captainStackHpMode=true;
+ const first={x:1320,y:1340},second={x:1100,y:1100};
+ g.setManualAim({x:1,y:0,point:first});g.update(.025);
+ assert.equal(g.mortarShells[0].x,first.x);assert.equal(g.mortarShells[0].y,first.y);
+ assert.equal(from(g,drone).kind,'dronePulse');
+ assert.ok(Math.abs(from(g,drone).commandAngle-Math.atan2(first.y-drone.y,first.x-drone.x))<1e-12);
+ const fireAt=sniper.sniperAim.fireAt;
+ g.setManualAim({x:0,y:-1,point:second});g.update(.025);assert.equal(sniper.sniperAim.fireAt,fireAt);
+ assert.equal(sniper.sniperAim.target.angle,-Math.PI/2);
+ for(let i=0;i<24&&!from(g,sniper);i++)g.update(.025);
+ assert.equal(from(g,sniper)?.commandAngle,-Math.PI/2);
+ const far={x:2600,y:mortar.y};g.setManualAim({x:1,y:0,point:far});mortar.cooldown=0;g.update(.025);
+ assert.equal(g.mortarShells.at(-1).x,mortar.x+g.stats(mortar).range);
+});
+test('deferred evolved volleys use world reticle aim when they actually fire, even into an empty field',()=>{
+ const g=field(),u=add(g,'tank',1100,1300);
+ const spec=g.stats(u),point={x:1050,y:1470};
+ g.evolutionAttacks.push({kind:'rifle',source:u,target:g.commandFirePoint(u,spec.range,0),at:g.time,spec,attack:{damage:10,critical:false},style:'siege'});
+ g.setManualAim({x:1,y:0,point});g.updateEvolutionCombat();
+ assert.ok(Math.abs(from(g,u).commandAngle-Math.atan2(point.y-u.y,point.x-u.x))<1e-12);
 });

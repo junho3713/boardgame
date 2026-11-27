@@ -641,7 +641,9 @@ $('followOrderBtn').onclick=()=>{if(game.followCommander()){clearInput();updateU
   }
   game.input=stickPointer!==null?{...stickInput}:{x:Number(!!keys.KeyD)-Number(!!keys.KeyA),y:Number(!!keys.KeyS)-Number(!!keys.KeyW)};
   let x=Number(!!keys.ArrowRight)-Number(!!keys.ArrowLeft),y=Number(!!keys.ArrowDown)-Number(!!keys.ArrowUp);
-  const cursor=aimPointer||(cursorAimEnabled&&!x&&!y&&mouseCursor);let point=null;
+  const hovered=cursorAimEnabled&&!x&&!y&&mouseCursor?canvasPosition(mouseCursor):null;
+  const inside=hovered&&hovered.x>=0&&hovered.x<W&&hovered.y>=0&&hovered.y<H;
+  const cursor=aimPointer||(inside?mouseCursor:null);let point=null;
   if(cursor){
    const c=game.commander(0),p=worldPosition(cursor),{width,height}=game.bounds();
    point={x:clamp(p.x,0,width),y:clamp(p.y,0,height)};x=point.x-c.x;y=point.y-c.y;

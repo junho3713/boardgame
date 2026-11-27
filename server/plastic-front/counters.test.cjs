@@ -16,7 +16,7 @@ test('snipers choose the highest max HP within range, vision and a clear firing 
  heavy.x=1790;heavy.hp=0;mage.fixedGuard=true;mage.activeStage=4;
  a.equal(g.selectCombatTarget(sniper,candidates),ant);
 });
-test('snipers resolve equal maximum HP by distance and keep auto-aim during manual control',()=>{
+test('snipers resume the nearest target among equal maximum HP after manual aim',()=>{
  const g=scene('livingroom'),sniper=g.addUnit(0,'sniper',1500,6000),ant=g.addUnit(2,'ant',1510,6000),mortar=g.addUnit(2,'mortar',1700,6000),mage=g.addUnit(2,'blizzardMage',1800,6000);
  mage.activeStage=1;mortar.maxHp=mage.maxHp=3000;ant.maxHp=100;
  const candidates=[mage,ant,mortar];
@@ -24,6 +24,8 @@ test('snipers resolve equal maximum HP by distance and keep auto-aim during manu
  g.addUnit(0,'leader',1500,6100);g.setManualAim({x:-1,y:0});g.setFocus(ant);
  g.updateRoomWaves=g.updateBosses=g.updateMission=()=>{};
  g.update(.05);
+ a.equal(sniper.sniperAim.target.angle,Math.PI);
+ g.setManualAim(null);g.update(.05);
  a.equal(sniper.sniperAim.target,mortar);
 });
 test('mage groups spawn atomically with four mortar escorts, including cooperative caps',()=>{

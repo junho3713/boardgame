@@ -138,7 +138,7 @@ TYPES.multiDrone={...TYPES.combatDrone,name:'전술 멀티드론',hp:220,damage:
 const ROSTER=['rifle','machinegun','sniper','guntruck','rocket','mortar','tank','medic','lucky','drone','combatDrone'];
 const TROOP_TYPES=[...ROSTER,'multiDrone'];
 const MELEE=new Set(['bladeGuard','bayonetCaptain','bayonet','honeybee','hornet','ant','soldierAnt','beetle','bruteBeetle','stagBeetle','rhinoBeetle']);
-const MANUAL_AIM_TYPES=new Set(['rifle','machinegun','rocket','tank','guntruck']);
+const MANUAL_AIM_TYPES=new Set(['leader','rifle','machinegun','rocket','tank','guntruck','sniper','mortar']);
 const ARMORED=new Set(['crimsonAce','bikeRaider','repairBot','hornet','tank','guntruck','stagBeetle','rhinoBeetle','base','structure','artillery']);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
@@ -720,14 +720,6 @@ class FrontGame{
  }
  commandFirePoint(u,range,angle){
   return {commandShot:true,angle,range,x:u.x+Math.cos(angle)*range,y:u.y+Math.sin(angle)*range};
- }
- commandEnemyInView(commander,candidates){
-  const view=this.spawnView(true);
-  return candidates.some(t=>{
-   if(t.team===0||t.hidden||t.hp<=0||t.base&&this.baseShielded())return false;
-   const r=this.collisionRadius(t);
-   return t.x+r>=view.left&&t.x-r<=view.right&&t.y+r>=view.top&&t.y-r<=view.bottom&&this.canTarget(commander,t)&&this.visible(t);
-  });
  }
  fireUnitProjectiles(u,target,attack,s=this.stats(u)){
   const shot={x:u.x,y:u.y,target,source:u,damage:attack.damage,critical:attack.critical,splash:s.splash||0,speed:u.type==='rocket'?480:(u.type==='tank'||u.type==='crimsonAce')?580:u.type==='sniper'?1600:950,kind:u.type,team:u.team,life:1.5};
@@ -2296,11 +2288,12 @@ class FrontGame{
   return true;
  }
  updateBattleUnits(dt,enemy){
-  const combatThreats=this.attackingEnemies(),combatCandidates=this.combatCandidates(),commandEngaged=new Map(),commandPoints=new Map();
+  const combatThreats=this.attackingEnemies(),combatCandidates=this.combatCandidates(),commandPoints=new Map();
   const hostileTargets=[...this.units,...this.radioTurretTargets(),...this.buildings.filter(b=>b.hp>0)];
   for(const u of this.units){
    this.coopSelectOwner?.(u.team===0?u.coopOwner:0);
    const player=this.commander(0);
+   if(u.team===0&&this.manualAim?.point&&!commandPoints.has(player))commandPoints.set(player,this.commandCursorPoint(player,this.manualAim.point,combatCandidates));
    if(this.isSupportEntity?.(u))continue;
    if(u.hp<=0){if(u.type==='leader'&&u.deadUntil&&this.time>=u.deadUntil)this.reviveCommander(u);continue;}
    if(u.foamWindup&&(u.toyKnockback||this.time<(u.toyStunUntil||0)))u.foamWindup=null;
@@ -2313,7 +2306,7 @@ class FrontGame{
    u.flash=Math.max(0,u.flash-dt);u.recoil=Math.max(0,(u.recoil||0)-dt);const s=this.stats(u);u.cooldown-=dt;if(this.time<(u.toyStunUntil||0))continue;
    if(u.team===0&&['drone','combatDrone','multiDrone'].includes(u.type)){
     if(u.type!=='combatDrone')this.updateSupportDrone(u,player,dt,s,combatCandidates);
-    if(u.type!=='drone')this.updateCombatDrone(u,player,dt,s,combatCandidates);
+    if(u.type!=='drone')this.updateCombatDrone(u,player,dt,s,combatCandidates,commandPoints.get(player));
     continue;
    }
    if(u.type==='bubbleOctopus'){this.updateBubbleOctopus(u,dt,s);continue;}
@@ -2335,17 +2328,18 @@ class FrontGame{
     target=patients[0]||null;if(target)nearest=dist(u,target);
     if(u.team!==0)this.updateMedicHealing(u,s);
    }else{
-    const aim=u.team===0&&MANUAL_AIM_TYPES.has(u.type)?this.manualAim:null;
-    if(aim?.point&&!commandPoints.has(player))commandPoints.set(player,this.commandCursorPoint(player,aim.point,combatCandidates));
-    const manualAngle=aim?this.manualAimAngle(u.type==='guntruck'?player:u,commandPoints.get(player)):null;
+    const aim=u.team===0&&(MANUAL_AIM_TYPES.has(u.type)||this.isSupplyTroop(u))?this.manualAim:null;
+    const aimPoint=aim?commandPoints.get(player):null;
+    const manualAngle=aim?this.manualAimAngle(u.type==='guntruck'?player:u,aimPoint):null;
     if(u.team===0&&u.type==='guntruck'){
      if(u.cooldown<=0){
       const contact=this.radioContacts(u,combatCandidates)[0];
       if(contact)target=manualAngle===null?contact:this.commandFirePoint(player,s.range,manualAngle);
      }
     }else if(manualAngle!==null){
-     if(!commandEngaged.has(player))commandEngaged.set(player,this.commandEnemyInView(player,combatCandidates));
-     if(u.type==='rocket'||commandEngaged.get(player))target=this.commandFirePoint(u,s.range,manualAngle);
+     // Indirect fire lands at the selected distance, limited by the mortar's firing envelope.
+     const distance=u.type==='mortar'?clamp(aimPoint?dist(u,aimPoint):s.range*.55,s.minRange||0,s.range):s.range;
+     target=this.commandFirePoint(u,distance,manualAngle);
     }else if(u.team===0)target=this.selectCombatTarget(u,combatCandidates,combatThreats,s);else for(const a of hostileTargets){if(!this.canTarget(u,a))continue;const d=this.targetDistance(u,a),score=d/Math.max(.25,multiplier(u.type,combatKind(a)))+(a.radioTurret?18:0);if(d<s.range&&d>=(s.minRange||0)&&score<nearest){target=a;nearest=score;}}
     // A tank can finish tracking a target that just crossed the edge of its firing range.
     if(u.team!==0&&u.type==='tank'){
@@ -2366,7 +2360,13 @@ class FrontGame{
      if(this.updateStackSniperAim(u,target,s))continue;
      if(target){u.face=u.aimFace=Math.atan2(target.y-u.y,target.x-u.x);continue;}
     }
-    if(u.type==='sniper'&&!stackSniper){const windup=Math.min(ROOM_RULES.sniperAim,s.rate*.7);if(!target)u.sniperAim=null;else if(u.sniperAim&&target.commandShot)u.sniperAim.target=target;else if(u.cooldown<=windup&&(!u.sniperAim||u.sniperAim.target!==target)){u.sniperAim={target,started:this.time,fireAt:this.time+windup};u.cooldown=Math.max(u.cooldown,windup);}}
+    if(u.type==='sniper'&&!stackSniper){
+     const aim=u.sniperAim,windup=Math.min(ROOM_RULES.sniperAim,s.rate*.7);
+     if(target&&aim&&(aim.target===target||aim.target.commandShot&&target.commandShot))aim.target=target;
+     else if(target&&u.cooldown<=windup){
+      u.sniperAim={target,started:this.time,fireAt:this.time+windup};u.cooldown=Math.max(u.cooldown,windup);
+     }else u.sniperAim=null;
+    }
     if(TYPES[u.type]?.stab){if(u.bossPattern!=='wideSlash')this.updateBayonet(u,target,s);}
     else if(target&&!channeling){u.face=Math.atan2(target.y-u.y,target.x-u.x);u.aimFace=u.face;let aligned=true;if(hasTurret){const delta=Math.atan2(Math.sin(u.aimFace-(u.turretFace??u.aimFace)),Math.cos(u.aimFace-(u.turretFace??u.aimFace)));u.turretFace=(u.turretFace??u.aimFace)+clamp(delta,-ROOM_RULES.turretSpeed*dt,ROOM_RULES.turretSpeed*dt);aligned=Math.abs(delta)<.13;if(u.team!==0&&u.type==='tank'&&u.cooldown<=0&&this.time-(u.tankReadyAimAt??this.time)>=.8){u.turretFace=u.aimFace;aligned=true;}}if(u.cooldown<=0&&aligned&&(u.type!=='sniper'||u.sniperAim&&this.time>=u.sniperAim.fireAt)){if(u.type==='sniper')u.sniperAim=null;const attack=this.attackRoll(u);u.cooldown=this.isFlameCommander(u)?Math.max(u.cooldown,-dt)+s.rate:s.rate;if(this.isSwordCommander(u)){this.beginSwordAttack(u,target,attack);}else if(this.isFlameCommander(u)){this.flamePulse(u,u.face);}else if(u.type==='mortar'){this.launchMortar(u,target,attack);u.recoil=.25;}else if(MELEE.has(u.type)){if(this.isFlying(u)){u.flightStrikeUntil=this.time+.22;u.recoil=.18;this.effects.push({kind:'sting',x:u.x,y:u.y,tx:target.x,ty:target.y,flightHeight:s.flightHeight,t:.2,max:.2,team:u.team});}this.damage(target,attack.damage,u);}else{this.fireUnitProjectiles(u,target,attack,s);u.recoil=(u.type==='tank'||u.type==='crimsonAce')?.24:u.type==='rocket'?.2:.16;if(u.team!==0||u.type!=='rocket'&&u.type!=='guntruck'){this.notify('fire',u);this.effects.push({kind:'muzzle',x:u.x,y:u.y,origin:true,t:.12,max:.12,team:u.team,weapon:u.appearance==='shino'?'shino':u.type,boss:!!u.boss,...(u.type==='sniper'&&['kayla','hayeon'].includes(u.appearance)?{appearance:u.appearance}:{}),angle:u.face});}if(u.type==='sniper')this.effects.push({kind:'tracer',x:u.x,y:u.y,tx:target.x,ty:target.y,t:.12,max:.12,team:u.team});}}}
    }
