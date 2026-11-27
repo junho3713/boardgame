@@ -729,7 +729,11 @@ function drawDefense(p){
  if(p.defenseKind==='laserTower'){if(!game.visible(p))return;ctx.save();ctx.translate(p.x,p.y);if(p.hp>0){
   const power=game.roomLaserPower(p);
   unitModels.draw(ctx,p,game.time);
-  if(power)circle(ctx,Math.cos(p.face)*13,-52+Math.sin(p.face)*8,4,power.phase==='off'?'#594841':power.phase==='warning'?'#ffbd58':'#ff4c37');
+  if(power){
+   const warning=power.phase==='warning';
+   const lit=warning&&window.FrontGuardianFX.warningPulse(power)>.5;
+   circle(ctx,Math.cos(p.face)*13,-52+Math.sin(p.face)*8,warning?6:4,lit?'#ffbd58':power.phase==='fire'?'#ff4c37':'#594841');
+  }
  }else{window.FrontGuardianFX.wreck(ctx,p,game.time);text(ctx,'레이저 포탑 잔해'+(Number.isFinite(p.respawnAt)?' · 재조립 '+Math.max(0,Math.ceil(p.respawnAt-game.time))+'초':''),0,55,10,'#b8a59d');}ctx.restore();if(p.hp>0){const power=game.roomLaserPower(p);
  const label=power?{off:'전원 차단',warning:'발사 예고',fire:'레이저 발사'}[power.phase]+' · '+Math.ceil(power.remaining)+'초':p.name+' · 사거리 '+game.defenseStats(p).range;
  text(ctx,label,p.x,p.y+24,11,power?.phase==='off'?'#e8e1cf':power?.phase==='warning'?'#ffd581':'#ffc2b7');rr(ctx,p.x-38,p.y+34,76,5,2,'#3c2929');rr(ctx,p.x-38,p.y+34,76*p.hp/p.maxHp,5,2,'#fa887d');}return;}

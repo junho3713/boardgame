@@ -10,11 +10,12 @@ const defenses=g=>({
  tower:g.defenses.find(p=>p.id==='room-threequarter-laser')
 });
 
-test('the 440 HP battery sits on the approach side and new-room fences have half HP',()=>{
+test('the 440 HP battery sits behind the wire and can be shot from the approach side and new-room fences have half HP',()=>{
  const g=create(),{battery,tower}=defenses(g);
  const posts=g.defenses.filter(p=>p.fencePost);
  assert.equal(battery.linkedTowerId,tower.id);
- assert.ok(battery.y>posts[0].y&&g.freePosition(battery.x,battery.y,27));
+ assert.ok(battery.y<posts[0].y&&g.freePosition(battery.x,battery.y,27));
+ assert.ok(g.lineClear({x:battery.x,y:posts[0].y+80},battery,0,{fireTeam:0}));
  assert.equal(battery.hp,440);
  assert.equal(g.defenseStats(battery).damage,0);
  assert.ok(g.combatCandidates().includes(battery));
@@ -24,7 +25,7 @@ test('the 440 HP battery sits on the approach side and new-room fences have half
  assert.equal(classic.defenses.find(p=>p.fencePost).hp,12000);
 });
 
-test('cutting the cable starts repeating 3.0 / 1.2 / 2.0 second phases and damages only while firing',()=>{
+test('cutting the cable starts repeating 3.0 / 2.0 / 2.0 second phases and damages only while firing',()=>{
  const g=create(),{battery,tower}=defenses(g),c=g.commander(0);
  g.time=25;
  c.x=tower.x;c.y=tower.y+250;c.hp=c.maxHp=10000;
@@ -32,7 +33,7 @@ test('cutting the cable starts repeating 3.0 / 1.2 / 2.0 second phases and damag
  g.damage(battery,1000,c);
  assert.ok(tower.hp>0);
  assert.equal(tower.laserFaultAt,25);
- const phases=[[0,'off'],[2.99,'off'],[3,'warning'],[4.19,'warning'],[4.2,'fire'],[6.19,'fire'],[6.2,'off'],[9.2,'warning'],[10.4,'fire']];
+ const phases=[[0,'off'],[2.99,'off'],[3,'warning'],[4.99,'warning'],[5,'fire'],[6.99,'fire'],[7,'off'],[10,'warning'],[12,'fire']];
  for(const [elapsed,phase] of phases){
   const hp=c.hp;
   g.time=25+elapsed;
@@ -40,8 +41,12 @@ test('cutting the cable starts repeating 3.0 / 1.2 / 2.0 second phases and damag
   g.updateLaser(tower,1/60);
   assert.equal(c.hp<hp,phase==='fire');
  }
- const loaded=unpack(create(),pack(g)), restored=defenses(loaded);
+ battery.y=4730;
+ const oldSave=pack(g);
+ oldSave.fields.roomAssaultDefenseVersion=1;
+ const loaded=unpack(create(),oldSave), restored=defenses(loaded);
  assert.equal(restored.battery.hp,0);
+ assert.ok(restored.battery.y<loaded.defenses.find(p=>p.fencePost).y);
  assert.equal(restored.tower.laserFaultAt,25);
  assert.equal(loaded.roomLaserPower(restored.tower).phase,'fire');
 });

@@ -23,7 +23,7 @@ const config={version:116,duration:1200,enemyLuckyInterval:5,recoverySeconds:16,
  surges:{enabled:true,from:120,extra:4,maxBatch:9,growthFrom:360,growthUntil:600,growthMaxBatch:7,intervalScale:.8,lanes:[-1,0,1],frontWidth:420,rosters:[{at:120,types:['ant','bladeGuard']},{at:240,types:['stagBeetle','rifle','sniper','butterfly']},{at:360,types:['hornet','bikeRaider','machinegun','sniper']},{at:480,types:['rhinoBeetle','bikeRaider','butterfly','machinegun']},{at:600,types:['stagBeetle','machinegun','sniper','butterfly']},{at:720,types:['stagBeetle','hornet','sniper','machinegun']},{at:900,types:['rhinoBeetle','butterfly','machinegun','sniper']},{at:1080,types:['hornet','rhinoBeetle','bikeRaider','sniper']}]},
  layout:{version:6,oldWidth:2400,oldHeight:4200,width:3000,height:8400,extraProps:[{kind:'books',label:'쌓인 책',x:250,y:4321.071428571428,w:240,h:165,color:'#6c8582'},{kind:'plant',label:'화분',x:2760,y:6616.428571428572,w:210,h:210,color:'#a87350'},{kind:'plant',label:'화분',x:350,y:3187.8571428571427,w:210,h:210,color:'#a87350'},{kind:'blocks',label:'나무 블록',x:2280,y:2460.714285714286,w:210,h:150,color:'#b68b58'},{kind:'sofa',label:'시작 구역 소파',x:450,y:6850,w:900,h:420,color:'#727c72'},{kind:'blocks',label:'장난감 부품',x:1730,y:7070,w:210,h:150,color:'#b68b58'},{kind:'blocks',label:'장난감 블록',x:2120,y:7270,w:180,h:130,color:'#b68b58'},{kind:'books',label:'시작 구역 책',x:800,y:7510,w:240,h:165,color:'#6c8582'},{kind:'cushion',label:'소파 쿠션',x:2220,y:6680,w:250,h:170,color:'#bc8e70'},{kind:'plant',label:'거실 화분',x:2650,y:7130,w:210,h:210,color:'#a87350'}]},
  laser:{range:370,opacity:.3,color:'#ec443b'},
- laserBattery:{version:1,id:'room-laser-battery',hp:440,y:4730,fenceHp:6000,off:3,warning:1.2,fire:2},
+ laserBattery:{version:2,id:'room-laser-battery',hp:440,y:4450,fenceHp:6000,off:3,warning:2,fire:2},
  opening:[{type:'ant',x:760,y:2240},{type:'ant',x:860,y:2240}],
  roadCaptains:[['road-soldier','bayonet','길목 장난감 병정',5600,1],['road-blade','bladeGuard','블랙 실드 검병 대장',3600,2],['road-bike','bikeRaider','바이크 돌격대장',2160,2]],
  mageEscort:{from:360,mortars:4,spacing:60,depth:80,interval:60},
@@ -330,9 +330,11 @@ const methods={
    post.hp=rules.fenceHp*clamp(post.hp/post.maxHp,0,1);
    post.maxHp=rules.fenceHp;
   }
-  if(tower.hp>0&&!this.defenses.some(p=>p.id===rules.id)){
+  const battery=this.defenses.find(p=>p.id===rules.id);
+  if(battery||tower.hp>0){
    const point=this.resolvePosition({x:tower.x,y:rules.y},30);
-   this.defenses.push({...point,id:rules.id,name:'레이저 전원 배터리',team:1,structure:true,
+   if(battery)Object.assign(battery,point);
+   else this.defenses.push({...point,id:rules.id,name:'레이저 전원 배터리',team:1,structure:true,
     defenseKind:'laserBattery',linkedTowerId:tower.id,activeStage:1,hp:rules.hp,maxHp:rules.hp,r:27});
   }
   this.roomAssaultDefenseVersion=rules.version;
