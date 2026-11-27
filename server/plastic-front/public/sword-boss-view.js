@@ -6,7 +6,7 @@ function star(c,x,y,r,color){c.fillStyle=color;c.beginPath();c.moveTo(x,y-r);c.q
 function capsule(c,a){const d=Math.atan2(a.end.y-a.start.y,a.end.x-a.start.x),px=-Math.sin(d)*a.radius,py=Math.cos(d)*a.radius;c.beginPath();c.moveTo(a.start.x+px,a.start.y+py);c.lineTo(a.end.x+px,a.end.y+py);c.arc(a.end.x,a.end.y,a.radius,d+Math.PI/2,d-Math.PI/2,true);c.lineTo(a.start.x-px,a.start.y-py);c.arc(a.start.x,a.start.y,a.radius,d-Math.PI/2,d+Math.PI/2,true);c.closePath();}
 // Four columns keep the same sword identity through every stance. Rows contain
 // attack/guard faces, the recessed metal edge, the two inlays, and polished steel.
-const bladeWidth=224,bladeHeight=384;
+const bladeWidth=224,bladeHeight=440;
 function drawSword(c,atlas,id,len,rotation,roll,pitch,guard,charge,time){
  const yaw=clamp(roll,-1.1,1.1),cb=Math.cos(yaw),sb=Math.sin(yaw),ct=Math.cos(pitch),st=Math.sin(pitch);
  const half=bladeWidth/2,top=-bladeHeight/2,sourceX=id*bladeWidth;
@@ -49,7 +49,7 @@ class View{
   const load=(image,file)=>new Promise((resolve,reject)=>{
    image.onload=resolve;image.onerror=reject;image.src='assets/sword-boss/'+file;
   });
-  this.ready=Promise.all([load(this.body,'empress-figurine.webp'),load(this.blades,'empress-royal-blades.webp')]);
+  this.ready=Promise.all([load(this.body,'empress-figurine.webp'),load(this.blades,'empress-royal-blades.webp?v=long-blades1')]);
  }
  healthBar(c,b,x,y,width){
   if(!b||b.hp<=0||!Number.isFinite(b.maxHp)||b.maxHp<=0)return;
@@ -131,7 +131,7 @@ class View{
   c.restore();
  }
  bladePose(s,b,g){
-  const a=s.action,drop=!!a&&['drop','rear'].includes(a.pattern),active=a?.stage==='active',len=drop?136:a?.pattern==='spin'?122:112;
+  const a=s.action,drop=!!a&&['drop','rear'].includes(a.pattern),active=a?.stage==='active',len=(drop?136:a?.pattern==='spin'?122:112)*(bladeHeight-8)/376;
   const returning=a?.stage==='return',progress=returning?clamp((g.time-a.started)/a.duration,0,1):0,turn=drop&&returning?clamp((progress-.35)/.65,0,1):0;
   const fall=active?clamp((g.time-a.fireAt)/a.duration,0,1):0,embed=drop?(a.stage==='hold'?12:active?12*fall**3:returning?12*(1-clamp(progress/.35,0,1)):0):0;
   const guard=s.mode==='defend'?this.shieldGeometry(b,s,g):null;
