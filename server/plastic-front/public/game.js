@@ -543,7 +543,7 @@ $('endlessBtn').onclick=()=>{
 };
 async function newGame(start=true){if(COOP?.active)return;collapseObjective(true);if(waveTestBackup)stopWaveTest(false);if(start&&selectedMode!=='idle'&&!runSave.claim()){toast(runSave.error);return;}battleMusic.reset();if(start){enableAudio(true);await gameAssetsReady;}if(selectedMode==='idle')autoSession.detach();cursorAimEnabled=false;clearInput();for(const id of ['displayOverlay','resultOverlay','upgradeOverlay','pauseOverlay','helpOverlay','intelOverlay','supportOverlay','permanentOverlay','evolutionOverlay','fusionOverlay','battleSquadOverlay','battleMenuOverlay'])$(id).hidden=true;game.commanderId=selectedCommander;game.sniperSkinId=selectedSniperSkin;game.medicSkinId=selectedMedicSkin;game.flameSkinId=selectedFlameSkin;game.reset();if(start&&selectedMode!=='idle')runSave.begin(game);if(selectedMode==='idle'){if(start){if(!startAuto())return;}else{autoPilot=new window.FrontAutoPilot(game,idlePlan);autoPilot.prepare();renderIdlePlan();}}rosterKey='';updateIntel();buildTerrain();if(start){$('startOverlay').hidden=true;if(selectedMode!=='idle')game.start();toast(game.isDesktopDefense()?'20분 동안 버티세요 · 북쪽 공세':selectedMode==='idle'?'AI 지휘 시작 · 기존 돌파 작전 규칙으로 진행합니다.':game.mode==='crisis'?'15초 뒤 포병 도착 · 부대를 이동해 포격을 피하고 적 포병을 격파하세요.':(game.usesSummoning()?'1~6번으로 병력을 소환하고 F로 미스터리 박스를 열 수 있어요.':'채집 트럭 2대가 고정 수입을 생산합니다. 첫 병력 지원은 1분 뒤 제공됩니다.'));}else{$('startOverlay').hidden=false;runSave.release();}refreshManualSave();updateUI();}
  $('startBtn').onclick=async()=>{battleMusic.reset();enableAudio(true);await prepareGameAssets();if(selectedMode!=='idle'&&!runSave.begin(game)){toast(runSave.error);return;}if(selectedMode==='idle'&&!startAuto())return;$('startOverlay').hidden=true;if(selectedMode!=='idle')game.start();toast(game.isDesktopDefense()?'20분 동안 버티세요 · 북쪽 공세':selectedMode==='idle'?'AI 지휘 시작 · 기존 돌파 작전 규칙으로 진행합니다.':game.mode==='crisis'?'15초 뒤 포병 도착 · 부대를 이동해 포격을 피하고 포병을 파괴하세요.':game.isRoomAssault()?'포탈을 돌파하고 최후의 총공세를 버티세요.':game.isRoomCampaign()?'거실 전체 개방 · 20분 이후 최종 보스 처치로 승리 · 포탈 폐쇄 시 증원 감소':game.mode==='pve'?'목표 1/3 · 벌레 무리 8회를 처치하고 전방 구역을 개방하세요.':'1대1 훈련 · 상대 본진을 파괴하세요. 3분 후 체력으로 판정합니다.');refreshManualSave();updateUI();};
- $('captainMode').onchange=()=>{game.captainStackHpMode=selectedMode==='pve'&&$('captainMode').value==='stack';$('captainModeHint').hidden=!game.captainStackHpMode;};
+ $('captainMode').onchange=()=>{game.setCaptainStackHpMode(selectedMode==='pve'&&$('captainMode').value==='stack');$('captainModeHint').hidden=!game.captainStackHpMode;};
  for(const button of missionModeButtons)button.onclick=()=>selectMode(button.dataset.mode);
  $('toMenuBtn').onclick=()=>{if(waveTestBackup)stopWaveTest();else newGame(false);};
  $('againBtn').onclick=()=>{if(waveTestBackup){stopWaveTest(false);openWaveTest();}else newGame();};$('restartBtn').onclick=()=>{if(game.phase==='ready')return;openPause('restart');};
@@ -800,7 +800,8 @@ function drawUnitRaw(u,mine=true){
  if(!reduceMotion.matches&&landing>=0&&landing<.10&&!window.FrontSummoning.isVehicle(u.type)){
   const bounce=Math.sin(landing/.10*Math.PI);ctx.scale(1-.07*bounce,1+.12*bounce);
  }
- if(!unitModels.draw(ctx,u,game.time,evolved)){ctx.save();
+ if(u.type==='assassin')window.FrontAssassinView.body(ctx,u,game.time);
+ else if(!unitModels.draw(ctx,u,game.time,evolved)){ctx.save();
  const vehicle=['tank','crimsonAce','guntruck','lucky'].includes(u.type),bodyFace=Number.isFinite(u.moveFace)?u.moveFace:u.face,aimFace=Number.isFinite(u.turretFace)?u.turretFace:Number.isFinite(u.aimFace)?u.aimFace:u.face;
  ctx.rotate((vehicle?bodyFace:u.face)+Math.PI/2);ctx.translate(0,vehicle?0:(u.recoil||0)*22);if(u.boss)ctx.scale(1.35,1.35);
  if(unitModels.manifest?.insectDesign!=='classic'&&window.FrontToyInsects?.draw(ctx,u,game.time)){
@@ -851,7 +852,7 @@ function drawUnitRaw(u,mine=true){
  if(u.bubbleShield)window.FrontBubbleOctopusView.shieldCast(ctx,u,game.time);
  if(u.droneShield)window.FrontSupportDroneView.shield(ctx,u,game.time,types[u.type].r);
  if(u.type==='blizzardMage')window.FrontGuardianFX.shield(ctx,u,game.time);
- if(u.flash){ctx.globalAlpha=u.flash/.13*.65;circle(ctx,0,0,types[u.type].r+2,null,'#fff4c8');ctx.globalAlpha=1;}
+ if(u.flash&&!u.assassinClone){ctx.globalAlpha=u.flash/.13*.65;circle(ctx,0,0,types[u.type].r+2,null,'#fff4c8');ctx.globalAlpha=1;}
  ctx.restore();
  if(game.isSupplyTroop(u))text(ctx,({commando:'블랙베어',spectre:'고스트',titan:'타이탄 · 최상위'})[u.type]+' · 특수부대',u.x,u.y-108,12,u.type==='titan'?'#ffe49a':'#e7c4ff');
  if(evolved)battleFx.drawEvolutionUnit(ctx,u,game.time);
@@ -871,7 +872,7 @@ function drawUnitRaw(u,mine=true){
   if(u.star>=2)text(ctx,'★'.repeat(u.star),u.x,u.y-(types[u.type].flying?100:70),12,u.star===3?'#ffd36c':'#ffe4a0');
  }else if(u.star>=2||u.boss||u.rareSupplyGuard||shieldHp>0||u.hp<u.maxHp||u.type==='leader'||u.type==='artillery'||u.type==='bayonetCaptain'||u.type==='bombBug'){
   const vehicle=(u.team!==0||u.type!=='guntruck')&&['tank','crimsonAce','guntruck','artillery','lucky','pirateCannon'].includes(u.type),human=roster.includes(u.type)&&!vehicle||u.type==='leader'||types[u.type].stab,w=u.boss?84:vehicle?48:u.type==='bombBug'?36:30;
-  const rise=(u.type==='medic'&&u.team===0&&u.appearance==='rina'?78+(u.star>=2?8:0):types[u.type].flying?(u.visualFlightHeight??types[u.type].flightHeight)+42:u.type==='crimsonAce'?140:u.type==='rhinoBeetle'?88:u.type==='stagBeetle'?76:u.type==='pirateCannon'?94:u.type==='bubbleOctopus'?52:u.type==='bombBug'?57:vehicle?79:u.type==='bayonetCaptain'?90:types[u.type].stab?75:human?66:u.type==='bruteBeetle'?58:35)*(u.boss?1.35:1)-(u.star>=2?(vehicle?10:8):0),y=u.y-rise;
+  const rise=(u.type==='medic'&&u.team===0&&u.appearance==='rina'?78+(u.star>=2?8:0):types[u.type].flying?(u.visualFlightHeight??types[u.type].flightHeight)+42:u.type==='crimsonAce'?140:u.type==='rhinoBeetle'?88:u.type==='stagBeetle'?76:u.type==='pirateCannon'?94:u.type==='bubbleOctopus'?52:u.type==='assassin'?94:u.type==='bombBug'?57:vehicle?79:u.type==='bayonetCaptain'?90:types[u.type].stab?75:human?66:u.type==='bruteBeetle'?58:35)*(u.boss?1.35:1)-(u.star>=2?(vehicle?10:8):0),y=u.y-rise;
   const left=u.x-w/2,bar=window.FrontBubbleOctopusView.healthBarLayout(u.hp,u.maxHp,shieldHp);
   const fill=window.FrontBubbleOctopusView.healthPaint(ctx,bar,left,w,u.boss?'#e6af57':t?'#e0a184':'#dceca2');
   rr(ctx,left-1,y-1,w*bar.track+2,6,2,'#172a20aa');rr(ctx,left,y,w*bar.track,4,2,'#293d2d88');rr(ctx,left,y,w*bar.filled,4,2,fill);
@@ -1072,7 +1073,7 @@ function draw(dt){
   ctx.fillStyle='#6a22352e';
   ctx.fillRect(0,0,game.bounds().width,game.bounds().height);
  }
- window.FrontGuardianFX.ground(ctx,game);battleFx.ground(ctx,fxVisible);battleFx.luckyGround(ctx,game,fxVisible);
+ window.FrontAssassinView.ground(ctx,game);window.FrontGuardianFX.ground(ctx,game);battleFx.ground(ctx,fxVisible);battleFx.luckyGround(ctx,game,fxVisible);
  for(const u of game.units)if(u.type==='bikeRaider'||u.bossPattern==='rhinoCharge')battleFx.drawBikeWarning(ctx,u,game.time);
  if(game.isRoomCampaign())window.FrontPortal.ground(ctx,game.bases[1],game.time);
  for(const b of game.bases)drawBase(b);
@@ -1131,9 +1132,10 @@ function draw(dt){
  window.FrontGuardianFX.air(ctx,game);battleFx.drawLuckySprays(ctx,game,fxVisible);
  for(const p of game.mortarShells){const pose=battleFx.mortarPose(p,game.time);if(fxVisible(pose))battleFx.drawMortar(ctx,p,game.time); }
  window.FrontRosterArt?.field(ctx,game,fxVisible);
+ window.FrontAssassinView.stars(ctx,game,fxVisible);
  for(const p of game.shots){if(!fxVisible(p))continue;battleFx.drawShot(ctx,p,game.evolutionEnabled(p.source));}
  for(const e of game.effects){
-  if(!fxVisible(e)||window.FrontSupportDroneView.event(ctx,e,unitModels,game.time)||window.FrontSummonHud.impact(ctx,e)||window.FrontSupportToyView?.event(ctx,e,game)||battleFx.drawEvent(ctx,e))continue;
+  if(!fxVisible(e)||window.FrontAssassinView.event(ctx,e)||window.FrontSupportDroneView.event(ctx,e,unitModels,game.time)||window.FrontSummonHud.impact(ctx,e)||window.FrontSupportToyView?.event(ctx,e,game)||battleFx.drawEvent(ctx,e))continue;
   const k=e.t/e.max;ctx.save();ctx.globalAlpha=k;
   if(e.kind==='critical')text(ctx,'치명타!',e.x,e.y-25*(1-k),15,'#ffe28c');
   else circle(ctx,e.x,e.y,45*(1-k),null,'#f5edc2');

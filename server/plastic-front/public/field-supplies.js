@@ -15,7 +15,7 @@ function install({FrontGame:Game,TYPES}){
  p.supplyState=function(){return this.fieldSupplyState??=fresh();};
  p.supplySquad=function(){return this.units.filter(u=>u.team===0&&u.hp>0&&(!this.coop||u.coopOwner===this.coopOwner));};
  p.stats=function(u){const s=stats.call(this,u);if(u.team===0&&this.isSupplyTroop(u)){
-  const grow=1+.18*(this.commanderLevel(this.commander(0))-1);s.hp*=grow;s.damage*=grow;s.defense+=armor[u.type];
+  const grow=1+.18*(this.commanderLevel(this.commander(0))-1);s.hp*=grow;if(this.captainStackHpMode)s.hp=this.captainStackTroopHp(u,s.hp);s.damage*=grow;s.defense+=armor[u.type];
  }
  if(u.team===0&&this.time<(this.fieldSupplyState?.boostUntil||0)){s.damage*=config.damage;if(u.type!=='medic')s.rate/=config.haste;}return s;};
  p.capacity=function(team=0){return capacity.call(this,team)+(team===0?this.supplySquad().filter(u=>this.isSupplyTroop(u)).length:0);};

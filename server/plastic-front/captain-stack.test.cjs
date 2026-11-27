@@ -32,7 +32,7 @@ test('remote allies do not intercept, while shields and damage gates work even i
  g.damage(tank,20000,ant);assert.equal(tank.hp,tank.maxHp);
  g.damage(c,2,ant);assert(tank.droneShield.hp<5);assert.equal(tank.hp,tank.maxHp);
  g.damage(c,20000,ant);assert.equal(tank.hp,0);assert.equal(g.cash[0],cash+Math.floor(TYPES.tank.cost*.25));
- g.time+=.349;g.damage(c,20000,ant);assert.equal(medic.hp,medic.maxHp);
+ g.time+=.149;g.damage(c,20000,ant);assert.equal(medic.hp,medic.maxHp);
  g.time+=.002;g.damage(c,20000,ant);assert.equal(medic.hp,0);assert.equal(c.hp,c.maxHp);
  assert.deepEqual(g.captainStack(c),[c]);
 });
@@ -89,7 +89,7 @@ test('a mine still damages enemies, and a bomb insect fuses only within reach of
  const bug=g.addUnit(2,'bombBug',c.x+500,c.y);u.x=bug.x;u.y=bug.y;
  g.updateBombBug(bug,.05);assert(!bug.bombFuse);bug.x=c.x+5;bug.y=c.y;g.updateBombBug(bug,.05);assert(bug.bombFuse);
  u.x=bug.x;u.y=bug.y;const [mine]=g.fireUnitProjectiles(u,bug,{damage:1e6,critical:false});
- assert(mine);g.time=mine.armAt+.01;g.updateBlockMines();assert.equal(bug.hp,0);assert(c.hp===c.maxHp);assert(u.hp<u.maxHp);
+ assert(mine);g.time=mine.armAt+.01;g.updateBlockMines();assert.equal(bug.hp,0);assert.equal(u.hp,0);assert(c.hp>0&&c.hp<c.maxHp);
 });
 test('stealth prevents independent targeting but never locks the active drone bar',()=>{
  const g=battle(),c=g.commander(0),drone=add(g,'drone');drone.droneLootUntil=g.time+2;
@@ -101,6 +101,83 @@ test('basic mode retains normal targeting, individual casualties and old save co
  assert(g.canTarget(ant,tank));g.damage(c,10,ant);assert(c.hp<c.maxHp);assert.equal(tank.hp,tank.maxHp);
  g.damage(tank,1e7,ant);assert.equal(tank.hp,0);assert(!tank.recoveredAs);
  const old=pack(g);delete old.fields.captainStackHpMode;assert.equal(unpack(battle(true),old).captainStackHpMode,false);
- const stacked=battle();stacked.commander(0).stackGuardUntil=40.35;
- const restored=unpack(battle(false),pack(stacked));assert(restored.captainStackHpMode);assert.equal(restored.commander(0).stackGuardUntil,40.35);
+ const stacked=battle();stacked.commander(0).stackGuardUntil=40.15;
+ const restored=unpack(battle(false),pack(stacked));assert(restored.captainStackHpMode);assert.equal(restored.commander(0).stackGuardUntil,40.15);
+});
+
+test('troop capacity is rounded before star scaling; the commander, enemies and basic rules keep their own HP',()=>{
+ const stack=battle(),basic=battle(false);
+ for(const [type,caps] of Object.entries({tank:[360,792,1980],rifle:[96,211,528],machinegun:[96,211,528],sniper:[60,132,330],guntruck:[120,264,660]})){
+  for(const [i,cap] of caps.entries())assert.equal(add(stack,type,i+1).maxHp,cap);
+  assert.equal(add(basic,type).maxHp,TYPES[type].hp);
+ }
+ stack.tech[0].sniper=basic.tech[0].sniper=2;stack.abilities.health=basic.abilities.health=1;
+ const normal=add(basic,'sniper').maxHp,ranked=add(stack,'sniper',2);
+ assert.equal(ranked.maxHp,Math.round(Math.round(normal*.6)*2.2));
+ for(const g of [stack,basic]){g.level=20;g.refreshCommanderHealth();}
+ assert.equal(stack.commander(0).maxHp,basic.commander(0).maxHp);
+ assert.equal(stack.stats({...ant}).hp,basic.stats({...ant}).hp);
+ const toy={type:'toyTurtle',team:0};assert.equal(stack.stats(toy).hp,basic.stats(toy).hp);
+ const initial=add(basic,'tank');initial.hp=initial.maxHp/2;
+ basic.setCaptainStackHpMode(true);assert.equal(initial.hp,initial.maxHp/2);assert.equal(initial.maxHp,stack.stats(initial).hp);
+ basic.setCaptainStackHpMode(false);assert.equal(initial.maxHp,basic.stats(initial).hp);
+});
+test('enemy hits scale at exactly four and eight minutes on troop and commander lines only',()=>{
+ for(const [at,scale] of [[0,1.5],[239.999,1.5],[240,2],[479.999,2],[480,2.6],[1200,2.6]]){
+  for(const stacked of [false,true])for(const troop of [false,true]){
+   const g=battle(stacked),c=g.commander(0),line=troop?add(g,'rifle'):c;
+   g.time=at;const expected=10*g.defenseFactor(line,ant)*(stacked?scale:1);
+   g.damage(stacked?c:line,10,ant);assert(Math.abs(line.maxHp-line.hp-expected)<1e-7);
+  }
+ }
+});
+test('heavy hits transfer only 70% of post-shield excess, and the next shield still protects its line',()=>{
+ for(const mark of [{type:'bombBug'},{miniBoss:true},{boss:true},{finalBoss:true},{elite:true},{}]){
+  const g=battle(),c=g.commander(0),first=add(g,'tank'),second=add(g,'rifle'),source={...ant,...mark};
+  g.time=480;first.hp=10;first.droneShield={hp:5,maxHp:5,until:500};
+  second.droneShield={hp:6,maxHp:6,until:500};
+  const raw=35/(2.6*g.defenseFactor(first,source));
+  g.damage(c,raw,source);assert.equal(first.hp,0);assert(!first.droneShield);
+  const strong=mark.type==='bombBug'||mark.boss||mark.miniBoss||mark.finalBoss;
+  // First line absorbs 5 shield + 10 HP. Of 20 excess, 14 reaches the next shield.
+  assert(Math.abs(second.maxHp-second.hp-(strong?8:0))<1e-7);
+  assert.equal(c.hp,c.maxHp);assert.equal(Boolean(second.droneShield),!strong);
+ }
+});
+test('one boss hit breaks at most two bars, including a recovered bar; guards expire exactly at 0.15s',()=>{
+ const g=battle(),c=g.commander(0),top=add(g,'multiDrone',3),boss={...ant,boss:true};
+ g.damage(c,1e7,boss);
+ const recovered=g.units.find(u=>u.id===top.recoveredAs),survivor=g.units.find(u=>u.id===recovered.recoveredAs);
+ assert.equal(recovered.star,2);assert.equal(recovered.hp,0);assert.equal(survivor.star,1);
+ assert.equal(survivor.hp,survivor.maxHp);assert.equal(c.hp,c.maxHp);assert.equal(c.stackGuardUntil,40.15);
+ g.time=40.149;g.damage(c,1e7,boss);assert(survivor.hp>0);
+ g.time=40.15;g.damage(c,1e7,boss);assert.equal(survivor.hp,0);assert.equal(c.hp,0);assert.equal(g.retreated,1);
+});
+test('medics and support drone shields have mode-specific strength; other healing keeps its value',()=>{
+ for(const stacked of [false,true]){
+  const g=battle(stacked),c=g.commander(0),m=add(g,'medic'),d=add(g,'drone'),tank=add(g,'tank');
+  tank.hp=1;assert.equal(g.heal(tank,50,m),stacked?30:50);
+  assert.equal(g.heal(tank,20),20);d.nextDroneShieldAt=0;g.updateSupportDrone(d,c,0,g.stats(d),[]);
+  assert(Math.abs(tank.droneShield.hp/tank.maxHp-.22*(stacked?.7:1))<1e-8);
+ }
+});
+test('legacy stacked checkpoints migrate wounds, shields and protection exactly once',()=>{
+ const g=battle(false),c=g.commander(0),tank=add(g,'tank',2);tank.hp=tank.maxHp*.25;
+ tank.droneShield={hp:100,maxHp:200,until:50};c.hp=97;c.droneShield={hp:10,maxHp:20,until:50};
+ c.stackBreakAt=40;c.stackGuardUntil=40.35;
+ const old=pack(g);old.fields.captainStackHpMode=true;
+ const once=unpack(battle(),old),twice=unpack(battle(),pack(once));
+ for(const saved of [once,twice]){
+  const lead=saved.commander(0),top=saved.captainStack(lead)[0];
+  assert.equal(top.maxHp,792);assert.equal(top.hp,198);
+  assert(Math.abs(top.droneShield.hp-42)<1e-8);assert(Math.abs(top.droneShield.maxHp-84)<1e-8);
+  assert.equal(lead.hp,97);assert.equal(lead.droneShield.hp,7);assert.equal(lead.stackGuardUntil,40.15);
+ }
+});
+test('co-op boss overflow and protection stay with the struck captain',()=>{
+ const g=battle(true,true),green=g.commander(0),greenTroop=add(g,'tank');
+ const [blue,first,second]=g.withOwner(1,()=>[g.commander(0),add(g,'tank'),add(g,'medic')]);
+ g.damage(blue,1e7,{...ant,boss:true});assert.equal(first.hp+second.hp,0);
+ assert.equal(blue.hp,blue.maxHp);assert.equal(greenTroop.hp,greenTroop.maxHp);
+ assert(!green.stackGuardUntil);g.damage(green,10,ant);assert(greenTroop.hp<greenTroop.maxHp);
 });

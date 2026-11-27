@@ -133,7 +133,7 @@ function install({FrontGame}){
   allies.sort((a,b)=>a.hp/a.maxHp-b.hp/b.maxHp||distance(a,leader)-distance(b,leader)||a.id-b.id);
   const recipients=game.captainStackHpMode?game.captainStack(leader).slice(0,1):[leader,...allies.slice(0,count)];
   for(const ally of recipients){
-   const hp=ally.maxHp*rules.shield.strength[rank]*power*(evolved&&drone.type==='multiDrone'?1.3:1),previous=ally.droneShield;
+   const hp=ally.maxHp*rules.shield.strength[rank]*power*(evolved&&drone.type==='multiDrone'?1.3:1)*(game.captainStackHpMode?game.captainStackRules.droneShield:1),previous=ally.droneShield;
    if(previous?.until>game.time&&previous.hp>hp)continue;
    ally.droneShield={hp,maxHp:hp,until:game.time+rules.shield.duration,evolved:evolved||!!(previous?.until>game.time&&previous.evolved)};
   }

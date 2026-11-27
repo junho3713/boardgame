@@ -409,7 +409,7 @@ const methods={
   for(const u of this.units){if(u.team===0)continue;const ratio=u.hp>0?clamp(u.hp/Math.max(1,u.maxHp),0,1):0;u.maxHp=this.stats(u).hp;u.hp=u.maxHp*ratio;}
   this.roomHealthVersion=config.combat.healthVersion;return true;
  },
- roomEnemyCount(type=null,opening=false){return this.units.filter(u=>u.hp>0&&u.team!==0&&!u.boss&&!u.fixedGuard&&!u.roomGarrison&&u.type!=='artillery'&&(!opening||!u.roadCaptain)&&(!type||u.type===type)).length;},
+ roomEnemyCount(type=null,opening=false){return this.units.filter(u=>u.hp>0&&(u.type!=='assassin'||type==='assassin'&&!u.assassinClone)&&u.team!==0&&!u.boss&&!u.fixedGuard&&!u.roomGarrison&&u.type!=='artillery'&&(!opening||!u.roadCaptain)&&(!type||u.type===type)).length;},
  roomWaveCap(){if(this.roomFever()||this.roomCampaign?.endless)return config.assault.cap;const boss=this.units.some(u=>u.boss&&!u.miniBoss&&!u.roadCaptain&&u.hp>0),base=this.time>=config.bossRush.from?config.bossRush.troops[boss?'boss':'between'].cap:this.roomPhase().cap;return base+(boss?0:this.evolutionPace().capExtra);},
  roomEnemyTypeCap(type){const row=config.openingCaps.find(r=>this.time<r.until);return Math.min(config.caps[type]??Infinity,row?.[type]??Infinity);},
  roomBombCap(){const r=config.insects.bombSpawn;return this.time<r.earlyUntil?r.earlyCap:r.cap;},

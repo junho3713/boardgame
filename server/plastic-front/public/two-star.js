@@ -14,7 +14,7 @@ p.abilityBonus=function(key,level=this.abilities[key]||0){if(this.starExperiment
 p.stats=function(u){
  const s=stats.call(this,u),rank=this.rankCombat(u);
  if(rank.hp===1)return s;
- return {...s,hp:s.hp*rank.hp,damage:s.damage*rank.damage,rate:u.type==='medic'?s.rate:s.rate/rank.attackSpeed,
+ return {...s,hp:this.captainStackHpMode?s.hp:s.hp*rank.hp,damage:s.damage*rank.damage,rate:u.type==='medic'?s.rate:s.rate/rank.attackSpeed,
   range:s.range*rank.range,splash:s.splash*rank.range,heal:s.heal*rank.heal};
 };
 p.refreshTwoStarHealth=function(){

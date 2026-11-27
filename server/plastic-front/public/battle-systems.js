@@ -49,6 +49,7 @@ class CampaignSystem extends BattleSystem{
   game.updateSwarm();
   game.updateBosses();
   if(game.bossIntro?.remaining>0)return false;
+  game.spawnAssassinGroup?.();
   game.updateArtillery();
   if(game.mode==='pve')game.updateDefenses(dt);
   game.updateBuildings(dt);
@@ -116,6 +117,7 @@ class ProjectileSystem extends BattleSystem{
  update(game,{dt,combatCandidates}){
   game.updateBattleProjectiles(dt,combatCandidates);
   game.updateFoamShots?.(dt);
+  game.updateAssassinStars?.(dt);
   game.updateMortars();
   game.updateButterflyGusts();
   game.updateMedicCleanses();
