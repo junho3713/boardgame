@@ -51,13 +51,13 @@ test('normal and evolved one-star signals preserve their six separate outcomes',
  }
 });
 
-test('all ranks force a single primary double on the sixth attempt',()=>{
+test('five completely missed turns guarantee one double on the next turn at every rank',()=>{
  for(const rank of [1,2,3]){
   const {g,radio,enemy}=field();radio.star=rank;
   for(let n=0;n<5;n++)assert.equal(fire(g,radio,enemy,[1,2]).strike,null);
   assert.equal(radio.radioMisses,5);
-  const roll=fire(g,radio,enemy,[1]);
-  assert.deepEqual(roll.rolls.map(pair=>pair.dice),[[1,1]]);
+  const roll=fire(g,radio,enemy,rank===1?[1]:[1,2,3,4,5,6]);
+  assert.deepEqual(roll.rolls.map(pair=>pair.dice),rank===1?[[1,1]]:[[1,1],[3,4],[5,6]]);
   assert.equal(roll.strike,'turret');assert.equal(radio.radioMisses,0);
  }
 });
@@ -121,7 +121,7 @@ test('real fusion and the Destiny Star scale damage once and scale every blast r
    g.radioNextNukeAt=0;
    const roll=fire(g,radio,enemy,[face,face],stats.damage);
    assert.equal(roll.rank,rank);assert.equal(roll.strike,strike);
-   assert.deepEqual(roll.rolls.map(pair=>pair.dice),[[face,face]]);
+   assert.deepEqual(roll.rolls.map(pair=>pair.dice),rank===1?[[face,face]]:[[face,face],[2,3],[2,3]]);
    assert.equal(g.radioStrikes.length,count);
    close(g.radioStrikes[0].landAt-g.time,delay);
    for(const shell of g.radioStrikes){
@@ -291,33 +291,68 @@ test('pity, evolution correction, the hotline and a non-double auxiliary pair ca
  const {g,radio,enemy}=field();
  radio.star=2;g.evolved.guntruck=true;g.radioNextNukeAt=12;
  const ordinary=fire(g,radio,enemy,[6,6,2,2,3,4]);
- assert.equal(ordinary.strike,'missile');assert.equal(ordinary.jackpot,false);assert.equal(ordinary.rolls.length,1);
+ assert.equal(ordinary.strike,'missile');assert.equal(ordinary.jackpot,false);assert.equal(ordinary.rolls.length,3);
+ assert.equal(ordinary.sync,true);assert.equal(g.radioTurrets.length,1);
  radio.radioMisses=5;
- assert.equal(fire(g,radio,enemy,[6]).jackpot,false);
- let correctedRolls=0;
- g.diceFace=(_unit,_evolved,set)=>{assert.equal(set,0);return correctedRolls++===0?6:2;};
+ assert.equal(fire(g,radio,enemy,[6,2,3,3,4,4]).jackpot,false);
+ const scripted=[6,2,1,3,4,2];
+ g.diceFace=(_unit,_evolved,set)=>{assert.equal(set,Math.floor((6-scripted.length)/2));return scripted.shift();};
  g.random=()=>0;
  g.fireUnitProjectiles(radio,enemy,{damage:100});
  const corrected=g.effects.findLast(e=>e.kind==='radioRoll');
  assert.deepEqual(corrected.rolls[0].dice,[6,6]);assert.equal(corrected.jackpot,false);
  g.linkState().radioHotlineUntil=5;
- g.diceFace=()=>assert.fail('the hotline does not roll dice');
- g.fireUnitProjectiles(radio,enemy,{damage:100});
- const hotline=g.effects.findLast(e=>e.kind==='radioRoll');
+ const hotline=fire(g,radio,enemy,[1,2,3,4,5,6]);
  assert.equal(hotline.strike,'missile');assert.equal(hotline.jackpot,false);
+ assert.deepEqual(hotline.rolls.map(pair=>pair.dice),[[6,6],[3,4],[5,6]]);
+});
+
+test('two auxiliary doubles can both launch even when the primary misses, with a 30 percent bonus',()=>{
+ const {g,radio,enemy}=field();
+ radio.star=2;radio.radioMisses=2;
+ const roll=fire(g,radio,enemy,[1,2,5,5,6,6]);
+ assert.deepEqual(roll.rolls.map(pair=>pair.success),[false,true,true]);
+ assert.equal(radio.radioMisses,0);
+ assert.equal(roll.sync,true);assert.equal(roll.jackpot,false);
+ assert.equal(g.radioStrikes.length,7);
+ for(const shell of g.radioStrikes){
+  close(shell.damage,130);
+  close(shell.radius,88*1.15*1.3);
+ }
+ const firstOfEach=g.radioStrikes.filter(shell=>shell.seq===0);
+ assert.equal(new Set(firstOfEach.map(shell=>shell.salvoId)).size,2);
+ enemy.x-=60;enemy.y+=60;g.time=.1;g.updateEvolutionCombat();
+ for(const shell of firstOfEach){
+  const marker=g.effects.find(e=>e.kind==='radioIncoming'&&e.salvoId===shell.salvoId&&e.seq===0);
+  assert.equal(marker.y,enemy.y);
+  assert.equal(shell.y,enemy.y);
+ }
+});
+
+test('an unevolved natural triple schedules one normal-sized nuke through the shared cooldown',()=>{
+ const {g,radio,enemy}=field();
+ radio.star=3;g.radioNextNukeAt=10;
+ const roll=fire(g,radio,enemy,[1,1,2,2,3,3]);
+ assert.equal(roll.jackpot,true);assert.equal(roll.sync,false);
+ assert.equal(g.radioStrikes.length,1);
+ assert.equal(g.radioNextNukeAt,12);
+ assert.equal(g.radioStrikes[0].damage,100);
+ close(g.radioStrikes[0].radius,225*1.3);
 });
 
 test('natural triple doubles bypass the launch cooldown while whiteout stays rate limited',()=>{
  const {g,radio,enemy}=field(),partner=g.addUnit(0,'guntruck',940,5900);
  radio.star=2;partner.star=3;
  g.evolved.guntruck=true;
- for(const [time,caller,dice] of [[0,radio,[6,6]],[.2,partner,[1,1,2,2,4,4]],[3.5,radio,[5,5,6,6,3,3]]]){
+ for(const [time,caller,dice,jackpot] of [[0,radio,[6,6,1,2,3,4],false],[.2,partner,[1,1,2,2,4,4],true],[3.5,radio,[5,5,6,6,3,3],true]]){
   g.time=time;
   const roll=fire(g,caller,enemy,dice);
   assert.equal(roll.strike,'nuke');
-  assert.equal(roll.jackpot,dice.length===6);
+  assert.equal(roll.jackpot,jackpot);
   assert.deepEqual(roll.rolls.flatMap(pair=>pair.dice),dice);
   assert.equal(g.radioNextNukeAt,time+12);
+  close(g.radioStrikes.at(-1).damage,jackpot?150:100);
+  close(g.radioStrikes.at(-1).radius,225*g.rankCombat(caller).range*(jackpot?1.5:1));
  }
  assert.equal(g.radioStrikes.length,3);
  const landings=g.radioStrikes.map(s=>s.landAt);

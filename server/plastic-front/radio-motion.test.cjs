@@ -52,16 +52,27 @@ test('rolling dice only show pips for the settled outcome, including misses that
   }
  }
 });
-test('ordinary results at each rank display a single pair and the dice still pop on success',()=>{
+test('ordinary ranked results draw three pairs and only matched pairs pop',()=>{
  const r=renderer();r.game.reducedMotion=false;
  for(const rank of [1,2,3]){
-  const e={rank,rolls:[{dice:[4,4],success:true,strike:'missile'}]};
-  assert.deepEqual(r.dice(e,.10),[0,0]);
-  assert.deepEqual(r.dice(e,rank===3?.217:.287),[4,4]);
-  assert.ok(r.scales.some(x=>x>1.45));
+  const pairs=[{dice:[4,4],success:true,strike:'missile'}];
+  if(rank>1)pairs.push({dice:[1,2],success:false},{dice:[5,6],success:false});
+  const e={rank,rolls:pairs};
+  assert.deepEqual(r.dice(e,.10),Array(pairs.length*2).fill(0));
+  assert.deepEqual(r.dice(e,rank===3?.217:.287),pairs.flatMap(pair=>pair.dice));
+  assert.equal(r.scales.filter(x=>x>1.45).length,1);
   assert.deepEqual(r.labels,['미사일 2발']);
-  assert.equal(r.paints.filter(x=>x==='#f7d072').length,rank===3?2:0);
+  assert.equal(r.paints.filter(x=>x==='#fff').length,pairs.length*2);
+  assert.equal(r.paints.filter(x=>x==='#c28a2f').length,rank===3?8:0);
  }
+});
+test('sync highlights two separate groups and leaves a missed pair at its usual size',()=>{
+ const r=renderer();r.game.reducedMotion=false;
+ const e={rank:2,sync:true,rolls:[{dice:[1,2]},{dice:[3,3],success:true},{dice:[5,5],success:true}]};
+ assert.deepEqual(r.dice(e,.29),[1,2,3,3,5,5]);
+ assert.deepEqual(r.labels,['SYNC x2!']);
+ assert.equal(r.scales.filter(x=>x>1.45).length,2);
+ assert.equal(r.paints.filter(x=>x==='#ffbf33').length,6);
 });
 test('nuclear and hotline sixes have distinct labels over the same two dice',()=>{
  const r=renderer();
@@ -77,7 +88,7 @@ test('a triple jackpot displays all six settled dice and the nuclear label',()=>
  const e={rank:2,jackpot:true,rolls:[[2,2],[4,4],[5,5]].map(dice=>({dice,success:true,strike:'nuke'}))};
  assert.deepEqual(r.dice(e,.1),[0,0,0,0,0,0]);
  assert.deepEqual(r.dice(e,.24),[2,2,4,4,5,5]);
- assert.deepEqual(r.labels,['트리플 잭팟 · 전술 핵']);
+ assert.deepEqual(r.labels,['TRIPLE JACKPOT!']);
 });
 const flames=layers=>layers.filter(({gradient})=>gradient.stops[0][1]==='#FFF3B0');
 test('the fire zone draws a soft floor and fourteen flames, then fades and settles in the final second',()=>{

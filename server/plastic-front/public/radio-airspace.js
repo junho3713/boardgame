@@ -28,6 +28,7 @@ function syncOrigins(c,game){
  }
 }
 function flightKey(e){
+ if(Number.isFinite(e.salvoId))return [e.source?.id,e.salvoId,e.seq].join('/');
  return Number.isFinite(e.landAt)?[e.source?.id,e.seq,e.strike,e.landAt,e.x,e.y].join('/'):e;
 }
 function pose(c,e,left=e.t){

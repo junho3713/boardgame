@@ -11,6 +11,7 @@ function install({FrontGame,TYPES,multiplier}){
  p.reset=function(...args){
   const result=reset.apply(this,args);this.radioStrikes=[];this.radioFireZones=[];this.radioTurrets=[];this.radioNextWhiteoutAt=0;
   this.radioNextNukeAt=0;
+  this.radioSalvoSerial=0;
   return result;
  };
  p.shotgunReloadTime=function(u,s=this.stats(u)){return 1.8*s.rate/TYPES.rifle.rate;};
@@ -162,38 +163,45 @@ function install({FrontGame,TYPES,multiplier}){
   return best||g.commandFirePoint(origin,aim.range,aim.angle);
  }
  function rollRadio(g,u,golden,rank){
-  if(g.time<(g.linkState(u.coopOwner||0).radioHotlineUntil??0)){
-   return {dice:[6,6],success:true,strike:'missile',missileCount:6};
+  const hotline=g.time<(g.linkState(u.coopOwner||0).radioHotlineUntil??0);
+  const hotlineRoll={dice:[6,6],success:true,strike:'missile',missileCount:6};
+  if(rank===1&&hotline)return {rolls:[hotlineRoll],jackpot:false};
+
+  const forced=u.radioMisses>=5;
+  const count=rank>=2?3:1;
+  const rolls=Array.from({length:count},(_,set)=>{
+   const a=g.diceFace(u,golden,set);
+   const b=rank===1&&forced?a:g.diceFace(u,golden,set);
+   const success=a===b;
+   return {dice:[a,b],success,strike:success?doubleStrike(a,golden):null};
+  });
+  const hits=rolls.filter(roll=>roll.success).length;
+  if(count===3&&hits===3){
+   for(const roll of rolls)roll.strike='nuke';
+   return {rolls,jackpot:true};
   }
-  const forced=u.radioMisses>=5,a=g.diceFace(u,golden,0);
-  let b=forced?a:g.diceFace(u,golden,0);
-  // The two auxiliary pairs are only used for a natural triple jackpot.
-  if(rank>=2&&!forced&&a===b){
-   const second=[g.diceFace(u,golden,1),g.diceFace(u,golden,1)];
-   const third=[g.diceFace(u,golden,2),g.diceFace(u,golden,2)];
-   if(second[0]===second[1]&&third[0]===third[1])
-    return {dice:[a,b],success:true,strike:'nuke',jackpotPairs:[second,third]};
+  if(hotline)rolls[0]=hotlineRoll;
+  else if(hits===0&&(forced||golden&&g.random()<.10)){
+   const [face]=rolls[0].dice;
+   rolls[0]={dice:[face,face],success:true,strike:doubleStrike(face,golden)};
   }
-  // Every rank uses the same 25% evolved chance and five-miss guarantee on its primary pair.
-  if(golden&&a!==b&&g.random()<.10)b=a;
-  const success=a===b;
-  return {dice:[a,b],success,strike:success?doubleStrike(a,golden):null};
+  return {rolls,jackpot:false};
  }
  function queueRadioStrike(g,u,aim,roll,point,{golden,damage,radiusScale}){
   const {strike,dice}=roll,spec=RADIO[strike],radius=spec.radius*radiusScale;
   const count=strike==='missile'?(roll.missileCount??(golden?4:dice[0]-2)):1;
   const angle=aim.commandShot?aim.angle:heading(u,point);
   const precise=strike!=='incendiary'&&g.hasEvolutionLink(u,'radioPrecision');
-  const bounds=g.bounds();
+  const bounds=g.bounds(),salvoId=g.radioSalvoSerial=(g.radioSalvoSerial??0)+1;
   for(let seq=0;seq<count;seq++){
    const spread=missileSpread[seq],delay=spec.delay+seq*.26;
    const offsetX=-Math.sin(angle)*spread,offsetY=Math.cos(angle)*spread;
    const x=Math.max(0,Math.min(bounds.width,point.x+offsetX));
    const y=Math.max(0,Math.min(bounds.height,point.y+offsetY));
-   const shell={source:u,x,y,angle,seq,strike,radius,radiusScale,golden,precise,damage,landAt:g.time+delay};
+   const shell={source:u,x,y,angle,seq,salvoId,strike,radius,radiusScale,golden,precise,damage,landAt:g.time+delay};
    if(strike==='missile'&&point.hp>0)shell.guidance={target:point,originX:point.x,originY:point.y,offsetX,offsetY};
    g.radioStrikes.push(shell);
-   effect(g,'radioIncoming',shell,{source:u,strike,angle,seq,radius,landAt:shell.landAt,visualUntil:shell.landAt},delay);
+   effect(g,'radioIncoming',shell,{source:u,strike,angle,seq,salvoId,radius,landAt:shell.landAt,visualUntil:shell.landAt},delay);
    if(strike==='nuke')g.notify('radioWarning',{team:0,id:u.id,x,y});
   }
  }
@@ -242,13 +250,13 @@ function install({FrontGame,TYPES,multiplier}){
   g.resolvePosition(point,26);
   const landAt=g.time+turretRules.flight;
   const turret={...point,...turretLoadout(golden,damage),id:++g.serial,source:u,owner,coopOwner:u.coopOwner,rank,
-   scale:radiusScale,range:turretRules.range*radiusScale,splash:turretRules.splash*radiusScale,
+   scale:radiusScale,range:turretRules.range*g.rankCombat(u).range,splash:turretRules.splash*radiusScale,
    angle:heading(point,target),startedAt:g.time,landAt,until:landAt+turretRules.lifetime,
    nextShot:landAt,landed:false,barrel:0};
   turrets.push(turret);
   return turret;
  }
- function launchRadio(g,u,aim,contacts,roll,damage,golden,rank,jackpot=false){
+ function launchRadio(g,u,aim,contacts,roll,damage,golden,rank,jackpot=false,bonus=1){
   if(roll.strike==='nuke'){
    const readyAt=g.radioNextNukeAt??0;
    if(!jackpot&&g.time+1e-8<readyAt){
@@ -256,7 +264,8 @@ function install({FrontGame,TYPES,multiplier}){
     g.radioNextNukeAt=Math.max(g.time,readyAt-1);
    }else g.radioNextNukeAt=g.time+nukeCooldown;
   }
-  const radiusScale=g.rankCombat(u).range;
+  const radiusScale=g.rankCombat(u).range*bonus;
+  damage*=bonus;
   if(roll.strike==='turret'){
    const target=contacts.reduce((nearest,t)=>distance(u,t)<distance(u,nearest)?t:nearest);
    const turret=deployRadioTurret(g,u,target,rank,damage,radiusScale,golden);
@@ -278,15 +287,19 @@ function install({FrontGame,TYPES,multiplier}){
   const contacts=g.radioContacts(u);
   if(!contacts.length)return [];
   const golden=g.evolutionEnabled(u),rank=radioRank(g,u);
-  const {jackpotPairs,...roll}=rollRadio(g,u,golden,rank);
+  const {rolls,jackpot}=rollRadio(g,u,golden,rank);
+  const hits=rolls.filter(roll=>roll.success);
+  const sync=!jackpot&&hits.length>=2;
   u.radioRollAt=g.time;
-  if(roll.success)u.radioDoubleAt=g.time;
-  u.radioMisses=roll.success?0:(u.radioMisses||0)+1;
+  if(hits.length)u.radioDoubleAt=g.time;
+  u.radioMisses=hits.length?0:(u.radioMisses||0)+1;
   g.notify('fire',u);
-  if(roll.success)launchRadio(g,u,aim,contacts,roll,attack.damage,golden,rank,!!jackpotPairs);
-  const [a,b]=roll.dice;
-  const rolls=jackpotPairs?[roll,...jackpotPairs.map(dice=>({dice,success:true,strike:'nuke'}))]:[roll];
-  effect(g,'radioRoll',u,{source:u,a,b,golden,rank,rolls,jackpot:!!jackpotPairs,strike:roll.strike,tx:roll.tx,ty:roll.ty},.85);
+  const launches=jackpot?hits.slice(0,1):hits;
+  const bonus=jackpot&&golden?1.5:sync?1.3:1;
+  for(const roll of launches)launchRadio(g,u,aim,contacts,roll,attack.damage,golden,rank,jackpot,bonus);
+  const [a,b]=rolls[0].dice;
+  const lead=hits[0]??rolls[0];
+  effect(g,'radioRoll',u,{source:u,a,b,golden,rank,rolls,sync,jackpot,strike:lead.strike,tx:lead.tx,ty:lead.ty},.85);
   return [];
  }
  function inRadius(g,area,t){return distance(t,area)<=area.radius+Math.max(0,g.collisionRadius(t)-5);}
@@ -330,7 +343,7 @@ function install({FrontGame,TYPES,multiplier}){
   const y=Math.max(0,Math.min(bounds.height,origin.y+dy*ratio+guide.offsetY));
   if(shell.x===x&&shell.y===y)return;
   shell.x=x;shell.y=y;
-  const marker=g.effects.find(e=>e.kind==='radioIncoming'&&e.strike==='missile'&&e.source===shell.source&&e.seq===shell.seq&&e.landAt===shell.landAt);
+  const marker=g.effects.find(e=>e.kind==='radioIncoming'&&e.strike==='missile'&&e.source===shell.source&&e.salvoId===shell.salvoId&&e.seq===shell.seq&&e.landAt===shell.landAt);
   if(marker){marker.x=x;marker.y=y;}
  }
  function updateRadio(g){

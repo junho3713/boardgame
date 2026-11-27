@@ -125,7 +125,7 @@ const TYPES={swordEmpress:{name:'사검의 군주',hp:140800,damage:0,rate:100,r
 };
 const ENEMY_REPLACED_TYPES={rifle:TYPES.rifle,guntruck:TYPES.guntruck,rocket:TYPES.rocket,mortar:TYPES.mortar,tank:TYPES.tank};
 TYPES.rifle={...TYPES.rifle,name:'산탄총병',enemyName:TYPES.rifle.name,icon:'✦',hp:160,damage:22,rate:1,range:210,cost:60,role:'근거리 산탄 피해 최대 +65% · 5갈래 · 4발 후 재장전'};
-TYPES.guntruck={...TYPES.guntruck,name:'통신병',enemyName:TYPES.guntruck.name,icon:'⚄',hp:200,damage:38,rate:2.4,range:620,speed:133,r:13,role:'주사위 한 쌍 · 1–2 더블 기관포탑 / 3–4 소이탄 / 5–6 미사일 · 진화 6-6 전술 핵 · 2성 화력 ×3.4·범위 ×1.15 / 3성 화력 ×10.5·범위 ×1.30'};
+TYPES.guntruck={...TYPES.guntruck,name:'통신병',enemyName:TYPES.guntruck.name,icon:'⚄',hp:200,damage:38,rate:2.4,range:620,speed:133,r:13,role:'1성 주사위 한 쌍 · 2–3성 세 쌍 · 1–2 더블 기관포탑 / 3–4 소이탄 / 5–6 미사일 · 진화 6-6 또는 자연 트리플 더블은 전술 핵'};
 TYPES.rocket={...TYPES.rocket,name:'지뢰 설치병',enemyName:TYPES.rocket.name,rate:5,role:'발밑에 원형 지뢰 1개 매설 · 기본 5초 간격 · 지상 적이 밟으면 반경 88 폭발'};
 TYPES.mortar={...TYPES.mortar,cost:130,rate:3.2};
 TYPES.tank={...TYPES.tank,cost:230,damage:115};

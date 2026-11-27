@@ -64,24 +64,28 @@ function noise(seed, i) {
 function face(c,x,y,n,rim,angle,gold) {
  c.save(); c.translate(x,y); c.rotate(angle);
  c.fillStyle=gold?'#9e611e':'#434543';c.beginPath();c.roundRect(-8,-8,18,20,3.5);c.fill();
- c.fillStyle=gold?'#f7d072':'#fff';c.beginPath();c.roundRect(-9,-9,18,18,3.5);c.fill();
- stroke(c,1.6,gold?'#5a390e':'#191918',()=>c.roundRect(-9,-9,18,18,3.5));
+ c.fillStyle='#fff';c.beginPath();c.roundRect(-9,-9,18,18,3.5);c.fill();
+ stroke(c,1.6,gold?'#c28a2f':'#191918',()=>c.roundRect(-9,-9,18,18,3.5));
  if(rim)stroke(c,2.3,rim,()=>c.roundRect(-10,-10,20,20,4.2));
  for (const [a,b] of pipLayout[n] || []) {
   const r=n===1?2.45:1.7;
-  ellipse(c,a*4.6,b*4.6,r,r,gold?'#3f230d':'#0e0e0e');
+  ellipse(c,a*4.6,b*4.6,r,r,'#0e0e0e');
  }
  c.restore();
 }
-function drawRollPair(c,roll,rank,age,spinning,reduced,duration) {
+function drawRollPair(c,roll,rank,age,spinning,reduced,duration,grouped=false) {
  const popup=(age-duration)/.25, accented=roll.success&&popup>=0&&popup<1;
  const zoom=accented?1+(reduced?.09:.5)*Math.min(1,popup/.22,(1-popup)/.30):1;
  const golden=rank===3;
  const twist=spinning&&!reduced?.34*Math.sin(age*38):0;
  const jump=spinning&&!reduced?2.6*Math.sin(age/duration*Math.PI):0;
  c.save();c.scale(zoom,zoom);
+ const rim=accented?'#ffbf33':null;
+ if(grouped){
+  c.fillStyle='#25241ef0';c.beginPath();c.roundRect(-23,-13,46,26,5);c.fill();
+  stroke(c,accented?2:1.2,rim||(golden?'#c28a2f':'#928b72'),()=>c.roundRect(-23,-13,46,26,5));
+ }
  if(spinning&&!reduced)c.scale(.55+.33*Math.abs(Math.sin(age*35)),1);
- const rim=accented?(roll.strike==='nuke'?'#ff472f':'#ffbf33'):null;
  face(c,-10.6,-jump,spinning?0:roll.dice[0],rim,twist-.035,golden);
  face(c,10.6,-jump*.55,spinning?0:roll.dice[1],rim,-twist+.035,golden);
  c.restore();
@@ -114,20 +118,24 @@ function rolls(c,game,visible) {
  const lanes = [], offset=displayFrames.get(c)?.offset||0, reduced=quiet(game);
  for (const e of rolling.values()) {
   const u=e.source || e, age=e.max-e.t+offset, rank=e.rank||1;
-  const pair=e.rolls?.[0]??{dice:[e.a,e.b],success:e.a===e.b};
-  const roll={tx:e.tx,ty:e.ty,strike:e.strike,...pair};
+  const pairs=e.rolls?.length?e.rolls:[{dice:[e.a,e.b],success:e.a===e.b}];
+  const lead=pairs.find(pair=>pair.success)??pairs[0];
+  const roll={tx:e.tx,ty:e.ty,strike:e.strike,...lead};
+  const grouped=pairs.length>1;
   const duration=rank===3?.16:.23,spinning=age<duration;
   let label='';
   if(roll.strike==='turret')label='기관포탑';
-  if(roll.strike==='nuke')label=e.jackpot?'트리플 잭팟 · 전술 핵':'전술 핵';
+  if(roll.strike==='nuke')label='전술 핵';
   if(roll.strike==='incendiary')label=e.golden?'강화 소이탄':'소이탄';
   if(roll.strike==='missile'){
    const count=roll.missileCount??(e.golden?4:roll.dice[0]-2);
    label=count===6?'강화 미사일 6발':`미사일 ${count}발`;
   }
+  if(e.sync)label='SYNC x2!';
+  if(e.jackpot)label='TRIPLE JACKPOT!';
   const x=u.x*scale;
   let y=(u.y-57)*scale-10;
-  const width=e.jackpot?82:label?48:35,top=label?41:19,bottom=19;
+  const width=grouped?83:label?48:35,top=label?41:19,bottom=19;
   let overlap;
   while((overlap=lanes.find(lane=>Math.abs(lane.x-x)<lane.width+width
    && y+bottom>lane.y-lane.top && y-top<lane.y+lane.bottom))){
@@ -145,13 +153,13 @@ function rolls(c,game,visible) {
    stroke(c,1.2,'#ffeab0',()=>c.arc(lampX,lampY,r+4,-1.5,-.22)); c.restore();
   }
   c.translate(x/scale,y/scale); c.scale(1/scale,1/scale);
-  if(e.jackpot){
-   for(const [index,pair] of e.rolls.entries()){
-    c.save();c.translate((index-1)*52,0);c.scale(.8,.8);
-    drawRollPair(c,pair,rank,age,spinning,reduced,duration);c.restore();
-   }
-  }else drawRollPair(c,roll,rank,age,spinning,reduced,duration);
-  if(label&&!spinning)rollLabel(c,label,roll,u,tr);
+  for(const [index,pair] of pairs.entries()){
+   c.save();
+   if(grouped){c.translate((index-(pairs.length-1)/2)*54,0);c.scale(.73,.73);}
+   drawRollPair(c,pair,rank,age,spinning,reduced,duration,grouped);
+   c.restore();
+  }
+  if(label&&!spinning)rollLabel(c,label,e.sync||e.jackpot?{}:roll,u,tr);
   c.restore();
  }
 }
