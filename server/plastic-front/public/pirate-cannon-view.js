@@ -17,7 +17,7 @@ function anchor(angle,point){
  return {x:x*co-y*si,y:.8*(x*si+y*co)-.6*z};
 }
 const muzzlePoint=[0,-38,34],fusePoint=[0,-1,59];
-function danger(c,target,p,flying,left=null){
+function danger(c,target,p,flying){
  const x=target.x,y=target.y,r=target.radius;const beat=.5+.5*Math.sin(p*TAU*(flying?1:2.5));
  c.save();c.translate(x,y);
  const wash=c.createRadialGradient(0,0,r*.72,0,0,r);wash.addColorStop(0,'#d0392106');wash.addColorStop(1,flying?'#ff854336':'#f7834520');disk(c,0,0,r,wash);
@@ -28,19 +28,15 @@ function danger(c,target,p,flying,left=null){
  }
  ring(c,0,0,8,'#64372ed9',2);ring(c,0,0,8,'#ffe4a8',1.6,-Math.PI/2,-Math.PI/2+p*TAU);
  const space=11+3*(1-p);for(let i=0;i<4;i++){const a=i*Math.PI/2;line(c,Math.cos(a)*space,Math.sin(a)*space,Math.cos(a)*(space+4),Math.sin(a)*(space+4),'#ffcf91',1.5);}
- if(left!==null){
-  c.fillStyle=left<=.4?'#fff0c8':'#ffc58f';c.font='bold 13px sans-serif';c.textAlign='center';
-  c.fillText('앵무새 · '+left.toFixed(1)+'초',0,-r-9);
- }
  c.restore();
 }
 function ground(c,game,visible=()=>true){
  for(const u of game.units||[]){
   const f=u.pirateFuse;if(u.hp<=0||!f||!visible(f))continue;
   const end=f.landAt??f.fireAt;
-  danger(c,f,clamp((game.time-f.startedAt)/Math.max(.01,end-f.startedAt)),false,f.landAt==null?null:Math.max(0,end-game.time));
+  danger(c,f,clamp((game.time-f.startedAt)/Math.max(.01,end-f.startedAt)),false);
  }
- for(const s of game.pirateShells||[])if(visible(s))danger(c,s,clamp((game.time-(s.warningAt??s.startedAt))/Math.max(.01,s.landAt-(s.warningAt??s.startedAt))),true,s.warningAt==null?null:Math.max(0,s.landAt-game.time));
+ for(const s of game.pirateShells||[])if(visible(s))danger(c,s,clamp((game.time-(s.warningAt??s.startedAt))/Math.max(.01,s.landAt-(s.warningAt??s.startedAt))),true);
 }
 function fuse(c,u,time){
  const f=u.pirateFuse;if(!f||u.hp<=0)return;
@@ -158,8 +154,6 @@ function intercept(c,e,p){
   for(let i=0;i<4;i++){const a=i*Math.PI/2;ring(c,e.x,e.y,radius,'#a7f4be',2,a+.09,a+Math.PI/2-.09);}
   c.restore();
  }
- c.globalAlpha*=Math.min(1,(1-p)*4);c.textAlign='center';c.font='bold 15px system-ui';c.lineWidth=3;c.lineJoin='round';
- const y=e.gunY-62-9*Math.min(1,p*2);c.strokeStyle='#204536';c.fillStyle='#dcffc2';c.strokeText('포격 차단!',e.gunX,y);c.fillText('포격 차단!',e.gunX,y);
 }
 function event(c,e){
  if(e.kind!=='pirateMuzzle'&&e.kind!=='pirateImpact'&&e.kind!=='pirateIntercept')return false;

@@ -793,30 +793,6 @@ function drawStackSniperWarning(u){
  circle(ctx,x,y,locked?2.3:1.5,color);
  ctx.restore();
 }
-function drawStackSniperStatus(player){
- if(!game.captainStackHpMode||player.hp<=0)return;
- let soonest;
- for(const u of game.units){
-  const aim=u.sniperAim;
-  if(u.hp>0&&aim?.stack&&aim.point&&aim.target?.id===player.id&&game.time<aim.fireAt&&(!soonest||aim.fireAt<soonest.fireAt))soonest=aim;
- }
- if(!soonest)return;
- const locked=soonest.locked,left=(locked?soonest.fireAt:soonest.lockAt)-game.time;
- const duration=locked?soonest.fireAt-soonest.lockedAt:soonest.lockAt-soonest.started;
- const color=!locked?'#ffcc86':left<=.2?'#ffe4cd':'#ff9e89';
- const p=point(player),w=145,x=clamp(p.x-w/2,8,Math.max(8,W-w-8)),y=clamp(p.y-106,62,Math.max(62,H-138));
- ctx.save();
- rr(ctx,x,y,w,33,6,locked?'#301b23f2':'#30261cf2',color);
- ctx.strokeStyle=color;ctx.lineWidth=1.3;ctx.beginPath();ctx.arc(x+16,y+14,5,0,Math.PI*2);ctx.stroke();
- ctx.beginPath();ctx.moveTo(x+8,y+14);ctx.lineTo(x+12,y+14);ctx.moveTo(x+20,y+14);ctx.lineTo(x+24,y+14);
- ctx.moveTo(x+16,y+6);ctx.lineTo(x+16,y+10);ctx.moveTo(x+16,y+18);ctx.lineTo(x+16,y+22);ctx.stroke();
- text(ctx,locked?'저격선 고정':'저격 조준',x+62,y+18,12,'#fff1df','800');
- text(ctx,(Math.ceil(Math.max(0,left-1e-8)*10)/10).toFixed(1)+'초',x+116,y+18,12,color,'800');
- rr(ctx,x+8,y+25,w-16,3,1.5,'#fbdfc238');
- const fill=(w-16)*clamp(left/Math.max(.01,duration),0,1);
- if(fill>0)rr(ctx,x+8,y+25,fill,3,1.5,color);
- ctx.restore();
-}
 function drawMortarShell(p){
  if(p.barrageShot&&p.source?.hp>0)return;
  if(game.captainStackHpMode&&p.team!==0&&game.isMortarShell(p)&&(p.source?.type==='mortar'||p.source?.defenseKind==='mortarPit')){
@@ -1246,7 +1222,6 @@ function draw(dt){
   }
  }
  window.FrontPirateCannonView?.edgeWarnings?.(ctx,game,W,H,point,reduceMotion.matches);
- drawStackSniperStatus(player);
  swordView.hud(ctx,game,W);
  if(game.time<game.scoutUntil){ctx.strokeStyle='#f0db98';ctx.lineWidth=2;ctx.strokeRect(4,4,W-8,H-8);}
  if(game.bossIntro?.remaining>0){rr(ctx,W/2-156,24,312,64,10,'#211a2ee8','#b795d5');text(ctx,'최종 보스 등장',W/2,48,13,'#d8bde9');text(ctx,game.bossIntro.name,W/2,73,20,'#fff0d3');}
