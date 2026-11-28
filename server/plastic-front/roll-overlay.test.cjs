@@ -12,7 +12,7 @@ const luck=(u,at,kind,resolved=true)=>{
  return u;
 };
 const hotline=at=>({kind:'evolutionLink',team:0,link:'gamblers',at,x:100,y:100,t:.65,max:.65});
-const labels=({results})=>results.map(r=>r.label);
+const keys=({results})=>results.map(r=>r.key);
 
 test('display preference validates the three modes and preserves old settings',()=>{
  const disk=new Map([['plastic-front-display-v1','{"zoom":120,"resolution":"high"}']]);
@@ -25,7 +25,7 @@ test('display preference validates the three modes and preserves old settings',(
  }
 });
 
-test('default keeps 1-star full displays and only promotes compact wins',()=>{
+test('default keeps the first star full and shows the actual compact outcomes',()=>{
  const scout=unit(1,'guntruck',1),miss=unit(2,'guntruck',2),double=unit(3,'guntruck',3);
  const spinning=luck(unit(4,'lucky',2),20.5,'blank',false);
  const glue=luck(unit(5,'lucky',2),20,'glue');
@@ -35,9 +35,9 @@ test('default keeps 1-star full displays and only promotes compact wins',()=>{
  assert.equal(full('default',scout),true);assert.equal(full('default',miss),false);
  assert.equal(full('full',double),true);assert.equal(full('minimal',scout),false);
  const out=plan(game,'default',visible);
- assert.deepEqual(out.spinners,[spinning]);
- assert.deepEqual(labels(out),['4–4  소이탄']);
- assert.deepEqual(plan(game,'full',visible),{results:[],spinners:[]});
+ assert.deepEqual(keys(out),['dice:4','lucky:glue']);
+ assert.equal(out.results[1].slots[0].kind,'glue');
+ assert.deepEqual(plan(game,'full',visible),{results:[]});
 });
 
 test('two ordinary calls are shared across families, with critical calls painted last',()=>{
@@ -48,9 +48,9 @@ test('two ordinary calls are shared across families, with critical calls painted
   hotline(9.96)
  ]};
  const result=plan(game,'default',visible);
- assert.deepEqual(labels(result),['1–1  기관포탑','777','6–6  전술 핵','행운의 핫라인']);
+ assert.deepEqual(keys(result),['dice:1','lucky:missiles','dice:6','hotline']);
  assert.deepEqual(result.results.map(r=>r.priority),[false,false,true,true]);
- assert.deepEqual(labels(plan(game,'minimal',visible)),['6–6  전술 핵','행운의 핫라인']);
+ assert.deepEqual(keys(plan(game,'minimal',visible)),['dice:6','hotline']);
 });
 
 test('an identical result within half a second is suppressed even after the first expires',()=>{
@@ -77,4 +77,36 @@ test('three admitted results reentering the viewport never exceed two normal cal
  game.time+=.03;
  assert.equal(plan(game,'default',u=>u.id===3).results.length,1);
  assert.equal(plan(game,'default',visible).results.length,2);
+});
+
+
+test('each blank gets one X and a new winning result takes its place before expiration',()=>{
+ const dice=unit(1,'guntruck',2),jeep=unit(2,'lucky',3),win=unit(3,'guntruck',2);
+ const game={time:10,units:[luck(jeep,9.98,'blank')],effects:[radio(dice,9.74,2,5)]};
+ let out=plan(game,'default',visible);
+ assert.deepEqual(keys(out),['dice:blank','lucky:']);
+ assert.ok(out.results.every(row=>row.miss));
+ game.time=10.05;game.effects.push(radio(win,9.82,6,6,'missile'));
+ out=plan(game,'default',visible);
+ assert.deepEqual(keys(out),['dice:6','dice:blank']);
+ assert.equal(out.results[0].face,6);
+ game.time=10.34;
+ assert.deepEqual(keys(plan(game,'default',visible)),['dice:6']);
+});
+
+test('the compact roulette keeps the original reel order and marks blanks beside wins',()=>{
+ const jeep=unit(1,'lucky',3);
+ jeep.luckyChannels=['spray','blank','mine'].map(kind=>({roll:{kind,startedAt:9,endsAt:10,resolved:true}}));
+ const game={time:10,units:[jeep],effects:[]};
+ const [row]=plan(game,'default',visible).results;
+ assert.deepEqual(row.slots.map(slot=>slot.kind??'blank'),['spray','blank','mine']);assert.equal(row.miss,false);
+ jeep.luckyChannels[1].roll={kind:'mine',startedAt:9,endsAt:10,resolved:true};
+ assert.deepEqual(plan(game,'default',visible).results[0].slots.map(slot=>slot.kind),['spray','mine','mine']);
+});
+
+test('the compact radio tile chooses the strongest double and gives nuclear badges priority',()=>{
+ const e=radio(unit(1,'guntruck',3),8,1,1,'turret');
+ e.rolls=[{dice:[1,1],success:true,strike:'turret'},{dice:[5,5],success:true,strike:'missile'},{dice:[6,6],success:true,strike:'nuke'}];
+ const [row]=plan({time:8.3,units:[],effects:[e]},'default',visible).results;
+ assert.equal(row.face,6);assert.equal(row.priority,true);
 });

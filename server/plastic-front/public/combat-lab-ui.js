@@ -81,7 +81,6 @@
   }
   fx.drawParticles(c);
   const rollFrame=rolls.plan(game,mode,visible);
-  rolls.drawSpinners(c,game,rollFrame.spinners);
   for(const u of [...game.units].sort((a,b)=>a.y-b.y||a.id-b.id)){
    if(FrontHitFeedback.airborne(u,game.time))continue;
    unit(u);if(u.type==='lucky'&&rolls.full(mode,u))fx.luckyReels(c,u,game);

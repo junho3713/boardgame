@@ -205,28 +205,38 @@ class FrontEffects{
   if(!visible)return;
   const y=u.y-135;
   ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';
-  for(let i=0;i<3;i++){
-   const x=u.x+(i-1)*50,slot=slots[i],special=slot?.kind==='bossKiller'&&!slot.spin;
-   ctx.save();
-   if(slot?.blank)ctx.globalAlpha*=clamp(1-slot.age/.49,.22,1);
-   ctx.fillStyle=slot?.glow>.2?'#526552':'#1d3027ef';
-   ctx.strokeStyle=special?'#f8d56e':slot?.glow>.18?'#e5f1d3':'#788f71';
-   ctx.lineWidth=special?2:1;
-   ctx.beginPath();ctx.roundRect(x-23,y-15,46,30,5);ctx.fill();ctx.stroke();
-   if(slot?.kind){
-    if(slot.spin){ctx.globalAlpha*=.72;this.luckySymbol(ctx,slot.kind,x,y,21);}
-    else{
-     this.luckySymbol(ctx,slot.kind,x,y-5,16);
-     ctx.fillStyle=special?'#ffe8ab':'#f4eedc';ctx.font='bold 10px sans-serif';
-     ctx.fillText(luckyResultNames[slot.kind],x,y+8.5);
-     if(slot.count>1){
-      ctx.fillStyle='#13251e';ctx.beginPath();ctx.roundRect(x+8,y-13,14,10,3);ctx.fill();
-      ctx.fillStyle='#fff4ba';ctx.font='bold 8px sans-serif';ctx.fillText('×'+slot.count,x+15,y-8);
-     }
+  for(let i=0;i<3;i++)this.luckyResultTile(ctx,slots[i],u.x+(i-1)*50,y);
+  ctx.restore();
+ }
+ rollMiss(ctx,x,y){
+  ctx.save();ctx.translate(x,y);ctx.lineCap='round';ctx.beginPath();
+  ctx.moveTo(-4.6,-4.6);ctx.lineTo(4.6,4.6);ctx.moveTo(4.6,-4.6);ctx.lineTo(-4.6,4.6);
+  ctx.strokeStyle='#942e32';ctx.lineWidth=3.8;ctx.stroke();
+  ctx.strokeStyle='#e54442';ctx.lineWidth=2.65;ctx.stroke();ctx.restore();
+ }
+ luckyResultTile(ctx,slot,x,y,compact=false){
+  const special=slot?.kind==='bossKiller'&&!slot.spin,w=compact?24:46,h=compact?24:30;
+  ctx.save();
+  if(slot?.blank&&!compact)ctx.globalAlpha*=clamp(1-slot.age/.49,.22,1);
+  ctx.fillStyle=slot?.glow>.2?'#526552':'#1d3027ef';
+  ctx.strokeStyle=special?'#f8d56e':slot?.glow>.18?'#e5f1d3':'#788f71';
+  ctx.lineWidth=special?2:1;
+  ctx.beginPath();ctx.roundRect(x-w/2,y-h/2,w,h,5);ctx.fill();ctx.stroke();
+  if(compact){
+   if(slot?.kind)this.luckySymbol(ctx,slot.kind,x,y,19);
+   else if(slot?.blank)this.rollMiss(ctx,x,y);
+  }else if(slot?.kind){
+   if(slot.spin){ctx.globalAlpha*=.72;this.luckySymbol(ctx,slot.kind,x,y,21);}
+   else{
+    this.luckySymbol(ctx,slot.kind,x,y-5,16);
+    ctx.fillStyle=special?'#ffe8ab':'#f4eedc';ctx.font='bold 10px sans-serif';
+    ctx.fillText(luckyResultNames[slot.kind],x,y+8.5);
+    if(slot.count>1){
+     ctx.fillStyle='#13251e';ctx.beginPath();ctx.roundRect(x+8,y-13,14,10,3);ctx.fill();
+     ctx.fillStyle='#fff4ba';ctx.font='bold 8px sans-serif';ctx.fillText('×'+slot.count,x+15,y-8);
     }
-   }else{ctx.fillStyle='#93a394';ctx.font='bold 14px sans-serif';ctx.fillText('·',x,y);}
-   ctx.restore();
-  }
+   }
+  }else{ctx.fillStyle='#93a394';ctx.font='bold 14px sans-serif';ctx.fillText('·',x,y);}
   ctx.restore();
  }
  luckyReels(ctx,u,game,single=false){

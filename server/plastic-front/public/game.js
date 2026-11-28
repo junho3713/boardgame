@@ -1263,7 +1263,6 @@ function draw(dt){
  }
  window.FrontRosterArt?.field(ctx,game,fxVisible,false);battleFx.drawLuckySprays(ctx,game,fxVisible);
  drawProjectiles(false,fxVisible);drawSniperLines(false);battleFx.drawParticles(ctx,fxVisible);
- rollOverlay.drawSpinners(ctx,game,rollFrame.spinners);
  if(game.isDesktopDefense()){
   const view=window.FrontDesktop,visibleTroops=game.units.filter(u=>u.hp>0),props=game.obstacles.filter(o=>view.visible(o,game.camera,halfW,halfH)),entities=[...game.units.filter(u=>!types[u.type].flying).map(u=>({depth:u.y,u})),...props.map(o=>({depth:view.depth(o),o}))].sort((a,b)=>a.depth-b.depth);
   for(const e of entities)if(e.u)drawUnit(e.u);else{ctx.save();ctx.globalAlpha=view.opacity(e.o,visibleTroops);view.obstacle(ctx,e.o,game.time);ctx.restore();}
