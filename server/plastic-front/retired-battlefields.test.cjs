@@ -13,7 +13,7 @@ test('retired map URLs lead to the final assault and the picker only lists suppo
  }
  const menu=fs.readFileSync(__dirname+'/public/index.html','utf8');
  const maps=[...menu.matchAll(/name="battlefield" value="([^"]+)"/g)].map(match=>match[1]);
- assert.deepEqual(maps,['livingroom-star','backyard','desktop','livingroom-assault','livingroom']);
+ assert.deepEqual(maps,['livingroom-assault','livingroom-star','backyard','desktop','livingroom']);
  for(const file of ['bedroom-star.js','pixel-room.js','pixel-infantry.js','pixel-promotion.css','assets/bedroom','assets/pixel-room']){
   assert.equal(fs.existsSync(__dirname+'/public/'+file),false,file);
  }

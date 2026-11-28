@@ -121,15 +121,21 @@
         <section class="mission-preview" aria-labelledby="missionMapTitle">
           <img id="missionMapImage" src="assets/previews/start-livingroom-v20261108.webp" alt="">
           <div class="mission-brief" aria-live="polite" aria-atomic="true">
-            <p id="missionMapFacts">혼합 공세 · 약 20분</p>
-            <h3 id="missionMapTitle">거실</h3>
-            <p id="missionMapGoal">포탈을 닫아 증원을 줄이고, 보스 연전을 돌파하세요.</p>
+            <p id="missionMapFacts">포탈 돌파 · 보스 러시</p>
+            <h3 id="missionMapTitle">거실 · 최후의 총공세</h3>
+            <p id="missionMapGoal">최전방 포탈을 부숴 운명의 별을 얻고, 3분간의 총공세를 버텨 사검의 군주를 쓰러뜨리세요.</p>
           </div>
         </section>
         <fieldset class="battlefield-picker">
           <legend>전장 선택</legend>
           <p id="missionMapLock" hidden>이 훈련은 뒷마당에서 진행돼요.</p>
           <div class="battlefield-options">
+          <label class="battlefield-option" data-brief="최전방 포탈을 부숴 운명의 별을 얻고, 3분간의 총공세를 버텨 사검의 군주를 쓰러뜨리세요.">
+            <input type="radio" name="battlefield" value="livingroom-assault" checked>
+            <img src="assets/previews/start-livingroom-v20261108.webp" alt="">
+            <span><b>거실 · 최후의 총공세</b><small>포탈 돌파 · 보스 러시</small></span>
+            <i aria-hidden="true">✓</i>
+          </label>
           <label class="battlefield-option" data-brief="포탈을 닫아 증원을 줄이고, 보스 연전을 돌파하세요.">
             <input type="radio" name="battlefield" value="livingroom-star">
             <img src="assets/previews/start-livingroom-v20261108.webp" alt="">
@@ -148,12 +154,6 @@
             <span><b>책상 디펜스</b><small>북쪽 공세 · 20분</small></span>
             <i aria-hidden="true">✓</i>
           </label>
-          <label class="battlefield-option" data-brief="최전방 포탈을 부숴 운명의 별을 얻고, 3분간의 총공세를 버텨 사검의 군주를 쓰러뜨리세요.">
-            <input type="radio" name="battlefield" value="livingroom-assault" checked>
-            <img src="assets/previews/start-livingroom-v20261108.webp" alt="">
-            <span><b>거실 · 최후의 총공세</b><small>포탈 돌파 · 보스 러시</small></span>
-            <i aria-hidden="true">✓</i>
-          </label>
           <label class="battlefield-option" data-brief="클래식 규칙으로 거실을 가로질러 최종 보스에 도전하세요.">
             <input type="radio" name="battlefield" value="livingroom">
             <img src="assets/previews/start-livingroom-v20261108.webp" alt="">
@@ -165,7 +165,7 @@
       </div>
       <div class="mission-setup">
         <fieldset class="commander-picker"><legend>대장 선택</legend><div class="commander-options"><label class="commander-option"><input type="radio" name="commander" value="sarge" checked><img src="assets/commanders/sarge-portrait.webp?v=1" alt="방탄모를 쓴 기본 대장"><span><b>기본 대장</b><small>플라스틱 분대 지휘관</small></span><i>✓</i></label><label class="commander-option"><input type="radio" name="commander" value="shino"><img src="assets/commanders/shino-portrait.webp?v=3" alt="흰 머리와 붉은 꽃 장식의 시노"><span><b>시노</b><small>권총을 든 새 지휘관</small></span><i>✓</i></label><label class="commander-option"><input type="radio" name="commander" value="blaze"><img src="assets/commanders/blaze-portrait.webp?v=1" alt="방탄모와 쌍연료통, 화염방사기를 든 플라스틱 대장"><span><b>화염방사 대장</b><small>근거리 광역 · 강력한 연속 화염</small></span><i>✓</i></label><label class="commander-option"><input type="radio" name="commander" value="shion"><img src="assets/commanders/shion-portrait-v144.webp" alt="은빛 분홍 머리와 검붉은 검을 든 검사 대장 시온"><span><b>시온</b><small>근접 베기 · 3타 광역 강타</small></span><i>✓</i></label></div><p>광전사: 실제 가한 피해의 10% 회복(궁극기 포함) · 잃은 체력 5%마다 공격속도 +2%<br>시온: HP 400 / 공격력 90 / 공격 간격 0.75초 / 기본 사거리 135 · 전방 최대 3기<br>3타는 사거리 180 · 전방 150° · 최대 6기에 피해 2배<br>Lv.10 홍련 회전베기: 4초간 360° / 범위 170 / 재사용 60초 · 모든 병과 강화 30% 적용<br>기본 대장·시노 능력치 동일 · 화염방사 대장: HP 400 / 기본 초당 피해 120 / 사거리 250 / 전방 50°<br>앞줄 병력과 같은 선상 · 적에게 직접 조준받음<br>기관총병 강화 50% + 지뢰 설치병 강화 50% 적용<br>화염은 경장갑 ×1 · 장갑 ×0.65 · Lv.10 궁극기: 4초간 지옥불 분사 / 재사용 60초<br>작전 Lv.10마다 대장 최대 체력 +20%·방어력 +6 누적 · 기존 병과 강화와 함께 적용<br>새 출격에 적용 · 이어하기는 저장된 대장 사용</p></fieldset>
-        <details class="mission-customize">
+        <details class="mission-customize" open>
           <summary>병과·대장 외형</summary>
           <fieldset class="unit-skin-picker commander-picker"><legend>병과 스킨 · 저격병</legend><div class="commander-options"><label class="commander-option"><input type="radio" name="sniperSkin" value="classic" checked><img src="assets/skins/sniper-classic-portrait.webp?v=2" alt="위장망과 저격총을 갖춘 기본 저격병"><span><b>기본 저격병</b><small>플라스틱 위장 병사</small></span><i>✓</i></label><label class="commander-option"><input type="radio" name="sniperSkin" value="kayla"><img src="assets/skins/kayla-portrait.webp?v=1" alt="검은 머리와 위장 망토를 두른 카이렌"><span><b>카이렌</b><small>입체 SD · 저격병 스킨</small></span><i>✓</i></label></div><p>아군 저격병 전체·추가 지원에 적용 · 해금·비용·능력치 동일<br>새 출격에 적용 · 이어하기는 저장된 스킨 사용</p></fieldset>
           <fieldset id="medicSkinPicker" class="unit-skin-picker commander-picker"><legend>병과 스킨 · 의무병</legend><div class="commander-options"><label class="commander-option"><input type="radio" name="medicSkin" value="classic" checked><img src="assets/rina/classic-portrait.webp" alt="기본 플라스틱 의무병" class="medic-classic-preview"><span><b>기본 의무병</b><small>플라스틱 야전 병사</small></span><i>✓</i></label><label class="commander-option"><input type="radio" name="medicSkin" value="rina"><img src="assets/rina/v2-portrait.webp?v=172" alt="금발 단발과 민트색 치료 장비를 갖춘 의무병 리나"><span><b>리나</b><small>8방향 · 보행 8프레임 · 치료·피격·쓰러짐</small></span><i>✓</i></label></div><p>아군 의무병·야전 의무관·추가 지원에 적용 · 치료량·비용·능력치 동일<br>새 출격에 적용 · 이어하기는 저장된 스킨 사용</p></fieldset>
