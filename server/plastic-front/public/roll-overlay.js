@@ -95,10 +95,8 @@ function fallout(c){
  c.beginPath();c.arc(0,0,1,0,Math.PI*2);c.fill();c.restore();
 }
 function diceBadge(c,row,fx){
- const face=row.face??0;
- root.FrontRadioArt.settledPair(c,[face,face],row.rank,!row.miss);
- if(row.miss)fx.rollMiss(c,10.6,0);
- if(row.priority){c.translate(15,0);fallout(c);}
+ root.FrontRadioArt.settledStack(c,row.face??0,row.rank,()=>fx.rollMiss(c,0,0));
+ if(row.priority){c.translate(7,0);fallout(c);}
 }
 function hotlineBadge(c){
  plate(c,-12,-12,24,24,'#3c3526','#e8bd65');
@@ -121,8 +119,8 @@ function draw(c,game,results,fx){
    const labels=root.FrontUnitLabels,name=labels.evolution(game,u);
    rise=u.y-(name?.y??labels.stackStarY(u))+21*ratio/Math.max(.1,tr.d);
   }
-  const w=row.kind==='lucky'?146*worldScale:row.kind==='dice'?row.priority?61:48:28;
-  const h=row.kind==='lucky'?30*worldScale:row.priority?33:28;
+  const w=row.kind==='lucky'?146*worldScale:row.kind==='dice'?row.priority?46:34:28;
+  const h=row.kind==='lucky'?30*worldScale:34;
   const x=Math.min(width-w/2-3,Math.max(w/2+3,(tr.a*u.x+tr.e)/ratio));
   const top=Math.min(56,height*.18)+h/2,bottom=Math.max(top,height-h/2-8);
   const anchor=Math.min(bottom,Math.max(top,(tr.d*(u.y-rise)+tr.f)/ratio));

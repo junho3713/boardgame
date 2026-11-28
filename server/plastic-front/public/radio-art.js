@@ -61,16 +61,13 @@ function noise(seed, i) {
  let h = Math.imul(seed + Math.imul(i, 1597334677), 2246822519);
  return ((h ^ (h >>> 13)) >>> 0) / 4294967296;
 }
-function face(c,x,y,n,rim,angle,gold) {
+function face(c,x,y,n,rim,angle,gold,pipRadius=n===1?2.45:1.7) {
  c.save(); c.translate(x,y); c.rotate(angle);
  c.fillStyle=gold?'#9e611e':'#434543';c.beginPath();c.roundRect(-8,-8,18,20,3.5);c.fill();
  c.fillStyle='#fff';c.beginPath();c.roundRect(-9,-9,18,18,3.5);c.fill();
  stroke(c,1.6,gold?'#c28a2f':'#191918',()=>c.roundRect(-9,-9,18,18,3.5));
  if(rim)stroke(c,2.3,rim,()=>c.roundRect(-10,-10,20,20,4.2));
- for (const [a,b] of pipLayout[n] || []) {
-  const r=n===1?2.45:1.7;
-  ellipse(c,a*4.6,b*4.6,r,r,'#0e0e0e');
- }
+ for (const [a,b] of pipLayout[n] || []) ellipse(c,a*4.6,b*4.6,pipRadius,pipRadius,'#0e0e0e');
  c.restore();
 }
 const pairGap=2,pairTrayWidth=46;
@@ -95,8 +92,18 @@ function drawRollPair(c,pose,rank,age,spinning,reduced,duration,grouped) {
  face(c,10.6,-jump*.55,spinning?0:roll.dice[1],rim,-twist+.035,golden);
  c.restore();
 }
-function settledPair(c,dice,rank,success){
- drawRollPair(c,{roll:{dice},accented:success,zoom:1},rank,0,false,true,1,true);
+function settledStack(c,n,rank,drawMiss){
+ c.save();
+ c.translate(3.5,-3.5);c.scale(1.22,1.22);
+ face(c,0,0,0,null,0,rank===3);
+ c.restore();
+ c.save();
+ c.translate(-3.5,3.5);
+ c.save();c.scale(1.22,1.22);
+ face(c,0,0,n,null,0,rank===3,1.8);
+ c.restore();
+ if(!n)drawMiss();
+ c.restore();
 }
 function rollLabel(c,label,roll,u,tr,top) {
  c.font='bold 12px sans-serif';
@@ -745,6 +752,6 @@ function event(c,e,fx) {
  if(e.kind==='radioIncoming')incoming(c,e,fx);else impact(c,e,p,fx,view?.reduced??quiet());
  c.restore();return true;
 }
-root.FrontRadioArt={event,rolls,settledPair,ground,turrets,flyovers};
+root.FrontRadioArt={event,rolls,settledStack,ground,turrets,flyovers};
 })(typeof window==='undefined'?globalThis:window);
 

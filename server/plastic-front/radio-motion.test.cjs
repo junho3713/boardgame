@@ -13,7 +13,7 @@ function renderer(coop=false){
  const window={Image:Atlas,matchMedia:()=>({matches:true}),performance:{now:()=>now},
   FrontCoopClient:{active:coop},FrontRadioAirspace:{syncOrigins(){},scorch(){},aircraft(_ctx,e){planes.push(e.strike);},marker(_ctx,e){markers.push(e.strike);},shadow(){}}};
  vm.runInNewContext(fs.readFileSync(require.resolve('./public/radio-art.js'),'utf8'),{window});
- const cells=[],faces=[],labels=[],scales=[],paints=[],layers=[],stack=[],groups=[];
+ const cells=[],faces=[],labels=[],scales=[],paints=[],layers=[],stack=[],groups=[],pips=[];
  function addColorStop(offset,color){this.stops.push([offset,color]);}
  const makeGradient=radius=>({radius,stops:[],addColorStop});
  const c=new Proxy({
@@ -23,13 +23,17 @@ function renderer(coop=false){
   save(){stack.push({globalAlpha:this.globalAlpha,globalCompositeOperation:this.globalCompositeOperation,position:this.position,stretch:this.stretch});},
   restore(){Object.assign(this,stack.pop());},
   translate(x,y){this.position=[this.position[0]+x,this.position[1]+y];},
+  ellipse(x,y,radiusX,radiusY){this.ellipsePath={x,y,radiusX,radiusY};},
   canvas:{width:800,height:600,clientWidth:800},getTransform:()=>({a:1,b:0,c:0,d:1,e:0,f:0}),
   fill(){
    paints.push(this.fillStyle);
    if(this.fillStyle==='#25241ef0')groups.push({x:this.position[0],zoom:this.stretch[0]});
    if(this.fillStyle?.stops)layers.push({gradient:this.fillStyle,alpha:this.globalAlpha,blend:this.globalCompositeOperation,position:this.position,stretch:this.stretch});
    if(['#434543','#9e611e'].includes(this.fillStyle))faces.push(0);
-   if(['#0e0e0e','#3f230d'].includes(this.fillStyle))faces[faces.length-1]++;
+   if(this.fillStyle==='#0e0e0e'){
+    faces[faces.length-1]++;
+    pips.push({position:this.position,...this.ellipsePath});
+   }
   },
   measureText:label=>({width:label.length*6}),fillText(label){labels.push(label);},scale(x,y){scales.push(x);this.stretch=[x,y];},stroke(){paints.push(this.strokeStyle);},
   drawImage(img,sx,sy,sw,sh){if(sw===192)cells.push((sy/192%4)*6+sx/192);}
@@ -40,9 +44,11 @@ function renderer(coop=false){
    faces.length=0;labels.length=0;scales.length=0;paints.length=0;groups.length=0;
    game.effects=[e].flat().map(roll=>({kind:'radioRoll',x:0,y:0,max:.85,t:.85-age,...roll}));
    window.FrontRadioArt.rolls(c,game,()=>true);return [...faces];},
-  settled(dice,rank,success){
-   faces.length=0;paints.length=0;groups.length=0;
-   window.FrontRadioArt.settledPair(c,dice,rank,success);return [...faces];
+  settled(n,rank){
+   faces.length=0;paints.length=0;groups.length=0;pips.length=0;
+   const crosses=[];
+   window.FrontRadioArt.settledStack(c,n,rank,()=>crosses.push(c.position));
+   return {faces:[...faces],pips:[...pips],crosses};
   },
   impact(at=0,strike='nuke'){return window.FrontRadioArt.event(c,{kind:'radioImpact',strike,at,x:0,y:0,radius:225,t:1,max:1});}};
 }
@@ -57,13 +63,20 @@ test('rolling dice only show pips for the settled outcome, including misses that
   }
  }
 });
-test('the compact result paints the original pair, palette, pips and tray',()=>{
+test('the compact result puts an even pip grid or a red cross on the front die only',()=>{
  const r=renderer();
- assert.deepEqual(r.settled([4,4],2,true),[4,4]);
+ const {faces,pips,crosses}=r.settled(6,2);
+ assert.deepEqual(faces,[0,6]);
+ assert.deepEqual(pips.map(({x,y})=>[x,y]),[
+  [-4.6,-4.6],[-4.6,0],[-4.6,4.6],[4.6,-4.6],[4.6,0],[4.6,4.6]
+ ]);
+ assert.ok(pips.every(pip=>pip.position.join() === '-3.5,3.5'&&pip.radiusX===1.8&&pip.radiusY===1.8));
+ assert.deepEqual(crosses,[]);
  assert.equal(r.paints.filter(p=>p==='#fff').length,2);
  assert.equal(r.paints.filter(p=>p==='#434543').length,2);
- assert.deepEqual(r.groups,[{x:0,zoom:1}]);
- assert.deepEqual(r.settled([0,0],3,false),[0,0]);
+ assert.deepEqual(r.groups,[]);
+ assert.deepEqual(r.settled(1,2).pips,[{position:[-3.5,3.5],x:0,y:0,radiusX:1.8,radiusY:1.8}]);
+ assert.deepEqual(r.settled(0,3),{faces:[0,0],pips:[],crosses:[[-3.5,3.5]]});
  assert.equal(r.paints.filter(p=>p==='#9e611e').length,2);
 });
 test('ordinary ranked results draw three pairs and only matched pairs pop',()=>{
