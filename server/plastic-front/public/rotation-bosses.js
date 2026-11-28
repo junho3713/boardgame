@@ -4,7 +4,52 @@
 'use strict';
 const TAU=Math.PI*2,dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const bearing=(a,b)=>Math.atan2(b.y-a.y,b.x-a.x);
-const WATER={period:310,wet:216,width:28,speed:850,bombRadius:52};
+const WATER={period:310,wet:216,width:28,speed:850,bombRadius:52,motion:tideMotion};
+// Integrating the speed between keys gives the position of the same crest
+// used by the renderer and the swept hit test. Impact is the fourth key.
+const tideKeys=[{time:0,distance:0,speed:WATER.speed}];
+for(const [duration,speed] of [[.22,295],[.98,145],[.42,690],[.48,WATER.speed]]){
+ const prev=tideKeys[tideKeys.length-1];
+ tideKeys.push({time:prev.time+duration,distance:prev.distance+duration*(prev.speed+speed)/2,speed});
+}
+const [approach,riseStart,fallStart,landing,washEnd]=tideKeys;
+function tideTime(distance){
+ if(distance<=0)return distance/approach.speed;
+ for(let i=1;i<tideKeys.length;i++){
+  const end=tideKeys[i],start=tideKeys[i-1];
+  if(distance>end.distance)continue;
+  const delta=distance-start.distance,accel=(end.speed-start.speed)/(end.time-start.time);
+  return start.time+2*delta/(start.speed+Math.sqrt(start.speed**2+2*accel*delta));
+ }
+ return washEnd.time+(distance-washEnd.distance)/washEnd.speed;
+}
+function tideDistance(time){
+ if(time<=0)return time*approach.speed;
+ for(let i=1;i<tideKeys.length;i++){
+  const end=tideKeys[i],start=tideKeys[i-1];
+  if(time>end.time)continue;
+  const dt=time-start.time,accel=(end.speed-start.speed)/(end.time-start.time);
+  return start.distance+dt*(start.speed+.5*accel*dt);
+ }
+ return washEnd.distance+(time-washEnd.time)*washEnd.speed;
+}
+const unitInterval=x=>Math.max(0,Math.min(1,x)),ease=x=>x*x*(3-2*x);
+const tideClockDistance=h=>(h.front-h.breakAt)*h.sign+landing.distance;
+function tideMotion(h){
+ // Previously saved casts finish their original travelling animation.
+ if(!Number.isFinite(h.breakAt))return {rise:1,fall:0,wash:0,height:1,impact:0};
+ const time=tideTime(tideClockDistance(h));
+ const rise=unitInterval((time-riseStart.time)/(fallStart.time-riseStart.time));
+ const fall=unitInterval((time-fallStart.time)/(landing.time-fallStart.time));
+ const wash=unitInterval((time-landing.time)/(washEnd.time-landing.time));
+ return {rise,fall,wash,height:ease(rise)*(1-ease(fall)),impact:ease(unitInterval((fall-.55)/.45))*(1-ease(wash))};
+}
+function advanceTide(h,dt){
+ if(dt<=0)return;
+ if(!Number.isFinite(h.breakAt)){h.front+=h.sign*WATER.speed*dt;return;}
+ const distance=tideClockDistance(h);
+ h.front+=h.sign*(tideDistance(tideTime(distance)+dt)-distance);
+}
 const hazards=g=>g.roomCampaign.rotation.hazards??=[];
 function fx(g,kind,p,life,extra={}){
  g.effects.push({kind,x:p.x,y:p.y,seed:p.id||0,t:life,max:life,...extra});
@@ -40,6 +85,7 @@ function place(g,center,angle,radius,bodyRadius=24){
 }
 function waterLane(cross,offset){return ((cross-offset)%WATER.period+WATER.period)%WATER.period<WATER.wet;}
 function startWave(g,u,again,previousDirection){
+ const captain=g.nearestStackCaptain(u);if(!captain)return;
  // Open from the north. Change axis every cast (including the enraged follow-up)
  // and use the opposite edge the next time that axis is visited.
  const clock=u.krakenClock,last=previousDirection??clock.lastTide;
@@ -50,8 +96,11 @@ function startWave(g,u,again,previousDirection){
  clock.lastTide=direction;
  if(direction%2===0)clock.lastHorizontal=direction;else clock.lastVertical=direction;
  const b=g.bounds(),horizontal=direction%2===0,sign=direction<2?1:-1,length=horizontal?b.width:b.height;
+ const breakAt=(horizontal?captain.x:captain.y)-sign*WATER.width,edge=sign>0?0:length;
+ // Even at the map edge the swell needs enough run-up to finish rising.
+ const front=edge+sign*Math.min(0,(breakAt-edge)*sign+riseStart.distance-landing.distance);
  hazards(g).push({kind:'tide',source:u,direction,horizontal,sign,length,offset:g.random()*WATER.period,
-  start:g.time+1.2,front:sign===1?0:length,again,hit:[]});
+  start:g.time+1.2,front,breakAt,again,hit:[]});
 }
 function bombs(g,u,c){
  const count=u.hp<=u.maxHp*.5?5:4,angle=g.random()*TAU;
@@ -211,7 +260,7 @@ function install({FrontGame}){
    if(h.kind==='windmill'||h.kind==='star')keep=flyStar(this,h,dt);
    else if(h.kind==='tide'&&this.time>=h.start){
     const old=h.front;
-    h.front+=WATER.speed*h.sign*Math.min(dt,this.time-h.start);
+    advanceTide(h,Math.min(dt,this.time-h.start));
     for(const t of validVictims(this,u)){
      const along=h.horizontal?t.x:t.y,cross=h.horizontal?t.y:t.x;
      if(h.hit.includes(t.id)||!waterLane(cross,h.offset)||along<Math.min(old,h.front)-WATER.width||along>Math.max(old,h.front)+WATER.width)continue;

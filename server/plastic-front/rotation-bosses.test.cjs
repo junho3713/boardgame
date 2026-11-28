@@ -137,6 +137,45 @@ test('kraken rage chains from a different edge, casts five bombs and accelerates
  wave.front=wave.sign>0?wave.length:0;g.time=wave.start+.1;g.updateRotationHazards(.1);
  const next=g.roomCampaign.rotation.hazards.find(h=>h.kind==='tide');assert.notEqual(next.horizontal,wave.horizontal);assert.equal(next.again,false);assert.ok(Math.abs(next.start-g.time-1.2)<1e-7);
 });
+test('the swell rises, breaks on the locked captain line, then surges across it once',()=>{
+ const g=arena(),b=spawn(g,'kraken'),c=g.commander(0),water=globalThis.FrontTideRules;
+ c.y=520;g.updateKraken(b,.05,g.stats(b));
+ for(let i=0;i<2;i++){g.time=b.krakenClock.water;g.updateKraken(b,.05,g.stats(b));}
+ const plan=g.roomCampaign.rotation,h=plan.hazards.find(v=>v.kind==='tide');
+ plan.hazards=[h];const station=c.y;
+ assert.ok(Math.abs(h.start-g.time-1.2)<1e-8);
+ assert.equal(h.breakAt,station-water.width);
+ c.y+=90;g.updateKraken(b,.02,g.stats(b));
+ assert.equal(h.breakAt,station-water.width);
+ c.y=station;h.offset=c.x-50;
+ const saved=copy(g),savedTide=saved.roomCampaign.rotation.hazards.find(v=>v.kind==='tide');
+ const tick=(game,end,step)=>{
+  while(game.time<end-1e-9){const dt=Math.min(step,end-game.time);game.time+=dt;game.updateRotationHazards(dt);}
+ };
+ const start=h.start;tick(g,start,.073);assert.equal(h.front,0);
+ // Track all phases at native speed and capture the first instant of contact.
+ const hp=c.hp;let riseAt,crestAt,hitAt,hitHp;
+ for(let i=1;i<=440;i++){
+  tick(g,start+i/180,1/180);
+  const pose=water.motion(h);
+  if(riseAt===undefined&&pose.rise>0)riseAt=g.time;
+  if(crestAt===undefined&&pose.fall>0){crestAt=g.time;assert.ok(pose.height>.998);}
+  if(hitAt===undefined&&c.hp<hp){
+   hitAt=g.time;hitHp=c.hp;
+   assert.ok(pose.fall>.999&&pose.impact>.999&&pose.height<.001);
+   assert.ok(Math.abs(h.front+water.width-station)<4);
+   assert.ok(c.toyKnockback.dy>0);
+  }
+ }
+ assert.ok(Math.abs((crestAt-riseAt)-.98)<.012);
+ assert.ok(Math.abs((hitAt-crestAt)-.42)<.012);
+ assert.equal(c.hp,hitHp);assert.deepEqual(h.hit,[c.id]);
+ assert.equal(water.motion(h).wash,1);
+ tick(saved,g.time,.173);
+ assert.equal(savedTide.breakAt,h.breakAt);
+ assert.ok(Math.abs(savedTide.front-h.front)<1e-6);
+ assert.deepEqual(savedTide.hit,h.hit);
+});
 test('boomerang pauses for 1.3 seconds, turns to its moving owner and can hit again on return',()=>{
  const g=arena(),b=spawn(g,'ninjaAssassin'),c=g.commander(0);Object.assign(b,{x:c.x-120,y:c.y});
  const h={kind:'windmill',source:b,x:c.x-8,y:c.y,angle:0,stage:'out',left:50,hit:[]};

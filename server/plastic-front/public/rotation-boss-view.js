@@ -30,7 +30,7 @@ function stride(walk,start,between){
  return step===0?start:step===7?start+1:between+step-1;
 }
 function kraken(c,u,time,hazards){
- breakerSheet??=sheet('kraken-surf',2);
+ loadSurfArt();
  c.save();c.scale(figureScale,figureScale);
  if(!krakenSheet.naturalWidth){krakenFallback(c,u,time);c.restore();return;}
  const wave=hazards?.find(h=>h.kind==='tide'&&h.source?.id===u.id&&time<h.start+.65);
@@ -127,6 +127,13 @@ function krakenFallback(c,u,time){
  oval(c,0,-2,2.6,2.8,'#b92454');oval(c,-.7,-3,1,.8,'#ffe0ce');c.restore();
 }
 let breakerSheet;
+function loadSurfArt(){
+ if(breakerSheet)return;
+ breakerSheet=sheet('kraken-surf',2);
+ const prepare=()=>root.FrontKrakenSwash.prepare(breakerSheet);
+ if(root.requestIdleCallback)root.requestIdleCallback(prepare,{timeout:900});
+ else root.setTimeout(prepare,0);
+}
 function tideWarning(c,left,right,low,high,h,time){
  const progress=clamp(1-(h.start-time)/1.2),middle=(low+high)/2;
  c.fillStyle='rgba(56,176,255,'+(.45+.12*progress)+')';c.fillRect(left,low,right-left,high-low);
@@ -172,63 +179,73 @@ function refractFloor(c,h,mid,phase,terrain,bounds){
  ctx.globalCompositeOperation='source-over';
  c.save();c.globalAlpha*=.68;c.drawImage(tile,start,mid-half);c.restore();
 }
-function tideCrest(c,h,laneStart,time,terrain,bounds){
- // Local x follows the wave, local y runs across the full 216px wet lane.
- const phase=(time-h.start)*1.15+.5+.5*Math.sin(laneStart*.071), flow=h.sign, span=water.wet;
- const mid=laneStart+span/2, direction=h.direction??(h.horizontal?(flow>0?0:2):(flow>0?1:3));
- refractFloor(c,h,mid,phase,terrain,bounds);
- c.save();c.translate(h.front,mid);c.scale(flow,1);
- c.save();c.translate(-48,0);c.scale(1,span/212);
- const wash=c.createRadialGradient(20,0,3,0,0,108);
- wash.addColorStop(0,'#077b924d');wash.addColorStop(.52,'#55d7e34b');
- wash.addColorStop(.82,'#9be5df25');wash.addColorStop(1,'#81e6df00');
- oval(c,0,0,108,108,wash);c.restore();
- // Uneven foam filaments stretch and split as the sheet drains away.
- c.lineCap='round';
- for(let i=0;i<37;i++){
-  const y=(i/36-.5)*(span-14)+3*Math.sin(i*1.83),edge=Math.sin(i/36*Math.PI),cycle=(phase*.82+i*.618)%1;
-  const x=-10-(18+109*edge)*cycle,drift=Math.sin(i*3.1+cycle*5)*(5+7*edge);
-  c.lineWidth=.55+1.05*(1-cycle);c.strokeStyle='rgba(195,250,250,'+(.46*Math.sin(Math.PI*cycle))+')';
-  c.beginPath();c.moveTo(x,y);c.bezierCurveTo(x-4,y+drift,x-12,y+drift,x-20-cycle*9,y+drift*.52);
-  if(i%3===0){c.moveTo(x-11,y+drift*.8);c.quadraticCurveTo(x-15,y+drift-4,x-21,y+drift-4);}
-  c.stroke();
+function smooth01(t){
+ t=clamp(t);return t*t*(3-2*t);
+}
+function drawBreakerFace(c,h,mid,phase,motion,mirrored){
+ const {height,fall}=motion,sign=h.sign,span=water.wet;
+ const opacity=1-smooth01((fall-.62)/.38);
+ if(opacity<=0)return;
+ const turn=smooth01(fall/.91),reach=68*turn-19*height;
+ const tile=288,frame=reduce?.matches?0:Math.floor(phase*16)%16;
+ const direction=h.direction??(h.horizontal?(sign>0?0:2):(sign>0?1:3));
+ const tx=(frame%8)*tile,ty=(direction*2+Math.floor(frame/8))*tile;
+ const depth=h.horizontal?span*.53:60+18*(1-height);
+ const footY=h.horizontal?mid+span*.43:h.front+(sign>0?20:84);
+ const lift=(h.horizontal?78:132)*height;
+ c.save();
+ // Undo the lane transform: water height always projects up the screen.
+ if(!h.horizontal)c.transform(0,1,1,0,0,0);
+ c.globalAlpha*=opacity;
+ if(!breakerSheet?.naturalWidth){
+  const footX=h.horizontal?h.front:mid;
+  const fallback=c.createLinearGradient(0,footY-depth-lift,0,footY);
+  fallback.addColorStop(0,'#deffff');fallback.addColorStop(.24,'#43bfc7');fallback.addColorStop(1,'#128d9e44');
+  oval(c,footX,footY-(depth+lift)*.5,h.horizontal?45:span*.49,(depth+lift)*.5,fallback);
+  c.restore();return;
  }
- c.restore();
- if(breakerSheet.naturalWidth){
-  const frame=reduce?.matches?0:Math.floor(phase*16)%16,tile=288;
-  c.save();
-  // The atlas is lit from above in screen space, including the rear view.
-  if(!h.horizontal)c.transform(0,1,1,0,0,0);
-  // Anchor the shoreward lip, not the center of the sprite, at the damage front.
-  const w=h.horizontal?span*.76:span,hgt=h.horizontal?span:span*.72;
-  const x=h.horizontal?h.front-w*(flow>0?.83:.17):mid-w/2;
-  const y=h.horizontal?mid-hgt/2:h.front-hgt*(flow>0?.83:.17);
-  const mirrored=!h.horizontal&&Math.round((laneStart-h.offset)/water.period)%2!==0;
-  c.translate(mirrored?x+w:x,y);if(mirrored)c.scale(-1,1);
-  c.drawImage(breakerSheet,frame%8*tile,(direction*2+Math.floor(frame/8))*tile,tile,tile,0,0,w,hgt);
-  c.restore();
- }else{
-  const waterFace=c.createLinearGradient(h.front-flow*35,0,h.front+flow*19,0);
-  waterFace.addColorStop(0,'#1775a1');waterFace.addColorStop(.68,'#42d3df');waterFace.addColorStop(1,'#e6ffff');
-  oval(c,h.front,mid,29,span*.48,waterFace);
+ // Project a vertical section of the water sheet. The foot stays on the floor.
+ // Its lip first leans upstream, then overtakes the middle of the falling face.
+ const bands=24,srcH=tile/bands;
+ if(mirrored){c.translate(2*mid,0);c.scale(-1,1);}
+ function rowY(upper){
+  const projection=footY-depth*upper-lift*upper*(.72+.28*upper);
+  if(h.horizontal)return projection;
+  return projection+sign*reach*upper**2.6;
  }
- // Droplets lift from the lip, fan out, then land in the leading wash.
- c.save();c.translate(h.front,mid);
- for(let i=0;i<46;i++){
-  const flight=(phase*.91+i*.6180339)%1,arc=4*flight*(1-flight);
-  const y=(i/45-.5)*(span-18)+3*Math.sin(i*5),edge=clamp(1-(y/(span*.51))**2);
-  const x=flow*(2+flight*(12+27*edge)+4*Math.sin(i*2.2));
-  const height=(7+17*edge)*(1-flight)+(12+24*edge+12*Math.sin(i*1.72))*arc;
-  const sx=x-(h.horizontal?0:height),sy=y-(h.horizontal?height:0)+Math.sin(i*2.7)*flight*9;
-  const size=(.8+1.35*edge+.45*Math.sin(i*3.2))*(1-.5*flight);
-  c.globalAlpha=Math.sin(flight*Math.PI)*.91;
-  c.lineWidth=size;c.strokeStyle=i%3?'#e1ffff':'#9fe6ef';c.beginPath();
-  c.moveTo(sx,sy);c.lineTo(sx+flow*flight*2+(h.horizontal?0:arc*2),sy+(h.horizontal?arc*2:0));c.stroke();
+ let previous=rowY(0);
+ for(let row=bands-1;row>=0;row--){
+  const upper=1-row/bands,center=upper-.5/bands,next=rowY(upper);
+  const w=h.horizontal?111+43*height+43*turn*(1-center):span*(.99-.035*height*center);
+  const x=h.horizontal?h.front-w*(sign>0?.84:.16)+sign*reach*center**2.6:mid-w/2;
+  // Paint from the foot toward the lip so overturned water covers the hollow.
+  const y=Math.min(next,previous),dh=Math.abs(next-previous)+.45;
+  c.drawImage(breakerSheet,tx,ty+row*srcH,tile,srcH,x,y,w,dh);
+  previous=next;
  }
  c.restore();
 }
+function tideCrest(c,h,laneStart,time,terrain,bounds,motion){
+ const mid=laneStart+water.wet/2,sign=h.sign;
+ const phase=(time-h.start)*1.15+.5+.5*Math.sin(laneStart*.071);
+ const mirrored=!h.horizontal&&Math.round((laneStart-h.offset)/water.period)%2!==0;
+ refractFloor(c,h,mid,phase,terrain,bounds);
+ c.save();c.translate(h.front,mid);c.scale(sign,1);
+ // A darkening trough anchors the rising wall. Its shadow contracts at impact.
+ c.translate(-27-16*motion.height,0);c.scale(.72,1);
+ const shade=c.createRadialGradient(0,0,3,0,0,water.wet*.5);
+ shade.addColorStop(0,'rgba(5,62,76,'+(.16+.26*motion.height)+')');
+ shade.addColorStop(.68,'#489ea02e');shade.addColorStop(1,'#76cdd600');
+ oval(c,0,0,water.wet*.5,water.wet*.5,shade);
+ c.restore();
+ drawBreakerFace(c,h,mid,phase,motion,mirrored);
+ c.save();c.translate(h.front,mid);c.scale(sign,1);
+ root.FrontKrakenSwash.draw(c,{span:water.wet,phase,sign,horizontal:h.horizontal,
+  fall:motion.fall,wash:motion.wash,impact:motion.impact});
+ c.restore();
+}
 function tide(c,g,h,terrain){
- breakerSheet??=sheet('kraken-surf',2);
+ loadSurfArt();
  const bounds=g.bounds(),horizontal=h.horizontal,cross=horizontal?bounds.height:bounds.width;
  const pos=horizontal?g.camera.x:g.camera.y,view=g.viewport||{width:1200,height:860};
  const half=(horizontal?view.width:view.height)/2+40,left=pos-half,right=pos+half;
@@ -236,10 +253,11 @@ function tide(c,g,h,terrain){
  const lo=Math.max(0,crossPos-crossHalf),hi=Math.min(cross,crossPos+crossHalf);
  const warning=g.time<h.start;
  // The warning stays on the approaching side while the breaker crosses a large map.
- const crestVisible=!warning&&h.front>=left-165&&h.front<=right+165;
+ const crestVisible=!warning&&h.front>=left-225&&h.front<=right+225;
  const warnLeft=warning||h.sign<0?left:Math.max(left,h.front+water.width);
  const warnRight=warning||h.sign>0?right:Math.min(right,h.front-water.width);
  if(!crestVisible&&warnRight<=warnLeft)return;
+ const motion=crestVisible?water.motion(h):null;
  c.save();if(!horizontal)c.transform(0,1,1,0,0,0);
  for(let y=h.offset+Math.floor((lo-h.offset)/water.period)*water.period;y<hi;y+=water.period){
   const low=Math.max(0,y),high=Math.min(cross,y+water.wet);
@@ -250,7 +268,7 @@ function tide(c,g,h,terrain){
    c.beginPath();c.rect(warnLeft,low,warnRight-warnLeft,high-low);c.clip();
    tideWarning(c,warnLeft,warnRight,low,high,h,g.time);c.restore();
   }
-  if(crestVisible)tideCrest(c,h,y,g.time,terrain,bounds);
+  if(crestVisible)tideCrest(c,h,y,g.time,terrain,bounds,motion);
   c.restore();
  }
  c.restore();
