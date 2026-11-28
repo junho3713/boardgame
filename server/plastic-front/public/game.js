@@ -770,21 +770,62 @@ function drawDefense(p){
  ctx.restore();
 }
 function drawStackSniperWarning(u){
- const aim=u.sniperAim,point=aim.point;
- if(!point||game.time>=aim.fireAt)return;
- const left=aim.fireAt-game.time,urgent=left<=.2;
- ctx.save();ctx.lineCap='round';
- ctx.strokeStyle=aim.locked?'#df35514d':'#ffb26033';ctx.lineWidth=types.leader.r*2;
- ctx.beginPath();ctx.moveTo(u.x,u.y);ctx.lineTo(point.x,point.y);ctx.stroke();
- ctx.strokeStyle=aim.locked?urgent?'#ffeab9':'#ff635d':'#ffbd71';ctx.lineWidth=aim.locked?2.8:1.8;
- if(!aim.locked)ctx.setLineDash([8,6]);
- ctx.beginPath();ctx.moveTo(u.x,u.y);ctx.lineTo(point.x,point.y);ctx.stroke();
- ctx.setLineDash([]);
- if(aim.locked){
-  const x=point.x-Math.cos(aim.angle)*Math.min(60,point.range),y=point.y-Math.sin(aim.angle)*Math.min(60,point.range);
-  circle(ctx,x,y,9,'#3b1427b0','#ffce97');
-  text(ctx,left.toFixed(1)+'초',x,y-15,12,'#ffe3b6');
+ const aim=u.sniperAim,lane=aim.point,left=aim.fireAt-game.time;
+ if(!lane||left<=0)return;
+ const locked=aim.locked,radius=types.leader.r,length=lane.range;
+ const color=!locked?'#ffca82':left<=.2?'#ffe0c1':'#ff8f7e';
+ ctx.save();ctx.translate(u.x,u.y);ctx.rotate(aim.angle);ctx.lineCap='round';
+ if(locked){
+  const fill=ctx.createLinearGradient(0,-radius,0,radius);
+  fill.addColorStop(0,'#a82339a8');fill.addColorStop(.5,'#b12e493d');fill.addColorStop(1,'#a82339a8');
+  ctx.fillStyle=fill;ctx.fillRect(0,-radius,length,radius*2);
+  ctx.save();ctx.beginPath();ctx.rect(0,-radius,length,radius*2);ctx.clip();
+  ctx.strokeStyle='#ffc1a950';ctx.lineWidth=1;ctx.beginPath();
+  for(let x=0;x<length+radius*2;x+=19){ctx.moveTo(x-radius*2,radius);ctx.lineTo(x,-radius);}
+  ctx.stroke();ctx.restore();
+  ctx.lineWidth=3.5;ctx.strokeStyle='#521925d8';ctx.strokeRect(0,-radius,length,radius*2);
+  ctx.lineWidth=1.5;ctx.strokeStyle=color;ctx.strokeRect(0,-radius,length,radius*2);
+  ctx.strokeStyle=color;ctx.lineWidth=1.8;ctx.beginPath();
+  for(let x=42;x<length-10;x+=66){ctx.moveTo(x-7,-5);ctx.lineTo(x,0);ctx.lineTo(x-7,5);}
+  ctx.stroke();
+ }else{
+  ctx.setLineDash([7,6]);ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(length,0);
+  ctx.strokeStyle='#492628';ctx.lineWidth=4;ctx.stroke();
+  ctx.strokeStyle=color;ctx.lineWidth=1.8;ctx.stroke();ctx.setLineDash([]);
  }
+ ctx.restore();
+ if(!locked&&aim.target){
+  const {x,y}=aim.target,reticleRadius=radius+8;
+  ctx.save();ctx.translate(x,y);ctx.strokeStyle=color;ctx.lineWidth=2;
+  for(let i=0;i<4;i++){
+   ctx.rotate(Math.PI/2);ctx.beginPath();ctx.arc(0,0,reticleRadius,-.32,.32);ctx.stroke();
+   ctx.beginPath();ctx.moveTo(reticleRadius+2,0);ctx.lineTo(reticleRadius+8,0);ctx.stroke();
+  }
+  ctx.restore();
+ }
+}
+function drawStackSniperStatus(player){
+ if(!game.captainStackHpMode||player.hp<=0)return;
+ let soonest;
+ for(const u of game.units){
+  const aim=u.sniperAim;
+  if(u.hp>0&&aim?.stack&&aim.point&&aim.target?.id===player.id&&game.time<aim.fireAt&&(!soonest||aim.fireAt<soonest.fireAt))soonest=aim;
+ }
+ if(!soonest)return;
+ const locked=soonest.locked,left=(locked?soonest.fireAt:soonest.lockAt)-game.time;
+ const duration=locked?soonest.fireAt-soonest.lockedAt:soonest.lockAt-soonest.started;
+ const color=!locked?'#ffcc86':left<=.2?'#ffe4cd':'#ff9e89';
+ const p=point(player),w=145,x=clamp(p.x-w/2,8,Math.max(8,W-w-8)),y=clamp(p.y-106,62,Math.max(62,H-138));
+ ctx.save();
+ rr(ctx,x,y,w,33,6,locked?'#301b23f2':'#30261cf2',color);
+ ctx.strokeStyle=color;ctx.lineWidth=1.3;ctx.beginPath();ctx.arc(x+16,y+14,5,0,Math.PI*2);ctx.stroke();
+ ctx.beginPath();ctx.moveTo(x+8,y+14);ctx.lineTo(x+12,y+14);ctx.moveTo(x+20,y+14);ctx.lineTo(x+24,y+14);
+ ctx.moveTo(x+16,y+6);ctx.lineTo(x+16,y+10);ctx.moveTo(x+16,y+18);ctx.lineTo(x+16,y+22);ctx.stroke();
+ text(ctx,locked?'저격선 고정':'저격 조준',x+62,y+18,12,'#fff1df','800');
+ text(ctx,(Math.ceil(Math.max(0,left-1e-8)*10)/10).toFixed(1)+'초',x+116,y+18,12,color,'800');
+ rr(ctx,x+8,y+25,w-16,3,1.5,'#fbdfc238');
+ const fill=(w-16)*clamp(left/Math.max(.01,duration),0,1);
+ if(fill>0)rr(ctx,x+8,y+25,fill,3,1.5,color);
  ctx.restore();
 }
 function drawMortarShell(p){
@@ -1216,6 +1257,7 @@ function draw(dt){
   }
  }
  window.FrontPirateCannonView?.edgeWarnings?.(ctx,game,W,H,point,reduceMotion.matches);
+ drawStackSniperStatus(player);
  swordView.hud(ctx,game,W);
  if(game.time<game.scoutUntil){ctx.strokeStyle='#f0db98';ctx.lineWidth=2;ctx.strokeRect(4,4,W-8,H-8);}
  if(game.bossIntro?.remaining>0){rr(ctx,W/2-156,24,312,64,10,'#211a2ee8','#b795d5');text(ctx,'최종 보스 등장',W/2,48,13,'#d8bde9');text(ctx,game.bossIntro.name,W/2,73,20,'#fff0d3');}
