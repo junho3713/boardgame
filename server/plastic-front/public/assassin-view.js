@@ -3,8 +3,15 @@
 const tau=2*Math.PI,sprite=new Image(),attack=root.FrontAssassin;
 // Each action frame has a foot anchor. All four stride cells share one ground point.
 const poses=[{x:.511,y:.966},{x:.463,y:.964},{x:.416,y:.914}];
-const strideAnchor={x:.5,y:.966},reducedMotion=root.matchMedia?.('(prefers-reduced-motion: reduce)');
+const reducedMotion=root.matchMedia?.('(prefers-reduced-motion: reduce)');
 let shade=null,throwLayers=null,cloneThrowLayers=null;
+// Four original steps, each followed by five in-between poses in the atlas.
+const strideTicks=6,strideCell=144,stridePeriod=8.4,strideFeet=[201,208,201,212];
+const motion=new WeakMap(),walkAtlas=new Image();
+let walkShade=null,blendCanvas=null;
+function raster(sizeX,sizeY=sizeX){
+ const c=document.createElement('canvas');c.width=sizeX;c.height=sizeY;return c;
+}
 function splitThrowPose(source){
  const size=sprite.naturalHeight,scale=size/384;
  const layer=keepArm=>{
@@ -20,14 +27,21 @@ function splitThrowPose(source){
  };
  return {torso:layer(false),arm:layer(true)};
 }
+function ghostTint(source,width,height){
+ const shade=raster(width,height),c=shade.getContext('2d');
+ c.drawImage(source,0,0);c.globalCompositeOperation='source-atop';
+ c.fillStyle='rgba(115,79,157,.87)';c.fillRect(0,0,width,height);
+ return shade;
+}
 sprite.onload=()=>{
- shade=document.createElement('canvas');shade.width=sprite.naturalWidth;shade.height=sprite.naturalHeight;
- const c=shade.getContext('2d');c.drawImage(sprite,0,0);c.globalCompositeOperation='source-atop';
- c.fillStyle='rgba(115,79,157,.87)';c.fillRect(0,0,shade.width,shade.height);
+ shade=ghostTint(sprite,sprite.naturalWidth,sprite.naturalHeight);
  throwLayers=splitThrowPose(sprite);cloneThrowLayers=splitThrowPose(shade);
-
 };
 sprite.src='assets/models/kunoichi.webp?v=seven-poses';
+walkAtlas.decoding='async';
+walkAtlas.fetchPriority='low';
+walkAtlas.onload=()=>{walkShade=ghostTint(walkAtlas,walkAtlas.naturalWidth,walkAtlas.naturalHeight);};
+walkAtlas.src='assets/models/kunoichi-walk-v1.webp';
 function ellipse(c,x,y,rx,ry,paint){c.beginPath();c.ellipse(x,y,rx,ry,0,0,tau);c.fillStyle=paint;c.fill();}
 function glow(c,x,y,r,inner,outer){
  const g=c.createRadialGradient(x,y,0,x,y,r);g.addColorStop(0,inner);g.addColorStop(1,outer);
@@ -44,49 +58,119 @@ function raisedStar(c,layers,left,top,size,clone,charge){
  glow(c,x,y,6+charge*5,clone?'#d4c5e5':'#ff2c50',clone?'#d4c5e500':'#ff264600');
  c.restore();
 }
+function figurePose(u,time){
+ const action=u.assassinAction,phase=action?.phase,releaseAge=time-(u.assassinReleasedAt??-Infinity);
+ if(phase==='throw'||phase==='warn'){
+  return {mode:phase,charge:progress(action,time,phase==='throw'?attack.windup:.75)};
+ }
+ if(phase==='dash')return {mode:'dash',charge:1-action.left/action.length};
+ if(releaseAge>=0&&releaseAge<.27)return {mode:'release',charge:releaseAge/.27};
+ if(phase==='retreat'||time-(u.assassinStepAt??-Infinity)<.10){
+  return {mode:'walk',cycle:((u.walk||0)/stridePeriod)%1};
+ }
+ return {mode:'idle'};
+}
+const smooth=n=>n*n*(3-2*n);
+function sampleFigure(u,time){
+ const pose=figurePose(u,time),side=Math.cos(u.face||0);
+ let state=motion.get(u);
+ if(!state||time<state.time||time-state.time>.25||Math.hypot(u.x-state.x,u.y-state.y)>150){
+  state={side:side<0?-1:1,turnAt:-Infinity,switchedAt:-Infinity,last:pose};
+  motion.set(u,state);
+ }else if(pose.mode!==state.last.mode){
+  state.previous=state.last;state.switchedAt=time;
+ }
+ // Keep facing stable as the target crosses the vertical axis.
+ if(state.side*side<-.19){state.side=-state.side;state.turnAt=time;}
+ const turn=Math.max(0,Math.min(1,(time-state.turnAt)/.14));
+ pose.facing=state.side;
+ if(turn<1&&!reducedMotion?.matches)pose.facing*=(turn<.5?-1:1)*(1-.44*Math.sin(Math.PI*turn));
+ Object.assign(state,{time,last:pose,x:u.x,y:u.y});
+ const duration=pose.mode==='dash'?.065:pose.mode==='release'?.09:state.previous?.mode==='dash'?.14:.13;
+ const blend=smooth(Math.max(0,Math.min(1,(time-state.switchedAt)/duration)));
+ if(blend>=1)state.previous=null;
+ return {pose,previous:state.previous,blend};
+}
+function drawFigure(c,pose,clone,flash){
+ const {mode,charge,facing}=pose,cell=sprite.naturalHeight,size=90;
+ const figure=flash&&shade?shade:sprite,throwing=mode==='throw',preparing=throwing||mode==='warn';
+ c.save();c.scale(facing,1);
+ if(mode==='walk'){
+  const cycle=pose.cycle,phase=cycle*strideFeet.length,i=Math.floor(phase),t=phase-i;
+  const anchor=(strideFeet[i]+(strideFeet[(i+1)%strideFeet.length]-strideFeet[i])*t)/384;
+  if(!reducedMotion?.matches){
+   const rise=Math.sin(cycle*tau)**2;
+   c.translate(Math.sin(cycle*tau)*.7,-1.4*rise);
+   c.rotate(.024*Math.cos(cycle*tau));
+  }
+  if(walkAtlas.naturalWidth===strideCell*strideTicks){
+   const frame=Math.round(cycle*strideTicks*strideFeet.length)%(strideTicks*strideFeet.length);
+   const source=flash&&walkShade?walkShade:walkAtlas;
+   c.drawImage(source,(frame%strideTicks)*strideCell,Math.floor(frame/strideTicks)*strideCell,strideCell,strideCell,-anchor*size,-.966*size,size,size);
+  }else c.drawImage(figure,(3+i)*cell,0,cell,cell,-anchor*size,-.966*size,size,size);
+  c.restore();return;
+ }
+ if(!reducedMotion?.matches){
+  if(preparing){
+   const windup=smooth(charge);
+   c.translate((throwing?-4:2)*windup,0);
+   c.scale(1+.035*windup,1-(throwing?.085:.055)*windup);c.rotate((throwing?-.12:.09)*windup);
+  }else if(mode==='release'){
+   const recoil=(1-charge)**2;
+   c.translate(3.5*recoil,-recoil);c.rotate(.055*recoil);
+  }
+ }
+ const frame=mode==='dash'?2:mode==='release'?1:0,anchor=poses[frame];
+ const layers=flash?cloneThrowLayers:throwLayers,left=-anchor.x*size,top=-anchor.y*size;
+ if(throwing&&layers)raisedStar(c,layers,left,top,size,clone,reducedMotion?.matches?1:Math.min(1,.08+charge*1.22));
+ else c.drawImage(figure,frame*cell,0,cell,cell,left,top,size,size);
+ if(preparing){
+  const light=clone?'#bdb1d1':'#ff273f',outside=clone?'rgba(196,182,216,0)':'rgba(245,15,54,0)';
+  c.globalAlpha*=clone?.42:.7+.3*charge;
+  for(const [x,y,r] of [[3.3,-52.3,3.1],[12.6,-53,3.1],[-17,-25,4.6]])glow(c,x,y,r,light,outside);
+  if(!throwing)glow(c,24,-36.7,4.6,light,outside);
+ }
+ c.restore();
+}
+function crossfade(c,older,newer,blend,clone,flash){
+ const resolution=2,size=128,ox=64,oy=104;
+ blendCanvas??=Array.from({length:3},()=>raster(size*resolution));
+ const [a,b,out]=blendCanvas;
+ for(const [canvas,pose] of [[a,older],[b,newer]]){
+  const layer=canvas.getContext('2d');
+  layer.setTransform(1,0,0,1,0,0);layer.clearRect(0,0,canvas.width,canvas.height);
+  layer.setTransform(resolution,0,0,resolution,ox*resolution,oy*resolution);
+  drawFigure(layer,pose,clone,flash);
+ }
+ const mixed=out.getContext('2d');
+ mixed.clearRect(0,0,out.width,out.height);
+ const earlier=blend<.5;
+ mixed.drawImage(earlier?a:b,0,0);
+ mixed.save();mixed.globalCompositeOperation='source-atop';mixed.globalAlpha=earlier?blend:1-blend;
+ mixed.drawImage(earlier?b:a,0,0);mixed.restore();
+ c.drawImage(out,-ox,-oy,size,size);
+}
 function body(c,u,time){
  if(!sprite.naturalWidth)return;
- const clone=u.assassinClone,action=u.assassinAction,pose=action?.phase,throwing=pose==='throw',preparing=throwing||pose==='warn';
- const charge=preparing?progress(action,time,throwing?attack.windup:.75):0;
+ const clone=u.assassinClone,{pose,previous,blend}=sampleFigure(u,time);
  c.save();
  if(clone){
   for(let i=0;i<3;i++){const phase=(time*.72+i/3+u.id*.19)%1;
    ellipse(c,Math.sin(i*2.2+phase*2)*11,-phase*9,4+phase*3,2+phase*1.5,'rgba(149,109,177,'+(.15*(1-phase))+')');}
  }
- const sign=Math.cos(u.face)<0?-1:1;
- const released=time-(u.assassinReleasedAt??-Infinity)<.28;
- const moving=!pose&&!released&&time-(u.assassinStepAt??-Infinity)<.09;
- const stride=3+Math.floor((u.walk||0)*.94)%4;
- let frame=0;
- if(pose==='dash'||pose==='retreat'&&u.assassinAction.until-time>.35)frame=2;
- else if(!preparing&&released)frame=1;
- else if(moving)frame=stride;
- c.scale(sign,1);
- if(preparing&&!reducedMotion?.matches){
-  const windup=charge*charge*(3-2*charge);
-  c.translate((throwing?-4:2)*windup,0);
-  c.scale(1+.035*windup,1-(throwing?.085:.055)*windup);c.rotate((throwing?-.12:.09)*windup);
- }
- if(pose==='dash'&&!reducedMotion?.matches){
-  const a=u.assassinAction,progress=1-a.left/a.length;
-  const sweep=Math.sin(Math.PI*Math.max(0,Math.min(1,progress)));
-  c.save();c.globalAlpha*=(clone?.23:.64)*sweep;
+ if(pose.mode==='dash'&&!reducedMotion?.matches){
+  const sweep=Math.sin(Math.PI*Math.max(0,Math.min(1,pose.charge)));
+  c.save();c.scale(pose.facing,1);c.globalAlpha*=(clone?.23:.64)*sweep;
   c.translate(18,-22);c.rotate(-.2);
   const edge=c.createLinearGradient(-40,0,17,0);
   edge.addColorStop(0,'rgba(180,145,182,0)');edge.addColorStop(.68,clone?'#b7a5cb':'#f15a75');edge.addColorStop(1,clone?'#eee5fa':'#fff3df');
   c.fillStyle=edge;c.beginPath();c.moveTo(-40,-12);c.quadraticCurveTo(-1,7,20,-5);c.quadraticCurveTo(1,15,-40,-12);c.fill();c.restore();
  }
- const flash=clone&&u.cloneFlashUntil>time;c.globalAlpha*=flash?.57:clone?.88:1;
- const figure=flash&&shade?shade:sprite,cell=sprite.naturalHeight,anchor=poses[frame]||strideAnchor,size=90;
- const layers=flash?cloneThrowLayers:throwLayers,left=-anchor.x*size,top=-anchor.y*size;
- if(throwing&&layers)raisedStar(c,layers,left,top,size,clone,reducedMotion?.matches?1:Math.min(1,.28+charge*1.2));
- else c.drawImage(figure,frame*cell,0,cell,cell,left,top,size,size);
- if(preparing){
-  const intensity=.8+.2*Math.sin(time*29),light=clone?'#bdb1d1':'#ff273f',outside=clone?'rgba(196,182,216,0)':'rgba(245,15,54,0)';
-  c.globalAlpha*=clone?.42:intensity;
-  for(const [x,y,r] of [[3.3,-52.3,3.1],[12.6,-53,3.1],[-17,-25,4.6]])glow(c,x,y,r,light,outside);
-  if(!throwing)glow(c,24,-36.7,4.6,light,outside);
- }
+ const flash=clone&&u.cloneFlashUntil>time;
+ c.globalAlpha*=flash?.57:clone?.88:1;
+ if(previous&&blend<=0)drawFigure(c,previous,clone,flash);
+ else if(previous)crossfade(c,previous,pose,blend,clone,flash);
+ else drawFigure(c,pose,clone,flash);
  c.restore();
 }
 function groundShadow(c,u){
