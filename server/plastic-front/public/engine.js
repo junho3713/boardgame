@@ -2,7 +2,7 @@
 (function(root){
 'use strict';
 const BATTLE_SYSTEMS=typeof module!=='undefined'&&module.exports?require('./battle-systems.js'):root.FrontBattleSystems;
-const SWORD={damage:90,rate:.75,range:135,arc:110*Math.PI/180,windup:.14,recovery:.42,targets:3,finisherRange:180,finisherArc:150*Math.PI/180,finisherTargets:6,finisherDamage:2,ultimateRange:170,ultimateInterval:.5,ultimateDamage:2};
+const SWORD={damage:90,rate:.9,range:135,arc:110*Math.PI/180,windup:.14,recovery:.42,targets:3,finisherRange:180,finisherArc:150*Math.PI/180,finisherTargets:6,finisherDamage:2,ultimateRange:170,ultimateInterval:.5,ultimateDamage:2};
 const FLAME={damage:14.4,rate:.12,range:250,arc:50*Math.PI/180,armor:.65,ultimateRange:420,ultimateArc:70*Math.PI/180,ultimateDamage:2};
 const BALANCE_VERSION=72;
 const PIRATE_REINFORCEMENT={from:360,interval:55,roomFrom:270,roomUntil:720,roomInterval:30,cap:2};
