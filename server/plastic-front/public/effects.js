@@ -173,7 +173,7 @@ class FrontEffects{
   }c.restore();
  }
  luckyReserveBadge(ctx,u,ammo,y=u.y-134){const x=u.x+50;ctx.save();ctx.fillStyle='#243b2df0';ctx.strokeStyle='#f0ba88';ctx.lineWidth=1;ctx.beginPath();ctx.roundRect(x,y,34,36,5);ctx.fill();ctx.stroke();this.luckySymbol(ctx,'missiles',x+17,y+12,20);ctx.fillStyle='#fff0cb';ctx.font='700 10px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('×'+ammo,x+17,y+28);ctx.restore();}
- luckyResultRow(ctx,u,game){
+ luckyResultRow(ctx,u,game,presentation){
   if(u.hp<=0)return;
   const time=game.time,slots=[],wins=new Map();
   const channels=u.luckyChannels||[{roll:u.luckyRoll}];
@@ -182,7 +182,9 @@ class FrontEffects{
   for(const [index,{roll}] of channels.slice(0,3).entries()){
    const resultAt=roll?.resultAt??roll?.endsAt;
    const age=time-resultAt;
-   if(!roll||time<roll.startedAt||age>(roll.kind==='bossKiller'?1.33:1.04)){slots.push(null);continue;}
+   if(!roll||time<roll.startedAt||age>(roll.kind==='bossKiller'?1.33:1.04)||presentation&&!presentation.rolls.includes(roll)){
+    slots.push(null);continue;
+   }
    visible=true;
    if(!roll.resolved){
     const symbols=enhancedFaces(roll),icon=symbols[Math.floor((time-roll.startedAt)*16+index*2)%symbols.length];
@@ -201,11 +203,11 @@ class FrontEffects{
    const slot={kind:roll.kind,count:1,glow};
    slots.push(slot);wins.set(roll.kind,slot);
   }
-  if(ammo)this.luckyReserveBadge(ctx,u,ammo,u.y-(visible?96:134));
+  const origin=presentation??{x:u.x,y:u.y-135};
+  if(ammo)this.luckyReserveBadge(ctx,origin,ammo,origin.y+(visible?39:1));
   if(!visible)return;
-  const y=u.y-135;
   ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';
-  for(let i=0;i<3;i++)this.luckyResultTile(ctx,slots[i],u.x+(i-1)*50,y);
+  for(let i=0;i<3;i++)this.luckyResultTile(ctx,slots[i],origin.x+(i-1)*50,origin.y,!!presentation);
   ctx.restore();
  }
  rollMiss(ctx,x,y){
@@ -214,18 +216,16 @@ class FrontEffects{
   ctx.strokeStyle='#942e32';ctx.lineWidth=3.8;ctx.stroke();
   ctx.strokeStyle='#e54442';ctx.lineWidth=2.65;ctx.stroke();ctx.restore();
  }
- luckyResultTile(ctx,slot,x,y,compact=false){
-  const special=slot?.kind==='bossKiller'&&!slot.spin,w=compact?24:46,h=compact?24:30;
+ luckyResultTile(ctx,slot,x,y,redMiss=false){
+  const special=slot?.kind==='bossKiller'&&!slot.spin;
   ctx.save();
-  if(slot?.blank&&!compact)ctx.globalAlpha*=clamp(1-slot.age/.49,.22,1);
+  if(slot?.blank&&!redMiss)ctx.globalAlpha*=clamp(1-slot.age/.49,.22,1);
   ctx.fillStyle=slot?.glow>.2?'#526552':'#1d3027ef';
   ctx.strokeStyle=special?'#f8d56e':slot?.glow>.18?'#e5f1d3':'#788f71';
   ctx.lineWidth=special?2:1;
-  ctx.beginPath();ctx.roundRect(x-w/2,y-h/2,w,h,5);ctx.fill();ctx.stroke();
-  if(compact){
-   if(slot?.kind)this.luckySymbol(ctx,slot.kind,x,y,19);
-   else if(slot?.blank)this.rollMiss(ctx,x,y);
-  }else if(slot?.kind){
+  ctx.beginPath();ctx.roundRect(x-23,y-15,46,30,5);ctx.fill();ctx.stroke();
+  if(redMiss&&slot?.blank)this.rollMiss(ctx,x,y);
+  else if(slot?.kind){
    if(slot.spin){ctx.globalAlpha*=.72;this.luckySymbol(ctx,slot.kind,x,y,21);}
    else{
     this.luckySymbol(ctx,slot.kind,x,y-5,16);

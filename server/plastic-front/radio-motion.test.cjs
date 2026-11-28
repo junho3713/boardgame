@@ -40,6 +40,10 @@ function renderer(coop=false){
    faces.length=0;labels.length=0;scales.length=0;paints.length=0;groups.length=0;
    game.effects=[e].flat().map(roll=>({kind:'radioRoll',x:0,y:0,max:.85,t:.85-age,...roll}));
    window.FrontRadioArt.rolls(c,game,()=>true);return [...faces];},
+  settled(dice,rank,success){
+   faces.length=0;paints.length=0;groups.length=0;
+   window.FrontRadioArt.settledPair(c,dice,rank,success);return [...faces];
+  },
   impact(at=0,strike='nuke'){return window.FrontRadioArt.event(c,{kind:'radioImpact',strike,at,x:0,y:0,radius:225,t:1,max:1});}};
 }
 test('rolling dice only show pips for the settled outcome, including misses that previously flashed a low double',()=>{
@@ -52,6 +56,15 @@ test('rolling dice only show pips for the settled outcome, including misses that
    for(const age of [.24,.4,.8])assert.deepEqual(r.dice(e,age),[a,b]);
   }
  }
+});
+test('the compact result paints the original pair, palette, pips and tray',()=>{
+ const r=renderer();
+ assert.deepEqual(r.settled([4,4],2,true),[4,4]);
+ assert.equal(r.paints.filter(p=>p==='#fff').length,2);
+ assert.equal(r.paints.filter(p=>p==='#434543').length,2);
+ assert.deepEqual(r.groups,[{x:0,zoom:1}]);
+ assert.deepEqual(r.settled([0,0],3,false),[0,0]);
+ assert.equal(r.paints.filter(p=>p==='#9e611e').length,2);
 });
 test('ordinary ranked results draw three pairs and only matched pairs pop',()=>{
  const r=renderer();r.game.reducedMotion=false;

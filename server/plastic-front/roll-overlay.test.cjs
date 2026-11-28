@@ -36,7 +36,7 @@ test('default keeps the first star full and shows the actual compact outcomes',(
  assert.equal(full('full',double),true);assert.equal(full('minimal',scout),false);
  const out=plan(game,'default',visible);
  assert.deepEqual(keys(out),['dice:4','lucky:glue']);
- assert.equal(out.results[1].slots[0].kind,'glue');
+ assert.equal(out.results[1].rolls[0].kind,'glue');
  assert.deepEqual(plan(game,'full',visible),{results:[]});
 });
 
@@ -99,9 +99,9 @@ test('the compact roulette keeps the original reel order and marks blanks beside
  jeep.luckyChannels=['spray','blank','mine'].map(kind=>({roll:{kind,startedAt:9,endsAt:10,resolved:true}}));
  const game={time:10,units:[jeep],effects:[]};
  const [row]=plan(game,'default',visible).results;
- assert.deepEqual(row.slots.map(slot=>slot.kind??'blank'),['spray','blank','mine']);assert.equal(row.miss,false);
+ assert.deepEqual(row.rolls.map(roll=>roll.kind),['spray','blank','mine']);assert.equal(row.miss,false);
  jeep.luckyChannels[1].roll={kind:'mine',startedAt:9,endsAt:10,resolved:true};
- assert.deepEqual(plan(game,'default',visible).results[0].slots.map(slot=>slot.kind),['spray','mine','mine']);
+ assert.deepEqual(plan(game,'default',visible).results[0].rolls.map(roll=>roll.kind),['spray','mine','mine']);
 });
 
 test('the compact radio tile chooses the strongest double and gives nuclear badges priority',()=>{

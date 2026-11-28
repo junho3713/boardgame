@@ -1,12 +1,9 @@
 /* Compact dice and roulette results share a budget per battle view. */
 (function(root){
 'use strict';
-const HOLD=.52,MISS_HOLD=.34,REPEAT=.5,LIMIT=2,STEP=26;
+const HOLD=.52,MISS_HOLD=.34,REPEAT=.5,LIMIT=2;
 const luckyFaces=new Set(['bossKiller','missiles','mine','spray','glue']);
 const diceOrder=['turret','incendiary','missile','nuke'];
-const pips=[[],[[0,0]],[[-1,-1],[1,1]],[[-1,-1],[0,0],[1,1]],
- [[-1,-1],[1,-1],[-1,1],[1,1]],[[-1,-1],[1,-1],[0,0],[-1,1],[1,1]],
- [[-1,-1],[1,-1],[-1,0],[1,0],[-1,1],[1,1]]];
 const frames=new WeakMap();
 function full(mode,u,rank=u.star||1){
  return u.team!==0||mode==='full'||mode!=='minimal'&&rank<2;
@@ -38,7 +35,7 @@ function collect(game,mode,visible){
   const priority=best?.strike==='nuke';
   if(mode==='minimal'&&!priority)continue;
   const at=effectStart(time,e)+(rank===3?.16:.23),face=best?.dice[0];
-  enqueue(u,'radio:'+u.id+':'+at,'dice:'+(face??'blank'),at,{kind:'dice',face,priority,miss:!best});
+  enqueue(u,'radio:'+u.id+':'+at,'dice:'+(face??'blank'),at,{kind:'dice',face,rank,priority,miss:!best});
  }
  if(mode==='minimal')return entries;
  for(const u of game.units){
@@ -51,10 +48,10 @@ function collect(game,mode,visible){
   });
   if(!resolved.length)continue;
   const at=Math.max(...resolved.map(r=>r.resultAt??r.endsAt));
-  const slots=resolved.slice(0,3).map(r=>luckyFaces.has(r.kind)?
-   {kind:r.kind,glow:Math.max(0,1-(time-(r.resultAt??r.endsAt))/.22)}:{blank:true});
-  const key=slots.map(slot=>slot.kind??'').join(',');
-  enqueue(u,'lucky:'+u.id+':'+at,'lucky:'+key,at,{kind:'lucky',slots,priority:false,miss:slots.every(slot=>slot.blank)});
+  const outcomes=resolved.slice(0,3);
+  const key=outcomes.map(roll=>luckyFaces.has(roll.kind)?roll.kind:'').join(',');
+  enqueue(u,'lucky:'+u.id+':'+at,'lucky:'+key,at,{kind:'lucky',rolls:outcomes,priority:false,
+   miss:outcomes.every(roll=>!luckyFaces.has(roll.kind))});
  }
  return entries;
 }
@@ -98,21 +95,10 @@ function fallout(c){
  c.beginPath();c.arc(0,0,1,0,Math.PI*2);c.fill();c.restore();
 }
 function diceBadge(c,row,fx){
- plate(c,-7,-13,19,20,'#acaa8b',row.priority?'#98612b':'#595d4d');
- const enamel=c.createLinearGradient(0,-9,0,11);
- enamel.addColorStop(0,row.priority?'#fff2b5':'#fff9e9');enamel.addColorStop(1,row.priority?'#e4af59':'#dfdcc8');
- plate(c,-11,-9,21,20,enamel,row.priority?'#a77526':'#454b3e');
- c.translate(-.5,1);
- if(row.miss)fx.rollMiss(c,0,0);
- else{
-  c.fillStyle='#29342a';
-  for(const [x,y] of pips[row.face]){c.beginPath();c.arc(x*4.7,y*4.7,row.face===1?2.45:1.48,0,Math.PI*2);c.fill();}
- }
- if(row.priority)fallout(c);
-}
-function rouletteBadge(c,row,fx){
- const offset=(row.slots.length-1)/2;
- row.slots.forEach((slot,i)=>fx.luckyResultTile(c,slot,(i-offset)*STEP,0,true));
+ const face=row.face??0;
+ root.FrontRadioArt.settledPair(c,[face,face],row.rank,!row.miss);
+ if(row.miss)fx.rollMiss(c,10.6,0);
+ if(row.priority){c.translate(15,0);fallout(c);}
 }
 function hotlineBadge(c){
  plate(c,-12,-12,24,24,'#3c3526','#e8bd65');
@@ -125,16 +111,18 @@ function draw(c,game,results,fx){
  if(!results.length)return;
  const tr=c.getTransform(),ratio=c.canvas.width/Math.max(1,c.canvas.clientWidth);
  const width=c.canvas.width/ratio,height=c.canvas.height/ratio,placed=[];
+ const worldScale=Math.hypot(tr.a,tr.b)/ratio;
  c.save();c.setTransform(ratio,0,0,ratio,0,0);
  // Give jackpots the first choice of location, then paint them last.
  for(const row of results.slice().reverse()){
   const {u}=row;
-  let rise=u.type==='lucky'?131:100;
+  let rise=u.type==='lucky'?151:100;
   if(u.type==='guntruck'&&game.captainStackHpMode&&root.FrontUnitLabels){
    const labels=root.FrontUnitLabels,name=labels.evolution(game,u);
    rise=u.y-(name?.y??labels.stackStarY(u))+21*ratio/Math.max(.1,tr.d);
   }
-  const w=row.kind==='lucky'?STEP*row.slots.length:29,h=row.priority?29:25;
+  const w=row.kind==='lucky'?146*worldScale:row.kind==='dice'?row.priority?61:48:28;
+  const h=row.kind==='lucky'?30*worldScale:row.priority?33:28;
   const x=Math.min(width-w/2-3,Math.max(w/2+3,(tr.a*u.x+tr.e)/ratio));
   const top=Math.min(56,height*.18)+h/2,bottom=Math.max(top,height-h/2-8);
   const anchor=Math.min(bottom,Math.max(top,(tr.d*(u.y-rise)+tr.f)/ratio));
@@ -149,7 +137,10 @@ function draw(c,game,results,fx){
  for(const {row,x,y} of placed.reverse()){
   c.save();c.translate(x,y);c.globalAlpha*=Math.min(1,(row.until-game.time)/.12)*(row.miss?.82:1);
   if(row.kind==='dice')diceBadge(c,row,fx);
-  else if(row.kind==='lucky')rouletteBadge(c,row,fx);
+  else if(row.kind==='lucky'){
+   c.scale(worldScale,worldScale);
+   fx.luckyResultRow(c,row.u,game,{x:0,y:0,rolls:row.rolls});
+  }
   else hotlineBadge(c);
   c.restore();
  }

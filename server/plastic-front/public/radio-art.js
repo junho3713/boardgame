@@ -95,6 +95,9 @@ function drawRollPair(c,pose,rank,age,spinning,reduced,duration,grouped) {
  face(c,10.6,-jump*.55,spinning?0:roll.dice[1],rim,-twist+.035,golden);
  c.restore();
 }
+function settledPair(c,dice,rank,success){
+ drawRollPair(c,{roll:{dice},accented:success,zoom:1},rank,0,false,true,1,true);
+}
 function rollLabel(c,label,roll,u,tr,top) {
  c.font='bold 12px sans-serif';
  c.textAlign='center';c.textBaseline='bottom';c.lineJoin='round';
@@ -742,6 +745,6 @@ function event(c,e,fx) {
  if(e.kind==='radioIncoming')incoming(c,e,fx);else impact(c,e,p,fx,view?.reduced??quiet());
  c.restore();return true;
 }
-root.FrontRadioArt={event,rolls,ground,turrets,flyovers};
+root.FrontRadioArt={event,rolls,settledPair,ground,turrets,flyovers};
 })(typeof window==='undefined'?globalThis:window);
 
