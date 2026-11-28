@@ -16,7 +16,7 @@ const battlefieldPicker=document.querySelector('.battlefield-picker');
 const battlefieldOptions=new Map([...battlefieldPicker.querySelectorAll('input[name="battlefield"]')].map(input=>[input.value,input]));
 const missionModeButtons=$('startOverlay').querySelectorAll('.mode-picker button[data-mode]');
 const captainModeButtons=$('captainModeField').querySelectorAll('button[data-health-mode]');
-let captainStackSelected=false;
+let captainStackSelected=$('captainModeField').querySelector('button[aria-pressed="true"]').dataset.healthMode==='stack';
 const battlefieldTitle=id=>battlefieldOptions.get(id)?.labels[0].querySelector('b').textContent||'작전';
 let battlefield='livingroom-assault',battlefieldPreviewKey='';
 const menuBattlefield=id=>window.FrontGame.normalizeBattlefield(id);
@@ -47,7 +47,7 @@ const gameEvents={level:showUpgrade,change:updateUI,toast:toast,end:data=>{if(au
  radioWarning(e){combatAudio.sync(game.phase);combatAudio.radioWarning(e,game.camera);},
  radioImpact(e){combatAudio.sync(game.phase);combatAudio.radioImpact(e,game.camera);},
  profile:persistProfile};
-let game=COOP?.active?new window.FrontCoopGame(gameEvents):new window.FrontGame(gameEvents,profile,{map:battlefield,commander:selectedCommander,sniperSkin:selectedSniperSkin,medicSkin:selectedMedicSkin,flameSkin:selectedFlameSkin,realtimeSummons:selectedMode!=='idle'});
+let game=COOP?.active?new window.FrontCoopGame(gameEvents):new window.FrontGame(gameEvents,profile,{map:battlefield,commander:selectedCommander,sniperSkin:selectedSniperSkin,medicSkin:selectedMedicSkin,flameSkin:selectedFlameSkin,realtimeSummons:selectedMode!=='idle',captainStackHpMode:captainStackSelected});
 const summonHud=window.FrontSummonHud.create($('summonHud'),requestSummon);
 const reduceMotion=window.matchMedia('(prefers-reduced-motion: reduce)');
 function requestSummon(slot){
