@@ -66,9 +66,37 @@ test('mobile mages enter only from six minutes onward, share the wave cap and ne
  for(let i=0;i<2;i++){const u=g.spawnRoomEnemy('blizzardMage');a.ok(u.mobileMage);a.equal(u.activeStage,1);a.equal(u.guardianRespawn,undefined);a.equal(u.fixedGuard,undefined);a.ok(g.stats(u).speed>0);}
  a.equal(g.spawnRoomEnemy('blizzardMage'),null);
 });
-test('rhino boss warns for one second and covers the same 360 units in half the old charge time',()=>{
- const p=room.patterns.rhinoCharge;a.equal(p.windup,1);a.equal(p.speed,800);a.equal(p.distance/p.speed,.45);
- const g=scene(),leader=g.addUnit(0,'leader',1500,6400),boss=g.addUnit(2,'rhinoBeetle',1500,6100);Object.assign(boss,{boss:true,bossPattern:'rhinoCharge',cooldown:0});
- g.updateBossPattern(boss,.05);a.equal(boss.bikeAttack.phase,'windup');g.time=.999;g.updateBossPattern(boss,.05);a.equal(boss.bikeAttack.phase,'windup');g.time=1;g.updateBossPattern(boss,.05);a.equal(boss.bikeAttack.phase,'charge');
- const y=boss.y;g.time=1.1;g.updateBossPattern(boss,.1);a.ok(Math.abs(boss.y-y-80)<1e-6);a.ok(leader.hp>0);
+test('boss charge warnings are halved and the locked lanes are crossed at the new speed',()=>{
+ for(const [type,pattern,windup,speed] of [['rhinoBeetle','rhinoCharge',.5,1200],['bikeRaider','rapidBike',.625,900],['bikeRaider',null,1.25,600]]){
+  const g=scene(),leader=g.addUnit(0,'leader',1500,6400),enemy=g.addUnit(2,type,1500,6100);
+  Object.assign(enemy,{boss:!!pattern,bossPattern:pattern,cooldown:0});
+  g.updateBattleUnits(.01);const attack=enemy.bikeAttack;
+  a.equal(attack.chargeAt,windup);a.equal(attack.speed,speed);
+  a.equal(g.bikeHazards()[0].landAt,windup+attack.distance/speed);
+  g.time=windup-.001;g.updateBattleUnits(.01);a.equal(attack.phase,'windup');a.equal(enemy.y,6100);
+  g.time=windup;g.updateBattleUnits(.01);a.equal(attack.phase,'charge');
+  const y=enemy.y;g.time=windup+.05;g.updateBattleUnits(.05);a.ok(Math.abs(enemy.y-y-speed*.05)<1e-6);
+  a.ok(leader.hp>0);
+ }
+});
+test('the four portal laser towers stay destroyed, including a legacy save waiting to rebuild',()=>{
+ const {pack,unpack}=require('./public/autoplay.js');
+ const g=new FrontGame({},undefined,{map:'livingroom-assault'});g.start();g.time=365;
+ const sites=[...room.guardians.finalLasers,...room.guardians.rearLasers],ids=sites.map(site=>site.id);
+ const towers=ids.map(id=>g.defenses.find(tower=>tower.id===id));
+ for(const tower of towers){
+  g.damage(tower,1e8,g.commander(0));
+  a.equal(tower.hp,0);a.equal(tower.respawnAt,undefined);
+  Object.assign(tower,{guardianRespawn:true,respawnAt:g.time+20});
+ }
+ g.roomGuardianVersion=142;
+ const mage=g.units.find(u=>u.guardianId===room.guardians.finalMages[0].id);
+ g.damage(mage,1e8,g.commander(0));a.ok(mage.respawnAt>g.time);
+ const restored=unpack(new FrontGame(),JSON.parse(JSON.stringify(pack(g))));
+ restored.time=Math.max(mage.respawnAt,g.time+20)+1;restored.updateGuardianRespawns();
+ for(const id of ids){
+  const tower=restored.defenses.find(tower=>tower.id===id);
+  a.equal(tower.hp,0);a.equal(tower.respawnAt,undefined);a.equal(tower.guardianRespawn,undefined);
+ }
+ a.ok(restored.units.find(u=>u.id===mage.id).hp>0);
 });

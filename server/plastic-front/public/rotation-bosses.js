@@ -3,30 +3,36 @@
 (function(root){
 'use strict';
 const TAU=Math.PI*2,dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+const NINJA_BURST={warning:.5,count:6};
 const bearing=(a,b)=>Math.atan2(b.y-a.y,b.x-a.x);
 const WATER={period:310,wet:216,width:28,speed:850,bombRadius:52,motion:tideMotion};
 // Integrating the speed between keys gives the position of the same crest
 // used by the renderer and the swept hit test. Impact is the fourth key.
-const tideKeys=[{time:0,distance:0,speed:WATER.speed}];
-for(const [duration,speed] of [[.22,295],[.98,145],[.42,690],[.48,WATER.speed]]){
- const prev=tideKeys[tideKeys.length-1];
- tideKeys.push({time:prev.time+duration,distance:prev.distance+duration*(prev.speed+speed)/2,speed});
+const tideKeys=makeTideProfile([[.22,295],[.98,145],[.42,690],[.48,WATER.speed]]);
+function makeTideProfile(stages){
+ const keys=[{time:0,distance:0,speed:WATER.speed}];
+ for(const [duration,speed] of stages){
+  const prev=keys[keys.length-1];
+  keys.push({time:prev.time+duration,distance:prev.distance+duration*(prev.speed+speed)/2,speed});
+ }
+ return keys;
 }
-const [approach,riseStart,fallStart,landing,washEnd]=tideKeys;
-function tideTime(distance){
+function tideTime(distance,keys){
+ const [approach,,,,washEnd]=keys;
  if(distance<=0)return distance/approach.speed;
- for(let i=1;i<tideKeys.length;i++){
-  const end=tideKeys[i],start=tideKeys[i-1];
+ for(let i=1;i<keys.length;i++){
+  const end=keys[i],start=keys[i-1];
   if(distance>end.distance)continue;
   const delta=distance-start.distance,accel=(end.speed-start.speed)/(end.time-start.time);
   return start.time+2*delta/(start.speed+Math.sqrt(start.speed**2+2*accel*delta));
  }
  return washEnd.time+(distance-washEnd.distance)/washEnd.speed;
 }
-function tideDistance(time){
+function tideDistance(time,keys){
+ const [approach,,,,washEnd]=keys;
  if(time<=0)return time*approach.speed;
- for(let i=1;i<tideKeys.length;i++){
-  const end=tideKeys[i],start=tideKeys[i-1];
+ for(let i=1;i<keys.length;i++){
+  const end=keys[i],start=keys[i-1];
   if(time>end.time)continue;
   const dt=time-start.time,accel=(end.speed-start.speed)/(end.time-start.time);
   return start.distance+dt*(start.speed+.5*accel*dt);
@@ -34,11 +40,12 @@ function tideDistance(time){
  return washEnd.distance+(time-washEnd.time)*washEnd.speed;
 }
 const unitInterval=x=>Math.max(0,Math.min(1,x)),ease=x=>x*x*(3-2*x);
-const tideClockDistance=h=>(h.front-h.breakAt)*h.sign+landing.distance;
+const tideClockDistance=(h,landing)=>(h.front-h.breakAt)*h.sign+landing.distance;
 function tideMotion(h){
  // Previously saved casts finish their original travelling animation.
  if(!Number.isFinite(h.breakAt))return {rise:1,fall:0,wash:0,height:1,impact:0};
- const time=tideTime(tideClockDistance(h));
+ const keys=h.profile??tideKeys,[,riseStart,fallStart,landing,washEnd]=keys;
+ const time=tideTime(tideClockDistance(h,landing),keys);
  const rise=unitInterval((time-riseStart.time)/(fallStart.time-riseStart.time));
  const fall=unitInterval((time-fallStart.time)/(landing.time-fallStart.time));
  const wash=unitInterval((time-landing.time)/(washEnd.time-landing.time));
@@ -47,8 +54,8 @@ function tideMotion(h){
 function advanceTide(h,dt){
  if(dt<=0)return;
  if(!Number.isFinite(h.breakAt)){h.front+=h.sign*WATER.speed*dt;return;}
- const distance=tideClockDistance(h);
- h.front+=h.sign*(tideDistance(tideTime(distance)+dt)-distance);
+ const keys=h.profile??tideKeys,distance=tideClockDistance(h,keys[3]);
+ h.front+=h.sign*(tideDistance(tideTime(distance,keys)+dt,keys)-distance);
 }
 const hazards=g=>g.roomCampaign.rotation.hazards??=[];
 function fx(g,kind,p,life,extra={}){
@@ -96,11 +103,16 @@ function startWave(g,u,again,previousDirection){
  clock.lastTide=direction;
  if(direction%2===0)clock.lastHorizontal=direction;else clock.lastVertical=direction;
  const b=g.bounds(),horizontal=direction%2===0,sign=direction<2?1:-1,length=horizontal?b.width:b.height;
- const breakAt=(horizontal?captain.x:captain.y)-sign*WATER.width,edge=sign>0?0:length;
- // Even at the map edge the swell needs enough run-up to finish rising.
+ const view=g.viewport,span=Math.min(length,horizontal?view?.width||1200:view?.height||860);
+ const half=span/2,center=view?(horizontal?g.camera.x:g.camera.y):horizontal?captain.x:captain.y-.16*span;
+ const viewCenter=Math.max(half,Math.min(length-half,center)),crestAt=viewCenter-sign*span*.35;
+ const riseSpeed=Math.min(330,span*.38),impactSpeed=Math.min(750,span*.55);
+ const profile=makeTideProfile([[.22,riseSpeed],[.58,riseSpeed*.5],[.24,impactSpeed],[.32,WATER.speed]]);
+ const [,riseStart,crest,landing]=profile,breakAt=crestAt+sign*(landing.distance-crest.distance),edge=sign>0?0:length;
+ // Lock the camera position at cast time so the wave does not chase panning players.
  const front=edge+sign*Math.min(0,(breakAt-edge)*sign+riseStart.distance-landing.distance);
  hazards(g).push({kind:'tide',source:u,direction,horizontal,sign,length,offset:g.random()*WATER.period,
-  start:g.time+1.2,front,breakAt,again,hit:[]});
+  start:g.time+1.2,front,breakAt,profile,again,hit:[]});
 }
 function bombs(g,u,c){
  const count=u.hp<=u.maxHp*.5?5:4,angle=g.random()*TAU;
@@ -153,7 +165,7 @@ function install({FrontGame}){
  };
  p.ninjaBossWounded=function(u,dealt){
   if(u.assassinClone){
-   if(dealt>0){u.cloneFlashUntil=this.time+.2;fx(this,'assassinPuff',u,.24,{damage:dealt});}
+   if(dealt>0)fx(this,'assassinPuff',u,.24,{damage:dealt});
    if(u.hp===0){
     dismiss(this,u);
     const body=this.units.find(b=>b.id===u.ninjaOwner&&b.hp>0);
@@ -204,8 +216,10 @@ function install({FrontGame}){
     this.move(u,dx*step,dy*step,dt,1020);const moved=dist(from,u);a.left-=step;
     cut(this,u,from,u,14,s.damage*1.12,a.hit);
     if(moved>=step*.65&&a.left>.01)return;
-    const count=body.ninjaLives===1?8:6;
-    for(let i=0;i<count;i++)star(this,u,a.angle+i*TAU/count,false);
+    a.phase='burst';a.until=now+NINJA_BURST.warning;return;
+   }else if(a.phase==='burst'){
+    for(let i=0;i<NINJA_BURST.count;i++)star(this,u,a.angle+i*TAU/NINJA_BURST.count,false);
+    u.assassinReleasedAt=now;
    }else if(a.phase==='hide'){
     const point=place(this,c,(c.moveFace??c.face??0)+Math.PI+(u.ninjaIndex%2?.45:-.25),38);
     Object.assign(a,{phase:'cross',point,until:now+.55});u.assassinHiddenUntil=a.until;return;
@@ -282,6 +296,6 @@ function install({FrontGame}){
   }
  };
 }
-root.FrontTideRules=WATER;
+root.FrontTideRules=WATER;root.FrontNinjaBurst=NINJA_BURST;
 if(typeof module!=='undefined'&&module.exports)module.exports=install;else install({FrontGame:root.FrontGame});
 })(typeof window==='undefined'?globalThis:window);

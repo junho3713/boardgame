@@ -30,19 +30,20 @@ test('test switch, relocatable slots, full rotation and saved draws',()=>{
 for(const stack of [false,true]){
  test('four previews, four formal slots, one star and one 12-minute finale, stack='+stack,()=>{
   const g=arena(stack),plan=g.roomCampaign.rotation,player=g.commander(0);
+  const slotHP=[4400,9360,18240,29760];
   for(const [i,slot] of config.rotation.slots.entries()){
    for(const mini of [true,false]){
     g.time=slot.at-(mini?60:0);g.updateRoomMission(0);g.updateRoomBosses();
     const b=g.activeBoss();assert.equal(b.type,plan.order[i]);assert.equal(!!b.miniBoss,mini);
     const scale=mini?.3:1,trait=config.rotation.traits[b.type];
-    assert.equal(b.maxHp*(b.ninjaLives||1),Math.round(slot.hp*trait[0]*scale));
+    assert.equal(b.maxHp*(b.ninjaLives||1),Math.round(slotHP[i]*trait[0]*scale));
     assert.equal(g.stats(b).damage,slot.damage*trait[1]*scale);
     while(b.hp>0){g.damage(b,1e8,player);g.time+=.36;}
    }
   }
   assert.equal(g.pickups.filter(p=>p.destinyStar).length,1);
   g.time=719.99;g.updateRoomBosses();assert.equal(g.finalBattle.spawned,false);
-  g.time=720;g.updateRoomBosses();g.updateRoomBosses();assert.equal(g.trialBoss.maxHp,90000);
+  g.time=720;g.updateRoomBosses();g.updateRoomBosses();assert.equal(g.trialBoss.maxHp,108000);
   assert.equal(g.units.filter(u=>u.finalBoss).length,1);
   for(const blade of g.trialBoss.swords.blades)blade.mode='attack';
   g.damage(g.trialBoss,1e8,player);assert.equal(g.result,'win');
@@ -93,9 +94,22 @@ test('ninja drops a log per phase, keeps stagger across checkpoint and retires i
   assert.ok(g.effects.some(e=>e.kind==='substitutionLog'&&e.max===2));
   g=copy(g);b=g.activeBoss();g.time+=.36;g.updateNinjaBoss(b,.05,g.stats(b));
  }
- b.assassinAction={phase:'dash',until:g.time,length:1,left:1,angle:0,hit:[]};g.updateNinjaBoss(b,.05,g.stats(b));
- assert.equal(g.roomCampaign.rotation.hazards.filter(h=>h.kind==='star').length,8);
  g.damage(b,1e8,g.commander(0));assert.equal(g.kills,1);assert.equal(g.bossState.killed,1);
+});
+test('six-way shuriken have a separate half-second tell after each dash',()=>{
+ for(const lives of [4,1]){
+  let g=arena(),b=spawn(g,'ninjaAssassin');b.ninjaLives=lives;
+  b.assassinAction={phase:'dash',until:g.time,length:1,left:1,angle:0,hit:[]};
+  g.updateNinjaBoss(b,.05,g.stats(b));
+  assert.equal(b.assassinAction.phase,'burst');assert.equal(b.assassinAction.until-g.time,.5);
+  g=copy(g);b=g.activeBoss();const until=b.assassinAction.until,position=[b.x,b.y];
+  g.time=until-.001;g.updateNinjaBoss(b,.05,g.stats(b));
+  assert.equal(g.roomCampaign.rotation.hazards?.length??0,0);assert.deepEqual([b.x,b.y],position);
+  g.time=until;g.updateNinjaBoss(b,.05,g.stats(b));
+  const blades=g.roomCampaign.rotation.hazards.filter(h=>h.kind==='star');
+  assert.equal(blades.length,6);assert.equal(b.assassinAction,null);
+  for(let i=0;i<6;i++)assert.ok(Math.abs(blades[i].angle-i*Math.PI/3)<1e-8);
+ }
 });
 test('7 minute preview can time out and the third formal slot still awards exactly one star',()=>{
  const g=arena(),plan=g.roomCampaign.rotation;plan.cursor=2;plan.order[2]='kraken';
@@ -115,6 +129,11 @@ test('Kraken opens from the north, then covers all four edges across a checkpoin
   const wave=g.roomCampaign.rotation.hazards.find(h=>h.kind==='tide');
   assert.ok(wave,'expected a tide on cast '+cast);
   directions.push(wave.direction);
+  const view=g.viewport??{width:1200,height:860},captain=g.commander(0);
+  const span=wave.horizontal?view.width:view.height,center=wave.horizontal?captain.x:captain.y-.16*span;
+  const viewCenter=Math.max(span/2,Math.min(wave.length-span/2,center));
+  const viewEdge=viewCenter-wave.sign*span/2,crestAt=wave.breakAt-wave.sign*(wave.profile[3].distance-wave.profile[2].distance);
+  assert.ok(Math.abs((crestAt-viewEdge)*wave.sign/span-.15)<1e-8);
   if(cast===0){
    assert.equal(wave.horizontal,false);assert.equal(wave.front,0);assert.equal(wave.sign,1);
    const c=g.commander(0);
@@ -137,16 +156,17 @@ test('kraken rage chains from a different edge, casts five bombs and accelerates
  wave.front=wave.sign>0?wave.length:0;g.time=wave.start+.1;g.updateRotationHazards(.1);
  const next=g.roomCampaign.rotation.hazards.find(h=>h.kind==='tide');assert.notEqual(next.horizontal,wave.horizontal);assert.equal(next.again,false);assert.ok(Math.abs(next.start-g.time-1.2)<1e-7);
 });
-test('the swell rises, breaks on the locked captain line, then surges across it once',()=>{
+test('the swell crests 15% into the locked view, then a low wash sweeps across the captain once',()=>{
  const g=arena(),b=spawn(g,'kraken'),c=g.commander(0),water=globalThis.FrontTideRules;
- c.y=520;g.updateKraken(b,.05,g.stats(b));
+ c.y=520;g.viewport={width:1200,height:800};g.camera={x:c.x,y:500};g.updateKraken(b,.05,g.stats(b));
  for(let i=0;i<2;i++){g.time=b.krakenClock.water;g.updateKraken(b,.05,g.stats(b));}
  const plan=g.roomCampaign.rotation,h=plan.hazards.find(v=>v.kind==='tide');
  plan.hazards=[h];const station=c.y;
  assert.ok(Math.abs(h.start-g.time-1.2)<1e-8);
- assert.equal(h.breakAt,station-water.width);
- c.y+=90;g.updateKraken(b,.02,g.stats(b));
- assert.equal(h.breakAt,station-water.width);
+ const lockedBreak=h.breakAt,crest=h.breakAt-(h.profile[3].distance-h.profile[2].distance);
+ assert.equal(crest,220);
+ c.y+=90;g.camera.y+=90;g.updateKraken(b,.02,g.stats(b));
+ assert.equal(h.breakAt,lockedBreak);
  c.y=station;h.offset=c.x-50;
  const saved=copy(g),savedTide=saved.roomCampaign.rotation.hazards.find(v=>v.kind==='tide');
  const tick=(game,end,step)=>{
@@ -154,21 +174,22 @@ test('the swell rises, breaks on the locked captain line, then surges across it 
  };
  const start=h.start;tick(g,start,.073);assert.equal(h.front,0);
  // Track all phases at native speed and capture the first instant of contact.
- const hp=c.hp;let riseAt,crestAt,hitAt,hitHp;
+ const hp=c.hp;let riseAt,crestAt,breakAt,hitAt,hitHp;
  for(let i=1;i<=440;i++){
   tick(g,start+i/180,1/180);
   const pose=water.motion(h);
   if(riseAt===undefined&&pose.rise>0)riseAt=g.time;
-  if(crestAt===undefined&&pose.fall>0){crestAt=g.time;assert.ok(pose.height>.998);}
+  if(crestAt===undefined&&pose.fall>0){crestAt=g.time;assert.ok(pose.height>.998);assert.ok(Math.abs(h.front-crest)<2);}
+  if(breakAt===undefined&&pose.fall>=1){breakAt=g.time;assert.ok(h.front+water.width<station);}
   if(hitAt===undefined&&c.hp<hp){
    hitAt=g.time;hitHp=c.hp;
-   assert.ok(pose.fall>.999&&pose.impact>.999&&pose.height<.001);
+   assert.ok(pose.fall===1&&pose.impact<.001&&pose.height===0);
    assert.ok(Math.abs(h.front+water.width-station)<4);
    assert.ok(c.toyKnockback.dy>0);
   }
  }
- assert.ok(Math.abs((crestAt-riseAt)-.98)<.012);
- assert.ok(Math.abs((hitAt-crestAt)-.42)<.012);
+ assert.ok(Math.abs((crestAt-riseAt)-.58)<.012);
+ assert.ok(Math.abs((breakAt-crestAt)-.24)<.012);
  assert.equal(c.hp,hitHp);assert.deepEqual(h.hit,[c.id]);
  assert.equal(water.motion(h).wash,1);
  tick(saved,g.time,.173);

@@ -354,7 +354,7 @@ class FrontGame{
  setupRoomGuardians(){
   if(this.mode!=='pve'||this.bounds().id!=='livingroom'||this.roomGuardianVersion===ROOM_CAMPAIGN.config.guardians.version)return false;
   const previous=this.roomGuardianVersion||0,c=this.commander(0),old=this.time>0;
-  // Waypoint guardians remain one-time encounters. Only the final HQ guard respawns.
+  // Waypoint guardians and laser towers are one-time encounters. Only the final mages respawn.
   const mage=(id,x,y,stage)=>{if(old&&c.y<y-120)return;if(this.units.some(u=>u.guardianId===id))return;const u=this.addUnit(1,'blizzardMage',x,y,true);Object.assign(u,{guardianId:id,missionStage:stage,activeStage:stage,fixedGuard:true,cooldown:1.2,homeX:x,homeY:y});};
   const laser=(id,x,y,stage)=>{if(this.defenses.some(u=>u.id===id))return;const hp=this.roomTowerHp({id});this.defenses.push({id,name:'레이저 포탑',x,y,team:1,structure:true,defenseKind:'laserTower',activeStage:stage,hp,maxHp:hp,r:42,cooldown:1.2,face:Math.PI/2});};
   const a=this.bases[0],b=this.bases[1],at=f=>a.y+(b.y-a.y)*f,sites=ROOM_CAMPAIGN.config.guardians;
@@ -369,8 +369,14 @@ class FrontGame{
    m.guardianSlot=i;finalMages.push([m,site.x,b.y+site.offset]);
   }
   const hqLasers=[...sites.finalLasers,...sites.rearLasers];
-  for(const site of hqLasers)laser(site.id,site.x,b.y+site.offset,3);
-  for(const [u,x,y]of [...finalMages,...hqLasers.map(site=>[this.defenses.find(p=>p.id===site.id),site.x,b.y+site.offset])]){
+  for(const site of hqLasers){
+   const x=site.x,y=b.y+site.offset;
+   laser(site.id,x,y,2);
+   const tower=this.defenses.find(p=>p.id===site.id);
+   Object.assign(tower,{x,y,homeX:x,homeY:y,activeStage:2,missionStage:2});
+   delete tower.guardianRespawn;delete tower.respawnAt;
+  }
+  for(const [u,x,y]of finalMages){
    Object.assign(u,{guardianRespawn:true,guardianSpawnX:x,guardianSpawnY:y,x,y,homeX:x,homeY:y,activeStage:2,missionStage:2});
    if(u.hp<=0&&!Number.isFinite(u.respawnAt))u.respawnAt=(u.diedAt??this.time)+GUARDIANS.respawnDelay;
   }
@@ -378,13 +384,13 @@ class FrontGame{
  }
  updateGuardianRespawns(){
   if(this.mode!=='pve'||this.bounds().id!=='livingroom'||this.phase==='ended')return;
-  for(const u of [...this.units,...this.defenses]){
+  for(const u of this.units){
    if(!u.guardianRespawn||u.hp>0||!Number.isFinite(u.respawnAt)||this.time+1e-8<u.respawnAt)continue;
    u.x=u.homeX=u.guardianSpawnX;u.y=u.homeY=u.guardianSpawnY;
-   u.maxHp=u.type?this.stats(u).hp:this.roomTowerHp(u);u.hp=u.maxHp;
+   u.maxHp=this.stats(u).hp;u.hp=u.maxHp;
    u.diedAt=undefined;u.respawnAt=null;u.flash=0;u.iceShield=null;u.blizzardCast=null;u.laserAttack=null;u.laserNextTick=this.time;u.cooldown=u.type==='blizzardMage'?1.2+(u.guardianSlot||0)*2.6:0;
    u.guardianReturnedAt=this.time;
-   this.effects.push({kind:u.type==='blizzardMage'?'guardianReturn':'towerRebuild',x:u.x,y:u.y,t:1.2,max:1.2,team:1});
+   this.effects.push({kind:'guardianReturn',x:u.x,y:u.y,t:1.2,max:1.2,team:1});
   }
  }
  setupRoadCaptains(){
@@ -1274,7 +1280,8 @@ class FrontGame{
    if(target.type==='bombBug')this.detonateBombBug(target,source);
    if(this.isSwordCommander(target)){target.swordAttack=null;target.swordPose=null;}
    target.diedAt=this.time;if(target.type==='acidBeetle')target.acidWindup=null;if(target.type==='blizzardMage')target.iceShield=null;
-   if(target.guardianRespawn){target.respawnAt=this.time+GUARDIANS.respawnDelay;target.laserAttack=null;target.blizzardCast=null;}
+   if(target.defenseKind==='laserTower')target.laserAttack=null;
+   if(target.guardianRespawn){target.respawnAt=this.time+GUARDIANS.respawnDelay;target.blizzardCast=null;}
    this.effects.push({kind:'burst',x:target.x,y:target.y-(target.visualFlightHeight??TYPES[target.type]?.flightHeight??0),t:.5,max:.5,team:target.team});
    if(target.base){if(this.isRoomCampaign()&&target===this.bases[1]){this.roomPortalDestroyed();return;}this.finish(source.team===0?'win':'lose','base');return;}
    if(target.built){this.navigationCache.clear();return;}
@@ -2189,7 +2196,7 @@ class FrontGame{
   const hazards=[];
   for(const u of this.units){const a=u.bikeAttack;if(u.hp<=0||u.team===0||!a)continue;
    const length=Math.max(0,a.distance-(a.phase==='charge'?a.traveled:0)),start=a.phase==='charge'?u:a.origin,n=Math.max(1,Math.ceil(length/70));
-   for(let i=0;i<=n;i++){const d=length*i/n;hazards.push({x:start.x+Math.cos(a.angle)*d,y:start.y+Math.sin(a.angle)*d,radius:(a.halfWidth||BIKE.halfWidth)+36,landAt:a.chargeAt+a.distance/(a.speed||BIKE.speed),source:u,bike:true});}
+   for(let i=0;i<=n;i++){const d=length*i/n;hazards.push({x:start.x+Math.cos(a.angle)*d,y:start.y+Math.sin(a.angle)*d,radius:(a.halfWidth||BIKE.halfWidth)+36,landAt:a.chargeAt+a.distance/(a.speed??this.bossPatternRules(u)?.speed??BIKE.speed),source:u,bike:true});}
   }return hazards;
  }
  infantryChargeDamage(fraction){
@@ -2214,7 +2221,7 @@ class FrontGame{
    if(rules.infantryHpDamage!==undefined&&!Number.isFinite(a.impactDamage))a.impactDamage=u.slotDamage??this.infantryChargeDamage(rules.infantryHpDamage)*this.roomSpawnScaling(u).damage;
    u.face=u.moveFace=u.aimFace=a.angle;
    if(a.phase==='windup'){if(this.time+1e-8<a.chargeAt)return;a.phase='charge';this.notify('fire',u);}
-   let remaining=Math.min(a.remaining,rules.speed*dt*(this.time<(u.luckySlowUntil||0)?1-LUCKY.groundSlow:1));
+   let remaining=Math.min(a.remaining,(a.speed??rules.speed)*dt*(this.time<(u.luckySlowUntil||0)?1-LUCKY.groundSlow:1));
    const victims=[...this.units,...this.radioTurretTargets(),...this.buildings.filter(b=>b.hp>0),this.bases[0]],r=this.collisionRadius(u);
    while(remaining>1e-6&&this.phase==='playing'){
     const step=Math.min(8,remaining),from={x:u.x,y:u.y},next={x:u.x+Math.cos(a.angle)*step,y:u.y+Math.sin(a.angle)*step};

@@ -154,9 +154,9 @@ function crossfade(c,older,newer,blend,clone){
  mixed.drawImage(earlier?b:a,0,0);mixed.restore();
  c.drawImage(out,-ox,-oy,size,size);
 }
-function body(c,u,time){
+function body(c,u,time,clone=u.assassinClone){
  if(!sprite.naturalWidth)return;
- const clone=u.assassinClone,{pose,previous,blend}=sampleFigure(u,time);
+ const {pose,previous,blend}=sampleFigure(u,time);
  c.save();
  if(clone){
   for(let i=0;i<3;i++){const phase=(time*.72+i/3+u.id*.19)%1;
@@ -177,8 +177,7 @@ function body(c,u,time){
  else drawFigure(c,pose,clone);
  c.restore();
 }
-function groundShadow(c,u){
- const clone=u.assassinClone;
+function groundShadow(c,u,clone){
  c.save();c.translate(u.x+6,u.y+5);c.scale(1,.47);
  glow(c,0,0,31,clone?'#39234155':'#211917ad',clone?'#39234100':'#21191700');
  if(!clone)glow(c,-5,-7,22,'#21191772','#21191700');
@@ -205,10 +204,7 @@ function ground(c,game){
  for(const u of game.units){const a=u.assassinAction;
   const boss=u.type==='ninjaAssassin';
   if((!boss&&u.type!=='assassin')||u.hp<=0||!game.visible(u))continue;
-  if(!boss||!u.assassinClone)groundShadow(c,u);
-  if(boss&&!u.assassinClone){
-   root.FrontRotationView.ninjaBase(c,u);
-  }
+  groundShadow(c,u,!boss&&u.assassinClone);
   if(a?.phase==='throw')throwWarning(c,u,a,game.time);
   if(a?.phase!=='warn')continue;
   const charge=progress(a,game.time,boss?.7:.75);

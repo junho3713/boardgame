@@ -5,12 +5,12 @@ const FORCE_NEW_BOSSES_FOR_TEST=true;
 const FORCED_BOSS_SLOTS=[2,3];
 const rotation={
  pools:[['stagBeetle','bayonetCaptain','bladeGuard','rhinoBeetle'],['ninjaAssassin','kraken','bikeRaider','hornet']],
- slots:[{at:240,hp:4400,damage:48,gold:80,xp:38},{at:360,hp:7800,damage:64,gold:90,xp:48},
-  {at:480,hp:15200,damage:80,gold:100,xp:58},{at:600,hp:24800,damage:100,gold:110,xp:68}],
+ slots:[{at:240,hp:4400,damage:48,gold:80,xp:38},{at:360,hp:9360,damage:64,gold:90,xp:48},
+  {at:480,hp:18240,damage:80,gold:100,xp:58},{at:600,hp:29760,damage:100,gold:110,xp:68}],
  traits:{stagBeetle:[1.05,.95],bayonetCaptain:[.95,1.05],bladeGuard:[1,1],rhinoBeetle:[1.15,.95],
   ninjaAssassin:[.95,1.1],kraken:[1.1,1],bikeRaider:[.9,1.1],hornet:[1,1.05]},
  extra:{kraken:{type:'kraken',name:'크라켄'},ninjaAssassin:{type:'ninjaAssassin',name:'닌자 어쌔신 피규어'}},
- finalAt:720,finalHp:90000,overloadAt:540,starSlot:2
+ finalAt:720,finalHp:108000,overloadAt:540,starSlot:2
 };
 function drawRotation(random,force=FORCE_NEW_BOSSES_FOR_TEST,forcedSlots=FORCED_BOSS_SLOTS){
  const draw=(pool)=>pool.splice(Math.floor(random()*pool.length),1)[0];
@@ -54,7 +54,7 @@ const config={rotation,version:116,duration:1200,enemyLuckyInterval:5,recoverySe
  introductions:{bayonet:180,honeybee:240,machinegun:360},
  openingCaps:[{until:360,bayonet:3,honeybee:2},{until:480,honeybee:4}],
  caps:{acidBeetle:2,blizzardMage:2,mortar:4,butterfly:2,sniper:2,machinegun:4,hornet:3,honeybee:8,bikeRaider:3,rhinoBeetle:4,stagBeetle:5,crimsonAce:3,lucky:4},
- guardians:{version:142,midLaser:{id:'room-threequarter-laser',x:1500,fraction:.5},midMage:{id:'room-half-mage',x:1500,fraction:.75},finalMage:{id:'room-final-mage',x:1340,offset:280},finalMages:[{id:'room-final-mage',x:1340,offset:280},{id:'room-final-mage-right',x:1660,offset:280}],rearLasers:[{id:'room-final-rear-laser-left',x:950,offset:-400},{id:'room-final-rear-laser-right',x:2050,offset:-400}],finalLasers:[{id:'room-final-laser',x:1225,offset:260},{id:'room-final-laser-right',x:1775,offset:260}]},
+ guardians:{version:143,midLaser:{id:'room-threequarter-laser',x:1500,fraction:.5},midMage:{id:'room-half-mage',x:1500,fraction:.75},finalMage:{id:'room-final-mage',x:1340,offset:280},finalMages:[{id:'room-final-mage',x:1340,offset:280},{id:'room-final-mage-right',x:1660,offset:280}],rearLasers:[{id:'room-final-rear-laser-left',x:950,offset:-400},{id:'room-final-rear-laser-right',x:2050,offset:-400}],finalLasers:[{id:'room-final-laser',x:1225,offset:260},{id:'room-final-laser-right',x:1775,offset:260}]},
  fortifications:{version:122,missiles:[{id:'room-hq-missile-left',x:980,y:1040},{id:'room-hq-missile-right',x:2020,y:1040},{id:'room-hq-missile-rear-left',x:1050,y:300},{id:'room-hq-missile-rear-right',x:1950,y:300}],guardian:{midLaser:{hp:2.6,defense:20},finalLaser:{hp:3.2,defense:30},midMage:{hp:3.2,damage:1.25,rate:.9,defense:18},finalMage:{hp:4,damage:1.35,rate:.9,defense:24},post:{hp:1.8,damage:1.25,defense:15},hq:{hp:1.75,damage:1.3,defense:20},garrison:{hp:1.5,damage:1,defense:8}},
   lines:[{id:'first-patrol',y:6200,roster:['ant','ant','bayonet']},{id:'laser-approach',y:4800,roster:['ant','ant','bladeGuard']},{id:'laser-left',x:450,y:4300,roster:['bladeGuard','machinegun']},{id:'laser-right',x:2550,y:4300,roster:['bladeGuard','machinegun']},{id:'approach',y:5600,roster:['bladeGuard','bayonet','rifle']},{id:'laser',y:4200,roster:['bayonet','bladeGuard','machinegun','machinegun','sniper']},{id:'witch',y:2400,roster:['stagBeetle','bladeGuard','machinegun','sniper']},{id:'final',y:1600,roster:['stagBeetle','bladeGuard','bladeGuard','machinegun','machinegun','sniper']}],leash:600,engage:650},
  lessons:{laser:{field:'laserExposureQuest',unlock:'mortar',hits:1},mage:{field:'mageShieldQuest',unlock:'sniper',uses:2}},
@@ -80,7 +80,7 @@ const config={rotation,version:116,duration:1200,enemyLuckyInterval:5,recoverySe
  destinyStarMini:{at:540,type:'rhinoBeetle'},
  destinyStarBoss:{at:840,type:'hornet'},
  bosses:[{at:240,type:'stagBeetle',name:'거대 사슴벌레',pattern:null},{at:360,type:'bayonetCaptain',name:'장난감 병정 보스',pattern:'soldierDash'},{at:480,type:'bladeGuard',name:'검병 대장',pattern:'wideSlash'},{at:600,type:'rhinoBeetle',name:'장수풍뎅이 보스',pattern:'rhinoCharge'},{at:720,type:'bikeRaider',name:'오토바이병 대장',pattern:'rapidBike'},{at:840,type:'hornet',name:'장수말벌',pattern:'venomDive'},{at:1200,type:'swordEmpress',name:'사검의 군주',pattern:'fourSwords'}],
- patterns:{soldierDash:{hpScale:1.75,every:2,duration:1,speed:2.2,damageMultiplier:3},wideSlash:{range:220,arc:1.9,windup:.7,damageMultiplier:2},rhinoCharge:{range:420,cooldown:8,windup:1,distance:360,speed:800,halfWidth:30,recovery:3,vulnerable:1.3,damageScale:.6,infantryHpDamage:.5},rapidBike:{cooldown:4.2},venomDive:{cooldown:8,rise:.25,warning:.6,descent:.1,recovery:2,height:145,lowHeight:24,damage:1.6,maxHpDamage:.5,poisonDuration:4,poisonRate:.25,poisonPerSecond:.12},rearBarrage:{cooldown:7,warning:1.5,radius:100,damage:1.35,bossDamageMultiplier:.85,range:650,shots:3,spacing:220}}
+ patterns:{soldierDash:{hpScale:1.75,every:2,duration:1,speed:2.2,damageMultiplier:3},wideSlash:{range:220,arc:1.9,windup:.7,damageMultiplier:2},rhinoCharge:{range:420,cooldown:8,windup:.5,distance:360,speed:1200,halfWidth:30,recovery:3,vulnerable:1.3,damageScale:.6,infantryHpDamage:.5},rapidBike:{windup:.625,speed:900,cooldown:4.2},venomDive:{cooldown:8,rise:.25,warning:.6,descent:.1,recovery:2,height:145,lowHeight:24,damage:1.6,maxHpDamage:.5,poisonDuration:4,poisonRate:.25,poisonPerSecond:.12},rearBarrage:{cooldown:7,warning:1.5,radius:100,damage:1.35,bossDamageMultiplier:.85,range:650,shots:3,spacing:220}}
 };
 const d=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y),clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const baseEnemyScaling={hp:1,damage:1};
