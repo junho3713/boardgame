@@ -7,7 +7,7 @@ const abilities=window.FrontAbilities,evolutions=window.FrontEvolutions,fieldCar
 const types=window.FrontTypes,roster=window.FrontRoster,production=[...roster],emptyQueue=()=>Object.fromEntries(production.map(t=>[t,0]));let W=1,H=1,DPR=1,scale=1,toastTimer,returnPhase='playing',last=0,uiTime=0,terrain,movePointer=null,pageTouch=null,stickPointer=null,aimPointer=null,manualAim=null,stickInput={x:0,y:0},keys={},rosterKey='',queue=emptyQueue();
 let cursorAimEnabled=false,manualAimCursor=null,reticleOpenedAt=0,windowBlurred=false;
 const aimReticleScale=1.5;
-const display=window.FrontDisplay;let displayPrefs;try{displayPrefs=display.read(localStorage);}catch{displayPrefs={...display.defaults};}let displayReturn='ready',displayFocus=null;
+const display=window.FrontDisplay,rollOverlay=window.FrontRollOverlay;let displayPrefs;try{displayPrefs=display.read(localStorage);}catch{displayPrefs={...display.defaults};}let displayReturn='ready',displayFocus=null;
 const profileKey='plastic-front-profile-v1',permanent=window.FrontPermanent;let profile,profileSaveError='',permanentReturn='ready';
 try{profile=window.FrontProfile.read(localStorage,profileKey);}catch{profile=new window.FrontProfile();profileSaveError='브라우저 저장을 읽을 수 없습니다. 현재 세션의 진행만 유지됩니다.';}
 const worldModels=new window.FrontWorldModels(()=>{if(game.bounds().id!=='livingroom')buildTerrain();});
@@ -729,13 +729,13 @@ function drawAimReticle(player){
  ctx.restore();
 }
 function resize(){const r=canvas.getBoundingClientRect();W=Math.max(1,r.width);H=Math.max(1,r.height);const m=display.metrics(W,H,window.devicePixelRatio,displayPrefs,selectedMode==='idle');DPR=m.ratio;canvas.width=Math.max(1,Math.round(W*DPR));canvas.height=Math.max(1,Math.round(H*DPR));fog.width=canvas.width;fog.height=canvas.height;scale=m.scale*(game.isDesktopDefense()?.65:1);game.viewport={width:W/scale,height:H/scale};renderDisplay();}
-function renderDisplay(){const p=displayPrefs;$('displayZoom').value=p.zoom;$('displayZoomValue').textContent=p.zoom+'%';$('displayResolution').value=p.resolution;$('zoomOut').disabled=p.zoom<=75;$('zoomIn').disabled=p.zoom>=200;$('displayPixels').textContent=`현재 전투 해상도 ${canvas.width} × ${canvas.height} · 화면 크기 ${Math.round(W)} × ${Math.round(H)}`;}
+function renderDisplay(){const p=displayPrefs;$('displayZoom').value=p.zoom;$('displayZoomValue').textContent=p.zoom+'%';$('displayResolution').value=p.resolution;$('displayRollDisplay').value=p.rollDisplay;$('zoomOut').disabled=p.zoom<=75;$('zoomIn').disabled=p.zoom>=200;$('displayPixels').textContent=`현재 전투 해상도 ${canvas.width} × ${canvas.height} · 화면 크기 ${Math.round(W)} × ${Math.round(H)}`;}
 function changeDisplay(value){displayPrefs=display.clean({...displayPrefs,...value});try{display.save(localStorage,displayPrefs);}catch{}resize();}
 async function openDisplay(){if(autoSession.busy)return;if(selectedMode==='idle'&&game.phase==='playing')await autoSession.tick();displayReturn=game.phase;displayFocus=document.activeElement;clearInput();if(game.phase==='playing')game.phase='paused';combatAudio.sync(game.phase);autoCheckpoint();renderDisplay();soundUI();$('displayOverlay').hidden=false;$('closeDisplay').focus();updateUI();}
 function closeDisplay(){if($('displayOverlay').hidden)return;combatAudio.stop();$('displayOverlay').hidden=true;if(game.phase==='paused'&&displayReturn==='playing'){game.phase='playing';if(selectedMode==='idle'){autoSession.at=Date.now();autoSession.save();}}displayFocus?.focus?.({preventScroll:true});updateUI();}
 for(const id of ['displayBtn','startDisplay','pauseDisplay'])$(id).onclick=openDisplay;
 $('closeDisplay').onclick=closeDisplay;$('applyDisplay').onclick=closeDisplay;
-$('displayZoom').oninput=e=>changeDisplay({zoom:e.target.value});$('zoomOut').onclick=()=>changeDisplay({zoom:displayPrefs.zoom-5});$('zoomIn').onclick=()=>changeDisplay({zoom:displayPrefs.zoom+5});$('displayResolution').onchange=e=>changeDisplay({resolution:e.target.value});$('resetDisplay').onclick=()=>changeDisplay(display.defaults);
+$('displayZoom').oninput=e=>changeDisplay({zoom:e.target.value});$('zoomOut').onclick=()=>changeDisplay({zoom:displayPrefs.zoom-5});$('zoomIn').onclick=()=>changeDisplay({zoom:displayPrefs.zoom+5});$('displayResolution').onchange=e=>changeDisplay({resolution:e.target.value});$('displayRollDisplay').onchange=e=>changeDisplay({rollDisplay:e.target.value});$('resetDisplay').onclick=()=>changeDisplay(display.defaults);
 $('displayOverlay').addEventListener('keydown',e=>{if(e.key!=='Tab')return;const nodes=[...$('displayOverlay').querySelectorAll('button,input,select')].filter(n=>!n.disabled&&!n.closest('[hidden]')&&n.getClientRects().length),first=nodes[0],last=nodes.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}});
  new ResizeObserver(resize).observe($('battleFrame'));
 window.addEventListener('resize',resize);window.addEventListener('orientationchange',()=>requestAnimationFrame(resize));
@@ -865,7 +865,7 @@ function drawCommandHeading(ctx,u,mine){
 function drawUnitRaw(u,mine=true){
  if(game.isSupportEntity?.(u)&&window.FrontSupportToyView){window.FrontSupportToyView.draw(ctx,u,game);return;}
  const t=u.team,alive=u.hp>0,evolved=window.FrontUnitLabels.isEvolved(game,u);if(!alive){if(u.type==='medic'&&t===0&&u.appearance==='rina'&&Number.isFinite(u.diedAt)){ctx.save();ctx.translate(u.x,u.y);unitModels.draw(ctx,u,game.time);ctx.restore();}if(u.guardianRespawn&&Number.isFinite(u.respawnAt)&&game.mission.stage>=3&&game.visible(u))text(ctx,'얼음 마녀 귀환 · '+Math.max(0,Math.ceil(u.respawnAt-game.time))+'초',u.x,u.y+28,11,'#acdfff');if(u.type==='leader'&&t===0){const p=point(u);text(ctx,u.deadUntil>game.time?'제자리 부활 '+Math.ceil(u.deadUntil-game.time)+'초':'부활 기회 소진',u.x,u.y-25,13,'#f5edc6');}return;}
- if(t&&!game.visible(u))return;window.FrontToyInsects?.warning?.(ctx,u,game.time);
+ if(t&&!game.visible(u))return;
  const col=t===2?'#77543a':t?'#bd6e55':'#5f863e',light=t===2?'#a17b4d':t?'#d88c71':'#84a953',dark=t===2?'#493c2b':t?'#82472f':'#36592b';ctx.save();ctx.translate(u.x,u.y);window.FrontHitFeedback.transform(ctx,u,game.time);
  if(u.type==='drone'||u.type==='multiDrone')ctx.globalAlpha*=window.FrontSupportDroneView.cloakOpacity(u,game.time);
 
@@ -947,7 +947,7 @@ function drawUnitRaw(u,mine=true){
  if(evolved)battleFx.drawEvolutionUnit(ctx,u,game.time);
  if(!u.rareSupplyGuard&&u.type==='blizzardMage')text(ctx,(u.iceShield&&game.time<=u.iceShield.until?'아이스 실드 · 박격포 차단':(u.mobileMage?'이동형 얼음 마녀':'얼음 마녀')+' · 사거리 '+window.FrontGuardians.range),u.x,u.y-103,11,'#c4edff');
  if(u.boss&&['bayonetCaptain','bladeGuard','bikeRaider'].includes(u.type))text(ctx,(u.miniBoss?'MID / ':'BOSS / ')+u.bossName.replace(/^(중간 보스|미드 보스) · /,''),u.x,u.y-176,13,'#ffe294');
- if(u.type==='lucky'){ctx.save();ctx.translate(0,-16);battleFx.luckyReels(ctx,u,game);ctx.restore();}
+ if(u.type==='lucky'&&rollOverlay.full(displayPrefs.rollDisplay,u)){ctx.save();ctx.translate(0,-16);battleFx.luckyReels(ctx,u,game);ctx.restore();}
  if(!u.rareSupplyGuard&&!u.boss&&u.type==='bikeRaider'&&(!u.bikeAttack||u.bikeAttack.phase!=='windup'))text(ctx,game.time<(u.bikeRecoverUntil||0)?'제동 · 공격 기회':'바이크 돌격병',u.x,u.y-88,10,'#ffd2be');
 
  if(!u.rareSupplyGuard&&!u.boss&&types[u.type].stab&&(u.type==='bayonetCaptain'||u.bayonetAttack||game.units.find(v=>v.type==='bayonet'&&v.hp>0&&game.visible(v))===u))text(ctx,u.bayonetAttack?'총검 준비!':types[u.type].name,u.x,u.y-(u.type==='bayonetCaptain'?99:78),10,u.bayonetAttack?'#ffd796':u.type==='bayonetCaptain'?'#ffdc80':'#ead3a2');
@@ -1166,6 +1166,47 @@ function drawMini(){
  for(const p of game.pickups)if(p.active&&p.destinyStar)drawDestinyStar(mc,p.x*sx,p.y*sy,6);
  mc.strokeStyle='#e8ecd199';mc.lineWidth=.8;mc.strokeRect((game.camera.x-W/scale/2)*sx,(game.camera.y-H/scale/2)*sy,W/scale*sx,H/scale*sy);
 }
+function drawCombatEffect(e){
+ if(window.FrontRotationView.event(ctx,e)||window.FrontAssassinView.event(ctx,e)||window.FrontSupportDroneView.event(ctx,e,unitModels,game.time)||window.FrontSummonHud.impact(ctx,e)||window.FrontSupportToyView?.event(ctx,e,game)||battleFx.drawEvent(ctx,e))return;
+ const k=e.t/e.max;ctx.save();ctx.globalAlpha=k;
+ if(e.kind==='critical')text(ctx,'치명타!',e.x,e.y-25*(1-k),15,'#ffe28c');
+ else circle(ctx,e.x,e.y,45*(1-k),null,'#f5edc2');
+ ctx.restore();
+}
+function drawSniperLines(enemy){
+ const snipers=game.units.filter(u=>(u.team!==0)===enemy&&u.hp>0&&u.type==='sniper'&&u.sniperAim&&game.visible(u));
+ for(const u of snipers){
+  const aim=u.sniperAim;
+  if(aim.stack){drawStackSniperWarning(u);continue;}
+  if(aim.target?.commandShot||aim.target&&game.visible(aim.target))battleFx.drawLaser(ctx,u,game.time,{crouched:unitModels.crouched(u),muzzle:unitModels.weaponPoint(u)});
+ }
+}
+function drawProjectiles(enemy,visible){
+ for(const p of game.mortarShells){
+  if((p.team!==0)!==enemy)continue;
+  if(enemy)drawMortarShell(p);
+  if(visible(battleFx.mortarPose(p,game.time)))battleFx.drawMortar(ctx,p,game.time);
+ }
+ for(const p of game.shots)if((p.team!==0)===enemy&&visible(p))battleFx.drawShot(ctx,p,game.evolutionEnabled(p.source),rollOverlay.full(displayPrefs.rollDisplay,p.source||p));
+}
+function drawEnemyThreats(visible,events){
+ window.FrontRotationView.ground(ctx,game,terrain);
+ window.FrontAssassinView.ground(ctx,game,'warnings');
+ window.FrontGuardianFX.warnings(ctx,game);
+ window.FrontPirateCannonView?.ground(ctx,game,visible);
+ for(const u of game.units){
+  if(u.hp<=0||u.team===0)continue;
+  if(u.type==='bikeRaider'||u.bossPattern==='rhinoCharge')battleFx.drawBikeWarning(ctx,u,game.time);
+  if((u.type==='bombBug'||u.type==='acidBeetle')&&game.visible(u))window.FrontToyInsects?.warning?.(ctx,u,game.time);
+ }
+ for(const b of game.barrages){const k=clamp(1-(b.landAt-game.time)/b.delay,0,1);circle(ctx,b.x,b.y,b.radius,'#c53d2630','#ffb079');ctx.lineWidth=3;circle(ctx,b.x,b.y,b.radius*k,'#db4e2830','#e84a27');ctx.setLineDash([8,6]);circle(ctx,b.x,b.y,b.radius+5,null,'#ffe1ad');ctx.setLineDash([]);text(ctx,`${Math.max(0,b.landAt-game.time).toFixed(1)}초`,b.x,b.y+5,22,'#fff2cc');}
+ swordView.warnings(ctx,game,'warnings');
+ drawSniperLines(true);window.FrontGuardianFX.air(ctx,game);
+ window.FrontRosterArt?.enemyProjectiles(ctx,game,visible);
+ window.FrontRotationView.air(ctx,game);window.FrontAssassinView.stars(ctx,game,visible);
+ drawProjectiles(true,visible);
+ for(const e of events)drawCombatEffect(e);
+}
 function draw(dt){
  $('battleFrame').classList.toggle('boss-intro-active',game.bossIntro?.remaining>0);
  game.viewport={width:W/scale,height:H/scale};
@@ -1175,7 +1216,7 @@ function draw(dt){
  ctx.setTransform(DPR,0,0,DPR,0,0);ctx.fillStyle='#809669';ctx.fillRect(0,0,W,H);ctx.translate(W/2,H/2);ctx.scale(scale,scale);ctx.translate(-game.camera.x,-game.camera.y);
  const impactShake=window.FrontHitFeedback.shake(game),[summonX,summonY]=reduceMotion.matches?[0,0]:window.FrontSummonHud.shake(game);
  sceneOffset.x=impactShake.x+summonX;sceneOffset.y=impactShake.y+summonY;
- ctx.translate(sceneOffset.x,sceneOffset.y);if(terrain)ctx.drawImage(terrain,0,0,game.bounds().width,game.bounds().height);
+ ctx.translate(sceneOffset.x,sceneOffset.y);const worldTransform=ctx.getTransform();if(terrain)ctx.drawImage(terrain,0,0,game.bounds().width,game.bounds().height);
  if(game.isRoomAssault()&&game.roomCampaign?.assaultAt!=null){
   ctx.fillStyle='#6a22352e';
   ctx.fillRect(0,0,game.bounds().width,game.bounds().height);
@@ -1183,13 +1224,11 @@ function draw(dt){
  for(const u of game.units)if(u.team===0&&u.toyKnockback?.popHeight>=48&&window.FrontHitFeedback.airborne(u,game.time)){
   ctx.save();ctx.fillStyle='#24282c69';ctx.beginPath();ctx.ellipse(u.x+3,u.y+4,17,6,0,0,Math.PI*2);ctx.fill();ctx.restore();
  }
- window.FrontRotationView.ground(ctx,game,terrain);window.FrontAssassinView.ground(ctx,game);window.FrontGuardianFX.ground(ctx,game);battleFx.ground(ctx,fxVisible);battleFx.luckyGround(ctx,game,fxVisible);
- for(const u of game.units)if(u.type==='bikeRaider'||u.bossPattern==='rhinoCharge')battleFx.drawBikeWarning(ctx,u,game.time);
+ window.FrontAssassinView.ground(ctx,game,'shadows');window.FrontGuardianFX.ground(ctx,game,false);battleFx.ground(ctx,fxVisible);battleFx.luckyGround(ctx,game,fxVisible,false);
  if(game.isRoomCampaign())window.FrontPortal.ground(ctx,game.bases[1],game.time);
  for(const b of game.bases)drawBase(b);
  game.structures.forEach(drawPost);game.defenses.filter(p=>!p.fencePost).forEach(drawDefense);window.FrontRoomFenceArt.links(ctx,game);game.defenses.filter(p=>p.fencePost).forEach(drawDefense);game.buildings.forEach(b=>window.FrontLivingRoom.building(ctx,b,game.time));
- for(const p of game.mortarShells)drawMortarShell(p);
- for(const b of game.barrages){const k=clamp(1-(b.landAt-game.time)/b.delay,0,1);circle(ctx,b.x,b.y,b.radius,'#c53d2630','#ffb079');ctx.lineWidth=3;circle(ctx,b.x,b.y,b.radius*k,'#db4e2830','#e84a27');ctx.setLineDash([8,6]);circle(ctx,b.x,b.y,b.radius+5,null,'#ffe1ad');ctx.setLineDash([]);text(ctx,`${Math.max(0,b.landAt-game.time).toFixed(1)}초`,b.x,b.y+5,22,'#fff2cc');}
+ for(const p of game.mortarShells)if(p.team===0)drawMortarShell(p);
  if(game.mode==='pve'&&!game.isDesktopDefense()&&game.frontline()>70){const y=game.frontline();ctx.strokeStyle='#efd48caa';ctx.lineWidth=3;ctx.setLineDash([14,12]);ctx.beginPath();ctx.moveTo(45,y);ctx.lineTo(game.bounds().width-45,y);ctx.stroke();ctx.setLineDash([]);text(ctx,game.mission.stage===1?'사냥 구역 완료 후 개방':'전초기지 2곳 파괴 후 개방',game.bounds().width/2,y-18,15,'#eee2ae');}
  if(!game.isDesktopDefense()&&game.baseShielded()){const b=game.bases[1];circle(ctx,b.x,b.y,135,null,'#a3cbbd88');text(ctx,'방어막 가동',b.x,b.y+135,14,'#c4dfd1');}
 
@@ -1213,12 +1252,24 @@ function draw(dt){
  window.FrontSummonHud.shadows(ctx,game);
  if(game.moveOrder){const p=game.moveOrder;circle(ctx,p.x,p.y,25,null,'#f7efb7');circle(ctx,p.x,p.y,5,'#f7efb7');text(ctx,'집결 지점',p.x,p.y+44,13,'#fff3bc');}
  for(const u of game.units)if(u.team===0&&u.type==='leader'&&u.hp>0&&u.ultimatePose?.active)battleFx.drawUltimateArea(ctx,u,u===player?game.ultimate:u.ultimatePose,game.time);
+ const hostileEvents=[];
+ const rollMode=displayPrefs.rollDisplay;
+ const visibleRoll=e=>fxVisible(e)&&Math.abs(e.x-game.camera.x)<=halfW+45&&Math.abs(e.y-game.camera.y)<=halfH+120;
+ const rollFrame=rollOverlay.plan(game,rollMode,visibleRoll);
+ for(const e of game.effects){
+  if(!fxVisible(e))continue;
+  if(window.FrontEffects.isHostileThreat(e)){hostileEvents.push(e);continue;}
+  drawCombatEffect(rollMode!=='full'&&rollOverlay.hotline(e)?{...e,hideCaption:true}:e);
+ }
+ window.FrontRosterArt?.field(ctx,game,fxVisible,false);battleFx.drawLuckySprays(ctx,game,fxVisible);
+ drawProjectiles(false,fxVisible);drawSniperLines(false);battleFx.drawParticles(ctx,fxVisible);
+ rollOverlay.drawSpinners(ctx,game,rollFrame.spinners);
  if(game.isDesktopDefense()){
   const view=window.FrontDesktop,visibleTroops=game.units.filter(u=>u.hp>0),props=game.obstacles.filter(o=>view.visible(o,game.camera,halfW,halfH)),entities=[...game.units.filter(u=>!types[u.type].flying).map(u=>({depth:u.y,u})),...props.map(o=>({depth:view.depth(o),o}))].sort((a,b)=>a.depth-b.depth);
   for(const e of entities)if(e.u)drawUnit(e.u);else{ctx.save();ctx.globalAlpha=view.opacity(e.o,visibleTroops);view.obstacle(ctx,e.o,game.time);ctx.restore();}
  }else if(game.bounds().id==='livingroom'){
   const view=window.FrontLivingRoom,props=game.obstacles.filter(o=>view.furnitureVisible(o,game.camera,halfW,halfH)),visibleTroops=game.units.filter(u=>u.hp>0&&(u.team===0||game.visible(u)));
-  if(game.trialBoss?.hp>0){game.trialViewport={left:game.camera.x-halfW,right:game.camera.x+halfW,top:game.camera.y-halfH,bottom:game.camera.y+halfH};swordView.warnings(ctx,game);}
+  if(game.trialBoss?.hp>0){game.trialViewport={left:game.camera.x-halfW,right:game.camera.x+halfW,top:game.camera.y-halfH,bottom:game.camera.y+halfH};swordView.warnings(ctx,game,'shadows');}
   const parts=game.trialBoss?.hp>0&&game.visible(game.trialBoss)?swordView.parts(game):[];
   const entities=[...game.units.filter(u=>!types[u.type].flying&&u.type!=='swordEmpress').map(u=>({depth:u.y,u})),...props.map(o=>({depth:view.depth(o),o})),...parts,{portal:true,depth:game.bases[1].y+29}].sort((a,b)=>a.depth-b.depth);
   for(const e of entities)if(e.portal)window.FrontPortal.body(ctx,game.bases[1],game.time);else if(e.kind)swordView.drawPart(ctx,e,game);else if(e.u)drawUnit(e.u);else{const o=e.o;view.furniture(ctx,o,view.furnitureOpacity(o,visibleTroops));}
@@ -1229,26 +1280,12 @@ function draw(dt){
  }
  window.FrontSummonHud.airborne(ctx,game,(pod,evolved)=>unitModels.draw(ctx,pod,game.time,evolved),reduceMotion.matches);
  for(const u of game.units.filter(u=>types[u.type].flying).sort((a,b)=>a.y-b.y))drawUnit(u);
- for(const u of game.units.filter(u=>u.hp>0&&u.type==='sniper'&&game.visible(u)&&u.sniperAim&&!u.sniperAim.stack&&(u.sniperAim.target.commandShot||game.visible(u.sniperAim.target))).slice(0,12))battleFx.drawLaser(ctx,u,game.time,{crouched:unitModels.crouched(u),muzzle:unitModels.weaponPoint(u)});
- for(const u of game.units)if(u.hp>0&&u.sniperAim?.stack)drawStackSniperWarning(u);
- window.FrontGuardianFX.air(ctx,game);battleFx.drawLuckySprays(ctx,game,fxVisible);
- for(const p of game.mortarShells){const pose=battleFx.mortarPose(p,game.time);if(fxVisible(pose))battleFx.drawMortar(ctx,p,game.time); }
- window.FrontRosterArt?.field(ctx,game,fxVisible);
- window.FrontRotationView.air(ctx,game);window.FrontAssassinView.stars(ctx,game,fxVisible);
- for(const p of game.shots){if(!fxVisible(p))continue;battleFx.drawShot(ctx,p,game.evolutionEnabled(p.source));}
- for(const e of game.effects){
-  if(!fxVisible(e)||window.FrontRotationView.event(ctx,e)||window.FrontAssassinView.event(ctx,e)||window.FrontSupportDroneView.event(ctx,e,unitModels,game.time)||window.FrontSummonHud.impact(ctx,e)||window.FrontSupportToyView?.event(ctx,e,game)||battleFx.drawEvent(ctx,e))continue;
-  const k=e.t/e.max;ctx.save();ctx.globalAlpha=k;
-  if(e.kind==='critical')text(ctx,'치명타!',e.x,e.y-25*(1-k),15,'#ffe28c');
-  else circle(ctx,e.x,e.y,45*(1-k),null,'#f5edc2');
-  ctx.restore();
- }
 
  window.FrontRadioArt.turrets(ctx,game,fxVisible);
 
  // Launched enemies stay visible above the shark rather than appearing after it submerges.
  for(const u of game.units.filter(u=>window.FrontHitFeedback.airborne(u,game.time)).sort((a,b)=>a.y-b.y||a.id-b.id))drawUnit(u,true);
- battleFx.drawHealingStatuses(ctx,game,fxVisible);battleFx.drawParticles(ctx,fxVisible);window.FrontRosterArt?.results(ctx,game,fxVisible);battleFx.drawStunStatuses(ctx,game,u=>game.visible(u));swordView.health(ctx,game);if(game.isRoomCampaign())window.FrontPortal.health(ctx,game.bases[1]);
+ battleFx.drawHealingStatuses(ctx,game,fxVisible);window.FrontRosterArt?.results(ctx,game,fxVisible,(u,rank)=>rollOverlay.full(rollMode,u,rank));battleFx.drawStunStatuses(ctx,game,u=>game.visible(u));swordView.health(ctx,game);if(game.isRoomCampaign())window.FrontPortal.health(ctx,game.bases[1]);
  const portal=game.isRoomCampaign()?game.bases[1]:null;
  for(const p of game.pickups)if(p.active&&p.destinyStar)drawDestinyPickup(p,portal);
  drawFog();ctx.setTransform(DPR,0,0,DPR,0,0);if(game.captainStackHpMode)for(const leader of game.stackCaptains())drawCaptainStack(leader);
@@ -1264,6 +1301,9 @@ function draw(dt){
  swordView.hud(ctx,game,W);
  if(game.time<game.scoutUntil){ctx.strokeStyle='#f0db98';ctx.lineWidth=2;ctx.strokeRect(4,4,W-8,H-8);}
  if(game.bossIntro?.remaining>0){rr(ctx,W/2-156,24,312,64,10,'#211a2ee8','#b795d5');text(ctx,'최종 보스 등장',W/2,48,13,'#d8bde9');text(ctx,game.bossIntro.name,W/2,73,20,'#fff0d3');}
+ ctx.save();ctx.setTransform(worldTransform);
+ rollOverlay.draw(ctx,game,rollFrame.results,battleFx);
+ drawEnemyThreats(fxVisible,hostileEvents);ctx.restore();
  drawAimReticle(player);
  drawMini();
  const objective=game.objective(),target=point(objective.target),marker=$('targetMarker'),lo=Math.min(145,H*.35),hi=Math.max(lo,H-110);marker.hidden=game.bossIntro?.remaining>0||objective.showMarker===false||game.phase==='ready'||game.phase==='ended'||(target.x>30&&target.x<W-30&&target.y>lo&&target.y<hi);marker.style.left=`${clamp(target.x,28,W-28)}px`;marker.style.top=`${clamp(target.y,lo,hi)}px`;marker.querySelector('b').style.transform=`rotate(${Math.atan2(target.y-H/2,target.x-W/2)+Math.PI/2}rad)`;marker.querySelector('small').textContent=game.mode==='duel'?'상대 본진':objective.targetName|| (game.mission.stage===1?objective.targetName:game.mission.stage===2?'전초기지':'최종 기지');

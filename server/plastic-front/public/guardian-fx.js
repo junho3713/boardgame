@@ -135,15 +135,17 @@ window.FrontGuardianFX={portal,shield,warningPulse,wreck(c,p,time){
  if(wreckImage.complete&&wreckImage.naturalWidth)c.drawImage(wreckImage,-76,-99,152,152);
  else{c.fillStyle='#3d3432';c.beginPath();c.ellipse(0,0,47,24,0,0,TAU);c.fill();c.fillStyle='#8b5147';c.fillRect(-27,-30,48,27);c.strokeStyle='#26232a';c.lineWidth=5;c.beginPath();c.moveTo(-24,-30);c.lineTo(5,-11);c.lineTo(24,-32);c.stroke();}
  const age=time-(p.diedAt??time);if(age<8){c.save();c.globalAlpha=Math.max(0,1-age/8)*.35;for(let i=0;i<4;i++){const t=(age*.5+i*.24)%1;c.fillStyle='#555860';c.beginPath();c.ellipse(7+Math.sin(i+time)*6,-34-t*43,5+t*11,6+t*8,0,0,TAU);c.fill();}c.restore();}
-},ground(c,g){c.save();powerCable(c,g);
+},ground(c,g,showWarnings=true){c.save();powerCable(c,g);
  for(const u of g.units)if(u.guardianRespawn&&u.type==='blizzardMage'&&g.mission.stage>=3&&g.visible(u))portal(c,u,g.time);
  for(const u of [...g.units.filter(u=>u.fixedGuard),...g.activeDefenses().filter(u=>u.defenseKind==='laserTower')]){if(u.hp<=0||!g.visible(u)||g.mission.stage<(u.activeStage||2))continue;const radius=u.defenseKind==='laserTower'?(g.defenseStats?.(u)?.range??window.FrontGuardians.range):(g.stats?.(u)?.range??window.FrontGuardians.range);c.lineWidth=1;
  if(u.defenseKind==='laserTower'){const phase=g.roomLaserPower?.(u)?.phase;if(phase==='off')continue;const warning=phase==='warning';c.save();c.globalAlpha*=warning?.12:(window.FrontRoomCampaign?.config.laser.opacity??.3);c.fillStyle=warning?'#ffae43':(window.FrontRoomCampaign?.config.laser.color??'#ec443b');c.beginPath();c.arc(u.x,u.y,radius,0,TAU);c.fill();c.restore();c.strokeStyle=warning?'#ffae437d':'#eb534bad';c.lineWidth=1.5;c.beginPath();c.arc(u.x,u.y,radius,0,TAU);c.stroke();}
  else{c.setLineDash([5,12]);ring(c,u.x,u.y,radius,'#9ddfff38');c.setLineDash([]);}
  }
- for(const u of g.units)if(u.hp>0&&u.blizzardCast)frostWarn(c,g,u.blizzardCast);
+ if(showWarnings)this.warnings(c,g);
  for(const u of g.alive(0)){if((u.rootedUntil||0)<=g.time)continue;c.lineWidth=2;ring(c,u.x,u.y,19,'#d7f9ff','#7fcfff66');c.fillStyle='#91dafa9c';c.strokeStyle='#e4faff';for(let i=0;i<5;i++){const a=i*TAU/5,x=u.x+Math.cos(a)*15,y=u.y+Math.sin(a)*9;c.beginPath();c.moveTo(x-5,y+3);c.lineTo(x,y-16);c.lineTo(x+5,y+3);c.closePath();c.fill();c.stroke();}}
- c.restore();},air(c,g){c.save();
+ c.restore();},warnings(c,g){
+ c.save();for(const u of g.units)if(u.hp>0&&u.blizzardCast)frostWarn(c,g,u.blizzardCast);c.restore();
+},air(c,g){c.save();
  for(const u of g.units)if(u.hp>0&&u.blizzardCast&&g.visible(u))frostWindup(c,g,u);
  for(const p of g.activeDefenses())if(p.defenseKind==='laserTower')laserPath(c,g,p);
  for(const e of g.effects){if(e.kind==='iceShieldBlock'){const age=Math.max(0,Math.min(1,1-e.t/e.max));c.save();c.translate(e.x,e.y);c.globalAlpha=Math.max(0,1-age);c.strokeStyle='#dbffff';c.lineWidth=2;ring(c,0,0,12+age*39,'#c5faff');for(let i=0;i<12;i++){const a=i*2.39996,x=Math.cos(a)*(12+age*64),y=Math.sin(a)*(9+age*40)-Math.sin(age*Math.PI)*18;c.save();c.translate(x,y);c.rotate(a+age*3);c.fillStyle=i%2?'#e6ffff':'#6ecbff';c.beginPath();c.moveTo(0,-7*(1-age));c.lineTo(4*(1-age),0);c.lineTo(0,9*(1-age));c.lineTo(-3*(1-age),0);c.closePath();c.fill();c.stroke();c.restore();}c.restore();continue;}if(e.kind!=='blizzard')continue;const age=1-e.t/e.max;c.globalAlpha=Math.min(1,e.t*2);c.lineWidth=2;ring(c,e.x,e.y,e.radius*(.7+age*.3),'#c9f3ff','#79cfff22');c.strokeStyle='#e5fbff';for(let i=0;i<30;i++){const a=i*2.39996+age*2,r=e.radius*Math.sqrt((i+.5)/30),x=e.x+Math.cos(a)*r,y=e.y+Math.sin(a)*r-age*30;snow(c,x,y,3+i%5,age+i);}}

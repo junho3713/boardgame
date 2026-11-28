@@ -110,10 +110,10 @@ function rollLabel(c,label,roll,u,tr,top) {
   }
  }
 }
-function rolls(c,game,visible) {
+function rolls(c,game,visible,show=()=>true) {
  const rolling = new Map();
  for(const e of game.effects){
-  if(e.kind==='radioRoll'&&visible(e.source||e))rolling.set(e.source?.id??e,e);
+  if(e.kind==='radioRoll'&&visible(e.source||e)&&show(e.source||e,e.rank))rolling.set(e.source?.id??e,e);
  }
  if(!rolling.size)return;
  const tr = c.getTransform();

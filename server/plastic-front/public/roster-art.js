@@ -379,9 +379,9 @@ function event(c,e,fx){
  c.restore();return true;
 }
 const resultLanes=new WeakMap();
-function results(c,game,visible=()=>true){
+function results(c,game,visible=()=>true,showRadio){
  root.FrontBlockFlashView?.enemyStatuses(c,game,visible);
- root.FrontRadioArt?.rolls(c,game,visible);
+ root.FrontRadioArt?.rolls(c,game,visible,showRadio);
  const results=game.effects.filter(e=>e.kind==='rosterDieResult'&&visible(e));
  if(!results.length)return;
  const tr=c.getTransform(),scale=Math.max(.38,Math.hypot(tr.a,tr.b)/(root.devicePixelRatio||1)),occupied=[];
@@ -400,16 +400,19 @@ function results(c,game,visible=()=>true){
  }
  c.restore();
 }
-function field(c,game,visible=()=>true){
+function field(c,game,visible=()=>true,showEnemy=true){
  root.FrontBlockFlashView?.air(c,game,visible);
- root.FrontPirateCannonView?.air(c,game,visible);
- root.FrontBubbleOctopusView?.air(c,game,visible);
+ if(showEnemy)enemyProjectiles(c,game,visible);
  for(const d of game.rosterDice||[]){
   if(!visible(d))continue;const t=Math.max(0,Math.min(1,(game.time-d.startedAt)/Math.max(.001,d.landAt-d.startedAt))),h=8+Math.sin(t*Math.PI)*(d.child?20:48)+(1-t)*17,r=d.child?6.5:10.5;
   ellipse(c,d.x,d.y,5+3*(1-t),2.4,'#443b292f');die(c,d.x,d.y-h,r,d.face,d.golden,Math.sin(Math.PI*t)*.85);
  }
 }
-root.FrontRosterArt={model,shot,event,field,results,burning,prepareDiceEffects};
+function enemyProjectiles(c,game,visible){
+ root.FrontPirateCannonView?.air(c,game,visible);
+ root.FrontBubbleOctopusView?.air(c,game,visible);
+}
+root.FrontRosterArt={model,shot,event,field,enemyProjectiles,results,burning,prepareDiceEffects};
 if(typeof root.Image==='function')prepareDiceEffects();
 })(typeof window==='undefined'?globalThis:window);
 

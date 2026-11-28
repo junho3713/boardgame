@@ -186,11 +186,12 @@ function throwWarning(c,u,a,now){
  }
  c.restore();
 }
-function ground(c,game){
+function ground(c,game,layer){
  for(const u of game.units){const a=u.assassinAction;
   const boss=u.type==='ninjaAssassin';
   if((!boss&&u.type!=='assassin')||u.hp<=0||!game.visible(u))continue;
-  groundShadow(c,u);
+  if(layer!=='warnings')groundShadow(c,u);
+  if(layer==='shadows')continue;
   if(a?.phase==='throw')throwWarning(c,u,a,game.time);
   if(a?.phase!=='warn')continue;
   const charge=progress(a,game.time,boss?.7:.75);

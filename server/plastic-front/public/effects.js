@@ -3,7 +3,9 @@
 const TAU=Math.PI*2,clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const enhancedFaces=roll=>roll.bossKillerAvailable||roll.kind==='bossKiller'?['glue','mine','spray','missiles','bossKiller']:['glue','mine','spray','missiles'];
 const luckyResultNames={glue:'접착탄',mine:'섬광탄',spray:'살포',missiles:'777',bossKiller:'보스킬러'};
+const hostileEffectKinds=new Set(['bossSlashWarn','bossDiveWarn','bossBarrageWarn','butterflyWarn','butterflyWind','bayonetWarn','bladeSlash','sting','tracer','luckyGlueThrow','luckySpray','waterColumn','bubbleFoamImpact','ninjaCut']);
 class FrontEffects{
+ static isHostileThreat(e){return e.team!==0&&hostileEffectKinds.has(e.kind);}
  constructor({budget=360,textures=null,weaponPoint=null}={}){this.budget=budget;this.textures=textures||this.makeTextures();this.weaponPoint=weaponPoint;this.reset();this.stickyAsset();this.cleanseAsset();this.healingReductionAsset();}
  healingReductionAsset(){
   if(this.healingReductionHeart)return this.healingReductionHeart;if(typeof Image==='undefined')return null;
@@ -129,10 +131,10 @@ class FrontEffects{
   }
   return plumes;
  }
- luckyGround(ctx,game,visible=()=>true){
+ luckyGround(ctx,game,visible=()=>true,showEnemy=true){
   root.FrontRadioArt?.ground(ctx,game,visible,this);
   root.FrontBlockFlashView?.grounded(ctx,game,visible);
-  root.FrontPirateCannonView?.ground(ctx,game,visible);
+  if(showEnemy)root.FrontPirateCannonView?.ground(ctx,game,visible);
   for(const z of game.luckyGlues||[]){if(!visible(z)||game.time>=z.expires)continue;const landed=game.time>=z.landAt,r=z.radius||100;ctx.save();ctx.translate(z.x,z.y);ctx.strokeStyle=landed?'#b9ee72':'#d7f2a18c';ctx.fillStyle=landed?'#9cdb3d24':'#afd96510';ctx.lineWidth=1.6;ctx.setLineDash(landed?[]:[6,6]);ctx.beginPath();ctx.arc(0,0,r,0,TAU);ctx.fill();ctx.stroke();ctx.setLineDash([]);
    if(landed&&!this.drawStickyGel(ctx,0,0,r,Math.min(1,Math.max(0,z.expires-game.time)))){ctx.fillStyle='#8fce40aa';ctx.strokeStyle='#d1f89a';ctx.lineWidth=1;ctx.beginPath();for(let i=0;i<=64;i++){const a=i*TAU/64,w=r*(.78+.10*Math.sin(a*5+.4)+.05*Math.cos(a*3));if(i)ctx.lineTo(Math.cos(a)*w,Math.sin(a)*w);else ctx.moveTo(Math.cos(a)*w,Math.sin(a)*w);}ctx.closePath();ctx.fill();ctx.stroke();for(let i=0;i<9;i++){const a=i*2.4,d=r*(.17+(i%3)*.23);ctx.fillStyle='#dcfba664';ctx.beginPath();ctx.ellipse(Math.cos(a)*d,Math.sin(a)*d,4+i%3,2+i%2,a,0,TAU);ctx.fill();}}
    ctx.restore();}

@@ -226,15 +226,18 @@ class View{
   const v=g.trialViewport||{left:0,right:g.bounds().width,top:0,bottom:g.bounds().height},gate={x:clamp(a.start.x,v.left+30,v.right-30),y:clamp(a.start.y,v.top+30,v.bottom-30)};
   c.translate(gate.x,gate.y);c.rotate(dir);c.shadowColor='#ff5b89';c.shadowBlur=12;c.strokeStyle='#ff94b0';c.lineWidth=3;c.beginPath();c.ellipse(0,0,10,a.radius*.82,0,0,TAU);c.stroke();c.shadowBlur=0;for(const side of [-1,1]){c.beginPath();c.moveTo(-9,side*a.radius);c.lineTo(10,side*(a.radius-8));c.lineTo(-2,side*(a.radius-17));c.stroke();}c.restore();
  }
- warnings(c,g){
+ warnings(c,g,layer){
   const b=g.trialBoss;if(!b||b.hp<=0)return;const st=b.swords;
-  groundShadow(c,b.x+10,b.y+6,43,13,.06,.47);
+  if(layer!=='warnings'){
+   groundShadow(c,b.x+10,b.y+6,43,13,.06,.47);
   for(const s of st.blades){
    const z=s.z||0,high=clamp(z/260,0,1),standing=s.mode==='defend'||s.action?.stage==='recallWarn'||['drop','rear'].includes(s.action?.pattern);
    const angle=standing ? .13 : Math.atan2(.48*Math.sin(s.angle),Math.cos(s.angle));
    const plate=s.mode==='defend'?this.shieldGeometry(b,s,g):null;
    groundShadow(c,(plate?plate.x:s.x)+9+z*.16,(plate?plate.y+68:s.y)+5+z*.085,standing?15+high*10:54,standing?6+high*6:7,angle,.44-high*.26);
   }
+  }
+  if(layer==='shadows')return;
   for(const s of st.blades){const a=s.action;if(!a)continue;if(Number.isFinite(a.impactAt))this.impact(c,a,g);if(a.stage==='recallWarn'){this.warningRecall(c,a.recall,g);continue;}if(!['warn','active'].includes(a.stage)||a.stage==='active'&&['drop','rear'].includes(a.pattern))continue;c.save();if(a.stage==='active')c.globalAlpha=.4;if(['drop','rear'].includes(a.pattern))this.warningCircle(c,a,g);else this.warningLane(c,a,g);c.restore();}
   if(st.pending){c.save();st.blades.forEach((s,i)=>{const p=SB.idlePoint(b,s),blue=st.pending.modes[i]==='defend';ellipse(c,p.x,p.y-35,24,35,null,blue?'#9fe7ff':'#ff91b8',2);star(c,p.x,p.y-75,5,blue?'#d2f7ff':'#ffd2e4');});c.font='600 13px system-ui';c.textAlign='center';c.fillStyle='#eed6ff';c.fillText('공수 전환 '+Math.max(0,st.pending.commitAt-g.time).toFixed(1)+'s',b.x,b.y+130);c.restore();}
  }
