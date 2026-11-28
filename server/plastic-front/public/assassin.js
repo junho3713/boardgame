@@ -74,6 +74,9 @@ function impact(g,u,target,damage){
 }
 function install({FrontGame}){
  const p=FrontGame.prototype;
+ p.markAssassinCloneHit=function(u){
+  if(this.time>=(u.cloneBlinkAt??-Infinity)+.45)u.cloneBlinkAt=this.time;
+ };
  p.spawnAssassinGroup=function(){
   const state=this.roomCampaign;
   if(!this.isRoomCampaign()||!state||this.time<rules.from||this.time<(state.recoveryUntil||0)||this.time<(state.assassinRetryAt||0))return;
@@ -99,7 +102,7 @@ function install({FrontGame}){
  };
  p.assassinWounded=function(u,damage){
   if(u.assassinClone){
-   if(damage>0){u.cloneFlashUntil=this.time+.2;smoke(this,u,'assassinPuff',damage);}
+   if(damage>0)this.markAssassinCloneHit(u);
    if(u.hp<=0){u.diedAt=this.time;clearPose(u);smoke(this,u,'assassinDecoy');}
    return;
   }

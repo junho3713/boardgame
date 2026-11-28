@@ -32,7 +32,9 @@ test('room encounter starts at 270, surrounds a captain at 260–320 and respect
 test('only the real figure pays the kill reward, and clearing one group leaves another alive',()=>{
  const g=arena(),c=g.commander(0),{body,copies}=group(g),gold=g.cash[0],kills=g.kills;
  g.time=600;g.spawnAssassinGroup();g.damage(copies[0],10,c);
- assert.equal(copies[0].cloneFlashUntil,600.2);assert(g.effects.some(e=>e.kind==='assassinPuff'&&e.damage>0));
+ assert.equal(copies[0].cloneBlinkAt,600);
+ g.time=600.1;g.damage(copies[0],10,c);assert.equal(copies[0].cloneBlinkAt,600);
+ g.time=600.45;g.damage(copies[0],10,c);assert.equal(copies[0].cloneBlinkAt,600.45);
  g.damage(copies[0],1e7,c);assert.equal(g.cash[0],gold);assert.equal(g.experienceDrops.length,0);assert.equal(g.kills,kills);
  assert(g.effects.some(e=>e.kind==='assassinDecoy'));
  g.damage(body,1e7,c);g.damage(body,1e7,c);assert.equal(g.cash[0],gold+22);

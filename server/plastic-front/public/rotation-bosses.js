@@ -165,7 +165,7 @@ function install({FrontGame}){
  };
  p.ninjaBossWounded=function(u,dealt){
   if(u.assassinClone){
-   if(dealt>0)fx(this,'assassinPuff',u,.24,{damage:dealt});
+   if(dealt>0)this.markAssassinCloneHit(u);
    if(u.hp===0){
     dismiss(this,u);
     const body=this.units.find(b=>b.id===u.ninjaOwner&&b.hp>0);

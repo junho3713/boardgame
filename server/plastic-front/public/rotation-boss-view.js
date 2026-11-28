@@ -49,7 +49,7 @@ function kraken(c,u,time,hazards){
 }
 function ninja(c,u,time,miniBoss=u.miniBoss){
  if(!ninjaSheet.naturalWidth){
-  c.save();const scale=1.38*figureScale*(miniBoss?117/137:1);c.scale(scale,scale);root.FrontAssassinView.body(c,u,time,false);c.restore();return;
+  c.save();const scale=1.38*figureScale*(miniBoss?117/137:1);c.scale(scale,scale);root.FrontAssassinView.body(c,u,time);c.restore();return;
  }
  const action=u.assassinAction;
  const phase=action?.phase,throwing=phase==='throw',warn=phase==='warn',dash=phase==='dash',burst=phase==='burst';
@@ -68,7 +68,8 @@ function ninja(c,u,time,miniBoss=u.miniBoss){
   if(burst){c.rotate(.13*burstCharge);c.translate(5*burstCharge,3*Math.sin(burstCharge*Math.PI));}
   if(released)c.rotate(-.05*(1-release/.34));
  }
- stamp(c,ninjaSheet,frame,size);
+ c.save();c.globalAlpha*=root.FrontAssassinView.blinkOpacity(u,time);
+ stamp(c,ninjaSheet,frame,size);c.restore();
  if(burst){
   const x=-.34*size,y=-.46*size,r=8+9*burstCharge;
   const glow=c.createRadialGradient(x,y,0,x,y,r);
@@ -325,7 +326,7 @@ function event(c,e){
   c.globalAlpha=Math.min(1,(1-q)*7);const wood=c.createLinearGradient(0,-8,0,8);
   wood.addColorStop(0,'#edc38b');wood.addColorStop(.4,'#b77742');wood.addColorStop(1,'#704332');
   c.fillStyle=wood;c.fillRect(-15,-8,30,16);oval(c,15,0,4.5,8,'#f2c794');oval(c,15,0,2.9,5.6,'#a26946');oval(c,15,0,1.6,3.5,'#edbd88');
-  if(q>.72){c.save();c.globalAlpha=(q-.72)/.28;for(let i=0;i<5;i++){const a=i*2.4;oval(c,Math.cos(a)*19*q,Math.sin(a)*11*q,3+6*q,3+4*q,'#9173a2aa');}c.restore();}
+  if(q>.72){c.save();c.globalAlpha=(q-.72)/.28;for(let i=0;i<5;i++){const a=i*2.4;oval(c,Math.cos(a)*19*q,Math.sin(a)*11*q,3+6*q,3+4*q,'#a59c8c88');}c.restore();}
   c.strokeStyle='#835130';c.beginPath();c.moveTo(-13,-2);c.quadraticCurveTo(-3,-5,10,-2);c.stroke();
  }else if(e.kind==='waterColumn'){
   const z=Math.sin(q*Math.PI)*93;c.globalAlpha=1-q*q;
@@ -336,7 +337,7 @@ function event(c,e){
    oval(c,x*1.5,y-z-5,2+i%3,3,'#b8f6ff');
   }
  }else{
-  c.rotate(e.angle);c.globalAlpha=1-q;c.fillStyle=e.clone?'#bcaec9':'#f34c77';
+  c.rotate(e.angle);c.globalAlpha=1-q;c.fillStyle=e.clone?'#c8c4bb':'#f34c77';
   c.beginPath();c.moveTo(-48,-4);c.quadraticCurveTo(0,16,55,-29);c.quadraticCurveTo(8,26,-48,-4);c.fill();
  }
  c.restore();return true;
