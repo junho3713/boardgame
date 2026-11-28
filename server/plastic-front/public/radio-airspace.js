@@ -42,11 +42,11 @@ function marker(c,e,left,reduced){
  c.save();c.lineCap='round';
  if(e.strike==='nuke'){
   const ring=r*clamp(left/e.max)**1.25;
-  c.fillStyle='rgba(187,27,17,.07)';c.beginPath();c.arc(0,0,r,0,tau);c.fill();
-  c.lineWidth=3;c.strokeStyle='#a82c27';c.stroke();
-  c.lineWidth=2.7;c.strokeStyle='#ff533c';c.beginPath();c.arc(0,0,ring,0,tau);c.stroke();
+  c.fillStyle='rgba(51,165,86,.10)';c.beginPath();c.arc(0,0,r,0,tau);c.fill();
+  c.lineWidth=3;c.strokeStyle='#347c4d';c.stroke();
+  c.lineWidth=2.7;c.strokeStyle='#86ed98';c.beginPath();c.arc(0,0,ring,0,tau);c.stroke();
   for(let i=0;i<8;i++){
-   c.rotate(tau/8);c.fillStyle='#f64e32';c.beginPath();c.moveTo(-4,-r+2);c.lineTo(4,-r+2);c.lineTo(0,-r+11);c.closePath();c.fill();
+   c.rotate(tau/8);c.fillStyle='#71d78a';c.beginPath();c.moveTo(-4,-r+2);c.lineTo(4,-r+2);c.lineTo(0,-r+11);c.closePath();c.fill();
   }
  }else{
   const gap=8+17*(1-p),arm=13;

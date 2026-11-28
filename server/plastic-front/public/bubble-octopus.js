@@ -4,7 +4,7 @@
 
 const rules=Object.freeze({
  shieldPeriod:7, shieldRadius:180, shieldLimit:6, shieldFraction:.35,
- foamPeriod:4.5, windup:.4, speed:240, travel:445, shotRadius:11, splashRadius:69, push:106,
+ foamPeriod:4.5, windup:.4, speed:360, travel:445, shotRadius:11, splashRadius:69, push:106,
  near:220, far:300, station:264, guardLeash:240
 });
 const specials=new Set(['pirateCannon','rhinoBeetle','stagBeetle','bruteBeetle','blizzardMage','acidBeetle','bombBug','butterfly','crimsonAce','swordEmpress','bayonetCaptain']);

@@ -73,6 +73,10 @@ class View{
   c.save();c.translate(b.x,b.y-10+bob-3*pose);c.scale(facing,1);
   c.rotate(.014*Math.sin(g.time*2.1)-.036*pose);
   c.drawImage(this.body,((f%2)+(cast?2:0))*384,Math.floor(f/2)*384,384,384,-94,-184,188,188);c.restore();
+  if(b.bubbleShield){
+   c.save();c.translate(b.x,b.y+bob);
+   root.FrontBubbleOctopusView.shieldCast(c,b,g.time);c.restore();
+  }
   if(cast){c.save();c.translate(b.x-facing*57,b.y-129+bob-3*pose);c.globalAlpha=pose;c.globalCompositeOperation='lighter';ellipse(c,0,0,16,5,null,'#ffd4e9aa',1.5);for(let j=0;j<3;j++){const a=g.time*5+j*TAU/3;star(c,Math.cos(a)*16,Math.sin(a)*5,3,'#fff0f8');}c.restore();}
   for(let i=0;i<4;i++){const a=g.time*.7+i*1.9;star(c,b.x+Math.cos(a)*36,b.y-75+Math.sin(a*.8)*65,1.5+Math.sin(a)*.6,color+'a0');}c.restore();
   const age=g.time-st.phaseAt;if(age>=0&&age<g.trialConfig.phaseWarning){c.save();c.translate(b.x,b.y-65);c.globalCompositeOperation='lighter';c.globalAlpha=1-age/g.trialConfig.phaseWarning;for(let i=0;i<3;i++)ellipse(c,0,0,55+age*90+i*14,55+age*90+i*14,null,i?'#ed407c':'#ffe3ee',i?1:3);for(let i=0;i<12;i++){const a=i*TAU/12;star(c,Math.cos(a)*(55+age*90),Math.sin(a)*(55+age*90),5,'#ffcbdc');}c.restore();}

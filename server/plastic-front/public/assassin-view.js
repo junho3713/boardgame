@@ -1,14 +1,30 @@
 /* The same figure and single four-point silhouette are used for the real ninja and her doubles. */
 (function(root){'use strict';
-const tau=2*Math.PI,sprite=new Image();
+const tau=2*Math.PI,sprite=new Image(),attack=root.FrontAssassin;
 // Each action frame has a foot anchor. All four stride cells share one ground point.
 const poses=[{x:.511,y:.966},{x:.463,y:.964},{x:.416,y:.914}];
 const strideAnchor={x:.5,y:.966},reducedMotion=root.matchMedia?.('(prefers-reduced-motion: reduce)');
-let shade=null;
+let shade=null,throwLayers=null,cloneThrowLayers=null;
+function splitThrowPose(source){
+ const size=sprite.naturalHeight,scale=size/384;
+ const layer=keepArm=>{
+  const canvas=document.createElement('canvas');canvas.width=canvas.height=size;
+  const c=canvas.getContext('2d');
+  c.drawImage(source,0,0,size,size,0,0,size,size);
+  c.globalCompositeOperation=keepArm?'destination-in':'destination-out';
+  // Follow the glove and forearm of the standing frame, leaving the face and dagger in place.
+  c.scale(scale,scale);c.beginPath();
+  c.moveTo(252,211);c.lineTo(272,201);c.lineTo(292,181);c.lineTo(348,181);
+  c.lineTo(348,253);c.lineTo(273,253);c.lineTo(252,233);c.closePath();c.fill();
+  return canvas;
+ };
+ return {torso:layer(false),arm:layer(true)};
+}
 sprite.onload=()=>{
  shade=document.createElement('canvas');shade.width=sprite.naturalWidth;shade.height=sprite.naturalHeight;
  const c=shade.getContext('2d');c.drawImage(sprite,0,0);c.globalCompositeOperation='source-atop';
  c.fillStyle='rgba(115,79,157,.87)';c.fillRect(0,0,shade.width,shade.height);
+ throwLayers=splitThrowPose(sprite);cloneThrowLayers=splitThrowPose(shade);
 
 };
 sprite.src='assets/models/kunoichi.webp?v=seven-poses';
@@ -17,9 +33,21 @@ function glow(c,x,y,r,inner,outer){
  const g=c.createRadialGradient(x,y,0,x,y,r);g.addColorStop(0,inner);g.addColorStop(1,outer);
  c.fillStyle=g;c.fillRect(x-r,y-r,r*2,r*2);
 }
+function progress(a,time,duration){return Math.max(0,Math.min(1,1-(a.until-time)/duration));}
+function raisedStar(c,layers,left,top,size,clone,charge){
+ const pivotX=252/384*size,pivotY=219/384*size;
+ c.drawImage(layers.torso,left,top,size,size);
+ c.save();c.translate(left+pivotX,top+pivotY);c.rotate(-.91*charge);
+ c.drawImage(layers.arm,-pivotX,-pivotY,size,size);
+ const x=49/384*size,y=-1/384*size;
+ c.globalAlpha*=.5+.5*charge;
+ glow(c,x,y,6+charge*5,clone?'#d4c5e5':'#ff2c50',clone?'#d4c5e500':'#ff264600');
+ c.restore();
+}
 function body(c,u,time){
  if(!sprite.naturalWidth)return;
- const clone=u.assassinClone,pose=u.assassinAction?.phase,preparing=pose==='throw'||pose==='warn';
+ const clone=u.assassinClone,action=u.assassinAction,pose=action?.phase,throwing=pose==='throw',preparing=throwing||pose==='warn';
+ const charge=preparing?progress(action,time,throwing?attack.windup:.75):0;
  c.save();
  if(clone){
   for(let i=0;i<3;i++){const phase=(time*.72+i/3+u.id*.19)%1;
@@ -35,11 +63,9 @@ function body(c,u,time){
  else if(moving)frame=stride;
  c.scale(sign,1);
  if(preparing&&!reducedMotion?.matches){
-  const duration=pose==='throw'?.45:.75;
-  const progress=Math.min(1,Math.max(0,1-(u.assassinAction.until-time)/duration));
-  const windup=progress*progress*(3-2*progress);
-  c.translate((pose==='throw'?-2:2)*windup,0);
-  c.scale(1+.035*windup,1-.055*windup);c.rotate((pose==='throw'?-.08:.09)*windup);
+  const windup=charge*charge*(3-2*charge);
+  c.translate((throwing?-4:2)*windup,0);
+  c.scale(1+.035*windup,1-(throwing?.085:.055)*windup);c.rotate((throwing?-.12:.09)*windup);
  }
  if(pose==='dash'&&!reducedMotion?.matches){
   const a=u.assassinAction,progress=1-a.left/a.length;
@@ -52,18 +78,45 @@ function body(c,u,time){
  }
  const flash=clone&&u.cloneFlashUntil>time;c.globalAlpha*=flash?.57:clone?.88:1;
  const figure=flash&&shade?shade:sprite,cell=sprite.naturalHeight,anchor=poses[frame]||strideAnchor,size=90;
- c.drawImage(figure,frame*cell,0,cell,cell,-anchor.x*size,-anchor.y*size,size,size);
+ const layers=flash?cloneThrowLayers:throwLayers,left=-anchor.x*size,top=-anchor.y*size;
+ if(throwing&&layers)raisedStar(c,layers,left,top,size,clone,reducedMotion?.matches?1:Math.min(1,.28+charge*1.2));
+ else c.drawImage(figure,frame*cell,0,cell,cell,left,top,size,size);
  if(preparing){
   const intensity=.8+.2*Math.sin(time*29),light=clone?'#bdb1d1':'#ff273f',outside=clone?'rgba(196,182,216,0)':'rgba(245,15,54,0)';
   c.globalAlpha*=clone?.42:intensity;
-  for(const [x,y,r] of [[3.3,-52.3,3.1],[12.6,-53,3.1],[-17,-25,4.6],[24,-36.7,4.6]])glow(c,x,y,r,light,outside);
+  for(const [x,y,r] of [[3.3,-52.3,3.1],[12.6,-53,3.1],[-17,-25,4.6]])glow(c,x,y,r,light,outside);
+  if(!throwing)glow(c,24,-36.7,4.6,light,outside);
+ }
+ c.restore();
+}
+function groundShadow(c,u){
+ const clone=u.assassinClone;
+ c.save();c.translate(u.x+6,u.y+5);c.scale(1,.47);
+ glow(c,0,0,31,clone?'#39234155':'#211917ad',clone?'#39234100':'#21191700');
+ if(!clone)glow(c,-5,-7,22,'#21191772','#21191700');
+ c.restore();
+}
+function throwWarning(c,u,a,now){
+ const clone=u.assassinClone,charge=progress(a,now,attack.windup),v=attack.throwVector(u,a);
+ const length=attack.starRange,width=Math.tan(attack.starSpread)*length;
+ c.save();c.translate(v.x,v.y);c.rotate(v.angle);
+ const fill=c.createLinearGradient(0,0,length,0);
+ fill.addColorStop(0,clone?'#cab3df24':'#e3376552');fill.addColorStop(1,clone?'#cab3df06':'#e3376512');
+ c.fillStyle=fill;c.beginPath();c.moveTo(0,0);c.lineTo(length,-width);c.lineTo(length,width);c.fill();
+ c.strokeStyle=clone?'#e5d9f2a8':'#ff758e';c.lineWidth=clone?1.25:2;
+ c.setLineDash([6,7]);c.beginPath();c.moveTo(length,-width);c.lineTo(0,0);c.lineTo(length,width);c.stroke();c.setLineDash([]);
+ c.strokeStyle=clone?'#e0cfed9e':'#ffbad0';c.lineWidth=2;
+ for(let x=28;x<length*charge;x+=52){
+  c.beginPath();c.moveTo(x-7,-4);c.lineTo(x,0);c.lineTo(x-7,4);c.stroke();
  }
  c.restore();
 }
 function ground(c,game){
- if(game.roomCampaign?.lastAssassinAt==null)return;
  for(const u of game.units){const a=u.assassinAction;
-  if(u.type!=='assassin'||u.hp<=0||a?.phase!=='warn'||!game.visible(u))continue;
+  if(u.type!=='assassin'||u.hp<=0||!game.visible(u))continue;
+  groundShadow(c,u);
+  if(a?.phase==='throw')throwWarning(c,u,a,game.time);
+  if(a?.phase!=='warn')continue;
   const clone=u.assassinClone,charge=Math.max(0,1-(a.until-game.time)/.75);
   c.save();c.translate(u.x,u.y);c.rotate(a.angle);
   c.fillStyle=clone?'rgba(145,131,161,.1)':'rgba(187,19,54,.17)';c.fillRect(0,-5,a.length,10);

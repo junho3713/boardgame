@@ -886,7 +886,7 @@ function drawUnitRaw(u,mine=true){
  if(u.type==='blizzardMage')window.FrontGuardianFX.shield(ctx,u,game.time);
  if(u.flash&&!u.assassinClone){ctx.globalAlpha=u.flash/.13*.65;circle(ctx,0,0,types[u.type].r+2,null,'#fff4c8');ctx.globalAlpha=1;}
  ctx.restore();
- if(game.isSupplyTroop(u))text(ctx,({commando:'블랙베어',spectre:'고스트',titan:'타이탄 · 최상위'})[u.type]+' · 특수부대',u.x,u.y-108,12,u.type==='titan'?'#ffe49a':'#e7c4ff');
+ if(game.isSupplyTroop(u))text(ctx,({commando:'블랙베어',spectre:'고스트',titan:'타이탄 · 최상위'})[u.type]+' · 특수부대',u.x,u.y-(game.captainStackHpMode?77:108),12,u.type==='titan'?'#ffe49a':'#e7c4ff');
  if(evolved)battleFx.drawEvolutionUnit(ctx,u,game.time);
  if(!u.rareSupplyGuard&&u.type==='blizzardMage')text(ctx,(u.iceShield&&game.time<=u.iceShield.until?'아이스 실드 · 박격포 차단':(u.mobileMage?'이동형 얼음 마녀':'얼음 마녀')+' · 사거리 '+window.FrontGuardians.range),u.x,u.y-103,11,'#c4edff');
  if(u.boss&&['bayonetCaptain','bladeGuard','bikeRaider'].includes(u.type))text(ctx,(u.miniBoss?'MID / ':'BOSS / ')+u.bossName.replace(/^(중간 보스|미드 보스) · /,''),u.x,u.y-176,13,'#ffe294');
@@ -901,7 +901,7 @@ function drawUnitRaw(u,mine=true){
  if(u.team!==0&&!u.rareSupplyGuard&&types[u.type].flying&&(u.boss||game.units.find(v=>v.type===u.type&&!v.boss&&v.hp>0&&game.visible(v))===u))text(ctx,(u.boss?(u.miniBoss?'MID / ':'BOSS / ')+u.bossName.replace(/^(중간 보스|미드 보스) · /,''):types[u.type].name)+(u.type==='hornet'?' · 중장갑':' · 경장갑'),u.x,u.y-((u.visualFlightHeight??types[u.type].flightHeight)+49)*(u.boss?1.35:1),u.boss?13:10,u.boss?'#ffc079':'#f2d694');
  const shieldHp=(u.bubbleShield?.hp||0)+window.FrontSupportDroneView.activeShieldHp(u,game.time);
  if(game.captainStackHpMode&&t===0){
-  if(u.star>=2)text(ctx,'★'.repeat(u.star),u.x,u.y-(types[u.type].flying?100:70),12,u.star===3?'#ffd36c':'#ffe4a0');
+  if(u.star>=2)text(ctx,'★'.repeat(u.star),u.x,window.FrontUnitLabels.stackStarY(u),12,u.star===3?'#ffd36c':'#ffe4a0');
  }else if(u.star>=2||u.boss||u.rareSupplyGuard||shieldHp>0||u.hp<u.maxHp||u.type==='leader'||u.type==='artillery'||u.type==='bayonetCaptain'||u.type==='bombBug'){
   const vehicle=(u.team!==0||u.type!=='guntruck')&&['tank','crimsonAce','guntruck','artillery','lucky','pirateCannon'].includes(u.type),human=roster.includes(u.type)&&!vehicle||u.type==='leader'||types[u.type].stab,w=u.boss?84:vehicle?48:u.type==='bombBug'?36:30;
   const rise=(u.type==='medic'&&u.team===0&&u.appearance==='rina'?78+(u.star>=2?8:0):types[u.type].flying?(u.visualFlightHeight??types[u.type].flightHeight)+42:u.type==='crimsonAce'?140:u.type==='rhinoBeetle'?88:u.type==='stagBeetle'?76:u.type==='pirateCannon'?94:u.type==='bubbleOctopus'?52:u.type==='assassin'?94:u.type==='bombBug'?57:vehicle?79:u.type==='bayonetCaptain'?90:types[u.type].stab?75:human?66:u.type==='bruteBeetle'?58:35)*(u.boss?1.35:1)-(u.star>=2?(vehicle?10:8):0),y=u.y-rise;

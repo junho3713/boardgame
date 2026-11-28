@@ -164,8 +164,8 @@ function draw(c,u,g){if(u.type==='toyDecoy'&&(u.hp<=0||g.time<(u.toyArrivesAt||0
  if(!hasArt||!character(c,u,g.time,m,facing)){
   c.translate(0,-24+Math.sin((u.walk||0)*.8)*1.5*m.weight);if(u.type==='toyTurtle'){c.scale(1,.8);c.rotate(facing+Math.PI/2);}else{const profile=.78+.22*Math.abs(Math.sin(facing)),flip=Math.cos(facing)<-.15?-1:1;c.scale(flip*profile,.95);}body(c,u,g.time,m.weight,u.type!=='toyTurtle'&&Math.sin(facing)<-.35);
  }c.restore();
- if(data){const top=hasArt?-88:-80,rank=clamp(Math.floor(u.toyUpgradeLevel||0),0,2),stars='★'.repeat(rank+1);label(c,data.name+' '+stars,0,top-6,down?'#c2bbb0':rank?'#ffe28a':'#f0e8b6');if(!g.captainStackHpMode){box(c,-21,top,42,4,2,'#213c37');box(c,-21,top,42*clamp(u.hp/Math.max(1,u.maxHp),0,1),4,2,'#9de4cb');}
-  if(down)label(c,'수리 '+Math.max(0,Math.ceil(u.toyDownUntil-g.time))+'초',0,-67,'#ffd5a0');
+ if(data){const top=hasArt?-88:-80,rank=clamp(Math.floor(u.toyUpgradeLevel||0),0,2),stars='★'.repeat(rank+1);label(c,data.name+' '+stars,0,top+(g.captainStackHpMode?12:-6),down?'#c2bbb0':rank?'#ffe28a':'#f0e8b6');if(!g.captainStackHpMode){box(c,-21,top,42,4,2,'#213c37');box(c,-21,top,42*clamp(u.hp/Math.max(1,u.maxHp),0,1),4,2,'#9de4cb');}
+  if(down)label(c,'수리 '+Math.max(0,Math.ceil(u.toyDownUntil-g.time))+'초',0,g.captainStackHpMode?-58:-67,'#ffd5a0');
   else{
    const remaining=Math.max(0,(u.toyNextAt||0)-g.time),cooldown=g.supportToyCooldown?.(u)||data.cooldown*(1-rank*.1);box(c,-16,15,32,3,1,'#213c37');box(c,-16,15,32*(1-clamp(remaining/cooldown,0,1)),3,1,'#e5ce86');
    if(u.type==='toyDrum'){

@@ -871,6 +871,7 @@ class FrontGame{
   }
   return best;
  }
+ captainStackEnemyType(type){return this.captainStackHpMode&&type==='tank'?'crimsonAce':type;}
  captainStackExcludesEnemy(type){return this.captainStackHpMode&&(type==='rifle'||type==='machinegun');}
  removeEnemyUnits(units){
   if(!units.length)return;
@@ -884,6 +885,12 @@ class FrontGame{
  refreshCaptainStackEnemyRoster(){
   if(!this.captainStackHpMode)return;
   this.removeEnemyUnits(this.units.filter(u=>u.team!==0&&this.captainStackExcludesEnemy(u.stackEnemyOriginalType??u.type)));
+  for(const u of this.units){
+   if(u.team===0||u.type!=='tank'||u.hp<=0)continue;
+   const ratio=Math.min(1,u.hp/Math.max(1,u.maxHp));
+   u.type=this.captainStackEnemyType(u.type);u.maxHp=this.stats(u).hp;u.hp=u.maxHp*ratio;
+   u.tankAimTargetId=null;u.tankReadyAimAt=null;this.resolvePosition(u);
+  }
   this.shots=this.shots.filter(shot=>shot.team===0||!this.captainStackExcludesEnemy(shot.kind)&&!this.captainStackExcludesEnemy(shot.source?.type));
   this.effects=this.effects.filter(effect=>effect.team===0||effect.kind!=='muzzle'||!this.captainStackExcludesEnemy(effect.weapon));
  }
@@ -901,7 +908,7 @@ class FrontGame{
   const tier=this.pressure().tier;if(tier===this.lastEnemyGrowth)return;this.lastEnemyGrowth=tier;
   for(const u of this.units){if(u.team===0||u.hp<=0||tier<=(u.threat||0))continue;const ratio=u.hp/u.maxHp;u.threat=tier;u.maxHp=this.stats(u).hp;u.hp=u.maxHp*ratio;}
  }
- addUnit(team,type,x,y,patrol=false){if(team!==0&&type==='sniper'&&this.enemySniperCount()>=2)type='rifle';if(team!==0&&this.captainStackExcludesEnemy(type))return null;const u={id:++this.serial,team,type,x,y,spawnedAt:this.time,face:team===0?-Math.PI/2:Math.PI/2,hp:1,maxHp:1,threat:team!==0&&type!=='leader'?this.pressure().tier:0,cooldown:this.random()*.4,deadUntil:0,patrol,homeX:x,homeY:y,walk:0,flash:0,recoil:0};u.hp=u.maxHp=this.stats(u).hp;if(u.type==='tank'||u.type==='crimsonAce'||u.type==='guntruck'||u.type==='lucky')u.moveFace=u.face;if(u.type==='tank'||u.type==='crimsonAce'||u.type==='guntruck')u.turretFace=u.face;this.resolvePosition(u);u.homeX=u.x;u.homeY=u.y;if(type==='lucky'&&team===0){u.nextLuckyAt=this.time+LUCKY.interval;u.luckyInterval=LUCKY.interval;}if(type==='leader'&&team===0){u.appearance=this.commanderId||'sarge';u.flameSkin=this.flameSkinId||'classic';}if(type==='sniper'&&team===0)u.appearance=this.sniperSkinId||'classic';if(type==='medic'&&team===0)u.appearance=this.medicSkinId||'classic';this.units.push(u);return u;}
+ addUnit(team,type,x,y,patrol=false){if(team!==0)type=this.captainStackEnemyType(type);if(team!==0&&type==='sniper'&&this.enemySniperCount()>=2)type='rifle';if(team!==0&&this.captainStackExcludesEnemy(type))return null;const u={id:++this.serial,team,type,x,y,spawnedAt:this.time,face:team===0?-Math.PI/2:Math.PI/2,hp:1,maxHp:1,threat:team!==0&&type!=='leader'?this.pressure().tier:0,cooldown:this.random()*.4,deadUntil:0,patrol,homeX:x,homeY:y,walk:0,flash:0,recoil:0};u.hp=u.maxHp=this.stats(u).hp;if(u.type==='tank'||u.type==='crimsonAce'||u.type==='guntruck'||u.type==='lucky')u.moveFace=u.face;if(u.type==='tank'||u.type==='crimsonAce'||u.type==='guntruck')u.turretFace=u.face;this.resolvePosition(u);u.homeX=u.x;u.homeY=u.y;if(type==='lucky'&&team===0){u.nextLuckyAt=this.time+LUCKY.interval;u.luckyInterval=LUCKY.interval;}if(type==='leader'&&team===0){u.appearance=this.commanderId||'sarge';u.flameSkin=this.flameSkinId||'classic';}if(type==='sniper'&&team===0)u.appearance=this.sniperSkinId||'classic';if(type==='medic'&&team===0)u.appearance=this.medicSkinId||'classic';this.units.push(u);return u;}
  spawnPatrol(x,y){this.addUnit(2,'ant',x-24,y,true);this.addUnit(2,'ant',x+24,y+34,true);}
  queueCost(queue,team=0){let total=0;for(const [type,n]of Object.entries(queue)){if(!Number.isInteger(n)||n<0||n>30)return Infinity;if(type==='truck'){if(n>0)return Infinity;}else if(ROSTER.includes(type))total+=(team===0?TYPES[type]:ENEMY_REPLACED_TYPES[type]||TYPES[type]).cost*n;else return Infinity;}return total;}
  supportValid(queue,team=0){

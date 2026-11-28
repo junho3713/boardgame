@@ -61,7 +61,7 @@ test('octopus retreats when crowded, approaches to support distance and guards s
  assert.deepEqual({x:o.x,y:o.y},parked);
 });
 
-test('foam telegraphs for .4s, travels straight at 240 px/s, and misses a commander who sidesteps',()=>{
+test('foam telegraphs for .4s, travels straight at 360 px/s, and misses a commander who sidesteps',()=>{
  const {g,leader:c,octopus:o}=field();o.nextFoamAt=0;g.update(.025);
  const fuse=o.foamWindup;
  assert.ok(fuse);close(fuse.fireAt-fuse.startedAt,.4);
@@ -69,7 +69,7 @@ test('foam telegraphs for .4s, travels straight at 240 px/s, and misses a comman
  c.y+=110;tick(g,.375);assert.equal(g.foamShots.length,0);
  g.update(.025);const shot=g.foamShots[0];assert.ok(shot);close(shot.angle,fuse.angle);
  const initial={x:shot.x,y:shot.y},hp=c.hp;tick(g,.5);
- close(shot.x,initial.x+120);close(shot.y,initial.y);
+ close(shot.x,initial.x+180);close(shot.y,initial.y);
  tick(g,1.5);assert.equal(g.foamShots.length,0);assert.equal(c.hp,hp);
  assert.ok(!g.effects.some(e=>e.kind==='bubbleFoamImpact'));
 });
@@ -115,4 +115,19 @@ test('co-op aims at the nearer commander and honors the other squad’s protecte
  for(let i=0;i<55&&g.foamShots.length;i++){g.time+=.025;g.updateFoamShots(.025);}
  assert.equal(green.hp,before[0]);assert.equal(green.toyKnockback,undefined);
  assert.ok(blue.hp<before[1]);assert.ok(blue.toyKnockback.dx<-100);
+});
+
+test('living shield recipients keep a visible bubble after the cast animation until the shield breaks',()=>{
+ const fs=require('node:fs'),vm=require('node:vm'),window={};
+ vm.runInNewContext(fs.readFileSync(require.resolve('./public/bubble-octopus-view.js'),'utf8'),{window});
+ const {g,octopus}=field(),guard=g.addUnit(2,'bladeGuard',octopus.x,octopus.y-50);
+ cast(g,octopus);assert.ok(guard.bubbleShield?.hp>0);
+ const strokes=[],noop=()=>{};
+ const c={save:noop,restore:noop,translate:noop,scale:noop,beginPath:noop,ellipse:noop,fill:noop,arc:noop,
+  globalAlpha:1,createRadialGradient:()=>({addColorStop:noop}),stroke(){strokes.push(this.strokeStyle);}};
+ for(const time of [.1,1,6]){
+  strokes.length=0;window.FrontBubbleOctopusView.shieldCast(c,guard,time);assert.ok(strokes.includes('#bdf9f4'));
+ }
+ g.damage(guard,1e6,g.commander(0));strokes.length=0;
+ window.FrontBubbleOctopusView.shieldCast(c,guard,6);assert.equal(strokes.length,0);
 });

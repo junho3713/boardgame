@@ -3,6 +3,29 @@
 const rules={from:270,interval:28,portalDelay:1.4,secondBodyAt:600,throwPeriod:2.2,throwWindup:.45,
  dashPeriod:4.5,dashWindup:.75,dashSpeed:920,dashDamage:3,retreat:.5,starSpeed:510,starRange:390,hide:.35};
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+const CLONE_SPACING=116,STAR_SPREAD=.092;
+function throwVector(u,a){
+ const x=u.x+(Math.cos(a.angle)<0?-35:35),y=u.y;
+ return {x,y,angle:Math.atan2(a.aimY-y,a.aimX-x)};
+}
+function spreadClones(g,u,dt,speed){
+ if(!u.assassinClone)return false;
+ let nearest,closest=CLONE_SPACING;
+ for(const v of g.units){
+  if(v===u||v.type!=='assassin'||!v.assassinClone||v.hp<=0||v.assassinHiddenUntil>g.time)continue;
+  const d=distance(u,v);
+  if(d<closest){nearest=v;closest=d;}
+ }
+ if(!nearest)return false;
+ const angle=closest?Math.atan2(u.y-nearest.y,u.x-nearest.x):u.id<nearest.id?0:Math.PI;
+ const radius=g.collisionRadius(u),reach=Math.min(32,CLONE_SPACING-closest),step=speed*dt;
+ for(const bend of [0,.63,-.63,1.25,-1.25]){
+  const dx=Math.cos(angle+bend)*Math.max(step,reach),dy=Math.sin(angle+bend)*Math.max(step,reach);
+  if(!g.freePosition(u.x+dx,u.y+dy,radius))continue;
+  g.move(u,dx,dy,dt,speed);return true;
+ }
+ return false;
+}
 const living=(game,id)=>game.units.filter(u=>u.type==='assassin'&&u.groupId===id&&u.hp>0);
 function smoke(g,u,kind='assassinSmoke',damage=0){
  const t=kind==='assassinPuff'?.24:.6;
@@ -110,11 +133,10 @@ function install({FrontGame}){
   if(a){
    if(a.phase==='throw'){
     if(this.time<a.until)return;
-    const fan=this.random()<.5?[-.064,.064]:[-.092,0,.092];
-    const stars=this.roomCampaign.assassinStars??=[];
-    const x=u.x+(Math.cos(a.angle)<0?-35:35),aim=Math.atan2(a.aimY-u.y,a.aimX-x);
+    const fan=this.random()<.5?[-.064,.064]:[-STAR_SPREAD,0,STAR_SPREAD];
+    const stars=this.roomCampaign.assassinStars??=[],origin=throwVector(u,a);
     // A short stagger leaves each four-point silhouette readable in the narrow fan.
-    fan.forEach((offset,i)=>stars.push({source:u,x,y:u.y,angle:aim+offset,left:rules.starRange,damage:s.damage,launchAt:this.time+.09*i}));
+    fan.forEach((offset,i)=>stars.push({source:u,...origin,angle:origin.angle+offset,left:rules.starRange,damage:s.damage,launchAt:this.time+.09*i}));
     u.assassinAction=null;u.assassinReleasedAt=this.time;return;
    }
    if(a.phase==='warn'){
@@ -131,7 +153,7 @@ function install({FrontGame}){
     if(!clear||a.left<=.01){a.phase='retreat';a.until=this.time+rules.retreat;}
     return;
    }
-   if(this.time<a.until){this.move(u,-dx,-dy,dt,s.speed*2.4);u.face=angle;return;}
+   if(this.time<a.until){if(!spreadClones(this,u,dt,s.speed*2.4))this.move(u,-dx,-dy,dt,s.speed*2.4);u.face=angle;return;}
    clearPose(u);
   }
   if(this.time<(u.assassinReleasedAt??-Infinity)+.2)return;
@@ -145,9 +167,11 @@ function install({FrontGame}){
    }
   }
   const stepBefore=u.walk;
-  if(d>320||!this.lineClear(u,c,0))this.navigate(u,c.x,c.y,dt,s.speed);
-  else if(d<200)this.move(u,-dx,-dy,dt,s.speed);
-  else this.move(u,-dy*u.orbitSign,dx*u.orbitSign,dt,s.speed*.55);
+  if(!spreadClones(this,u,dt,s.speed)){
+   if(d>320||!this.lineClear(u,c,0))this.navigate(u,c.x,c.y,dt,s.speed);
+   else if(d<200)this.move(u,-dx,-dy,dt,s.speed);
+   else this.move(u,-dy*u.orbitSign,dx*u.orbitSign,dt,s.speed*.55);
+  }
   if(u.walk!==stepBefore)u.assassinStepAt=this.time;
   u.face=angle;
  };
@@ -164,5 +188,8 @@ function install({FrontGame}){
   });
  };
 }
-if(typeof module!=='undefined'&&module.exports)module.exports=install;else install({FrontGame:root.FrontGame});
+if(typeof module!=='undefined'&&module.exports)module.exports=install;else{
+ install({FrontGame:root.FrontGame});
+ root.FrontAssassin={throwVector,windup:rules.throwWindup,starRange:rules.starRange,starSpread:STAR_SPREAD};
+}
 })(typeof window==='undefined'?globalThis:window);

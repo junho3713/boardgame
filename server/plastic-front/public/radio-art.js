@@ -145,6 +145,11 @@ function rolls(c,game,visible) {
   const labelY=grouped?-14*peak-7:-21;
   const width=grouped?rowWidth/2:label?48:35,bottom=Math.max(19,14*peak);
   const top=label?Math.max(41,15-labelY):bottom;
+  const labels=root.FrontUnitLabels;
+  if(game.captainStackHpMode&&u.team===0&&labels){
+   const starY=labels.stackStarY(u),name=labels.evolution(game,u);
+   y=(name?.y??starY)*scale-bottom-14*scale;
+  }
   let overlap;
   while((overlap=lanes.find(lane=>Math.abs(lane.x-x)<lane.width+width
    && y+bottom>lane.y-lane.top && y-top<lane.y+lane.bottom))){

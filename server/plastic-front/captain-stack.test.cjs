@@ -306,3 +306,19 @@ test('allied troops stay in formation and keep attacking during final sword warn
   assert(action.hits.includes(c.id));assert(!action.hits.includes(ally.id));
  }
 });
+
+test('captain stack substitutes Crimson Aces for enemy tanks on spawn and restores old tanks at the same HP fraction',()=>{
+ for(const coop of [false,true]){
+  const g=battle(true,coop),c=g.commander(0),p={x:c.x-180,y:c.y-220,entrySide:1};
+  assert.equal(g.addUnit(1,'tank',p.x,p.y).type,'crimsonAce');
+  const wave=g.spawnRoomEnemy('tank',null,p);assert.equal(wave.type,'crimsonAce');assert.equal(wave.roomWave,true);
+  assert.equal(g.addUnit(0,'tank',c.x+90,c.y).type,'tank');
+ }
+ const g=battle(false),c=g.commander(0),enemy=g.addUnit(2,'tank',c.x-150,c.y),ally=g.addUnit(0,'tank',c.x-90,c.y);
+ enemy.hp=enemy.maxHp*.4;const legacy=pack(g);
+ legacy.fields.captainStackHpMode=true;
+ const resumed=unpack(battle(true),legacy),replacement=resumed.units.find(u=>u.id===enemy.id);
+ assert.equal(replacement.type,'crimsonAce');assert(Math.abs(replacement.hp/replacement.maxHp-.4)<1e-9);
+ assert.equal(resumed.units.find(u=>u.id===ally.id).type,'tank');
+ assert.equal(g.spawnRoomEnemy('tank',null,{x:c.x-350,y:c.y-230,entrySide:1}).type,'tank');
+});

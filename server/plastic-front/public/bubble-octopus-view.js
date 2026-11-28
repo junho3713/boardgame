@@ -39,7 +39,10 @@ function model(c,u,time){
  const gait=Math.sin(cycle),hop=Math.abs(gait)*1.65;
  const pose=swell>.28||windProgress>.4?3:gait>.48?1:gait<-.48?2:0;
  c.save();
- oval(c,1,1,21-hop*.6,7.2,'#48334a32');oval(c,0,1,15,4.4,'#31202c29');
+ c.save();c.translate(5,7);c.scale(1,.43);
+ const ground=c.createRadialGradient(-3,-2,0,0,0,32);
+ ground.addColorStop(0,'#282022b8');ground.addColorStop(.52,'#382a336b');ground.addColorStop(1,'#382a3300');
+ oval(c,0,0,32,32,ground);c.restore();
  c.translate(0,-hop);c.scale(1+.04*swell,1+.06*swell);
  if(atlas?.complete&&atlas.naturalWidth===cell*8){
   c.drawImage(atlas,dir%8*cell,(pose*2+(dir>>3))*cell,cell,cell,-size/2,-90*size/cell,size,size);
@@ -71,14 +74,18 @@ function healthPaint(c,bar,x,baseWidth,hpColor){
 }
 function shieldCast(c,u,time){
  const s=u.bubbleShield;
- if(!s)return;
- const p=(time-s.at)/.72;
- if(!(p>=0&&p<1))return;
- const type=root.FrontTypes?.[u.type];
- const r=(u.r||type?.r||14)*(u.boss?1.35:1);
- const flight=u.visualFlightHeight??type?.flightHeight??0;
- c.save();c.globalAlpha*=Math.sin(Math.min(1,p*6)*Math.PI/2)*(1-p*p);
- film(c,0,-r*.85-flight,(r*1.25+8)*(.55+.45*Math.min(1,p*4)));c.restore();
+ if(!(u.hp>0&&s?.hp>0))return;
+ const type=root.FrontTypes?.[u.type],r=(u.r||type?.r||14)*(u.boss?1.35:1);
+ const flight=u.visualFlightHeight??type?.flightHeight??0,empress=u.type==='swordEmpress';
+ const tall=u.type==='crimsonAce'||u.type==='assassin'||type?.stab;
+ const rx=empress?93:Math.max(25,r*1.35+12),ry=empress?98:Math.max(tall?43:27,r*(tall?1.62:1.25)+14);
+ const charge=clamp((time-(s.at??time))/.20),remaining=clamp(s.hp/(s.maxHp||s.hp));
+ const swell=.88+.12*charge;
+ c.save();c.translate(0,7-ry-flight);c.scale(swell,swell*ry/rx);
+ c.globalAlpha*=.55+.28*remaining+.11*(1-charge);
+ film(c,0,0,rx);
+ c.strokeStyle='#bdf9f4';c.lineWidth=1.45;c.beginPath();c.arc(0,0,rx,0,TAU);c.stroke();
+ c.restore();
 }
 function air(c,game,visible){
  for(const shot of game.foamShots||[]){

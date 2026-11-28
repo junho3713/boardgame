@@ -116,3 +116,17 @@ test('guard composition grows with time and expiration withdraws living guards w
 test('saved cooperative supplies remain collectible with living guards and reward only the collector',()=>{
  const g=scene(true);g.time=120;g.updateRareSupplies();const restored=unpack(scene(true),JSON.parse(JSON.stringify(pack(g)))),p=restored.pickups[0];a.equal(restored.rareSupplyGuards(p).length,3);restored.withOwner(1,()=>{const c=restored.commander(0);Object.assign(c,{x:p.x,y:p.y});p.supplyKind='artillery';a.equal(restored.collectFieldSupply(p),true);a.equal(restored.supplyState().artillery,1);});a.equal(restored.withOwner(0,()=>restored.supplyState().artillery),0);
 });
+
+test('captain stack staffs rare supply with snipers and blades while honoring the room-wide sniper cap',()=>{
+ for(const coop of [false,true])for(const time of [120,240,360,720])for(const full of [false,true]){
+  const g=scene(coop);g.captainStackHpMode=true;g.time=time;
+  if(full)for(const x of [950,1050])g.addUnit(1,'sniper',x,6400);
+  g.updateRareSupplies();const p=g.pickups.find(p=>p.rareSupply),guards=()=>g.rareSupplyGuards(p).map(u=>u.type);
+  a.ok(p);a.equal(guards().length,time===120?3:6);
+  a.equal(guards().filter(t=>t==='sniper').length,full?0:1);
+  a.ok(guards().includes('bladeGuard'));a.ok(guards().includes('bubbleOctopus'));
+  Object.assign(g.commander(0),{x:p.x+300,y:p.y});g.updateRareSupplySecurity();
+  a.equal(guards().length,time===120?5:10);a.ok(guards().includes('bayonet'));
+  a.ok(guards().every(t=>t!=='rifle'&&t!=='machinegun'));a.ok(g.enemySniperCount()<=2);
+ }
+});

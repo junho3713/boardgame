@@ -105,3 +105,23 @@ test('the normal campaign tick spawns the encounter; a blue co-op captain owns i
  assert.equal(g.withOwner(1,()=>g.cash[0]),blueCash+22);
  assert(g.experienceDrops.some(drop=>drop.owner===1&&drop.amount===55));
 });
+
+test('nearby clones spread out while circling and retreating without moving a locked throw',()=>{
+ const g=arena(true),{copies}=group(g),leader=g.commander(0);
+ g.obstacles=[];g.structures=[];g.defenses=[];g.buildings=[];
+ const [a,b,c]=copies;
+ for(const [u,x] of [[a,0],[b,18],[c,39]])Object.assign(u,{x:leader.x+x,y:leader.y-258,nextStarAt:Infinity,nextSlashAt:Infinity});
+ a.assassinAction={phase:'retreat',until:g.time+.5};
+ const separation=(u,v)=>Math.hypot(u.x-v.x,u.y-v.y);
+ for(let i=0;i<27;i++){
+  g.time+=.05;
+  for(const u of copies)g.updateAssassin(u,.05,g.stats(u));
+ }
+ for(const [u,v] of [[a,b],[b,c],[a,c]])assert(separation(u,v)>=104);
+ Object.assign(c,{x:b.x+27,y:b.y});
+ b.assassinAction={phase:'throw',aimX:leader.x,aimY:leader.y,angle:Math.PI/2,until:g.time+.45};
+ const start={x:b.x,y:b.y};
+ g.updateAssassin(b,.05,g.stats(b));
+ assert.deepEqual({x:b.x,y:b.y},start);
+ assert.equal(b.assassinAction.phase,'throw');
+});

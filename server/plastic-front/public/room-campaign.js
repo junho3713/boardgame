@@ -414,6 +414,7 @@ const methods={
  roomEnemyTypeCap(type){const row=config.openingCaps.find(r=>this.time<r.until);return Math.min(config.caps[type]??Infinity,row?.[type]??Infinity);},
  roomBombCap(){const r=config.insects.bombSpawn;return this.time<r.earlyUntil?r.earlyCap:r.cap;},
  roomEnemyReady(type){
+  type=this.captainStackEnemyType(type);
   if(this.captainStackExcludesEnemy(type))return false;
   if(type==='pirateCannon')return this.pirateReinforcementReady();
   if(type==='bubbleOctopus')return this.octopusReinforcementReady();
@@ -425,7 +426,7 @@ const methods={
   if(this.time<(config.introductions[type]||0)||type==='sniper'&&this.enemySniperCount()>=2)return false;
   return !config.insects.intervals[type]||this.time>=Math.max(config.insects.from,this.roomCampaign?.insectNext?.[type]||0);
  },
- roomCanSpawn(type){return this.roomEnemyReady(type)&&this.roomEnemyCount()<this.roomWaveCap()&&this.roomEnemyCount(type)<this.roomEnemyTypeCap(type);},
+ roomCanSpawn(type){type=this.captainStackEnemyType(type);return this.roomEnemyReady(type)&&this.roomEnemyCount()<this.roomWaveCap()&&this.roomEnemyCount(type)<this.roomEnemyTypeCap(type);},
  roomWavePlan(){
   if(this.roomFever()||this.roomCampaign?.endless)return {count:config.assault.batch,interval:config.assault.interval,surge:false,forced:[]};
   const p=this.roomPhase(),beat=this.roomBeat(),s=this.roomCampaign,r=config.surges;
@@ -466,6 +467,7 @@ const methods={
   return plan;
  },
  spawnRoomEnemy(type,lane=null,entry=null){
+  type=this.captainStackEnemyType(type);
   const r=config.insects.opening,opening=entry?.openingAntPack&&this.time>=r.at&&this.time<r.until&&!this.roomCampaign.openingAntWave&&this.roomEnemyCount(null,true)<this.roomWaveCap();
   if(!(opening?this.roomEnemyReady(type):this.roomCanSpawn(type)))return null;
   const cursor=this.roomCampaign.entryCursor||0,p=entry||this.roomEntry(this.serial+1+(lane||0)*3,55,cursor%4);
