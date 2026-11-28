@@ -39,7 +39,16 @@ function place(g,center,angle,radius,bodyRadius=24){
  return g.resolvePosition({x:center.x+Math.cos(angle)*radius,y:center.y+Math.sin(angle)*radius},bodyRadius);
 }
 function waterLane(cross,offset){return ((cross-offset)%WATER.period+WATER.period)%WATER.period<WATER.wet;}
-function startWave(g,u,direction,again){
+function startWave(g,u,again,previousDirection){
+ // Open from the north. Change axis every cast (including the enraged follow-up)
+ // and use the opposite edge the next time that axis is visited.
+ const clock=u.krakenClock,last=previousDirection??clock.lastTide;
+ let direction;
+ if(last==null)direction=1;
+ else if(last%2===0)direction=clock.lastVertical===1?3:1;
+ else direction=clock.lastHorizontal==null?(g.random()<.5?0:2):(clock.lastHorizontal+2)%4;
+ clock.lastTide=direction;
+ if(direction%2===0)clock.lastHorizontal=direction;else clock.lastVertical=direction;
  const b=g.bounds(),horizontal=direction%2===0,sign=direction<2?1:-1,length=horizontal?b.width:b.height;
  hazards(g).push({kind:'tide',source:u,direction,horizontal,sign,length,offset:g.random()*WATER.period,
   start:g.time+1.2,front:sign===1?0:length,again,hit:[]});
@@ -187,7 +196,7 @@ function install({FrontGame}){
   }
   const tideBusy=k.move%2===1&&this.roomCampaign.rotation.hazards?.some(h=>h.kind==='tide'&&h.source===u);
   if(now>=k.water&&!tideBusy){
-   if(k.move++%2===0)bombs(this,u,c);else startWave(this,u,Math.floor(this.random()*4),enraged);
+   if(k.move++%2===0)bombs(this,u,c);else startWave(this,u,enraged);
    k.water=now+(k.move%2?4:10);
   }
   if(dist(u,c)>125)this.navigate(u,c.x,c.y,dt,s.speed);
@@ -209,7 +218,7 @@ function install({FrontGame}){
      h.hit.push(t.id);strike(this,u,t,u.slotDamage*1.5,{angle:h.direction*Math.PI/2,travel:148,duration:.34,height:10});
     }
     if(h.sign>0?h.front>h.length+WATER.width:h.front<-WATER.width){
-     keep=false;if(h.again)startWave(this,u,(h.direction+1+Math.floor(this.random()*3))%4,false);
+     keep=false;if(h.again)startWave(this,u,false,h.direction);
     }
    }else if((h.kind==='foam'||h.kind==='geyser')&&this.time>=h.at){
     const foam=h.kind==='foam',points=foam?[h]:h.points,radius=foam?180:WATER.bombRadius;

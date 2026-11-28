@@ -7,9 +7,9 @@ function oval(c,x,y,rx,ry,fill){
 }
 // Cells share a foot pivot at (128,240). The last six cells interpolate the two planted steps.
 const figureScale=1.22,cell=256,reduce=root.matchMedia?.('(prefers-reduced-motion: reduce)');
-function sheet(name){
+function sheet(name,version=1){
  const art=new Image();art.decoding='async';art.fetchPriority='low';
- art.src='assets/models/'+name+'-v1.webp';return art;
+ art.src='assets/models/'+name+'-v'+version+'.webp';return art;
 }
 const krakenSheet=sheet('kraken-boss'),ninjaSheet=sheet('ninja-assassin-boss');
 const headings=new WeakMap();
@@ -30,6 +30,7 @@ function stride(walk,start,between){
  return step===0?start:step===7?start+1:between+step-1;
 }
 function kraken(c,u,time,hazards){
+ breakerSheet??=sheet('kraken-surf',2);
  c.save();c.scale(figureScale,figureScale);
  if(!krakenSheet.naturalWidth){krakenFallback(c,u,time);c.restore();return;}
  const wave=hazards?.find(h=>h.kind==='tide'&&h.source?.id===u.id&&time<h.start+.65);
@@ -125,6 +126,7 @@ function krakenFallback(c,u,time){
  c.fillStyle=gold;c.beginPath();c.moveTo(-10,-10);c.lineTo(-5,-5);c.lineTo(0,-14);c.lineTo(5,-5);c.lineTo(10,-10);c.lineTo(8,0);c.quadraticCurveTo(0,4,-8,0);c.closePath();c.fill();
  oval(c,0,-2,2.6,2.8,'#b92454');oval(c,-.7,-3,1,.8,'#ffe0ce');c.restore();
 }
+let breakerSheet;
 function tideWarning(c,left,right,low,high,h,time){
  const progress=clamp(1-(h.start-time)/1.2),middle=(low+high)/2;
  c.fillStyle='rgba(56,176,255,'+(.45+.12*progress)+')';c.fillRect(left,low,right-left,high-low);
@@ -137,50 +139,126 @@ function tideWarning(c,left,right,low,high,h,time){
  }
  c.stroke();
 }
-function tideCrest(c,h,low,high,time){
- const flow=h.sign,front=h.front,back=front-78*flow;
- const edge=y=>front+flow*(6*Math.sin(y*.042-time*13)+3*Math.cos(y*.12+time*9));
- const body=c.createLinearGradient(back,0,front+13*flow,0);
- body.addColorStop(0,'#529dd900');body.addColorStop(.29,'#327ebd6e');body.addColorStop(.72,'#249ac9d9');
- body.addColorStop(.91,'#81e4fade');body.addColorStop(1,'#e7ffff');
- c.fillStyle=body;c.beginPath();c.moveTo(back,low);c.lineTo(edge(low),low);
- for(let y=low+5;y<high;y+=5)c.lineTo(edge(y),y);
- c.lineTo(edge(high),high);c.lineTo(back,high);c.closePath();c.fill();
- for(const [offset,line,color] of [[-23,3,'#7fdefa85'],[-7,7,'#99edffc2'],[1,3,'#eaffff']]){
-  c.strokeStyle=color;c.lineWidth=line;c.lineCap='round';c.beginPath();c.moveTo(edge(low)+offset*flow,low);
-  for(let y=low+4;y<high;y+=4)c.lineTo(edge(y)+offset*flow,y);
-  c.lineTo(edge(high)+offset*flow,high);c.stroke();
+let refraction;
+function refractFloor(c,h,mid,phase,terrain,bounds){
+ if(!terrain?.width||!terrain.height)return;
+ const span=water.wet,depth=140,half=span/2,sign=h.sign;
+ if(!refraction){
+  const tile=document.createElement('canvas');tile.width=depth;tile.height=span;
+  const ctx=tile.getContext('2d');
+  ctx.save();ctx.scale(depth/2,half);
+  const mask=ctx.createRadialGradient(1,1,.05,1,1,1);
+  mask.addColorStop(0,'#fff');mask.addColorStop(.55,'#ffffffdc');mask.addColorStop(1,'#ffffff00');
+  // Rasterize the soft edge once so it never cuts a hard notch into a floorboard.
+  ctx.fillStyle=mask;ctx.fillRect(0,0,2,2);ctx.restore();
+  const feather=document.createElement('canvas');feather.width=depth;feather.height=span;
+  feather.getContext('2d').drawImage(tile,0,0);
+  refraction={tile,ctx,feather};
  }
- // Foam stays inside the same lanes as damage, including near the edges of the map.
- for(let y=low+8;y<high;y+=14){
-  const shift=(Math.sin(y*1.48+time*17)+1)*.5;
-  oval(c,edge(y)+flow*(8+shift*12),y+shift*5,1.5+shift*2.8,1.3+shift*1.8,'#ddfaffce');
-  oval(c,edge(y)-flow*(20+shift*37),y,3+shift*4,1.2,'#baf4ff99');
+ const {tile,ctx,feather}=refraction;
+ const start=h.front+(sign>0?-101:-39),rx=terrain.width/bounds.width,ry=terrain.height/bounds.height;
+ ctx.clearRect(0,0,depth,span);ctx.save();
+ if(!h.horizontal)ctx.transform(0,1,1,0,0,0);
+ // Refract a small patch of map texture in four-pixel strips. The simulation and
+ // fog continue in world space and the browser never has to read screen pixels.
+ for(let across=0;across<span;across+=4){
+  const u=(across+2)/span,y=mid-half+across,w=Math.sin(Math.PI*u);
+  const offset=(5+6*Math.sin(9*u+phase*TAU))*w*sign,lateral=2*w*Math.sin(15*u-phase*TAU);
+  const dw=h.horizontal?depth:4,dh=h.horizontal?4:depth;
+  const sx=h.horizontal?start+offset:y+lateral,sy=h.horizontal?y+lateral:start+offset;
+  ctx.drawImage(terrain,sx*rx,sy*ry,dw*rx,dh*ry,h.horizontal?0:across,h.horizontal?across:0,dw,dh);
  }
+ ctx.restore();ctx.globalCompositeOperation='destination-in';ctx.drawImage(feather,0,0);
+ ctx.globalCompositeOperation='source-over';
+ c.save();c.globalAlpha*=.68;c.drawImage(tile,start,mid-half);c.restore();
 }
-function tide(c,g,h){
- const horizontal=h.horizontal,cross=horizontal?g.bounds().height:g.bounds().width;
+function tideCrest(c,h,laneStart,time,terrain,bounds){
+ // Local x follows the wave, local y runs across the full 216px wet lane.
+ const phase=(time-h.start)*1.15+.5+.5*Math.sin(laneStart*.071), flow=h.sign, span=water.wet;
+ const mid=laneStart+span/2, direction=h.direction??(h.horizontal?(flow>0?0:2):(flow>0?1:3));
+ refractFloor(c,h,mid,phase,terrain,bounds);
+ c.save();c.translate(h.front,mid);c.scale(flow,1);
+ c.save();c.translate(-48,0);c.scale(1,span/212);
+ const wash=c.createRadialGradient(20,0,3,0,0,108);
+ wash.addColorStop(0,'#077b924d');wash.addColorStop(.52,'#55d7e34b');
+ wash.addColorStop(.82,'#9be5df25');wash.addColorStop(1,'#81e6df00');
+ oval(c,0,0,108,108,wash);c.restore();
+ // Uneven foam filaments stretch and split as the sheet drains away.
+ c.lineCap='round';
+ for(let i=0;i<37;i++){
+  const y=(i/36-.5)*(span-14)+3*Math.sin(i*1.83),edge=Math.sin(i/36*Math.PI),cycle=(phase*.82+i*.618)%1;
+  const x=-10-(18+109*edge)*cycle,drift=Math.sin(i*3.1+cycle*5)*(5+7*edge);
+  c.lineWidth=.55+1.05*(1-cycle);c.strokeStyle='rgba(195,250,250,'+(.46*Math.sin(Math.PI*cycle))+')';
+  c.beginPath();c.moveTo(x,y);c.bezierCurveTo(x-4,y+drift,x-12,y+drift,x-20-cycle*9,y+drift*.52);
+  if(i%3===0){c.moveTo(x-11,y+drift*.8);c.quadraticCurveTo(x-15,y+drift-4,x-21,y+drift-4);}
+  c.stroke();
+ }
+ c.restore();
+ if(breakerSheet.naturalWidth){
+  const frame=reduce?.matches?0:Math.floor(phase*16)%16,tile=288;
+  c.save();
+  // The atlas is lit from above in screen space, including the rear view.
+  if(!h.horizontal)c.transform(0,1,1,0,0,0);
+  // Anchor the shoreward lip, not the center of the sprite, at the damage front.
+  const w=h.horizontal?span*.76:span,hgt=h.horizontal?span:span*.72;
+  const x=h.horizontal?h.front-w*(flow>0?.83:.17):mid-w/2;
+  const y=h.horizontal?mid-hgt/2:h.front-hgt*(flow>0?.83:.17);
+  const mirrored=!h.horizontal&&Math.round((laneStart-h.offset)/water.period)%2!==0;
+  c.translate(mirrored?x+w:x,y);if(mirrored)c.scale(-1,1);
+  c.drawImage(breakerSheet,frame%8*tile,(direction*2+Math.floor(frame/8))*tile,tile,tile,0,0,w,hgt);
+  c.restore();
+ }else{
+  const waterFace=c.createLinearGradient(h.front-flow*35,0,h.front+flow*19,0);
+  waterFace.addColorStop(0,'#1775a1');waterFace.addColorStop(.68,'#42d3df');waterFace.addColorStop(1,'#e6ffff');
+  oval(c,h.front,mid,29,span*.48,waterFace);
+ }
+ // Droplets lift from the lip, fan out, then land in the leading wash.
+ c.save();c.translate(h.front,mid);
+ for(let i=0;i<46;i++){
+  const flight=(phase*.91+i*.6180339)%1,arc=4*flight*(1-flight);
+  const y=(i/45-.5)*(span-18)+3*Math.sin(i*5),edge=clamp(1-(y/(span*.51))**2);
+  const x=flow*(2+flight*(12+27*edge)+4*Math.sin(i*2.2));
+  const height=(7+17*edge)*(1-flight)+(12+24*edge+12*Math.sin(i*1.72))*arc;
+  const sx=x-(h.horizontal?0:height),sy=y-(h.horizontal?height:0)+Math.sin(i*2.7)*flight*9;
+  const size=(.8+1.35*edge+.45*Math.sin(i*3.2))*(1-.5*flight);
+  c.globalAlpha=Math.sin(flight*Math.PI)*.91;
+  c.lineWidth=size;c.strokeStyle=i%3?'#e1ffff':'#9fe6ef';c.beginPath();
+  c.moveTo(sx,sy);c.lineTo(sx+flow*flight*2+(h.horizontal?0:arc*2),sy+(h.horizontal?arc*2:0));c.stroke();
+ }
+ c.restore();
+}
+function tide(c,g,h,terrain){
+ breakerSheet??=sheet('kraken-surf',2);
+ const bounds=g.bounds(),horizontal=h.horizontal,cross=horizontal?bounds.height:bounds.width;
  const pos=horizontal?g.camera.x:g.camera.y,view=g.viewport||{width:1200,height:860};
  const half=(horizontal?view.width:view.height)/2+40,left=pos-half,right=pos+half;
  const crossPos=horizontal?g.camera.y:g.camera.x,crossHalf=(horizontal?view.height:view.width)/2+50;
  const lo=Math.max(0,crossPos-crossHalf),hi=Math.min(cross,crossPos+crossHalf);
  const warning=g.time<h.start;
- if(!warning&&(h.front<left-85||h.front>right+85))return;
+ // The warning stays on the approaching side while the breaker crosses a large map.
+ const crestVisible=!warning&&h.front>=left-165&&h.front<=right+165;
+ const warnLeft=warning||h.sign<0?left:Math.max(left,h.front+water.width);
+ const warnRight=warning||h.sign>0?right:Math.min(right,h.front-water.width);
+ if(!crestVisible&&warnRight<=warnLeft)return;
  c.save();if(!horizontal)c.transform(0,1,1,0,0,0);
  for(let y=h.offset+Math.floor((lo-h.offset)/water.period)*water.period;y<hi;y+=water.period){
   const low=Math.max(0,y),high=Math.min(cross,y+water.wet);
   if(high<=lo||low>=high)continue;
   c.save();c.beginPath();c.rect(left,low,right-left,high-low);c.clip();
-  if(warning)tideWarning(c,left,right,low,high,h,g.time);
-  else tideCrest(c,h,low,high,g.time);
+  if(warnRight>warnLeft){
+   c.save();if(!warning)c.globalAlpha*=.48;
+   c.beginPath();c.rect(warnLeft,low,warnRight-warnLeft,high-low);c.clip();
+   tideWarning(c,warnLeft,warnRight,low,high,h,g.time);c.restore();
+  }
+  if(crestVisible)tideCrest(c,h,y,g.time,terrain,bounds);
   c.restore();
  }
  c.restore();
 }
-function ground(c,g){
+function ground(c,g,terrain){
  for(const h of g.roomCampaign?.rotation?.hazards||[]){
   if(h.source?.hp<=0)continue;
-  if(h.kind==='tide'){tide(c,g,h);continue;}
+  if(h.kind==='tide'){tide(c,g,h,terrain);continue;}
   if(h.kind!=='foam'&&h.kind!=='geyser')continue;
   const q=Math.max(0,Math.min(1,(g.time-h.start)/(h.at-h.start))),r=h.kind==='foam'?180:water.bombRadius;
   for(const p of h.points||[h]){

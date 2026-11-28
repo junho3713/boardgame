@@ -1180,7 +1180,7 @@ function draw(dt){
  for(const u of game.units)if(u.team===0&&u.toyKnockback?.popHeight>=48&&window.FrontHitFeedback.airborne(u,game.time)){
   ctx.save();ctx.fillStyle='#24282c69';ctx.beginPath();ctx.ellipse(u.x+3,u.y+4,17,6,0,0,Math.PI*2);ctx.fill();ctx.restore();
  }
- window.FrontRotationView.ground(ctx,game);window.FrontAssassinView.ground(ctx,game);window.FrontGuardianFX.ground(ctx,game);battleFx.ground(ctx,fxVisible);battleFx.luckyGround(ctx,game,fxVisible);
+ window.FrontRotationView.ground(ctx,game,terrain);window.FrontAssassinView.ground(ctx,game);window.FrontGuardianFX.ground(ctx,game);battleFx.ground(ctx,fxVisible);battleFx.luckyGround(ctx,game,fxVisible);
  for(const u of game.units)if(u.type==='bikeRaider'||u.bossPattern==='rhinoCharge')battleFx.drawBikeWarning(ctx,u,game.time);
  if(game.isRoomCampaign())window.FrontPortal.ground(ctx,game.bases[1],game.time);
  for(const b of game.bases)drawBase(b);

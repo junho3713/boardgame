@@ -103,6 +103,30 @@ test('7 minute preview can time out and the third formal slot still awards exact
  g.time=480;g.updateRoomBosses();assert.equal(mini.hp,0);assert.equal(g.kills,0);assert.equal(g.pickups.filter(p=>p.destinyStar).length,0);
  g.damage(g.activeBoss(),1e8,g.commander(0));assert.equal(g.pickups.filter(p=>p.destinyStar).length,1);
 });
+test('Kraken opens from the north, then covers all four edges across a checkpoint',()=>{
+ let g=arena(),b=spawn(g,'kraken');
+ const directions=[];
+ for(let cast=0;cast<5;cast++){
+  if(cast===2){g=copy(g);b=g.activeBoss();}
+  g.commander(0).hp=g.commander(0).maxHp;
+  g.updateKraken(b,.05,g.stats(b));
+  g.time=b.krakenClock.water;g.updateKraken(b,.05,g.stats(b)); // water bombs
+  g.time=b.krakenClock.water;g.updateKraken(b,.05,g.stats(b));
+  const wave=g.roomCampaign.rotation.hazards.find(h=>h.kind==='tide');
+  assert.ok(wave,'expected a tide on cast '+cast);
+  directions.push(wave.direction);
+  if(cast===0){
+   assert.equal(wave.horizontal,false);assert.equal(wave.front,0);assert.equal(wave.sign,1);
+   const c=g.commander(0);
+   c.x=wave.offset+2*310+75;c.y=58;
+   g.time=wave.start+.1;g.updateRotationHazards(.1);
+   assert.ok(c.toyKnockback.dy>0);
+  }
+  wave.front=wave.sign>0?wave.length:0;g.time=Math.max(g.time,wave.start)+.1;g.updateRotationHazards(.1);
+ }
+ assert.equal(directions[0],1);assert.equal(directions[2],3);assert.equal(directions[4],1);
+ assert.deepEqual(directions.slice(0,4).sort(),[0,1,2,3]);
+});
 test('kraken rage chains from a different edge, casts five bombs and accelerates shield and foam',()=>{
  const g=arena(),b=spawn(g,'kraken'),c=g.commander(0);Object.assign(b,{x:c.x+60,y:c.y});
  b.hp=b.maxHp/2;g.updateKraken(b,.05,g.stats(b));g.time+=2.5;g.updateKraken(b,.05,g.stats(b));
@@ -111,7 +135,7 @@ test('kraken rage chains from a different edge, casts five bombs and accelerates
  g.time=b.krakenClock.water;g.updateKraken(b,.05,g.stats(b));
  const wave=g.roomCampaign.rotation.hazards.find(h=>h.kind==='tide');assert.ok(wave.again);
  wave.front=wave.sign>0?wave.length:0;g.time=wave.start+.1;g.updateRotationHazards(.1);
- const next=g.roomCampaign.rotation.hazards.find(h=>h.kind==='tide');assert.notEqual(next.direction,wave.direction);assert.equal(next.again,false);assert.ok(Math.abs(next.start-g.time-1.2)<1e-7);
+ const next=g.roomCampaign.rotation.hazards.find(h=>h.kind==='tide');assert.notEqual(next.horizontal,wave.horizontal);assert.equal(next.again,false);assert.ok(Math.abs(next.start-g.time-1.2)<1e-7);
 });
 test('boomerang pauses for 1.3 seconds, turns to its moving owner and can hit again on return',()=>{
  const g=arena(),b=spawn(g,'ninjaAssassin'),c=g.commander(0);Object.assign(b,{x:c.x-120,y:c.y});
