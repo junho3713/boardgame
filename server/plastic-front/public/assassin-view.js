@@ -203,7 +203,7 @@ function ground(c,game){
   if((!boss&&u.type!=='assassin')||u.hp<=0||!game.visible(u))continue;
   if(!boss||!u.assassinClone)groundShadow(c,u);
   if(boss&&!u.assassinClone){
-   ellipse(c,u.x,u.y+2,27,10,'#15131c');ellipse(c,u.x,u.y-1,27,9,'#323039');
+   root.FrontRotationView.ninjaBase(c,u);
   }
   if(a?.phase==='throw')throwWarning(c,u,a,game.time);
   if(a?.phase!=='warn')continue;
