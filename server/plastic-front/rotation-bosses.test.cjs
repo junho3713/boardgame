@@ -43,7 +43,7 @@ for(const stack of [false,true]){
   }
   assert.equal(g.pickups.filter(p=>p.destinyStar).length,1);
   g.time=719.99;g.updateRoomBosses();assert.equal(g.finalBattle.spawned,false);
-  g.time=720;g.updateRoomBosses();g.updateRoomBosses();assert.equal(g.trialBoss.maxHp,108000);
+  g.time=720;g.updateRoomBosses();g.updateRoomBosses();assert.equal(g.trialBoss.maxHp,300000);
   assert.equal(g.units.filter(u=>u.finalBoss).length,1);
   for(const blade of g.trialBoss.swords.blades)blade.mode='attack';
   g.damage(g.trialBoss,1e8,player);assert.equal(g.result,'win');
@@ -83,6 +83,31 @@ for(const stack of [false,true]){
   const x=c.x;g.move(c,100,0,.1,175);assert.equal(c.x,x);
  });
 }
+test('Kraken recovers one percent once per water cast that hits, including after restoring an active tide',()=>{
+ for(const kind of ['tide','foam','geyser']){
+  let g=arena(),b=spawn(g,'kraken');const c=g.commander(0),troop=g.addUnit(0,'tank',c.x,c.y);
+  assert.equal(b.maxHp,50160);
+  b.hp=b.maxHp*.5;const before=b.hp,heal=Math.round(b.maxHp*.01);
+  const tide={kind,source:b,horizontal:true,direction:0,sign:1,length:3000,front:c.x-10,start:g.time,hit:[],offset:c.y-60};
+  const point={kind,source:b,x:c.x,y:c.y,points:[{x:c.x,y:c.y},{x:c.x+2,y:c.y}],at:g.time};
+  const h=kind==='tide'?tide:point;
+  const cast=()=>{g.roomCampaign.rotation.hazards=[h];g.updateRotationHazards(.01);};
+  Object.assign(c,{y:c.y+495});troop.y=c.y;cast();assert.equal(b.hp,before);
+  c.y-=495;troop.y=c.y;cast();assert.equal(b.hp,before+heal);
+  assert.equal(g.effects.filter(e=>e.kind==='heal'&&e.target===b).length,1);
+  if(kind==='tide'){
+   g=copy(g);b=g.activeBoss();const restored=g.roomCampaign.rotation.hazards[0];
+   assert.equal(restored.recovered,true);restored.hit=[];
+   g.updateRotationHazards(.01);assert.equal(b.hp,before+heal);
+  }
+ }
+});
+test('Kraken health in a restored fight keeps its original remaining fraction',()=>{
+ let g=arena(),b=spawn(g,'kraken',true);assert.equal(b.maxHp,15048);
+ b.maxHp=b.slotHp=6020;b.hp=3010;
+ g=copy(g);b=g.activeBoss();g.updateKraken(b,0,g.stats(b));
+ assert.equal(b.maxHp,15048);assert.equal(b.hp,7524);
+});
 test('ninja drops a log per phase, keeps stagger across checkpoint and retires illusions without rewards',()=>{
  let g=arena(),b=spawn(g,'ninjaAssassin'),clones=g.units.filter(u=>u.assassinClone);
  assert.equal(clones.length,3);let prev=b.ninjaNext;

@@ -73,6 +73,14 @@ function strike(g,u,t,power,control){
  const {angle=0,travel=0,duration,height}=control;
  g.pushWithFoam(t,angle,travel,duration,height);
 }
+function krakenStrike(g,cast,target,damage,control){
+ const boss=cast.source;
+ strike(g,boss,target,damage,control);
+ if(cast.recovered)return;
+ cast.recovered=true;
+ const healed=g.heal(boss,Math.round(boss.maxHp*.01));
+ if(healed>0)fx(g,'heal',boss,.65,{target:boss,team:boss.team});
+}
 function lineDistance(t,a,b){
  const x=b.x-a.x,y=b.y-a.y,q=Math.max(0,Math.min(1,((t.x-a.x)*x+(t.y-a.y)*y)/(x*x+y*y||1)));
  return Math.hypot(t.x-a.x-q*x,t.y-a.y-q*y);
@@ -245,6 +253,11 @@ function install({FrontGame}){
   u.face=angle;
  };
  p.updateKraken=function(u,dt,s){
+  const slot=root.FrontRoomCampaign.config.rotation.slots[u.rotationSlot];
+  if(slot){
+   const hp=this.roomRotationBossHp(u.type,slot,u.miniBoss);
+   if(u.maxHp!==hp){u.hp*=hp/Math.max(1,u.maxHp);u.slotHp=u.maxHp=hp;}
+  }
   const c=this.nearestStackCaptain(u);if(!c)return;
   const now=this.time,enraged=u.hp<=u.maxHp*.5,rate=enraged?.8:1;
   if(!u.krakenClock)u.krakenClock={shield:now+1.5,foam:now+2.2,water:now+1,move:0};
@@ -278,7 +291,7 @@ function install({FrontGame}){
     for(const t of validVictims(this,u)){
      const along=h.horizontal?t.x:t.y,cross=h.horizontal?t.y:t.x;
      if(h.hit.includes(t.id)||!waterLane(cross,h.offset)||along<Math.min(old,h.front)-WATER.width||along>Math.max(old,h.front)+WATER.width)continue;
-     h.hit.push(t.id);strike(this,u,t,u.slotDamage*1.5,{angle:h.direction*Math.PI/2,travel:148,duration:.34,height:10});
+     h.hit.push(t.id);krakenStrike(this,h,t,u.slotDamage*1.5,{angle:h.direction*Math.PI/2,travel:148,duration:.34,height:10});
     }
     if(h.sign>0?h.front>h.length+WATER.width:h.front<-WATER.width){
      keep=false;if(h.again)startWave(this,u,false,h.direction);
@@ -287,7 +300,7 @@ function install({FrontGame}){
     const foam=h.kind==='foam',points=foam?[h]:h.points,radius=foam?180:WATER.bombRadius;
     for(const t of validVictims(this,u)){
      const point=points.find(v=>dist(t,v)<=radius+this.collisionRadius(t));if(!point)continue;
-     strike(this,u,t,u.slotDamage*(foam?.7:1.3),foam?{angle:bearing(h,t),travel:132,duration:.3,height:8}:{duration:1.2,height:48});
+     krakenStrike(this,h,t,u.slotDamage*(foam?.7:1.3),foam?{angle:bearing(h,t),travel:132,duration:.3,height:8}:{duration:1.2,height:48});
     }
     for(const point of points)fx(this,foam?'bubbleFoamImpact':'waterColumn',point,foam?.45:.65,{radius,angle:0});
     keep=false;

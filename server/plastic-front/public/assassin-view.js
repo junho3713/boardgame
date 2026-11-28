@@ -163,7 +163,8 @@ function body(c,u,time){
  c.restore();
 }
 function groundShadow(c,u){
- c.save();c.translate(u.x+6,u.y+4);c.scale(1,.43);
+ const scale=u.type==='ninjaAssassin'?1.28:1;
+ c.save();c.translate(u.x+6,u.y+4);c.scale(scale,scale*.43);
  glow(c,0,0,32,'#2b211456','#2b211400');
  glow(c,-5,-6,19,'#2b211447','#2b211400');
  c.restore();
@@ -189,7 +190,7 @@ function ground(c,game){
  for(const u of game.units){const a=u.assassinAction;
   const boss=u.type==='ninjaAssassin';
   if((!boss&&u.type!=='assassin')||u.hp<=0||!game.visible(u))continue;
-  if(!boss)groundShadow(c,u);
+  groundShadow(c,u);
   if(a?.phase==='throw')throwWarning(c,u,a,game.time);
   if(a?.phase!=='warn')continue;
   const charge=progress(a,game.time,boss?.7:.75);

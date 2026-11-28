@@ -8,9 +8,9 @@ const rotation={
  slots:[{at:240,hp:4400,damage:48,gold:80,xp:38},{at:360,hp:9360,damage:64,gold:90,xp:48},
   {at:480,hp:18240,damage:80,gold:100,xp:58},{at:600,hp:29760,damage:100,gold:110,xp:68}],
  traits:{stagBeetle:[1.05,.95],bayonetCaptain:[.95,1.05],bladeGuard:[1,1],rhinoBeetle:[1.15,.95],
-  ninjaAssassin:[.95,1.1],kraken:[1.1,1],bikeRaider:[.9,1.1],hornet:[1,1.05]},
+  ninjaAssassin:[.95,1.1],kraken:[2.75,1],bikeRaider:[.9,1.1],hornet:[1,1.05]},
  extra:{kraken:{type:'kraken',name:'크라켄'},ninjaAssassin:{type:'ninjaAssassin',name:'닌자 어쌔신 피규어'}},
- finalAt:720,finalHp:108000,overloadAt:540,starSlot:2
+ finalAt:720,finalHp:300000,overloadAt:540,starSlot:2
 };
 function drawRotation(random,force=FORCE_NEW_BOSSES_FOR_TEST,forcedSlots=FORCED_BOSS_SLOTS){
  const draw=(pool)=>pool.splice(Math.floor(random()*pool.length),1)[0];
@@ -676,6 +676,9 @@ const methods={
   s.miniMinute=minute;this.notify('toast',u.bossName+' 접근 · '+(starPending?'처치 시 운명의 별':'체력·공격력 30%'));
  },
 
+ roomRotationBossHp(type,slot,preview){
+  return Math.round(slot.hp*rotation.traits[type][0]*(preview?config.miniBoss.hp:1));
+ },
  spawnRoomAssaultBoss(type,group,slotIndex=null,preview=false){
   const entry=config.bosses.find(b=>b.type===type)||rotation.extra[type]||config.bossRush.extraBosses[type];
   const commander=this.commander(0),portal=this.bases[1],final=type==='swordEmpress';
@@ -686,7 +689,7 @@ const methods={
   Object.assign(unit,{boss:true,bossName:entry.name,bossPattern:entry.pattern,assault:true,finalBoss:final,bossRushPair:group,bossNumber:preview?null:++this.bossState.spawned});
   if(slotIndex!==null){
    const slot=rotation.slots[slotIndex],trait=rotation.traits[type],scale=preview?config.miniBoss.hp:1;
-   Object.assign(unit,{rotationSlot:slotIndex,slotHp:Math.round(slot.hp*trait[0]*scale),slotDamage:slot.damage*trait[1]*scale});
+   Object.assign(unit,{rotationSlot:slotIndex,slotHp:this.roomRotationBossHp(type,slot,preview),slotDamage:slot.damage*trait[1]*scale});
    if(preview)Object.assign(unit,{miniBoss:true,midBossVersion:1,miniBossMinute:(slot.at-60)/60,bossName:'미드 보스 · '+entry.name});
    if(type==='ninjaAssassin')unit.ninjaLives=4;
   }
