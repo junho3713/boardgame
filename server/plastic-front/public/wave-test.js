@@ -8,7 +8,7 @@ function capacity(game,levels){return 20+game.profile.upgrades.capacity+(game.st
 function current(game){return{level:game.level,cash:Math.floor(game.cash[0]),tech:{...game.tech[0]},abilities:{...game.abilities},counts:Object.fromEntries(roster.map(t=>[t,game.alive(0).filter(u=>u.type===t).reduce((n,u)=>n+(game.starExperiment?3**((u.star||1)-1):1),0)]))};}
 function recommended(game,seconds){
  if(!Number.isFinite(seconds)||seconds<0||seconds>1200)throw Error('0:00부터 20:00 사이를 선택하세요.');
- const minutes=seconds/60,level=1+Math.floor(minutes*2),pastBosses=room.bosses.filter(b=>b.at<seconds).length+room.bossRush.pairs.filter(b=>b.at<seconds).length*2;
+ const minutes=seconds/60,level=1+Math.floor(minutes*2),pastBosses=game.roomCampaign?.rotation?room.rotation.slots.filter(b=>b.at<seconds).length:room.bosses.filter(b=>b.at<seconds).length+room.bossRush.pairs.filter(b=>b.at<seconds).length*2;
  const tech=Object.fromEntries(roster.map(t=>[t,t==='rifle'?1:0])),growth=Object.fromEntries(Object.keys(abilities).map(k=>[k,0]));let budget=level-1+pastBosses;
  const unlocks={rocket:1,medic:2,lucky:3,machinegun:4,tank:5,sniper:6,mortar:7,guntruck:9,drone:10};
  for(const [type,at]of Object.entries(unlocks))if(minutes>=at&&budget>0){tech[type]=1;budget--;}
@@ -54,8 +54,16 @@ function shiftTimers(value,delta,seen=new Set()){
  if(!value||typeof value!=='object'||seen.has(value))return;seen.add(value);
  for(const [key,v]of Object.entries(value)){if(typeof v==='number'&&Number.isFinite(v)&&(/(?:At|Until)$/.test(key)||['started','until','since'].includes(key)))value[key]=v+delta;else if(v&&typeof v==='object')shiftTimers(v,delta,seen);}
 }
-function describe(seconds){
+function describe(seconds,game){
  if(!Number.isFinite(seconds)||seconds<0||seconds>1200)return '';
+ const plan=game?.roomCampaign?.rotation;
+ if(plan){
+  if(seconds===room.rotation.finalAt)return '사검의 군주 등장';
+  const slot=room.rotation.slots.findIndex(s=>seconds===s.at||seconds===s.at-60);
+  if(slot>=0){const type=plan.order[slot],entry=room.rotation.extra[type]||room.bosses.find(b=>b.type===type);
+   return (seconds===room.rotation.slots[slot].at?'정식 보스 · ':'미드 보스 · ')+entry.name;}
+  return room.phases.filter(p=>p.at<=seconds).at(-1)?.name;
+ }
  const phase=room.phases.filter(p=>p.at<=seconds).at(-1),boss=room.bosses.find(b=>b.at===seconds),pair=room.bossRush.pairs.find(b=>b.at===seconds);
  const names=pair?pair.types.map(t=>(room.bosses.find(b=>b.type===t)||room.bossRush.extraBosses[t]).name).join(' + '):boss?.name;
  return phase.name+(names?' · '+names+' 등장':' · 해당 시간대 혼합 공세')+(room.tanks.includes(seconds)?' · 일반 전차 증원':'');
@@ -91,7 +99,12 @@ function seek(game,seconds,{heal=false}={}){
   delete s.portalRewarded;
   delete s.portalDestroyedAt;
   delete s.portalOverloaded;
-  if(target>=room.assault.overloadAt){
+  if(s.rotation){
+   s.rotation.cursor=room.rotation.slots.filter(slot=>slot.at<target).length;
+   s.rotation.previews=room.rotation.slots.flatMap((slot,i)=>slot.at-60<target?[i]:[]);
+   s.rotation.starDropped=false;s.rotation.hazards=[];
+  }
+  if(target>=game.roomOverloadAt()){
    game.startRoomAssault(true);
    s.assaultRushCursor=room.assault.rush.filter(event=>room.assault.overloadAt+event.at<target).length;
   }

@@ -124,7 +124,15 @@
    const remainingCap=()=>this.recruitmentRemaining(type);
    if(!mystery&&!openSquadSlots&&!docking?.partner)return {...status,reason:'병력 한도에 도달했어요'};
    if(docking&&this.starExperiment&&remainingCap()<docking.needed)return {...status,reason:'멀티드론 합성 한도에 도달했어요'};
-   if(!mystery&&!docking&&(this.coop?this.scoped(remainingCap):remainingCap())<=pending.filter(u=>u.type===type).length)return {...status,reason:'이 병과의 충원 한도에 도달했어요'};
+   if(!mystery&&!docking){
+    const reserved=pending.reduce((sum,pod)=>{
+     if(pod.type!==type)return sum;
+     if(!this.starExperiment)return sum+1;
+     if(pod.star===2)return sum+root.FrontTwoStar.RULES.copies;
+     return sum+(pod.goldenSummon||pod.summonEvolved?0:1);
+    },0);
+    if((this.coop?this.scoped(remainingCap):remainingCap())<=reserved)return {...status,reason:'이 병과의 충원 한도에 도달했어요'};
+   }
    if(this.cash[0]+1e-8<cost)return {...status,reason:'전투 골드가 부족해요'};
    return {...status,reason:''};
   };
@@ -149,6 +157,17 @@
    }
 
    return landings.sort((a,b)=>Number(isVehicle(b.type))-Number(isVehicle(a.type)));
+  };
+  p.summonOrder=function(slot,mode='single'){
+   if(mode==='single')return this.summon(slot);
+   if(!Number.isInteger(slot)||slot<1||slot>rules.slots||(mode!=='three'&&mode!=='all'))return false;
+   const status=this.summonStatus(slot);
+   if(status.reason||!(status.cost>0))return false;
+   const affordable=Math.floor((this.cash[0]+1e-8)/status.cost);
+   const limit=mode==='three'?Math.min(3,affordable):affordable;
+   let ordered=0;
+   while(ordered<limit&&this.summon(slot))ordered++;
+   return ordered>0;
   };
   p.summon=function(slot){
    const status=this.summonStatus(slot);

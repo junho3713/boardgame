@@ -118,6 +118,7 @@ class ProjectileSystem extends BattleSystem{
   game.updateBattleProjectiles(dt,combatCandidates);
   game.updateFoamShots?.(dt);
   game.updateAssassinStars?.(dt);
+  game.updateRotationHazards?.(dt);
   game.updateMortars();
   game.updateButterflyGusts();
   game.updateMedicCleanses();

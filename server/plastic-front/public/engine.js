@@ -110,6 +110,8 @@ const TYPES={swordEmpress:{name:'사검의 군주',hp:140800,damage:0,rate:100,r
  sniper:{name:'저격병',icon:'⌖',hp:100,damage:100,rate:2.35,range:560,speed:137,r:11,cost:110,role:'사거리 안에서 최대 체력이 가장 높은 적 자동 조준 · 경장갑 ×1 / 장갑 ×0.5'},
  guntruck:{name:'전투트럭',icon:'▱',hp:280,damage:12,rate:.22,range:265,speed:150,r:22,cost:150,role:'기동 연사 · 경장갑 ×1 / 장갑 ×0.8'},
  tank:{name:'전차',icon:'▰',hp:600,damage:100,rate:2.3,range:310,speed:95,r:26,cost:260,splash:60,role:'장갑 ×1 · 경장갑 ×0.5 · 범위 포격'},
+ kraken:{name:'크라켄',icon:'♛',hp:220,damage:80,rate:4,range:360,speed:83,r:38,cost:0},
+ ninjaAssassin:{name:'닌자 어쌔신 피규어',icon:'✥',hp:310,damage:80,rate:2,range:360,speed:134,r:22,cost:0},
  assassin:{name:'쿠노이치 어쌔신',icon:'✥',hp:310,damage:12,rate:2.2,range:320,speed:118,r:15,cost:0,rewardGold:0,role:'분신 셋과 출현 · 표창 투척과 예고 돌진 · 본체만 진홍빛 무기 예고'},
  pirateCannon:{name:'해적 포탄병',icon:'✹',hp:260,damage:88,rate:5.75,range:425,speed:87,r:24,cost:0,role:'앵무새 점화 2초 · 반경 170 포격 · 피격 병력 최대 체력의 30% 추가 피해'},
  bubbleOctopus:{name:'버블 문어',icon:'◉',hp:220,damage:9,rate:4.5,range:330,speed:82,r:17,cost:0,rewardGold:6,role:'후방 지원 · 주변 적에게 비눗방울 실드 · 고압 거품탄으로 넉백'},
@@ -633,7 +635,7 @@ class FrontGame{
   // Supply troops apply their commander-level HP bonus before stack compression.
   if(this.captainStackHpMode&&ally&&u.type!=='leader'&&!this.isSupportEntity?.(u)&&!this.isSupplyTroop?.(u))
    hp=this.captainStackTroopHp(u,hp);
-  return {...b,name,hp,damage:baseDamage*(1+.18*(level-1))*(ally?(1+.04*p.damage)*(1+.1*r.damage):enemyPower)*(1+.10*tier)*(u.boss?1.69:1)*damageBonus*(fort?.damage||1)*goldenTank,rate:u.type==='medic'?MEDIC_HEALING.interval:b.rate/(1+.09*(level-1))/(ally?(1+.03*p.haste)*(1+.08*r.haste):1)*(e==='guntruck'||e==='machinegun'?.75:1)*(!ally&&this.mode==='pve'&&u.type==='sniper'?1.25:1)*(fort?.rate||1)/(1+this.berserkerHaste(u))/this.tacticalFeverHaste(u),speed:b.speed*(ally?(1+.03*p.speed)*(1+.06*r.speed):1)*(e==='rifle'?1.15:1)*(u.boss?u.type==='rhinoBeetle'?1.6:u.type==='stagBeetle'?1.5:1.35:1),defense,range:b.range+(e==='tank'?35:e==='rifle'?20:e==='sniper'?65:e==='medic'?60:e==='mortar'?70:0),splash:(b.splash||0)+(e==='tank'?35:e==='rocket'||e==='mortar'?30:0),critChance:ally?clamp(.05+p.critChance*.02+r.critChance*.04+(e==='sniper'?.25:e==='rocket'?.2:0),0,.95):0,critDamage:1.5+(ally?p.critDamage*.1+r.critDamage*.15:0)+(e==='sniper'?.5:0),heal:u.type==='medic'?MEDIC_HEALING.base*(1+MEDIC_HEALING.perLevel*(level-1))*(e==='medic'?MEDIC_HEALING.evolvedMultiplier:1):12*(1+.2*(level-1))};
+  return {...b,name,hp:u.slotHp??hp,damage:u.slotDamage??baseDamage*(1+.18*(level-1))*(ally?(1+.04*p.damage)*(1+.1*r.damage):enemyPower)*(1+.10*tier)*(u.boss?1.69:1)*damageBonus*(fort?.damage||1)*goldenTank,rate:u.type==='medic'?MEDIC_HEALING.interval:b.rate/(1+.09*(level-1))/(ally?(1+.03*p.haste)*(1+.08*r.haste):1)*(e==='guntruck'||e==='machinegun'?.75:1)*(!ally&&this.mode==='pve'&&u.type==='sniper'?1.25:1)*(fort?.rate||1)/(1+this.berserkerHaste(u))/this.tacticalFeverHaste(u),speed:b.speed*(ally?(1+.03*p.speed)*(1+.06*r.speed):1)*(e==='rifle'?1.15:1)*(u.boss?u.type==='rhinoBeetle'?1.6:u.type==='stagBeetle'?1.5:1.35:1),defense,range:b.range+(e==='tank'?35:e==='rifle'?20:e==='sniper'?65:e==='medic'?60:e==='mortar'?70:0),splash:(b.splash||0)+(e==='tank'?35:e==='rocket'||e==='mortar'?30:0),critChance:ally?clamp(.05+p.critChance*.02+r.critChance*.04+(e==='sniper'?.25:e==='rocket'?.2:0),0,.95):0,critDamage:1.5+(ally?p.critDamage*.1+r.critDamage*.15:0)+(e==='sniper'?.5:0),heal:u.type==='medic'?MEDIC_HEALING.base*(1+MEDIC_HEALING.perLevel*(level-1))*(e==='medic'?MEDIC_HEALING.evolvedMultiplier:1):12*(1+.2*(level-1))};
  }
  selectedAbilities(){return Object.keys(ABILITIES).filter(k=>this.abilities[k]>0);}
  abilityKey(type){return typeof type==='string'&&type.startsWith('ability_')?type.slice(8):null;}
@@ -1248,6 +1250,7 @@ class FrontGame{
   }
   if(this.isSwordCommander(source)&&source.hp>0&&target.team!==source.team&&target!==source)this.heal(source,Math.max(0,previousHp-target.hp)*.1);
   const dealt=previousHp-target.hp;
+  if(target.type==='ninjaAssassin'&&this.ninjaBossWounded(target,dealt))return;
   if(target.type==='assassin'){
    this.assassinWounded(target,dealt);
    if(target.assassinClone)return;
@@ -1287,7 +1290,9 @@ class FrontGame{
     const pveCash={bubbleOctopus:20,pirateCannon:12,bombBug:10,acidBeetle:10,butterfly:16,crimsonAce:40,bikeRaider:16,bladeGuard:7,bayonetCaptain:16,bayonet:10,honeybee:10,hornet:26,rhinoBeetle:28,stagBeetle:20,bruteBeetle:20,soldierAnt:8,ant:6,beetle:12};
     let cash=(room?ROOM_KILL_GOLD[target.type]:undefined)??(this.mode==='pve'?pveCash:originalCash)[target.type]??8;
     if(boss)cash=target.miniBoss?(ROOM_BOSS_GOLD.mini[target.type]??50):(ROOM_BOSS_GOLD.main[target.type]??100);
-    const xp=(room?ROOM_KILL_XP[target.type]:undefined)??originalXP[target.type]??9;
+    const slot=ROOM_CAMPAIGN.config.rotation.slots[target.rotationSlot];
+    if(slot)cash=slot.gold*(target.miniBoss?.5:1);
+    const xp=slot?.xp??(room?ROOM_KILL_XP[target.type]:undefined)??originalXP[target.type]??9;
     const fever=this.roomFever()?ROOM_CAMPAIGN.config.assault.rewardMultiplier:1;
     const award=(boss?xp*(target.miniBoss?2.5:4):Math.ceil(xp*(target.ambient?.22:1)))*fever;
     this.earnDefeatXP(target,award,boss);this.rollCombatDrop(target);this.cash[0]+=Math.ceil(cash*(!boss&&target.ambient?.25:1))*(target.type==='assassin'?1:fever);
@@ -2200,13 +2205,13 @@ class FrontGame{
   for(let d=8;d<=rules.distance;d+=8){const p={x:u.x+Math.cos(angle)*d,y:u.y+Math.sin(angle)*d};if(p.x<45||p.x>this.bounds().width-45||p.y<70||p.y>this.bounds().height-70||!this.lineClear(origin,p,r))break;distance=d;}
   if(distance<12){if(!target.built||this.targetDistance(u,target)>r+8)return false;distance=8;}
   u.bikeAttack={phase:'windup',origin,angle,startedAt:this.time,chargeAt:this.time+rules.windup,distance,remaining:distance,traveled:0,hit:[],target,halfWidth:rules.halfWidth,speed:rules.speed};
-  if(rules.infantryHpDamage!==undefined)u.bikeAttack.impactDamage=this.infantryChargeDamage(rules.infantryHpDamage)*this.roomSpawnScaling(u).damage;
+  if(rules.infantryHpDamage!==undefined)u.bikeAttack.impactDamage=u.slotDamage??this.infantryChargeDamage(rules.infantryHpDamage)*this.roomSpawnScaling(u).damage;
   u.face=u.moveFace=u.aimFace=angle;u.route=null;u.cooldown=rules.cooldown;return true;
  }
  updateBike(u,dt,rules=BIKE){
   const s=this.stats(u),a=u.bikeAttack;
   if(a){
-   if(rules.infantryHpDamage!==undefined&&!Number.isFinite(a.impactDamage))a.impactDamage=this.infantryChargeDamage(rules.infantryHpDamage)*this.roomSpawnScaling(u).damage;
+   if(rules.infantryHpDamage!==undefined&&!Number.isFinite(a.impactDamage))a.impactDamage=u.slotDamage??this.infantryChargeDamage(rules.infantryHpDamage)*this.roomSpawnScaling(u).damage;
    u.face=u.moveFace=u.aimFace=a.angle;
    if(a.phase==='windup'){if(this.time+1e-8<a.chargeAt)return;a.phase='charge';this.notify('fire',u);}
    let remaining=Math.min(a.remaining,rules.speed*dt*(this.time<(u.luckySlowUntil||0)?1-LUCKY.groundSlow:1));
@@ -2317,6 +2322,8 @@ class FrontGame{
     if(u.type!=='drone')this.updateCombatDrone(u,player,dt,s,combatCandidates,commandPoints.get(player));
     continue;
    }
+   if(u.type==='kraken'){this.updateKraken(u,dt,s);continue;}
+   if(u.type==='ninjaAssassin'){this.updateNinjaBoss(u,dt,s);continue;}
    if(u.type==='bubbleOctopus'){this.updateBubbleOctopus(u,dt,s);continue;}
    if(u.type==='assassin'){this.updateAssassin(u,dt,s);continue;}
    if(u.type==='pirateCannon'){this.updatePirateCannon(u,dt,s);continue;}
@@ -2403,6 +2410,6 @@ class FrontGame{
  finish(result,reason){if(this.phase==='ended')return;this.phase='ended';this.result=result;if(result==='win')this.awardGold(80);this.notify('end',{result,reason});}
 }
 Object.assign(FrontGame.prototype,ROOM_CAMPAIGN.methods);
-if(typeof module!=='undefined'&&module.exports){require('./combat-drone.js')({FrontGame});require('./evolution-combat.js')({FrontGame,TYPES,LUCKY,multiplier,EVOLUTIONS});require('./block-mines.js')({FrontGame,TYPES,multiplier});require('./roster-combat.js')({FrontGame,TYPES,multiplier});require('./lucky-flash.js')({FrontGame,TYPES});require('./assassin.js')({FrontGame});require('./pirate-cannon.js')({FrontGame});require('./bubble-octopus.js')({FrontGame});require('./support-drone.js')({FrontGame});require('./field-supplies.js')({FrontGame,TYPES});require('./support-toys.js')({FrontGame,TYPES});require('./evolution-links.js')({FrontGame});require('./summoning.js')({FrontGame,TYPES,ROSTER});}
+if(typeof module!=='undefined'&&module.exports){require('./combat-drone.js')({FrontGame});require('./evolution-combat.js')({FrontGame,TYPES,LUCKY,multiplier,EVOLUTIONS});require('./block-mines.js')({FrontGame,TYPES,multiplier});require('./roster-combat.js')({FrontGame,TYPES,multiplier});require('./lucky-flash.js')({FrontGame,TYPES});require('./assassin.js')({FrontGame});require('./rotation-bosses.js')({FrontGame});require('./pirate-cannon.js')({FrontGame});require('./bubble-octopus.js')({FrontGame});require('./support-drone.js')({FrontGame});require('./field-supplies.js')({FrontGame,TYPES});require('./support-toys.js')({FrontGame,TYPES});require('./evolution-links.js')({FrontGame});require('./summoning.js')({FrontGame,TYPES,ROSTER});}
 root.FrontRoomCampaign=ROOM_CAMPAIGN;root.FrontButterfly=BUTTERFLY;root.FrontMedicCleanse=MEDIC_CLEANSE;root.FrontMedicHealing=MEDIC_HEALING;root.FrontGuardians=GUARDIANS;root.FrontBike=BIKE;root.FrontLucky=LUCKY;root.FrontDesktopItems={art:DESKTOP_ITEM_ART,sprite:desktopItemSprite,bodies:desktopItemBodies,floor:desktopItemFloor};root.FrontUnitTypeCap=UNIT_TYPE_CAP;root.FrontFlame=FLAME;root.FrontSword=SWORD;root.FrontWaveConfigs=WAVE_CONFIGS;root.FrontDesktopNotebook={art:DESKTOP_NOTEBOOK_ART,rect:desktopNotebookRect,bodies:desktopNotebookBodies};root.FrontDesktopProps={art:DESKTOP_PROP_ART,sprite:desktopPropSprite,bodies:desktopPropBodies};root.FrontDesktopCover={art:DESKTOP_COVER_ART,style:desktopCoverStyle,rect:desktopCoverRect};root.FrontRemoteShape=ROOM_REMOTE_SHAPE;root.FrontDesktopRules=DESKTOP_RULES;root.FrontFlyingWaves=FLYING_WAVES;root.FrontUltimate=ULTIMATE;root.FrontBuildings=BUILDINGS;root.FrontRoomRules=ROOM_RULES;root.FrontAbilities=ABILITIES;root.FrontEvolutions=EVOLUTIONS;root.FrontFieldCards=FIELD_CARDS;root.FrontProfile=FrontProfile;root.FrontPermanent=PERMANENT;root.FrontGame=FrontGame;root.FrontTypes=TYPES;root.FrontMultiplier=multiplier;root.FrontRoster=ROSTER;if(typeof module!=='undefined')module.exports={SWORD,BUTTERFLY,MEDIC_CLEANSE,MEDIC_HEALING,GUARDIANS,BIKE,LUCKY,DESKTOP_ITEM_ART,desktopItemSprite,desktopItemBodies,desktopItemFloor,UNIT_TYPE_CAP,FLAME,DESKTOP_NOTEBOOK_ART,desktopNotebookRect,desktopNotebookBodies,DESKTOP_PROP_ART,desktopPropSprite,desktopPropBodies,WAVE_CONFIGS,DESKTOP_COVER_ART,desktopCoverStyle,desktopCoverRect,ROOM_REMOTE_SHAPE,DESKTOP_RULES,FLYING_WAVES,ULTIMATE,BUILDINGS,ROOM_RULES,FrontGame,FrontProfile,PERMANENT,ABILITIES,EVOLUTIONS,FIELD_CARDS,TYPES,multiplier,ROSTER};
 })(typeof window==='undefined'?globalThis:window);

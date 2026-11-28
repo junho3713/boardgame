@@ -53,8 +53,11 @@ p.fuseUnit=function(type,fromStar=1){return fromStar===1?mergeCopies.call(this,t
 p.dropDestinyStar=function(boss){
  if(!this.starExperiment||this.mode!=='pve'||boss.team===0||boss.hp>0||boss.roadCaptain||boss.bossRushPair||boss.finalBoss)return;
  let destinySource;
- if(this.isRoomAssault())return;
- if(this.isRoomCampaign()){
+ if(this.isRoomAssault()){
+  const plan=this.roomCampaign.rotation;
+  if(!plan||plan.starDropped||boss.rotationSlot!==root.FrontRoomCampaign.config.rotation.starSlot)return;
+  plan.starDropped=true;destinySource='rotation-third-slot';
+ }else if(this.isRoomCampaign()){
   const {destinyStarMini,destinyStarBoss,miniBoss,bosses}=root.FrontRoomCampaign.config;
   const source=boss.miniBoss?destinyStarMini:destinyStarBoss;
   const scheduledAt=boss.miniBoss?boss.miniBossMinute*miniBoss.interval:bosses[boss.bossScheduleIndex]?.at;

@@ -95,6 +95,8 @@ html.game-hud .battle-frame>.minimap{top:120px;right:max(12px,env(safe-area-inse
  background:transparent;
  filter:drop-shadow(0 1px 1px #102117aa);
 }
+#fieldSummonModes[data-mode="three"] [data-key="three"],
+#fieldSummonModes[data-mode="all"] [data-key="all"] { background:#ffe49a; color:#243023; border-color:#fff0ba; text-shadow:none; }
 .auto-mode .field-key-guide { display:none; }
 @media (pointer:coarse), (max-width:540px) {
  .field-key-guide { display:none; }
@@ -176,3 +178,10 @@ html.game-hud .battle-frame>.toast{top:auto;right:auto;bottom:calc(74px + env(sa
 @media(min-width:441px) and (max-width:740px){
  html.game-hud .battle-frame.room-assault>.hud-left-rail{top:80px}
 }
+
+.rotation-boss-plate{position:absolute;z-index:5;top:84px;left:50%;transform:translateX(-50%);width:clamp(220px,28%,390px);padding:5px 12px 8px;pointer-events:none;background:linear-gradient(90deg,transparent,#20191df2 16%,#20191df2 84%,transparent);color:#fff2d9;text-align:center;font:700 13px system-ui}
+.rotation-boss-plate[hidden]{display:none}
+.rotation-boss-plate strong{color:#ffcb8e;margin-left:.5em;font-variant-numeric:tabular-nums}
+.rotation-boss-track{display:block;height:6px;background:#523d42;border-radius:4px;position:relative;overflow:hidden;margin:4px 12px 0}
+.rotation-boss-track i{position:absolute;left:0;top:0;height:100%;background:linear-gradient(90deg,#b74459,#ef9570)}
+#rotationBossShield{background:#7bdbee}

@@ -1,7 +1,26 @@
 /* Living-room campaign only. Times are simulation seconds; weights replace enemies, never add a second spawner. */
 (function(root){'use strict';
+// Zero-based slots. Move the test pair to [0, 1] for an early pattern run.
+const FORCE_NEW_BOSSES_FOR_TEST=true;
+const FORCED_BOSS_SLOTS=[2,3];
+const rotation={
+ pools:[['stagBeetle','bayonetCaptain','bladeGuard','rhinoBeetle'],['ninjaAssassin','kraken','bikeRaider','hornet']],
+ slots:[{at:240,hp:4400,damage:48,gold:80,xp:38},{at:360,hp:7800,damage:64,gold:90,xp:48},
+  {at:480,hp:15200,damage:80,gold:100,xp:58},{at:600,hp:24800,damage:100,gold:110,xp:68}],
+ traits:{stagBeetle:[1.05,.95],bayonetCaptain:[.95,1.05],bladeGuard:[1,1],rhinoBeetle:[1.15,.95],
+  ninjaAssassin:[.95,1.1],kraken:[1.1,1],bikeRaider:[.9,1.1],hornet:[1,1.05]},
+ extra:{kraken:{type:'kraken',name:'크라켄'},ninjaAssassin:{type:'ninjaAssassin',name:'닌자 어쌔신 피규어'}},
+ finalAt:720,finalHp:90000,overloadAt:540,starSlot:2
+};
+function drawRotation(random,force=FORCE_NEW_BOSSES_FOR_TEST,forcedSlots=FORCED_BOSS_SLOTS){
+ const draw=(pool)=>pool.splice(Math.floor(random()*pool.length),1)[0];
+ const pools=rotation.pools.map(list=>list.slice()),pair=['kraken','ninjaAssassin'];
+ const order=Array(4).fill(null);
+ if(force)for(const slot of forcedSlots){const type=draw(pair);order[slot]=type;pools[1].splice(pools[1].indexOf(type),1);}
+ return order.map((type,i)=>type||draw(pools[Math.floor(i/2)]));
+}
 const armoredWaveMix={ant:4,bombBug:.45,acidBeetle:.55,bayonet:1.5,stagBeetle:2,sniper:1.5,honeybee:1,bladeGuard:2,rifle:2,butterfly:.6};
-const config={version:116,duration:1200,enemyLuckyInterval:5,recoverySeconds:16,
+const config={rotation,version:116,duration:1200,enemyLuckyInterval:5,recoverySeconds:16,
  combat:{healthVersion:145,hpScale:1.2,openingHp:{until:300,restoreAt:480,scale:.75},openingDamage:{types:['ant','bladeGuard'],scale:.7,restoreFrom:180,restoreAt:300},bossHpScale:1.485,bossHpExtra:{rhinoBeetle:1.3,hornet:1.3,crimsonAce:1.3},damageScale:1.25,meleeDamageScale:1.1,bossDamageScale:1.3,bossArmorPenetration:{hornet:.3,crimsonAce:.4},bikeDamageScale:1.05,
   spawnScaling:[{at:720,hp:1.4,damage:1.3},{at:480,hp:1.25,damage:1.2}]},
  rewards:{supplyGold:10,miniBossGold:15,bossGold:40},
@@ -165,6 +184,10 @@ const methods={
  },
  roomFever(){return this.isRoomAssault()&&(this.roomAssaultRemaining()??0)>1e-8;},
  roomAssaultObjective(){
+  if(this.roomCampaign?.rotation&&!this.roomCampaign.endless){
+   const seconds=Math.max(0,Math.ceil(rotation.finalAt-this.time));
+   return seconds?'사검의 군주 강림까지 '+String(Math.floor(seconds/60)).padStart(2,'0')+':'+String(seconds%60).padStart(2,'0'):'목표: 사검의 군주 처치';
+  }
   if(this.roomCampaign?.endless)return '무한 모드 · 최후의 총공세 생존';
   const remaining=this.roomAssaultRemaining();
   if(remaining===null)return '목표: 최전방 포탈 파괴 (3성 해금)';
@@ -176,7 +199,7 @@ const methods={
   const state=this.roomCampaign;
   if(state.assaultAt!=null)return false;
   const portal=this.bases[1], origin=overload?this.commander(0):portal;
-  state.assaultAt=overload?config.assault.overloadAt:this.time;
+  state.assaultAt=overload?this.roomOverloadAt():this.time;
   state.portalRewarded=true;
   state.portalDestroyedAt=this.time;
   state.portalOverloaded=overload;
@@ -190,9 +213,11 @@ const methods={
   this.navigationCache.clear();
   this.bossState.warned=false;
   this.bossState.nextAt=this.roomNextBossAt();
-  const star={x:origin.x,y:origin.y,active:true,destinyStar:true,destinySource:'portal'};
-  this.resolvePosition(star,24);
-  this.pickups.push(star);
+  if(!state.rotation){
+   const star={x:origin.x,y:origin.y,active:true,destinyStar:true,destinySource:'portal'};
+   this.resolvePosition(star,24);
+   this.pickups.push(star);
+  }
   for(const owner of this.coop?[0,1]:[0]){
    for(let i=0;i<8;i++){
     const angle=(i+owner*.5)*Math.PI/4,radius=i%2?62:96;
@@ -239,6 +264,7 @@ const methods={
   if(!this.isRoomCampaign())return false;this.upgradeRoomMidBosses();if(this.roomCampaign&&!this.roomCampaign.endgame153){this.roomCampaign.endgame153=true;for(const u of this.units)if(u.finalBoss){u.finalBoss=false;}this.finalBattle={spawned:false,killed:false};this.roomCampaign.bossCursor=Math.min(this.roomCampaign.bossCursor,config.bosses.length-1);}let updated=this.setupRoomFences();if(this.upgradeRoomEncounters())updated=true;if(this.setupRoomFortifications())updated=true;if(this.setupRoomAssaultDefenses())updated=true;if(this.roomCampaign?.version===config.version){this.upgradeRoomFinalBossPosition();if(this.refreshRoomEnemyHealth())updated=true;if(this.upgradeRoomBombSpawns())updated=true;return updated;}
   const old=this.time>0,cursor=old?config.bosses.findIndex(b=>b.at>=this.time):0;
   this.roomCampaign={endgame153:true,version:config.version,nextSpawnAt:this.time+4,spawned:0,miniScheduleVersion:2,miniMinute:Math.floor(this.time/60),bossCursor:cursor<0?config.bosses.length:cursor,recoveryUntil:0,bossReadyAt:this.time,tanksDone:config.tanks.map(at=>old&&at<this.time),tankSpawned:0,phaseAt:this.roomPhase().at};
+  if(!old&&this.isRoomAssault())this.roomCampaign.rotation={order:drawRotation(()=>this.random()),cursor:0,previews:[]};
   this.mission.stage=3;this.mission.nextAssault=Infinity;this.mission.nextWave=Infinity;
   // Road encounters keep their IDs and positions, but are local elites, not extra scheduled bosses.
   for(const u of this.units)if(u.roadCaptain){u.boss=false;u.roadStage=1;u.missionStage=1;}
@@ -599,10 +625,12 @@ const methods={
   if(u.swords){u.swords.pending=null;u.swords.nextAttackAt=this.time+(this.isRoomAssault()?.65:2.5);for(const blade of u.swords.blades){blade.x+=dx;blade.y+=dy;blade.action=null;}}
   this.bossIntro={bossId:u.id,name:u.bossName||'사검의 군주',x:u.x,y:u.y,from:{x:this.camera.x,y:this.camera.y},remaining:r.introSeconds,total:r.introSeconds};return true;
  },
+ roomOverloadAt(){return this.roomCampaign?.rotation?rotation.overloadAt:config.assault.overloadAt;},
  roomRushEntry(){const s=this.roomCampaign;if(this.finalBattle.spawned||this.units.some(u=>u.finalBoss)){s.rushCursor=config.bossRush.pairs.length;return null;}if(!Number.isInteger(s.rushCursor))s.rushCursor=0;return config.bossRush.pairs[s.rushCursor]||null;},
  roomNextBossAt(){
   if(this.isRoomAssault()){
    const state=this.roomCampaign;
+   if(state.rotation)return this.finalBattle.spawned?Infinity:rotation.slots[state.rotation.cursor]?.at??rotation.finalAt;
    if(state.assaultAt==null)return config.assault.opening[state.bossCursor]?.at??config.assault.overloadAt+config.assault.rush[0].at;
    if(this.finalBattle.spawned)return Infinity;
    return state.assaultAt+(config.assault.rush[state.assaultRushCursor]?.at??config.assault.duration);
@@ -648,14 +676,20 @@ const methods={
   s.miniMinute=minute;this.notify('toast',u.bossName+' 접근 · '+(starPending?'처치 시 운명의 별':'체력·공격력 30%'));
  },
 
- spawnRoomAssaultBoss(type,group){
-  const entry=config.bosses.find(b=>b.type===type)||config.bossRush.extraBosses[type];
+ spawnRoomAssaultBoss(type,group,slotIndex=null,preview=false){
+  const entry=config.bosses.find(b=>b.type===type)||rotation.extra[type]||config.bossRush.extraBosses[type];
   const commander=this.commander(0),portal=this.bases[1],final=type==='swordEmpress';
   const near={x:commander.x,y:commander.y-485};
   const finalPoint=Math.hypot(commander.x-portal.x,commander.y-portal.y)<1250?{x:config.finalBoss.x,y:portal.y+config.finalBoss.offset}:near;
-  const point=final?finalPoint:this.northernSpawn(this.serial+1,55)||this.resolvePosition(near,55);
+  const point=final?finalPoint:slotIndex!==null?this.roomEntry(this.serial+1,55,slotIndex%4)||this.resolvePosition(near,55):this.northernSpawn(this.serial+1,55)||this.resolvePosition(near,55);
   const unit=this.addUnit(2,type,point.x,point.y,true);
-  Object.assign(unit,{boss:true,bossName:entry.name,bossPattern:entry.pattern,assault:true,finalBoss:final,bossRushPair:group,bossNumber:++this.bossState.spawned});
+  Object.assign(unit,{boss:true,bossName:entry.name,bossPattern:entry.pattern,assault:true,finalBoss:final,bossRushPair:group,bossNumber:preview?null:++this.bossState.spawned});
+  if(slotIndex!==null){
+   const slot=rotation.slots[slotIndex],trait=rotation.traits[type],scale=preview?config.miniBoss.hp:1;
+   Object.assign(unit,{rotationSlot:slotIndex,slotHp:Math.round(slot.hp*trait[0]*scale),slotDamage:slot.damage*trait[1]*scale});
+   if(preview)Object.assign(unit,{miniBoss:true,midBossVersion:1,miniBossMinute:(slot.at-60)/60,bossName:'미드 보스 · '+entry.name});
+   if(type==='ninjaAssassin')unit.ninjaLives=4;
+  }
   unit.hp=unit.maxHp=this.stats(unit).hp;
   unit.homeX=unit.x;
   unit.homeY=unit.y;
@@ -663,9 +697,28 @@ const methods={
    this.finalBattle.spawned=true;
    this.upgradeRoomFinalBossPosition(point);
   }
-  return entry.name;
+  if(type==='ninjaAssassin')this.initNinjaBoss(unit);
+  return unit.bossName;
+ },
+ updateRotationBosses(){
+  const plan=this.roomCampaign.rotation,index=plan.cursor,slot=rotation.slots[index];
+  if(slot&&this.time+1e-8>=slot.at){
+   // The preview leaves when its full-strength counterpart enters. This is not a kill.
+   const preview=this.units.find(u=>u.miniBoss&&u.rotationSlot===index&&u.hp>0);
+   if(preview)for(const u of this.units){
+    if(u===preview||u.ninjaOwner===preview.id){u.hp=0;u.diedAt=this.time;}
+   }
+   this.spawnRoomAssaultBoss(plan.order[index],undefined,index);plan.cursor++;
+  }else if(slot&&this.time>=slot.at-60&&!plan.previews.includes(index)&&
+   !this.units.some(u=>u.boss&&!u.roadCaptain&&u.hp>0)&&this.time>=(this.roomCampaign.recoveryUntil||0)){
+   this.spawnRoomAssaultBoss(plan.order[index],undefined,index,true);plan.previews.push(index);
+  }
+  if(plan.cursor===rotation.slots.length&&this.time+1e-8>=rotation.finalAt&&!this.finalBattle.spawned)
+   this.spawnRoomAssaultBoss('swordEmpress');
+  this.bossState.nextAt=this.roomNextBossAt();
  },
  updateRoomAssaultBosses(){
+  if(this.roomCampaign.rotation){this.updateRotationBosses();return;}
   const state=this.roomCampaign,{opening,rush}=config.assault;
   const before=state.assaultAt==null;
   const event=before?opening[state.bossCursor]:rush[state.assaultRushCursor];
@@ -692,7 +745,7 @@ const methods={
  },
  roomBossKilled(u){if(!this.isRoomCampaign()||!u.boss||u.miniBoss||u.roadCaptain)return;if(u.bossRushPair&&this.units.some(v=>v!==u&&v.hp>0&&v.bossRushPair===u.bossRushPair))return;const s=this.roomCampaign;s.recoveryUntil=this.time+config.recoverySeconds;s.bossReadyAt=s.recoveryUntil;this.bossState.nextAt=Math.max(this.roomNextBossAt(),s.bossReadyAt);},
  updateRoomMission(dt){this.upgradeRoomCampaign();this.bases[1].name='최전방 포탈';if(this.isRoomAssault()){
-  if(this.roomPortalAlive()&&this.time+1e-8>=config.assault.overloadAt)this.startRoomAssault(true);
+  if(this.roomPortalAlive()&&this.time+1e-8>=this.roomOverloadAt())this.startRoomAssault(true);
  }else if(this.time>=900&&this.roomPortalAlive()&&!this.roomCampaign.portalWarned){this.roomCampaign.portalWarned=true;this.notify('toast','최전방 포탈 폭주 · 후반 증원 대폭 증가! 포탈을 파괴하세요.');}for(const p of [...this.structures,this.bases[1]])this.fireDefense(p,dt);},
  roomObjective(){const b=this.bases[1],boss=this.units.find(u=>u.finalBoss&&u.hp>0);
   if(this.isRoomAssault()){
@@ -731,7 +784,7 @@ const methods={
   else if(a.phase==='high'&&this.time>=a.until){a.phase='dive';a.started=this.time;a.until=this.time+p.descent;u.flightStrikeUntil=this.time+p.descent+.2;}
   else if(a.phase==='dive'){
    const q=clamp((this.time-a.started)/p.descent,0,1);u.x=a.fromX+(a.x-a.fromX)*q;u.y=a.fromY+(a.y-a.fromY)*q;
-   if(this.time>=a.until){const t=a.target;if(t?.hp>0&&this.canTarget(u,t)&&d(t,a)<=38+(t.r||12)){const damage=this.stats(u).damage,impact=p.maxHpDamage===undefined?damage*p.damage:t.maxHp*p.maxHpDamage*this.roomSpawnScaling(u).damage/this.defenseFactor(t,u);this.damage(t,impact,u);if(t.hp>0)this.applyPoison(t,u,damage*p.poisonPerSecond,p);}
+   if(this.time>=a.until){const t=a.target;if(t?.hp>0&&this.canTarget(u,t)&&d(t,a)<=38+(t.r||12)){const damage=this.stats(u).damage,impact=u.slotDamage!==undefined||p.maxHpDamage===undefined?damage*p.damage:t.maxHp*p.maxHpDamage*this.roomSpawnScaling(u).damage/this.defenseFactor(t,u);this.damage(t,impact,u);if(t.hp>0)this.applyPoison(t,u,damage*p.poisonPerSecond,p);}
     this.effects.push({kind:'sting',x:u.x,y:u.y,tx:a.x,ty:a.y,flightHeight:24,t:.25,max:.25,team:u.team});a.phase='low';a.started=this.time;a.until=this.time+p.recovery;u.cooldown=p.recovery;
    }
   }else if(a.phase==='low'&&this.time>=a.until){u.bossAction=null;u.visualFlightHeight=48;u.nextBossSkillAt=this.time+p.cooldown;}
@@ -802,5 +855,5 @@ const methods={
  },
  bossHazards(){const result=[];for(const u of this.units){if(u.hp<=0)continue;if(u.bombFuse)result.push({x:u.x,y:u.y,radius:root.FrontBombBugRules.radius,landAt:u.bombFuse.explodeAt});if(!u.boss&&!u.bossBarrage)continue;if(u.bossBarrage){const a=u.bossBarrage;for(const [i,point] of (a.targets||[a]).entries())if(i>=(a.nextShot||0))result.push({x:point.x,y:point.y,radius:config.patterns.rearBarrage.radius,landAt:a.hitAt+.25+i*(a.shotInterval||0)});}const a=u.bossAction;if(u.bossPattern==='venomDive'&&a&&a.phase!=='low')result.push({x:a.x,y:a.y,radius:55,landAt:a.until});if(u.bossPattern==='wideSlash'&&a)result.push({x:u.x+Math.cos(a.angle)*70,y:u.y+Math.sin(a.angle)*70,radius:85,landAt:a.hitAt});}return result;}
 };
-root.FrontRoomCampaign={config,methods};if(typeof module!=='undefined')module.exports={config,methods};
+root.FrontRoomCampaign={config,methods,drawRotation};if(typeof module!=='undefined')module.exports={config,methods,drawRotation};
 })(typeof window!=='undefined'?window:globalThis);

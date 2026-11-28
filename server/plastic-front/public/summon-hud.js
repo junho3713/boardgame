@@ -25,7 +25,11 @@
    const node=document.createElement('button');node.type='button';node.className='summon-slot';
    node.innerHTML='<span class="summon-key"></span><span class="summon-level"></span><span class="summon-icon"></span><span class="summon-caption"></span><span class="summon-cost"></span>';
    node.firstElementChild.textContent=i===last?'F':i+1;
-   node.addEventListener('click',()=>activate(i+1));panel.append(node);return node;
+   node.addEventListener('click',()=>activate(i+1));
+   if(i<last)node.addEventListener('contextmenu',event=>{
+    event.preventDefault();activate(i+1,'three');
+   });
+   panel.append(node);return node;
   });
   const previous=[];
   return {update(game){
@@ -51,7 +55,7 @@
     const detail=status.docking?`다음 소환 ${root.FrontTypes[display].name} · ${waiting?'도킹 대기 · ':''}같은 성급 자동 합체 · 만석에서도 미합체 1성의 짝은 소환 가능`:fever?'10초간 공속 +40% · 체력 30% 회복 · 480px XP 흡수 · 재사용 25초':
      i===last?'보병 1기와 50G 환급 30% · 일반 2기 44% · 2성 17% · 진화 2성 6%(6분 전 일반 2성) · 황금 전차·레토나 각 1.5%':'';
     const timers=[fever&&feverSeconds?`효과 ${feverSeconds}초`:null,cooldown?`재사용 ${cooldown}초`:null].filter(Boolean);
-    node.title=[name,branches,status.cost?status.cost+'G':null,...timers,status.reason,detail].filter(Boolean).join(' · ');
+    node.title=[name,branches,status.cost?status.cost+'G':null,...timers,status.reason,detail,i<last&&entry?'좌클릭 1기 · 우클릭 최대 3기':null].filter(Boolean).join(' · ');
     node.setAttribute('aria-label',(i===last?'F':(i+1)+'번')+', '+name+(status.docking?', 다음 '+root.FrontTypes[display].name:'')+(waiting?', 도킹 대기':'')+(branches?', '+branches:level?', 레벨 '+level:'')+(status.cost?', '+status.cost+' 골드':'')+(status.reason?', '+status.reason:''));
     node.children[1].textContent=cooldown?'쿨 '+cooldown+'초':branches||(level?'Lv.'+level:'');
     node.children[2].innerHTML=icon(display);

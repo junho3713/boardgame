@@ -20,6 +20,36 @@ function upgrade(g,type){
  g.phase='choice';g.choiceKind='level';g.turnChoice=null;g.currentOptions=[type];
  assert(g.stageChoice(type));assert(g.confirmChoice());g.phase='playing';
 }
+test('three and all only charge for the two missing copies, including airborne reservations',()=>{
+ for(const mode of ['three','all']){
+  const g=battle(),type='rifle',cost=TYPES[type].cost;
+  g.addUnit(0,type,800,600).star=2;g.addUnit(0,type,810,605).star=2;
+  g.cash[0]=10*cost;
+  assert(g.summonOrder(1,mode));assert.equal(g.dropPods.length,2);assert.equal(g.cash[0],8*cost);
+  assert(!g.summonOrder(1,mode));assert.equal(g.cash[0],8*cost);
+ }
+});
+test('maximum orders spend the available budget only on the selected troop',()=>{
+ const g=battle(),cost=TYPES.rifle.cost;
+ g.cash[0]=5*cost+11;
+ assert(g.summonOrder(1,'all'));assert.equal(g.cash[0],11);
+ assert.equal(g.dropPods.length,5);assert(g.dropPods.every(p=>p.type==='rifle'));
+ assert(!g.summonOrder(1,'three'));assert.equal(g.cash[0],11);
+});
+test('bulk orders share squad, pending high-rank and landing limits and reject non-troop slots',()=>{
+ const g=battle(),cost=TYPES.rifle.cost;g.cash[0]=2000;
+ for(const slot of [0,'1',1.2,boxSlot])assert(!g.summonOrder(slot,'all'));
+ assert(!g.summonOrder(1,'invalid'));
+ g.addUnit(0,'rifle',800,600).star=2;
+ g.dropPods.push({type:'rifle',star:2,x:100,y:100});
+ assert(g.summonOrder(1,'all'));assert.equal(g.dropPods.length,3);
+ assert.equal(g.cash[0],2000-2*cost);
+ const h=battle();h.cash[0]=2000;
+ while(h.alive(0).filter(u=>u.type!=='leader').length<h.capacity()-1)h.addUnit(0,'medic',800,600);
+ assert(h.summonOrder(1,'three'));assert.equal(h.dropPods.length,1);assert.equal(h.cash[0],2000-cost);
+ const b=battle();b.cash[0]=2000;b.freePosition=()=>false;
+ assert(!b.summonOrder(1,'all'));assert.equal(b.dropPods.length,0);assert.equal(b.cash[0],2000);
+});
 test('slot order is committed once and round trips through saves with pending orders',()=>{
  const g=battle();
  for(const type of ['tank','medic','tank','rocket','lucky','mortar'])upgrade(g,type);

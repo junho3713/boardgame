@@ -113,7 +113,7 @@ api.chooseInitial=type=>state?.choosing&&!state.paused?command('chooseInitial',{
 api.chooseUpgrade=type=>state?.choosing&&!state.paused?command('chooseUpgrade',{type}):false;
 api.reroll=()=>state?.choosing&&!state.paused?command('reroll'):false;
 api.skipLevelUpgrade=()=>state?.choosing&&!state.paused?command('skipLevelUpgrade'):false;
-api.summon=slot=>inputAllowed()?command('summon',{slot}):false;
+api.summon=(slot,mode='single')=>inputAllowed()?command('summon',{slot,mode}):false;
 api.pause=()=>{bridge.clearInput();command('pause');};
 api.frame=game=>{
  if(!inputAllowed())return;

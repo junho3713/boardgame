@@ -27,7 +27,7 @@ function castShield(game,u){
  targets.sort((a,b)=>Number(!!special(b))-Number(!!special(a))||distance(u,a)-distance(u,b)||a.id-b.id);
  for(const t of targets.slice(0,rules.shieldLimit)){
   const hp=t.maxHp*rules.shieldFraction;
-  t.bubbleShield={sourceId:u.id,hp,maxHp:hp,at:game.time};
+  game.grantBubbleShield(u,t,hp);
  }
  if(targets.length)u.bubbleInflatedAt=game.time;
  u.nextBubbleShieldAt=game.time+(targets.length?rules.shieldPeriod:.5);
@@ -64,12 +64,7 @@ function impact(game,shot,allies){
   if(!vulnerable(game,t)||distance(t,shot)>rules.splashRadius+game.collisionRadius(t)-5||
     !game.lineClear(shot,t,0,{fireTeam:shot.team}))continue;
   game.damage(t,shot.damage,shot.source);
-  if(t.hp<=0||game.isStationary(t))continue;
-  const duration=.29,travel=rules.push;
-  // Existing knockback steps the movement against solid cover and arena edges.
-  t.toyKnockback={dx:Math.cos(shot.angle)*travel,dy:Math.sin(shot.angle)*travel,applied:0,
-   startedAt:game.time,until:game.time+duration,recoverUntil:game.time+duration,popHeight:8,popPeak:.45};
-  t.route=t.routeGoal=null;
+  game.pushWithFoam(t,shot.angle,rules.push,.29);
  }
  game.effects.push({kind:'bubbleFoamImpact',x:shot.x,y:shot.y,angle:shot.angle,
   radius:rules.splashRadius,team:shot.team,at:game.time,t:.45,max:.45});
@@ -94,6 +89,15 @@ function advanceShot(game,shot,dt,allies){
 
 function install({FrontGame}){
  const p=FrontGame.prototype;
+ p.grantBubbleShield=function(source,target,hp){
+  target.bubbleShield={sourceId:source.id,hp,maxHp:hp,at:this.time};
+ };
+ p.pushWithFoam=function(target,angle,travel,duration,height=8){
+  if(target.hp<=0||this.isStationary(target))return;
+  target.toyKnockback={dx:Math.cos(angle)*travel,dy:Math.sin(angle)*travel,applied:0,
+   startedAt:this.time,until:this.time+duration,recoverUntil:this.time+duration,popHeight:height,popPeak:travel?.45:.5};
+  target.route=target.routeGoal=null;
+ };
  p.releaseOctopusShields=function(source){
   for(const t of this.units)if(t.bubbleShield?.sourceId===source.id)pop(this,t);
   source.foamWindup=null;

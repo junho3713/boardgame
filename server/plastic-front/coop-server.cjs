@@ -104,7 +104,7 @@ function createCoopHandler({now=Date.now,automatic=true}={}){
       else if(action==='follow')ok=g.followCommander();
       else if(action==='focus'){const target=body.target==='enemy-base'?g.bases[1]:[...g.units,...g.structures,...g.defenses].find(u=>u.id===body.target);ok=g.setFocus(target);}
       else if(action==='ultimate')ok=g.useUltimate();
-      else if(action==='summon')ok=g.summon(body.slot);
+      else if(action==='summon')ok=g.summonOrder(body.slot,body.mode);
       else if(action==='medkit')ok=g.useMedkit();
       else if(action==='artillery')ok=g.useArtilleryTicket(body.x,body.y);
       else if(action==='supportToy')ok=g.resolveSupportToyOffer(body.id);

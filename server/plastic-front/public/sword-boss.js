@@ -165,7 +165,7 @@ function create(settings={},events={}){
 }
 
 // Campaign integration retains native waves, rewards, profiles, death and victory rules.
-function campaignBossHp(g){return CONFIG.hp*(g.captainStackHpMode?STACK_FINAL_HP_MULTIPLIER:1);}
+function campaignBossHp(g){if(g.roomCampaign?.rotation)return root.FrontRoomCampaign.config.rotation.finalHp;return CONFIG.hp*(g.captainStackHpMode?STACK_FINAL_HP_MULTIPLIER:1);}
 function ensure(g,b){
  if(!b||b.type!=='swordEmpress')return null;
  g.trialConfig??=JSON.parse(JSON.stringify(CONFIG));

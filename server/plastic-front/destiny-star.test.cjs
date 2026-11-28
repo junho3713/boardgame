@@ -147,7 +147,9 @@ test('a dead commander cannot collect a star and co-op never combines squads',()
 });
 
 test('an early Destiny Star unlock survives a checkpoint and later promotes three twos',()=>{
- let g=game('livingroom-assault');g.phase='playing';g.time=720;g.updateRoomMission(0);
+ let g=game('livingroom-assault');g.phase='playing';g.time=420;
+ g.roomCampaign.rotation.cursor=2;g.roomCampaign.rotation.order[2]='kraken';g.updateRoomBosses();
+ g.damage(g.activeBoss(),1e9,g.commander(0));
  const p=destiny(g);Object.assign(g.commander(0),{x:p.x,y:p.y});
  assert.equal(g.destinyStarTypes().length,0);
  assert.equal(g.collectFieldSupply(p),true);

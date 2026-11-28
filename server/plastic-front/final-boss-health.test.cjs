@@ -35,7 +35,7 @@ test('the left shield segment shrinks without changing the width of the right he
 });
 
 function finaleFixture(stack=true,coop=false){
- const g=coop?new CoopGame({}, {captainStackHpMode:stack}):new FrontGame({},undefined,{map:'livingroom-assault',captainStackHpMode:stack});
+ const g=coop?new CoopGame({}, {captainStackHpMode:stack}):new FrontGame({},undefined,{map:'livingroom-star',captainStackHpMode:stack});
  g.units=g.units.filter(u=>u.team===0&&u.type==='leader');
  g.phase='playing';g.time=1200;g.obstacles=[];
  const c=g.commander(0);Object.assign(c,{x:1500,y:1450});

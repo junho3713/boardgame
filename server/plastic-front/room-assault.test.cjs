@@ -8,7 +8,11 @@ const {pack,unpack}=require('./public/autoplay.js');
 
 const fresh=()=>{
  const game=new FrontGame({},undefined,{map:'livingroom-assault'});
- game.phase='playing';
+ // Recreate a checkpoint from the portal-timed version and exercise its migration path.
+ const saved=pack(game);
+ delete saved.fields.roomCampaign.rotation;
+ saved.fields.bossState.nextAt=180;
+ unpack(game,saved);game.phase='playing';
  return game;
 };
 const bosses=game=>game.units.filter(u=>u.boss&&!u.roadCaptain).map(u=>u.type);

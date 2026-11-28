@@ -182,7 +182,9 @@ function groundShadow(c,u){
 }
 function throwWarning(c,u,a,now){
  const clone=u.assassinClone,charge=progress(a,now,attack.windup),v=attack.throwVector(u,a);
- const length=attack.starRange,width=Math.tan(attack.starSpread)*length;
+ const boss=u.type==='ninjaAssassin';
+ if(boss)Object.assign(v,{x:u.x,y:u.y,angle:a.angle});
+ const length=boss?420:attack.starRange,width=boss?17:Math.tan(attack.starSpread)*length;
  c.save();c.translate(v.x,v.y);c.rotate(v.angle);
  const fill=c.createLinearGradient(0,0,length,0);
  fill.addColorStop(0,clone?'#cab3df24':'#e3376552');fill.addColorStop(1,clone?'#cab3df06':'#e3376512');
@@ -197,8 +199,12 @@ function throwWarning(c,u,a,now){
 }
 function ground(c,game){
  for(const u of game.units){const a=u.assassinAction;
-  if(u.type!=='assassin'||u.hp<=0||!game.visible(u))continue;
-  groundShadow(c,u);
+  const boss=u.type==='ninjaAssassin';
+  if((!boss&&u.type!=='assassin')||u.hp<=0||!game.visible(u))continue;
+  if(!boss||!u.assassinClone)groundShadow(c,u);
+  if(boss&&!u.assassinClone){
+   ellipse(c,u.x,u.y+2,27,10,'#15131c');ellipse(c,u.x,u.y-1,27,9,'#323039');
+  }
   if(a?.phase==='throw')throwWarning(c,u,a,game.time);
   if(a?.phase!=='warn')continue;
   const clone=u.assassinClone,charge=Math.max(0,1-(a.until-game.time)/.75);
@@ -248,5 +254,5 @@ function event(c,e){
  }
  c.restore();return true;
 }
-root.FrontAssassinView={body,ground,stars,event};
+root.FrontAssassinView={body,ground,stars,event,throwingStar};
 })(window);
