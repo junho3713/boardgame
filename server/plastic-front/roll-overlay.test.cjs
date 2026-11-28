@@ -89,7 +89,7 @@ test('each blank gets one X and a new winning result takes its place before expi
  game.time=10.05;game.effects.push(radio(win,9.82,6,6,'missile'));
  out=plan(game,'default',visible);
  assert.deepEqual(keys(out),['dice:6','dice:blank']);
- assert.equal(out.results[0].face,6);
+ assert.equal(out.results[0].doubles[0].dice[0],6);
  game.time=10.34;
  assert.deepEqual(keys(plan(game,'default',visible)),['dice:6']);
 });
@@ -104,9 +104,21 @@ test('the compact roulette keeps the original reel order and marks blanks beside
  assert.deepEqual(plan(game,'default',visible).results[0].rolls.map(roll=>roll.kind),['spray','mine','mine']);
 });
 
-test('the compact radio tile chooses the strongest double and gives nuclear badges priority',()=>{
+test('one compact row retains all simultaneous doubles and highlights the real nuclear strike',()=>{
  const e=radio(unit(1,'guntruck',3),8,1,1,'turret');
  e.rolls=[{dice:[1,1],success:true,strike:'turret'},{dice:[5,5],success:true,strike:'missile'},{dice:[6,6],success:true,strike:'nuke'}];
- const [row]=plan({time:8.3,units:[],effects:[e]},'default',visible).results;
- assert.equal(row.face,6);assert.equal(row.priority,true);
+ const game={time:8.3,units:[],effects:[e]};
+ const [row]=plan(game,'default',visible).results;
+ assert.deepEqual(row.doubles.map(roll=>roll.dice[0]),[1,5,6]);
+ assert.equal(row.nuclear,e.rolls[2]);
+ assert.equal(row.priority,true);
+ assert.deepEqual(plan(game,'minimal',visible).results[0].doubles,[e.rolls[2]]);
+});
+
+test('two equal winning sets each get a card while a failed set gets no card beside them',()=>{
+ const e=radio(unit(1,'guntruck',2),1,4,4,'incendiary');
+ e.rolls=[{dice:[4,4],success:true,strike:'incendiary'},{dice:[1,4],success:false},{dice:[4,4],success:true,strike:'incendiary'}];
+ const [row]=plan({time:1.3,units:[],effects:[e]},'default',visible).results;
+ assert.equal(row.key,'dice:4,4');
+ assert.deepEqual(row.doubles,[e.rolls[0],e.rolls[2]]);
 });

@@ -198,23 +198,94 @@ setInterval(()=>{if(selectedMode==='idle'&&autoPilot?.active)autoSession.tick();
 window.addEventListener('pagehide',()=>{if(selectedMode==='idle')autoSession.release();else{runSave.release();}});
 function persistProfile(){if(COOP?.active||waveTestBackup||selectedMode==='idle')return;try{profile.save(localStorage,profileKey);profileSaveError='';}catch{profileSaveError='브라우저 저장에 실패했습니다. 현재 세션에만 적용되므로 창을 닫기 전에 저장 가능 여부를 확인하세요.';}if(!$('permanentOverlay').hidden)renderPermanent();}
 function permanentEffect(key,level){const n=permanent[key].gain*level;if(key==='capacity')return `${20+n}기`;if(key==='critChance')return `${5+n}%`;if(key==='critDamage')return `${150+n}%`;if(key==='turretDefense')return `${10+n} · 피해 ${Math.round(100*(10+n)/(110+n))}% 감소`;if(key==='defense')return `${n} · 피해 ${Math.round(100*n/(100+n))}% 감소`;return `+${n}%`;}
+function canResetPermanent(){return !COOP?.active&&!waveTestBackup&&selectedMode!=='idle'&&profile===directProfile;}
+function showPermanentReset(confirming){
+ $('permanentResetConfirm').hidden=!confirming;
+ $('openPermanentReset').hidden=confirming;
+ $('openPermanentReset').setAttribute('aria-expanded',String(confirming));
+}
+function renderPermanentReset(){
+ const available=canResetPermanent(),refund=available?profile.refundTotal():0;
+ $('permanentReset').hidden=!available;
+ if(!refund)showPermanentReset(false);
+ $('openPermanentReset').disabled=!refund;
+ $('permanentRefundPreview').textContent=refund
+  ?`모든 강화 Lv.0 · 사용한 ◈ ${refund.toLocaleString('ko-KR')} 전액 환급`
+  :'초기화할 영구 강화가 없어요.';
+}
 function renderPermanent(){
  const idle=selectedMode==='idle';$('permanentTitle').textContent=idle?'AI 부대 · 확률 영구 강화':'일반 부대 · 확정 영구 강화';$('permanentCurrencyLabel').textContent=idle?'AI 전용 골드':'일반 모드 골드';
  $('permanentGold').textContent=Math.floor(profile.gold);$('headerGold').textContent=Math.floor(profile.gold);$('startGold').textContent=Math.floor(profile.gold);
  $('permanentGrid').innerHTML=Object.entries(permanent).map(([key,b])=>{const lv=profile.upgrades[key],cost=profile.cost(key),max=lv>=b.max;return `<article class="permanent-card"><div class="permanent-card-top"><span>${upgradeArt.icon(key,b.icon)}</span><small>Lv.${lv} / ${b.max}</small></div><h3>${b.name}</h3><p>${b.detail}${idle&&!max?`<br><strong>성공 ${Math.round(profile.chance(key)*1000)/10}%</strong> · 실패 보정 +${(profile.fails[key]||0)*15}%p`:''}</p><div class="permanent-effect"><span>${permanentEffect(key,lv)}</span>${max?'':`<b>→ ${permanentEffect(key,lv+1)}</b>`}</div><button data-permanent="${key}" aria-label="${b.name} ${max?'최대 강화':`강화 ${cost} 골드`}" ${max||profile.gold<cost?'disabled':''}>${max?'최대 강화':`${idle?'확률 강화 시도':'확정 강화'} · ◈ ${cost}`}</button></article>`;}).join('');
+ renderPermanentReset();
  $('profileSaveStatus').textContent=(idle&&autoSession.error?'AI 강화 저장 실패 · 이 창의 진행을 유지하세요.':profileSaveError)||'이 기기·브라우저의 개인 저장입니다. 다른 방문자에게 전달되지 않습니다. 브라우저 데이터를 지우면 초기화됩니다.';$('profileSaveStatus').classList.toggle('save-error',!!profileSaveError);if(waveTestBackup)$('profileSaveStatus').textContent='테스트 전용 강화·골드 · 원래 작전과 영구 저장에 반영하지 않습니다.';
 }
 async function openPermanent(){if(selectedMode==='idle'&&autoSession.busy){toast('부재중 계산이 끝나면 강화창을 열 수 있습니다.');return;}if(selectedMode==='idle'&&autoPilot?.active)await autoSession.tick();permanentReturn=game.phase;clearInput();if(game.phase==='playing')game.phase='paused';if(selectedMode==='idle'&&autoPilot?.active)autoSession.save();$('permanentStatus').textContent=selectedMode==='idle'?'AI 전용 골드·강화 · 실패해도 단계 유지, 다음 성공 확률 +15%p · 일반 모드와 독립 저장':'일반 모드 전용 · 100% 성공 · 단계별 비용 80 → 180 → 360 → 620… 골드';renderPermanent();$('permanentOverlay').hidden=false;updateUI();}
-function closePermanent(){$('permanentOverlay').hidden=true;if(permanentReturn==='playing'&&game.phase==='paused'){game.phase='playing';if(selectedMode==='idle'){autoSession.at=Date.now();autoSession.save();}}updateUI();}
+function closePermanent(){showPermanentReset(false);$('permanentOverlay').hidden=true;if(permanentReturn==='playing'&&game.phase==='paused'){game.phase='playing';if(selectedMode==='idle'){autoSession.at=Date.now();autoSession.save();}}updateUI();}
 for(const id of ['permanentBtn','startPermanent','pausePermanent','resultPermanent'])$(id).onclick=openPermanent;
 $('closePermanent').onclick=closePermanent;
-window.addEventListener('storage',e=>{if(e.key!==profileKey)return;try{const next=new window.FrontProfile(e.newValue?JSON.parse(e.newValue):{});directProfile.gold=next.gold;Object.assign(directProfile.upgrades,next.upgrades);if(waveTestBackup||selectedMode==='idle')return;game.refreshBuildingStats();if(!$('permanentOverlay').hidden)renderPermanent();updateUI();}catch{profileSaveError='다른 창에서 바뀐 진행 정보를 읽을 수 없습니다.';if(!$('permanentOverlay').hidden)renderPermanent();}});
+function applyDirectProfile(next){
+ directProfile.gold=next.gold;
+ Object.assign(directProfile.upgrades,next.upgrades);
+ if(!canResetPermanent())return;
+ game.refreshBuildingStats();
+ if(!$('permanentOverlay').hidden)renderPermanent();
+ updateUI();
+}
+$('openPermanentReset').onclick=()=>{
+ if(!canResetPermanent()||!profile.refundTotal())return;
+ showPermanentReset(true);
+ $('cancelPermanentReset').focus();
+};
+$('cancelPermanentReset').onclick=()=>{
+ showPermanentReset(false);
+ $('openPermanentReset').focus();
+};
+$('confirmPermanentReset').onclick=()=>{
+ if(!canResetPermanent()||$('permanentResetConfirm').hidden)return;
+ const status=$('permanentStatus'),refund=profile.refundTotal();
+ showPermanentReset(false);
+ if(!runSave.claim()){
+  status.textContent=runSave.error;
+  $('openPermanentReset').focus();
+  return;
+ }
+ try{
+  const next=window.FrontProfile.read(localStorage,profileKey);
+  if(next.refundTotal()!==refund){
+   if(!profileSaveError)applyDirectProfile(next);
+   status.textContent='저장된 강화가 바뀌었어요. 새 환급 금액을 확인해 주세요.';
+   return;
+  }
+  if(!next.resetPermanent())return;
+  next.save(localStorage,profileKey);
+  profileSaveError='';
+  applyDirectProfile(next);
+  status.textContent=`영구 강화 Lv.0 · ◈ ${refund.toLocaleString('ko-KR')} 환급 완료`;
+ }catch{
+  status.textContent='초기화를 저장하지 못했어요. 저장 공간을 확인하고 다시 시도해 주세요.';
+ }finally{
+  if(game.phase==='ready'||game.phase==='ended')runSave.release();
+  const reset=$('openPermanentReset');
+  (reset.disabled?$('closePermanent'):reset).focus({preventScroll:true});
+ }
+};
+window.addEventListener('storage',e=>{
+ if(e.key!==profileKey)return;
+ try{
+  if(canResetPermanent())showPermanentReset(false);
+  applyDirectProfile(new window.FrontProfile(e.newValue?JSON.parse(e.newValue):{}));
+ }catch{
+  profileSaveError='다른 창에서 바뀐 진행 정보를 읽을 수 없습니다.';
+  if(!$('permanentOverlay').hidden)renderPermanent();
+ }
+});
 $('permanentGrid').onclick=e=>{const button=e.target.closest('[data-permanent]');if(!button)return;const key=button.dataset.permanent;if(selectedMode==='idle'){
  if(autoSession.busy||!autoSession.claim()){toast('다른 창에서 AI 작전 진행 중 · 해당 창에서 강화하세요.');return;}
  // Refresh the ready-screen wallet after a different window has changed it.
  if(!autoPilot.active){profile=new window.FrontAutoProfile(idleProfileData(autoSession.read()));game.profile=profile;autoPilot.fails=profile.fails;autoPilot.attempts=profile.attempts;autoPilot.successes=profile.successes;}
  const result=autoPilot.attemptPermanent(key);if(autoPilot.active)autoSession.save();else autoSession.saveArmory(autoPilot);renderPermanent();$('permanentStatus').textContent=result?(result.success?`AI 강화 성공 · Lv.${result.level} · ${result.cost} 골드 사용`:`AI 강화 실패 · Lv.${result.level} 유지 · ${result.cost} 골드 사용 · 다음 성공 ${Math.round(profile.chance(key)*1000)/10}%`):'AI 전용 골드와 최대 단계를 확인하세요.';return;
- }if(game.buyPermanent(key)){renderPermanent();$('permanentStatus').textContent='일반 모드 확정 강화 · 현재 부대와 이후 일반 작전에 적용됩니다.';}else $('permanentStatus').textContent='보유 골드와 최대 강화 단계를 확인하세요.';};
+ }showPermanentReset(false);if(game.buyPermanent(key)){renderPermanent();$('permanentStatus').textContent='일반 모드 확정 강화 · 현재 부대와 이후 일반 작전에 적용됩니다.';}else $('permanentStatus').textContent='보유 골드와 최대 강화 단계를 확인하세요.';};
 
 
 function collapseObjective(compact){$('objectiveDetails').hidden=compact;$('objectiveToggle').setAttribute('aria-expanded',String(!compact));$('objectiveToggle').querySelector('i').textContent=compact?'＋':'−';}

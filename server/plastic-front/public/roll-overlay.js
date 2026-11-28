@@ -3,16 +3,13 @@
 'use strict';
 const HOLD=.52,MISS_HOLD=.34,REPEAT=.5,LIMIT=2;
 const luckyFaces=new Set(['bossKiller','missiles','mine','spray','glue']);
-const diceOrder=['turret','incendiary','missile','nuke'];
+const diceSpacing=40;
 const frames=new WeakMap();
 function full(mode,u,rank=u.star||1){
  return u.team!==0||mode==='full'||mode!=='minimal'&&rank<2;
 }
 function hotline(e){return e.kind==='evolutionLink'&&e.link==='gamblers';}
 function effectStart(time,e){return Math.round((e.at??time-(e.max-e.t))*1000)/1000;}
-function badgeOrder(a,b){
- return diceOrder.indexOf(b.strike)-diceOrder.indexOf(a.strike)||b.dice[0]-a.dice[0];
-}
 function collect(game,mode,visible){
  const entries=[],time=game.time;
  const enqueue=(u,id,key,at,badge)=>{
@@ -31,11 +28,13 @@ function collect(game,mode,visible){
   const rank=e.rank||u.star||1;
   if(full(mode,u,rank))continue;
   const pairs=e.rolls?.length?e.rolls:[{dice:[e.a,e.b],success:e.a===e.b,strike:e.strike}];
-  const best=pairs.filter(p=>p.success&&p.dice?.[0]>=1&&p.dice[0]<=6).sort(badgeOrder)[0];
-  const priority=best?.strike==='nuke';
-  if(mode==='minimal'&&!priority)continue;
-  const at=effectStart(time,e)+(rank===3?.16:.23),face=best?.dice[0];
-  enqueue(u,'radio:'+u.id+':'+at,'dice:'+(face??'blank'),at,{kind:'dice',face,rank,priority,miss:!best});
+  const hits=pairs.filter(p=>p.success&&p.dice?.[0]>=1&&p.dice[0]<=6);
+  const nuclear=hits.find(p=>p.strike==='nuke');
+  if(mode==='minimal'&&!nuclear)continue;
+  const doubles=mode==='minimal'?[nuclear]:hits;
+  const at=effectStart(time,e)+(rank===3?.16:.23);
+  const key=doubles.map(roll=>roll.dice[0]).join(',')||'blank';
+  enqueue(u,'radio:'+u.id+':'+at,'dice:'+key,at,{kind:'dice',doubles,nuclear,rank,priority:!!nuclear,miss:!doubles.length});
  }
  if(mode==='minimal')return entries;
  for(const u of game.units){
@@ -95,8 +94,14 @@ function fallout(c){
  c.beginPath();c.arc(0,0,1,0,Math.PI*2);c.fill();c.restore();
 }
 function diceBadge(c,row,fx){
- root.FrontRadioArt.settledStack(c,row.face??0,row.rank,()=>fx.rollMiss(c,0,0));
- if(row.priority){c.translate(7,0);fallout(c);}
+ const rolls=row.doubles.length?row.doubles:[null];
+ for(const [index,roll] of rolls.entries()){
+  c.save();
+  c.translate((index-(rolls.length-1)/2)*diceSpacing,0);
+  root.FrontRadioArt.settledStack(c,roll?.dice[0]??0,row.rank,()=>fx.rollMiss(c,0,0));
+  if(roll&&roll===row.nuclear){c.translate(7,0);fallout(c);}
+  c.restore();
+ }
 }
 function hotlineBadge(c){
  plate(c,-12,-12,24,24,'#3c3526','#e8bd65');
@@ -119,7 +124,8 @@ function draw(c,game,results,fx){
    const labels=root.FrontUnitLabels,name=labels.evolution(game,u);
    rise=u.y-(name?.y??labels.stackStarY(u))+21*ratio/Math.max(.1,tr.d);
   }
-  const w=row.kind==='lucky'?146*worldScale:row.kind==='dice'?row.priority?46:34:28;
+  const w=row.kind==='lucky'?146*worldScale:row.kind==='dice'
+   ?(row.priority?46:34)+Math.max(0,row.doubles.length-1)*diceSpacing:28;
   const h=row.kind==='lucky'?30*worldScale:34;
   const x=Math.min(width-w/2-3,Math.max(w/2+3,(tr.a*u.x+tr.e)/ratio));
   const top=Math.min(56,height*.18)+h/2,bottom=Math.max(top,height-h/2-8);

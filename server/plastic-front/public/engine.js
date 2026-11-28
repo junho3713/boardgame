@@ -166,6 +166,14 @@ const PERMANENT={
  turretDamage:{name:'포탑 데미지 증가',icon:'✹',gain:5,unit:'%',max:10,detail:'기관총·미사일 포탑 공격력 · 단계당 +5%'},
  turretDefense:{name:'포탑 방어력 증가',icon:'⬟',gain:3,unit:'',max:10,detail:'기관총·미사일 포탑 방어력 · 단계당 +3 · 기본 10'}
 };
+const permanentLevelCost=level=>80+60*level+40*level*level;
+function investedGold(level){
+ let total=0;
+ for(let rank=0;rank<level;rank++)total+=permanentLevelCost(rank);
+ return total;
+}
+const earnedGoldLimit=1e9;
+const walletGoldLimit=earnedGoldLimit+Object.values(PERMANENT).reduce((sum,b)=>sum+investedGold(b.max),0);
 const ABILITIES={...Object.fromEntries(Object.entries(PERMANENT).filter(([k])=>k!=='gold'&&!k.startsWith('turret')).map(([k,b])=>[k,{...b,max:5,gain:{damage:10,speed:6,haste:8,critChance:4,critDamage:15,capacity:2,defense:5}[k]}])),magnet:{name:'자석',icon:'🧲',gain:24,unit:'',max:5,detail:'대장이 경험치 결정을 끌어오는 범위 증가'},health:{name:'체력',icon:'♥',gain:10,unit:'%',max:5,detail:'대장과 모든 분대원의 최대 체력 · 단계당 +10%'},xpGain:{name:'경험치 획득량',icon:'✧',gain:8,unit:'%',max:5,detail:'작전 중 획득하는 경험치 · 단계당 +8%'}};
 const EVOLUTIONS={
  tank:{name:'공성 전차',ability:'damage',detail:'공격력 +35% · 폭발 범위 +35 · 사거리 +35 · 최대 체력 +20%'},
@@ -188,10 +196,19 @@ const BUILDINGS={mgTower:{name:'기관총 포탑',cost:125,hp:900,w:72,h:72,rang
 class FrontProfile{
  constructor(data={}){
   data=data&&typeof data==='object'?data:{};const upgrades=data.upgrades&&typeof data.upgrades==='object'?data.upgrades:{};
-  this.version=1;this.gold=Number.isFinite(data.gold)?Math.round(clamp(data.gold,0,1e9)*100)/100:0;
   this.upgrades=Object.fromEntries(Object.entries(PERMANENT).map(([k,b])=>[k,Number.isFinite(upgrades[k])?Math.floor(clamp(upgrades[k],0,b.max)):0]));
+  this.version=1;this.gold=Number.isFinite(data.gold)?Math.round(clamp(data.gold,0,walletGoldLimit-this.refundTotal())*100)/100:0;
  }
- cost(key){const b=PERMANENT[key],lv=this.upgrades[key];return !b||lv>=b.max?Infinity:80+60*lv+40*lv*lv;}
+ cost(key){const b=PERMANENT[key],lv=this.upgrades[key];return !b||lv>=b.max?Infinity:permanentLevelCost(lv);}
+ refundTotal(){return Object.values(this.upgrades).reduce((sum,level)=>sum+investedGold(level),0);}
+ resetPermanent(){
+  if(this.mode==='idle')return 0;
+  const refund=this.refundTotal();
+  if(!refund)return 0;
+  for(const key of Object.keys(this.upgrades))this.upgrades[key]=0;
+  this.gold=Math.round((this.gold+refund)*100)/100;
+  return refund;
+ }
  snapshot(){return {version:1,gold:this.gold,upgrades:{...this.upgrades}};}
  static read(storage,key='plastic-front-profile-v1'){const raw=storage.getItem(key);return new FrontProfile(raw?JSON.parse(raw):{});}
  save(storage,key='plastic-front-profile-v1'){storage.setItem(key,JSON.stringify(this.snapshot()));}
@@ -678,7 +695,7 @@ class FrontGame{
  abilityBonus(key,level=this.abilities[key]||0){return (ABILITIES[key]?.gain||0)*level;}
  abilityStep(key,level){return this.abilityBonus(key,level)-this.abilityBonus(key,Math.max(0,level-1));}
  capacity(team=0){return team===0?20+this.profile.upgrades.capacity+this.abilityBonus('capacity'):20;}
- awardGold(base){const amount=Math.round(base*(1+.1*this.profile.upgrades.gold)*100)/100;this.profile.gold=Math.round(Math.min(1e9,this.profile.gold+amount)*100)/100;this.runGold=Math.round((this.runGold+amount)*100)/100;this.notify('profile');return amount;}
+ awardGold(base){const amount=Math.round(base*(1+.1*this.profile.upgrades.gold)*100)/100;const ceiling=Math.max(earnedGoldLimit,this.profile.gold);this.profile.gold=Math.round(Math.min(ceiling,this.profile.gold+amount)*100)/100;this.runGold=Math.round((this.runGold+amount)*100)/100;this.notify('profile');return amount;}
  buyPermanent(key){
   this.lastPermanentAttempt=null;
   if(!['ready','paused','choice','resupply','ended'].includes(this.phase))return false;
