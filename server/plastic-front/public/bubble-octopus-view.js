@@ -81,7 +81,11 @@ function shieldCast(c,u,time){
  const rx=empress?93:Math.max(25,r*1.35+12),ry=empress?98:Math.max(tall?43:27,r*(tall?1.62:1.25)+14);
  const charge=clamp((time-(s.at??time))/.20),remaining=clamp(s.hp/(s.maxHp||s.hp));
  const swell=.88+.12*charge;
- c.save();c.translate(0,7-ry-flight);c.scale(swell,swell*ry/rx);
+ c.save();
+ if(u.type==='kraken'){
+  const scale=root.FrontRotationView.figureScale;c.scale(scale,scale);
+ }
+ c.translate(0,7-ry-flight);c.scale(swell,swell*ry/rx);
  c.globalAlpha*=.55+.28*remaining+.11*(1-charge);
  film(c,0,0,rx);
  c.strokeStyle='#bdf9f4';c.lineWidth=1.45;c.beginPath();c.arc(0,0,rx,0,TAU);c.stroke();
