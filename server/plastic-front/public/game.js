@@ -772,37 +772,26 @@ function drawDefense(p){
 function drawStackSniperWarning(u){
  const aim=u.sniperAim,lane=aim.point,left=aim.fireAt-game.time;
  if(!lane||left<=0)return;
- const locked=aim.locked,radius=types.leader.r,length=lane.range;
- const color=!locked?'#ffca82':left<=.2?'#ffe0c1':'#ff8f7e';
- ctx.save();ctx.translate(u.x,u.y);ctx.rotate(aim.angle);ctx.lineCap='round';
- if(locked){
-  const fill=ctx.createLinearGradient(0,-radius,0,radius);
-  fill.addColorStop(0,'#a82339a8');fill.addColorStop(.5,'#b12e493d');fill.addColorStop(1,'#a82339a8');
-  ctx.fillStyle=fill;ctx.fillRect(0,-radius,length,radius*2);
-  ctx.save();ctx.beginPath();ctx.rect(0,-radius,length,radius*2);ctx.clip();
-  ctx.strokeStyle='#ffc1a950';ctx.lineWidth=1;ctx.beginPath();
-  for(let x=0;x<length+radius*2;x+=19){ctx.moveTo(x-radius*2,radius);ctx.lineTo(x,-radius);}
-  ctx.stroke();ctx.restore();
-  ctx.lineWidth=3.5;ctx.strokeStyle='#521925d8';ctx.strokeRect(0,-radius,length,radius*2);
-  ctx.lineWidth=1.5;ctx.strokeStyle=color;ctx.strokeRect(0,-radius,length,radius*2);
-  ctx.strokeStyle=color;ctx.lineWidth=1.8;ctx.beginPath();
-  for(let x=42;x<length-10;x+=66){ctx.moveTo(x-7,-5);ctx.lineTo(x,0);ctx.lineTo(x-7,5);}
-  ctx.stroke();
- }else{
-  ctx.setLineDash([7,6]);ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(length,0);
-  ctx.strokeStyle='#492628';ctx.lineWidth=4;ctx.stroke();
-  ctx.strokeStyle=color;ctx.lineWidth=1.8;ctx.stroke();ctx.setLineDash([]);
- }
+ const locked=aim.locked,angle=aim.angle,urgency=locked&&left<=.2;
+ const sight=aim.sight||(!locked&&aim.target)||{x:lane.x-Math.cos(angle)*Math.min(60,lane.range),y:lane.y-Math.sin(angle)*Math.min(60,lane.range)};
+ const x=sight.x,y=sight.y-25;
+ const muzzle=battleFx.muzzlePoint({x:u.x,y:u.y,weapon:'sniper',angle,origin:true});
+ const color=locked?urgency?'#ffd0c7':'#ff697b':'#ffca82';
+ ctx.save();ctx.lineCap='round';
+ ctx.beginPath();ctx.moveTo(muzzle.x,muzzle.y);ctx.lineTo(x,y);
+ ctx.strokeStyle=locked?'#f3294d70':'#ffb34c42';ctx.lineWidth=locked?2.8:2.2;ctx.stroke();
+ ctx.strokeStyle=color;ctx.lineWidth=locked?1:.85;ctx.stroke();
+ const lamp=ctx.createRadialGradient(muzzle.x,muzzle.y,0,muzzle.x,muzzle.y,8);
+ lamp.addColorStop(0,locked?'#fff1e8':'#ffe0a3');lamp.addColorStop(.35,color);lamp.addColorStop(1,'#ff603000');
+ circle(ctx,muzzle.x,muzzle.y,8,lamp);
+ const r=locked?11:14;
+ ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);
+ ctx.moveTo(x-r-5,y);ctx.lineTo(x-r+3,y);ctx.moveTo(x+r-3,y);ctx.lineTo(x+r+5,y);
+ ctx.moveTo(x,y-r-5);ctx.lineTo(x,y-r+3);ctx.moveTo(x,y+r-3);ctx.lineTo(x,y+r+5);
+ ctx.strokeStyle='#301820d8';ctx.lineWidth=3.5;ctx.stroke();
+ ctx.strokeStyle=color;ctx.lineWidth=1.5;ctx.stroke();
+ circle(ctx,x,y,locked?2.3:1.5,color);
  ctx.restore();
- if(!locked&&aim.target){
-  const {x,y}=aim.target,reticleRadius=radius+8;
-  ctx.save();ctx.translate(x,y);ctx.strokeStyle=color;ctx.lineWidth=2;
-  for(let i=0;i<4;i++){
-   ctx.rotate(Math.PI/2);ctx.beginPath();ctx.arc(0,0,reticleRadius,-.32,.32);ctx.stroke();
-   ctx.beginPath();ctx.moveTo(reticleRadius+2,0);ctx.lineTo(reticleRadius+8,0);ctx.stroke();
-  }
-  ctx.restore();
- }
 }
 function drawStackSniperStatus(player){
  if(!game.captainStackHpMode||player.hp<=0)return;
@@ -1180,7 +1169,6 @@ function draw(dt){
   ctx.fillRect(0,0,game.bounds().width,game.bounds().height);
  }
  window.FrontAssassinView.ground(ctx,game);window.FrontGuardianFX.ground(ctx,game);battleFx.ground(ctx,fxVisible);battleFx.luckyGround(ctx,game,fxVisible);
- for(const u of game.units)if(u.hp>0&&u.sniperAim?.stack)drawStackSniperWarning(u);
  for(const u of game.units)if(u.type==='bikeRaider'||u.bossPattern==='rhinoCharge')battleFx.drawBikeWarning(ctx,u,game.time);
  if(game.isRoomCampaign())window.FrontPortal.ground(ctx,game.bases[1],game.time);
  for(const b of game.bases)drawBase(b);
@@ -1227,6 +1215,7 @@ function draw(dt){
  window.FrontSummonHud.airborne(ctx,game,(pod,evolved)=>unitModels.draw(ctx,pod,game.time,evolved),reduceMotion.matches);
  for(const u of game.units.filter(u=>types[u.type].flying).sort((a,b)=>a.y-b.y))drawUnit(u);
  for(const u of game.units.filter(u=>u.hp>0&&u.type==='sniper'&&game.visible(u)&&u.sniperAim&&!u.sniperAim.stack&&(u.sniperAim.target.commandShot||game.visible(u.sniperAim.target))).slice(0,12))battleFx.drawLaser(ctx,u,game.time,{crouched:unitModels.crouched(u),muzzle:unitModels.weaponPoint(u)});
+ for(const u of game.units)if(u.hp>0&&u.sniperAim?.stack)drawStackSniperWarning(u);
  window.FrontGuardianFX.air(ctx,game);battleFx.drawLuckySprays(ctx,game,fxVisible);
  for(const p of game.mortarShells){const pose=battleFx.mortarPose(p,game.time);if(fxVisible(pose))battleFx.drawMortar(ctx,p,game.time); }
  window.FrontRosterArt?.field(ctx,game,fxVisible);

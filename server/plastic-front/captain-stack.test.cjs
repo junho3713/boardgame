@@ -193,12 +193,12 @@ test('stack sniper warns along a fixed line and its shot can be dodged after loc
   g.updateBattleUnits(0,g.commander(1));const aim=u.sniperAim;
   assert(aim?.stack);assert.equal(aim.target,c);assert.equal(aim.lockAt,40.30);assert.equal(aim.fireAt,41.3);
   g.time=aim.lockAt+.02;g.updateBattleUnits(0,g.commander(1));assert(aim.locked);assert.equal(aim.fireAt,g.time+1);
-  const locked=aim.point;
+  const locked=aim.point,sight={x:c.x,y:c.y};assert.deepEqual(aim.sight,sight);
   if(dodge){
    g.freePosition=()=>true;c.slowUntil=42;c.slowAmount=.5;
    for(let i=0;i<7;i++){g.time=aim.lockedAt+.65+i*.05;g.move(c,0,100,.05,g.stats(c).speed);}
   }
-  g.time=41.31;g.updateBattleUnits(0,g.commander(1));assert.equal(aim.point,locked);assert.equal(g.shots.length,0);
+  g.time=41.31;g.updateBattleUnits(0,g.commander(1));assert.equal(aim.point,locked);assert.deepEqual(aim.sight,sight);assert.equal(g.shots.length,0);
   g.time=aim.fireAt;g.updateBattleUnits(0,g.commander(1));assert.equal(g.shots.length,1);assert.equal(g.shots[0].commandAngle,aim.angle);
   for(let i=0;i<7;i++){
    g.updateBattleProjectiles(.05,g.combatCandidates());g.shots=g.shots.filter(p=>p.life>0);

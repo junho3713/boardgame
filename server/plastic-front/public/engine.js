@@ -2280,6 +2280,7 @@ class FrontGame{
   if(!aim.locked){
    if(!this.canTarget(u,aim.target)||!this.lineClear(u,aim.target,0,{fireTeam:u.team})){u.sniperAim=null;u.cooldown=Math.max(u.cooldown,.3);return false;}
    const {x,y}=aim.target;
+   aim.sight={x,y};
    aim.angle=Math.atan2(y-u.y,x-u.x);
    const distance=Math.min(s.range,Math.hypot(x-u.x,y-u.y)+60);
    aim.point=this.commandFirePoint(u,distance,aim.angle);
