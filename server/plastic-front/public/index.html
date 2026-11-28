@@ -17,7 +17,7 @@
   <link rel="preload" as="image" href="assets/ui/upgrades-v139/capacity.webp">
   <link rel="preload" as="image" href="assets/ui/upgrades-v139/defense.webp">
 <link rel="stylesheet" href="ui-shell.css?v=20261109-pace1">
-<link rel="stylesheet" href="battle-hud.css?v=20261127-portal-assault2"><link rel="stylesheet" href="summon-hud.css?v=20261126-drone-pair2"><link rel="stylesheet" href="mission-menu.css?v=20261127-captain-stack1">
+<link rel="stylesheet" href="battle-hud.css?v=20261127-portal-assault2"><link rel="stylesheet" href="summon-hud.css?v=20261126-drone-pair2"><link rel="stylesheet" href="mission-menu.css?v=20261128-health-buttons1">
 </head>
 <body>
 <div class="app">
@@ -109,10 +109,14 @@
         <button type="button" data-mode="duel" aria-pressed="false">1대1 훈련</button>
         <button type="button" data-mode="crisis" aria-pressed="false">포병 훈련</button>
       </div>
-      <label id="captainModeField" class="captain-mode-field">체력 규칙
-        <select id="captainMode"><option value="basic">기본 모드</option><option value="stack">지휘관 체력바 모드 (테스트)</option></select>
+      <div id="captainModeField" class="captain-mode-field">
+        <span id="captainModeLabel">체력 규칙</span>
+        <div class="captain-mode-picker" role="group" aria-labelledby="captainModeLabel">
+          <button type="button" data-health-mode="stack" aria-pressed="false">지휘관 체력 모드</button>
+          <button type="button" data-health-mode="basic" aria-pressed="true">일반 모드</button>
+        </div>
         <small id="captainModeHint" hidden>병력 한 줄의 체력은 60%예요. 폭탄개미와 보스는 초과 피해의 70%로 다음 줄까지 공격해요.</small>
-      </label>
+      </div>
       <div class="mission-stage">
         <section class="mission-preview" aria-labelledby="missionMapTitle">
           <img id="missionMapImage" src="assets/previews/start-livingroom-v20261108.webp" alt="">
@@ -225,6 +229,6 @@
 <script src="autoplay.js?v=20261128-stack-roster2"></script><script src="auto-session.js?v=20261128-ambush-tells1"></script><script src="run-save.js?v=20261127-retire-maps1"></script>
 <script src="room-fence-art.js?v=178"></script><script src="livingroom.js?v=20261115-bedroom1"></script><script src="display.js?v=178"></script>
 <script src="garden.js?v=178"></script><script src="desktop.js?v=20261127-retire-maps1"></script>
-<script src="art-loader.js?v=178"></script><script src="unit-art.js?v=20261126-drone-crown1"></script><script src="upgrade-art.js?v=178"></script><script src="mobile-ui.js?v=178"></script><script src="wave-test.js?v=20261127-kunoichi1"></script><script src="wave-test-ui.js?v=20261124-destiny1"></script><script src="coop-state.js?v=2"></script><script src="coop-client.js?v=20261127-captain-stack1"></script><script src="unit-labels.js?v=20261128-ambush-tells1"></script><script src="field-supply-ui.js?v=20261115-toyarea1"></script><script src="battle-hud.js?v=20261126-mystery-economy1"></script><script src="summon-hud.js?v=20261126-drone-pair2"></script><script src="assassin-view.js?v=20261128-ambush-tells1"></script><script src="game.js?v=20261128-ambush-tells1"></script>
+<script src="art-loader.js?v=178"></script><script src="unit-art.js?v=20261126-drone-crown1"></script><script src="upgrade-art.js?v=178"></script><script src="mobile-ui.js?v=178"></script><script src="wave-test.js?v=20261127-kunoichi1"></script><script src="wave-test-ui.js?v=20261124-destiny1"></script><script src="coop-state.js?v=2"></script><script src="coop-client.js?v=20261127-captain-stack1"></script><script src="unit-labels.js?v=20261128-ambush-tells1"></script><script src="field-supply-ui.js?v=20261115-toyarea1"></script><script src="battle-hud.js?v=20261126-mystery-economy1"></script><script src="summon-hud.js?v=20261126-drone-pair2"></script><script src="assassin-view.js?v=20261128-ambush-tells1"></script><script src="game.js?v=20261128-health-buttons1"></script>
 <script src="ui-shell.js?v=20261125-missionmenu1"></script>
 </body></html>

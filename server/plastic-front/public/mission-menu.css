@@ -3,7 +3,7 @@
 }
 .captain-mode-field{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;margin:8px 0 12px;font-weight:700}
 .captain-mode-field[hidden],.captain-mode-field small[hidden]{display:none}
-.captain-mode-field select{font:inherit;color:#20352a;background:#f5f4e9;border:1px solid #70846c;border-radius:5px;padding:5px 9px}
+.captain-mode-picker{display:flex;flex-wrap:wrap;gap:6px}
 .captain-mode-field small{font-weight:500;color:inherit}
 
 
@@ -69,6 +69,7 @@
 
 .mission-tools button,
 .mission-menu .mode-picker > *,
+.mission-menu .captain-mode-picker button,
 .mission-menu .mission-resume {
   display: flex;
   align-items: center;
@@ -89,6 +90,7 @@
 
 .mission-tools button:hover,
 .mission-menu .mode-picker > *:hover,
+.mission-menu .captain-mode-picker button:hover,
 .mission-menu .mission-resume:hover {
   background: #33483a;
   border-color: #809482;
@@ -112,7 +114,8 @@
 
 .mission-menu .mode-picker > * { flex: 1 0 auto; }
 
-.mission-menu .mode-picker button.selected {
+.mission-menu .mode-picker button.selected,
+.mission-menu .captain-mode-picker button[aria-pressed="true"] {
   background: #384936;
   border-color: var(--menu-accent);
   color: #f8da90;
